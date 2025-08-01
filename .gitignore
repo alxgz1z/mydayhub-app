@@ -1,0 +1,9 @@
+# Composer vendor directory
+/vendor/
+
+# Log files
+debug.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db

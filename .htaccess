@@ -1,0 +1,42 @@
+# MyDayHub 4.0.0 Beta - Apache Configuration
+#
+# This file controls how the Apache server handles requests. It's crucial for
+# security, URL routing, and ensuring our PHP application is served correctly.
+
+# --- Core Directives ---
+
+# Set the default file to serve when a directory is requested.
+# This ensures that visiting mytsks.com/ loads our index.php file.
+DirectoryIndex index.php
+
+# --- URL Rewriting Engine ---
+
+# Enable the URL rewriting engine. This will be critical later for our
+# Single Page App (SPA) to handle "clean" URLs without page reloads.
+RewriteEngine On
+
+# --- Security Headers ---
+
+# Add basic security headers to help protect against common web vulnerabilities.
+<IfModule mod_headers.c>
+	# Prevent browsers from MIME-sniffing the content type.
+	Header set X-Content-Type-Options "nosniff"
+
+	# Prevent the site from being rendered within a frame or iframe (clickjacking).
+	Header set X-Frame-Options "DENY"
+
+	# Enable the browser's built-in XSS protection.
+	Header set X-XSS-Protection "1; mode=block"
+</IfModule>
+
+# --- SPA Routing Rules (Future Use) ---
+# The following rules will be needed later to route all non-file/non-directory
+# requests to our main index.php file. This allows the JavaScript router to
+# handle paths like /tasks or /journal. We are keeping it commented out for now
+# until we build the authentication and routing logic.
+#
+# <IfModule mod_rewrite.c>
+#     RewriteCond %{REQUEST_FILENAME} !-f
+#     RewriteCond %{REQUEST_FILENAME} !-d
+#     RewriteRule . /index.php [L]
+# </IfModule>
