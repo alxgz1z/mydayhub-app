@@ -1,0 +1,12 @@
+{
+  "editor.default_syntax" : "php",
+  "index.ignored_file_patterns" : [
+    ".htaccess",
+    ".gitignore",
+    ".git",
+    ".nova"
+  ],
+  "index.use_scm_ignored_files" : true,
+  "workspace.color" : 1,
+  "workspace.name" : "mdh"
+}

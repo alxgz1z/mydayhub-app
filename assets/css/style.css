@@ -152,6 +152,14 @@ body {
 /* ==========================================================================
    4. MAIN CONTENT AREA (TASK & JOURNAL BOARDS)
    ========================================================================== */
+#task-columns-wrapper {
+	   display: flex;
+	   gap: 1.5rem;
+	   flex-grow: 1;
+	   min-height: 0;
+	   height: 100%;
+   }
+
 #task-board-container,
 #journal-board-container {
 	display: flex;

@@ -61,6 +61,7 @@ require_once __DIR__ . '/includes/config.php';
 
     </div>
 
+    <script defer src="/assets/js/tasks.js"></script>
     <script defer src="/assets/js/app.js"></script>
 
 </body>
