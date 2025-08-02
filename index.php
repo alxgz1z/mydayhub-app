@@ -1,41 +1,41 @@
 <?php
 /**
  * MyDayHub 4.0.0 Beta - Main Application Shell
- *
- * This file is the single entry point for the Single Page Application (SPA).
- * It includes the core configuration, sets up the HTML document structure,
- * and serves as the primary container where all views (like the Tasks board
- * and Journal) will be dynamically rendered by JavaScript.
- *
- * @version 4.0.0
- * @author Alex & Gemini
  */
 
 // Load the core application configuration.
-// We use require_once because the config is essential for the app to run.
 require_once __DIR__ . '/includes/config.php';
 
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-	<title>MyDayHub</title>
+    <title>MyDayHub</title>
 
-	<link rel="stylesheet" href="/assets/css/style.css">
+    <link rel="icon" href="assets/images/favicon.png" type="image/png">
+    <link rel="stylesheet" href="/assets/css/style.css">
 </head>
 <body <?php if (DEVMODE) echo 'class="dev-mode-active"'; ?>>
 
-	<div id="app-container">
+    <div id="main-app-container">
 
-		<main id="main-content">
-			</main>
+        <header id="app-header">
+            <div class="header-left">
+                <img src="/assets/images/sitelogo.png" alt="MyDayHub Logo" id="header-logo">
+                <h1 id="app-title">MyDayHub</h1>
+            </div>
+            <div class="header-right">
+                </div>
+        </header>
+        <main id="main-content">
+            </main>
 
-	</div>
+    </div>
 
-	<script defer src="/assets/js/app.js"></script>
+    <script defer src="/assets/js/app.js"></script>
 
 </body>
 </html>
