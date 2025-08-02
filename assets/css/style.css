@@ -141,6 +141,12 @@ body.dev-mode-active #app-header {
 	padding-top: 1rem;
 }
 
+/* Container for the 'Add Column' form, gives it a fixed, non-shrinkable width. */
+#add-column-form-container {
+	min-width: 250px;
+	flex-shrink: 0;
+}
+
 #task-columns-wrapper {
 	display: flex;
 	gap: 1.5rem;
