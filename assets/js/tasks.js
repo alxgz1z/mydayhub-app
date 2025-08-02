@@ -13,10 +13,7 @@ const addColumnToBoard = (title) => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
 	if (!taskColumnsWrapper) return;
 
-	// Create a unique ID for the new column based on the title and a timestamp.
 	const columnId = 'column-' + Date.now();
-
-	// This HTML structure is based on the spec requirements
 	const newColumnHTML = `
 		<div class="task-column" id="${columnId}">
 			<div class="card-header">
@@ -38,7 +35,58 @@ const addColumnToBoard = (title) => {
 			</div>
 		</div>
 	`;
-
-	// Insert the new column HTML at the end of the wrapper.
 	taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
+};
+
+/**
+ * Creates the HTML for a new task card.
+ * @param {string} title - The title for the new task.
+ * @returns {string} - The HTML string for the new task card.
+ */
+const createTaskCard = (title) => {
+	const taskId = 'task-' + Date.now();
+	return `
+		<div class="task-card new-card" id="${taskId}" draggable="true">
+			<div class="task-status-band"></div>
+			<div class="task-card-main-content">
+				<div class="task-card-content">
+					<span class="task-title">${title}</span>
+				</div>
+			</div>
+		</div>
+	`;
+};
+
+
+/**
+ * Initializes all event listeners for the Tasks view.
+ */
+const initTasksView = () => {
+	const taskBoard = document.getElementById('task-board-container');
+	if (!taskBoard) return;
+
+	// Use event delegation to handle form submissions for dynamically created columns.
+	taskBoard.addEventListener('submit', (event) => {
+		// Check if the submitted element is an "add-task-form".
+		if (event.target.classList.contains('add-task-form')) {
+			event.preventDefault();
+			const form = event.target;
+			const input = form.querySelector('input');
+			const taskTitle = input.value.trim();
+
+			if (taskTitle) {
+				const cardBody = form.closest('.task-column').querySelector('.card-body');
+				const newTaskHTML = createTaskCard(taskTitle);
+				cardBody.insertAdjacentHTML('beforeend', newTaskHTML);
+
+				// Add and then remove the animation class.
+				const newCard = cardBody.lastElementChild;
+				setTimeout(() => {
+					newCard.classList.remove('new-card');
+				}, 500); // Animation duration is 0.5s
+
+				input.value = ''; // Clear input field
+			}
+		}
+	});
 };

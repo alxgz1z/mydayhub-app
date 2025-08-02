@@ -18,11 +18,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			const newTitle = newColumnTitleInput.value.trim();
 
 			if (newTitle) {
-				// This now calls the function from tasks.js
 				addColumnToBoard(newTitle);
 				newColumnTitleInput.value = '';
 			}
 		});
 	}
+
+	// Initialize the event listeners for the Tasks view.
+	initTasksView();
 
 });
