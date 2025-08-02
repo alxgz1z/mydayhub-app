@@ -156,8 +156,8 @@ body.dev-mode-active #app-header {
 }
 
 .task-column {
-	min-width: 300px;
-	flex: 1;
+	width: 320px;
+	flex-shrink: 0;
 	background: var(--column-bg);
 	border: 1px solid var(--card-border);
 	display: flex;
