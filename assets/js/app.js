@@ -12,11 +12,18 @@
 /**
  * Initializes the view switcher to handle tab-based navigation.
  * It adds click listeners to all view tabs to show/hide the correct
- * view container based on the tab's `data-view` attribute.
+ * view container and updates the body class for contextual styling.
  */
 const initViewSwitcher = () => {
 	const viewTabs = document.querySelectorAll('.view-tab');
 	const viewContainers = document.querySelectorAll('.view-container');
+	const body = document.body;
+
+	// Set the initial body class based on the default active tab on page load.
+	const initialActiveTab = document.querySelector('.view-tab.active');
+	if (initialActiveTab) {
+		body.classList.add(`view-${initialActiveTab.dataset.view}-active`);
+	}
 
 	viewTabs.forEach(tab => {
 		tab.addEventListener('click', () => {
@@ -37,6 +44,11 @@ const initViewSwitcher = () => {
 			if (targetView) {
 				targetView.classList.add('active');
 			}
+
+			// Remove all possible view-related classes from the body.
+			body.classList.remove('view-tasks-active', 'view-journal-active', 'view-outlines-active', 'view-meetings-active');
+			// Add the new class that corresponds to the active view.
+			body.classList.add(`view-${targetViewId}-active`);
 		});
 	});
 };
@@ -45,10 +57,11 @@ const initViewSwitcher = () => {
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
-	// Initialize the main navigation tab switcher.
+	// Initialize the main navigation tab switcher and contextual body class.
 	initViewSwitcher();
 
-	// Initialize the event listeners for adding new columns.
+	// This listener can remain here. It will find the form in the header
+	// and attach the event listener correctly on page load.
 	const addColumnForm = document.getElementById('add-column-form');
 	const newColumnTitleInput = document.getElementById('new-column-title');
 	if (addColumnForm) {

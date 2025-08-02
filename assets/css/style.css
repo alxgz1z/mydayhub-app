@@ -82,7 +82,7 @@ body {
 
 .header-left, .header-right {
 	display: flex;
-	align-items: baseline;
+	align-items: center;
 	gap: 1rem;
 }
 
@@ -129,6 +129,16 @@ body.dev-mode-active #app-header {
 	border-bottom: 3px solid #e0740b;
 }
 
+/* Hide the "Add Column" form by default */
+#add-column-form-container {
+	display: none;
+}
+
+/* ONLY show the form when the body has the 'view-tasks-active' class */
+.view-tasks-active #add-column-form-container {
+	display: flex;
+}
+
 
 /* ==========================================================================
    4. TASK BOARD & COLUMNS
@@ -139,12 +149,6 @@ body.dev-mode-active #app-header {
 	gap: 1.5rem;
 	overflow-x: auto;
 	padding-top: 1rem;
-}
-
-/* Container for the 'Add Column' form, gives it a fixed, non-shrinkable width. */
-#add-column-form-container {
-	min-width: 250px;
-	flex-shrink: 0;
 }
 
 #task-columns-wrapper {
