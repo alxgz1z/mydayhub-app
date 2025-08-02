@@ -34,17 +34,17 @@ require_once __DIR__ . '/includes/config.php';
                 </nav>
             </div>
             <div class="header-right">
-                </div>
-        </header>
-
-        <main id="main-content">
-            <div id="task-board-container" class="view-container active">
                 <div id="add-column-form-container">
                     <form id="add-column-form">
                         <input type="text" id="new-column-title" class="form-control" placeholder="Add New Column..." maxlength="50" required>
                         <button type="submit" class="btn btn-primary">Add</button>
                     </form>
                 </div>
+            </div>
+        </header>
+
+        <main id="main-content">
+            <div id="task-board-container" class="view-container active">
                 <div id="task-columns-wrapper">
                 </div>
             </div>
