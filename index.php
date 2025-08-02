@@ -24,7 +24,7 @@ require_once __DIR__ . '/includes/config.php';
 
         <header id="app-header">
             <div class="header-left">
-                <img src="/assets/images/sitelogo.png" alt="MyDayHub Logo" id="header-logo">
+                <img src="/assets/images/icon.png" alt="MyDayHub Logo" id="header-logo">
                 <h1 id="app-title">MyDayHub</h1>
                 <nav class="view-tabs">
                     <button class="view-tab active" data-view="tasks">Tasks</button>
