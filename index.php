@@ -26,10 +26,16 @@ require_once __DIR__ . '/includes/config.php';
             <div class="header-left">
                 <img src="/assets/images/sitelogo.png" alt="MyDayHub Logo" id="header-logo">
                 <h1 id="app-title">MyDayHub</h1>
+                <nav class="view-tabs">
+                    <button class="view-tab active" data-view="tasks">Tasks</button>
+                    <button class="view-tab" data-view="journal">Journal</button>
+                    <button class="view-tab" data-view="outlines">Outlines</button>
+                </nav>
             </div>
             <div class="header-right">
                 </div>
         </header>
+
         <main id="main-content">
             </main>
 
