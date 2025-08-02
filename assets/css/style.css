@@ -51,6 +51,20 @@ body {
 	padding: 0.75rem 1.5rem 1rem 1.5rem;
 }
 
+/* Base styles for all main view containers. They are hidden by default. */
+.view-container {
+	display: none;
+	flex: 1;
+	min-height: 0;
+	flex-direction: column; /* Most views will be vertical stacks. */
+}
+
+/* Only the active view should be visible, displayed as a flex container. */
+.view-container.active {
+	display: flex;
+}
+
+
 /* ==========================================================================
    3. APP HEADER & TABS
    ========================================================================== */
@@ -119,11 +133,10 @@ body.dev-mode-active #app-header {
 /* ==========================================================================
    4. TASK BOARD & COLUMNS
    ========================================================================== */
+/* The task board is a specific type of view that scrolls horizontally. */
 #task-board-container {
-	display: flex;
+	flex-direction: row;
 	gap: 1.5rem;
-	flex: 1;
-	min-height: 0;
 	overflow-x: auto;
 	padding-top: 1rem;
 }

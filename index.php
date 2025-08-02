@@ -46,17 +46,17 @@ require_once __DIR__ . '/includes/config.php';
                     </form>
                 </div>
                 <div id="task-columns-wrapper">
-                    </div>
+                </div>
             </div>
-
-            <div id="journal-view-container" class="view-container" style="display: none;">
-                </div>
-
-            <div id="outlines-view-container" class="view-container" style="display: none;">
-                </div>
-
-            <div id="meetings-view-container" class="view-container" style="display: none;">
-                </div>
+        
+            <div id="journal-view-container" class="view-container">
+            </div>
+        
+            <div id="outlines-view-container" class="view-container">
+            </div>
+        
+            <div id="meetings-view-container" class="view-container">
+            </div>
         </main>
 
     </div>
