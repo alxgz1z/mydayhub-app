@@ -26,18 +26,9 @@ require_once __DIR__ . '/includes/config.php';
 
 	<link rel="stylesheet" href="/assets/css/style.css">
 </head>
-<body>
+<body <?php if (DEVMODE) echo 'class="dev-mode-active"'; ?>>
 
 	<div id="app-container">
-
-		<?php
-		// If DEVMODE is enabled in config.php, display a noticeable banner.
-		// This provides a clear visual indicator that we are in development mode,
-		// which is helpful for debugging.
-		if (DEVMODE) {
-			echo '<div class="devmode-banner">DEV MODE ENABLED</div>';
-		}
-		?>
 
 		<main id="main-content">
 			</main>
