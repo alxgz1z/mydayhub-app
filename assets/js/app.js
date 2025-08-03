@@ -61,7 +61,6 @@ const initAddColumnButton = () => {
 		container.innerHTML = `
 			<form id="add-column-form">
 				<input type="text" id="new-column-title" class="form-control" placeholder="New Column Title..." maxlength="50" required autofocus>
-				<button type="submit" class="btn btn-primary">Add</button>
 			</form>
 		`;
 
@@ -74,12 +73,7 @@ const initAddColumnButton = () => {
 		};
 
 		// If the user clicks away from the input, revert to the button.
-		input.addEventListener('blur', (e) => {
-			if (e.relatedTarget && e.relatedTarget.type === 'submit') {
-				return;
-			}
-			revertToButton();
-		});
+		input.addEventListener('blur', revertToButton);
 
 		// Handle form submission.
 		form.addEventListener('submit', (e) => {
