@@ -6,35 +6,100 @@
  */
 
 /**
-  * Creates the HTML for a new column and appends it to the board.
-  * @param {string} title - The title for the new column.
-  */
- const addColumnToBoard = (title) => {
-	 const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
-	 if (!taskColumnsWrapper) return;
- 
-	 const columnId = 'column-' + Date.now();
-	 const newColumnHTML = `
-		 <div class="task-column" id="${columnId}">
-			 <div class="card-header">
-				 <span class="column-title">${title}</span>
-				 <span class="task-count">0</span>
-				 <div class="column-controls">
-					 <button class="btn-icon btn-column-actions" title="Column Actions">&#8230;</button>
-				 </div>
-			 </div>
-			 <div class="card-body">
-				 </div>
-			 <div class="card-footer">
-				 <button class="btn-add-task">+ New Task</button>
-			 </div>
-		 </div>
-	 `;
-	 taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
- };
- 
+ * =========================================================================
+ * DEV MODE FUNCTIONS
+ * =========================================================================
+ */
+
 /**
- * Creates the HTML for a new task card.
+ * Creates the HTML for a new task card WITHOUT the animation class.
+ * This is used for populating the board in DEVMODE to prevent a flash of animations on load.
+ * @param {string} title - The title for the new task.
+ * @returns {string} - The HTML string for the new task card.
+ */
+const createTaskCardDev = (title) => {
+	const taskId = 'task-' + Date.now() + Math.random();
+	return `
+		<div class="task-card" id="${taskId}" draggable="true">
+			<div class="task-status-band"></div>
+			<div class="task-card-main-content">
+				<div class="task-card-content">
+					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
+					<span class="task-title">${title}</span>
+				</div>
+			</div>
+		</div>
+	`;
+};
+
+/**
+ * Populates the task board with sample data for faster testing.
+ * This function is ONLY called when DEVMODE is active.
+ */
+const populateDevModeTasks = () => {
+	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
+	if (!taskColumnsWrapper) return;
+
+	// Clear any existing columns to prevent duplicates on hot-reload.
+	taskColumnsWrapper.innerHTML = '';
+
+	const devData = {
+		"Weekdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+		"Colors": ["Blue", "Red", "Green", "Black", "White"],
+		"Chores": ["Wash car", "Mow lawn", "Water plant", "Garbage out"]
+	};
+
+	for (const columnTitle in devData) {
+		addColumnToBoard(columnTitle);
+		const newColumn = taskColumnsWrapper.lastElementChild;
+		if (newColumn) {
+			const cardBody = newColumn.querySelector('.card-body');
+			const tasks = devData[columnTitle];
+			tasks.forEach(taskTitle => {
+				const taskHTML = createTaskCardDev(taskTitle);
+				cardBody.insertAdjacentHTML('beforeend', taskHTML);
+			});
+		}
+	}
+};
+
+
+/**
+ * =========================================================================
+ * CORE TASK VIEW FUNCTIONS
+ * =========================================================================
+ */
+
+/**
+ * Creates the HTML for a new column and appends it to the board.
+ * @param {string} title - The title for the new column.
+ */
+const addColumnToBoard = (title) => {
+	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
+	if (!taskColumnsWrapper) return;
+
+	const columnId = 'column-' + Date.now() + Math.random();
+	const newColumnHTML = `
+		<div class="task-column" id="${columnId}">
+			<div class="card-header">
+				<span class="column-title">${title}</span>
+				<span class="task-count">0</span>
+				<div class="column-controls">
+					<button class="btn-icon btn-column-actions" title="Column Actions">&#8230;</button>
+				</div>
+			</div>
+			<div class="card-body">
+				</div>
+			<div class="card-footer">
+				<button class="btn-add-task">+ New Task</button>
+			</div>
+		</div>
+	`;
+	taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
+};
+
+/**
+ * Creates the HTML for a new task card with an animation class.
  * @param {string} title - The title for the new task.
  * @returns {string} - The HTML string for the new task card.
  */
@@ -172,11 +237,16 @@ const getDragAfterElement = (container, y) => {
 		const box = child.getBoundingClientRect();
 		const offset = y - box.top - box.height / 2;
 		if (offset < 0 && offset > closest.offset) {
-			return { offset: offset, element: child };
+			return {
+				offset: offset,
+				element: child
+			};
 		} else {
 			return closest;
 		}
-	}, { offset: Number.NEGATIVE_INFINITY }).element;
+	}, {
+		offset: Number.NEGATIVE_INFINITY
+	}).element;
 };
 
 /**
@@ -185,7 +255,7 @@ const getDragAfterElement = (container, y) => {
  */
 const showAddTaskForm = (footer) => {
 	const originalButtonHTML = footer.innerHTML;
-	
+
 	footer.innerHTML = `
 		<form class="add-task-form">
 			<input type="text" class="form-control" placeholder="Enter task title..." autofocus>
@@ -203,7 +273,7 @@ const showAddTaskForm = (footer) => {
 
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
-		
+
 		const taskTitle = input.value.trim();
 		if (taskTitle) {
 			const cardBody = footer.closest('.task-column').querySelector('.card-body');
@@ -221,7 +291,7 @@ const showAddTaskForm = (footer) => {
 					newCard.classList.remove('new-card');
 				}, 500); // Animation duration
 			}
-			
+
 			input.value = '';
 		}
 	});
@@ -245,9 +315,9 @@ const toggleColumnActionsMenu = (buttonEl) => {
 	closeAllActionMenus();
 
 	if (existingMenu) {
-		return; 
+		return;
 	}
-	
+
 	const menu = document.createElement('div');
 	menu.className = 'column-actions-menu';
 	menu.innerHTML = `
@@ -264,10 +334,19 @@ const toggleColumnActionsMenu = (buttonEl) => {
 const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
-	
+
+	// In DEVMODE, populate the board with sample data for easy testing.
+	if (document.body.classList.contains('dev-mode-active')) {
+		populateDevModeTasks();
+	}
+
 	// Variables to manage the long-press state.
-	let longPressTimer = { id: null };
-	let longPressTriggered = { value: false };
+	let longPressTimer = {
+		id: null
+	};
+	let longPressTriggered = {
+		value: false
+	};
 
 	// A single, delegated listener for the entire task board.
 	taskBoard.addEventListener('click', async (event) => {
@@ -278,14 +357,12 @@ const initTasksView = () => {
 		}
 
 		const target = event.target;
-		
+
 		if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
-		}
-		else if (target.matches('.btn-column-actions')) {
+		} else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
-		}
-		else if (target.matches('.btn-delete-column')) {
+		} else if (target.matches('.btn-delete-column')) {
 			const column = target.closest('.task-column');
 			closeAllActionMenus();
 			if (column) {
@@ -298,8 +375,7 @@ const initTasksView = () => {
 					column.remove();
 				}
 			}
-		}
-		else if (target.matches('.task-complete-checkbox')) {
+		} else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				taskCard.classList.toggle('completed', target.checked);
