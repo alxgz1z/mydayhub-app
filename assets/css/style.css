@@ -129,13 +129,13 @@ body.dev-mode-active #app-header {
 	border-bottom: 3px solid #e0740b;
 }
 
-/* Hide the "Add Column" form by default */
-#add-column-form-container {
+/* Hide the container for the '+ New Column' button by default. */
+#add-column-container {
 	display: none;
 }
 
-/* ONLY show the form when the body has the 'view-tasks-active' class */
-.view-tasks-active #add-column-form-container {
+/* ONLY show the container when the body has the 'view-tasks-active' class. */
+.view-tasks-active #add-column-container {
 	display: flex;
 }
 
