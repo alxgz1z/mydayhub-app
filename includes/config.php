@@ -1,6 +1,6 @@
 <?php
 /**
- * MyDayHub 4.0.0 Beta - Core Configuration
+ * MyDayHub 4.0.0 Beta - Core Configuration 
  *
  * This file contains the essential configuration settings for the application.
  * It initializes constants for directory paths, database credentials, and

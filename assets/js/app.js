@@ -1,5 +1,5 @@
 /**
- * MyDayHub 4.0.0 Beta - Main Application Logic (Glue)
+ * MyDayHub 4.0.0 Beta - Main Application Logic (Glue) 
  *
  * This file contains the primary client-side logic that connects different
  * parts of the application, such as view switching and initializing
