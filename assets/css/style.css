@@ -375,6 +375,7 @@ body.dev-mode-active #app-header {
 	display: flex;
 	border: 1px solid var(--card-border);
 	cursor: grab;
+	transition: opacity 0.2s ease-out;
 }
 
 /* Style for the card currently being dragged */
@@ -386,10 +387,10 @@ body.dev-mode-active #app-header {
 .task-status-band {
 	width: 8px;
 	flex-shrink: 0;
-	cursor: pointer;
 	background-color: var(--accent-color);
 	border-top-left-radius: 8px;
 	border-bottom-left-radius: 8px;
+	transition: background-color 0.2s ease-out;
 }
 
 .task-card-main-content {
@@ -401,15 +402,36 @@ body.dev-mode-active #app-header {
 .task-card-content {
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
+	gap: 0.75rem;
 	width: 100%;
+}
+
+.task-complete-checkbox {
+	flex-shrink: 0;
+	accent-color: var(--accent-color);
 }
 
 .task-title {
 	word-break: break-word;
 	flex-grow: 1;
 	min-width: 0;
+	transition: color 0.2s ease-out;
 }
+
+/* --- Completed Task State --- */
+.task-card.completed {
+	opacity: 0.7;
+}
+
+.task-card.completed .task-title {
+	text-decoration: line-through;
+	color: var(--text-secondary);
+}
+
+.task-card.completed .task-status-band {
+	background-color: var(--text-secondary);
+}
+
 
 /* Animation for newly added cards */
 @keyframes fadeInUp {

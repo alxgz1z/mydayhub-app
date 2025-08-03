@@ -45,6 +45,7 @@ const createTaskCard = (title) => {
 			<div class="task-status-band"></div>
 			<div class="task-card-main-content">
 				<div class="task-card-content">
+					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
 					<span class="task-title">${title}</span>
 				</div>
 			</div>
@@ -186,34 +187,38 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// Make the event listener async to use 'await' for the modal.
+	// A single, delegated listener for the entire task board.
 	taskBoard.addEventListener('click', async (event) => {
+		const target = event.target;
+		
 		// Handle the '+ New Task' button click.
-		if (event.target.matches('.btn-add-task')) {
-			showAddTaskForm(event.target.parentElement);
+		if (target.matches('.btn-add-task')) {
+			showAddTaskForm(target.parentElement);
 		}
 		// Handle the '...' column actions button click.
-		else if (event.target.matches('.btn-column-actions')) {
-			toggleColumnActionsMenu(event.target);
+		else if (target.matches('.btn-column-actions')) {
+			toggleColumnActionsMenu(target);
 		}
 		// Handle the 'Delete Column' button click within an action menu.
-		else if (event.target.matches('.btn-delete-column')) {
-			const column = event.target.closest('.task-column');
-			
-			// Close the menu before showing the modal for a cleaner UI.
+		else if (target.matches('.btn-delete-column')) {
+			const column = target.closest('.task-column');
 			closeAllActionMenus();
-
 			if (column) {
-				// Await the result of our new custom modal.
 				const confirmed = await showConfirmationModal({
 					title: 'Delete Column',
 					message: 'Are you sure you want to delete this column and all its tasks? This action cannot be undone.',
 					confirmText: 'Delete'
 				});
-
 				if (confirmed) {
 					column.remove();
 				}
+			}
+		}
+		// Handle the task completion checkbox click.
+		else if (target.matches('.task-complete-checkbox')) {
+			const taskCard = target.closest('.task-card');
+			if (taskCard) {
+				taskCard.classList.toggle('completed', target.checked);
 			}
 		}
 	});
