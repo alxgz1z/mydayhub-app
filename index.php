@@ -1,6 +1,6 @@
 <?php
 /**
- * MyDayHub 4.0.0 Beta - Main Application Shell 
+ * MyDayHub 4.0.0 Beta - Main Application Shell
  */
 
 // Load the core application configuration.

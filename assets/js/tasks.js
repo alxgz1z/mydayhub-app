@@ -2,7 +2,7 @@
  * MyDayHub 4.0.0 Beta - Tasks View Module
  *
  * Contains all logic specific to the Tasks Board view, including
- * creating columns, adding tasks, drag-and-drop, etc. 
+ * creating columns, adding tasks, drag-and-drop, etc.
  */
 
 /**
