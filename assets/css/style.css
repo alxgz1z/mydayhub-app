@@ -408,7 +408,7 @@ body.dev-mode-active #app-header {
 
 .task-complete-checkbox {
 	flex-shrink: 0;
-	accent-color: var(--accent-color);
+	accent-color: var(--text-secondary); /* Use subtle gray for the checkmark */
 }
 
 .task-title {
