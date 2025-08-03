@@ -115,10 +115,8 @@ const getDragAfterElement = (container, y) => {
  * @param {HTMLElement} footer - The .card-footer element containing the button.
  */
 const showAddTaskForm = (footer) => {
-	// Save the button's current HTML so we can restore it later.
 	const originalButtonHTML = footer.innerHTML;
 	
-	// Replace the button with the form.
 	footer.innerHTML = `
 		<form class="add-task-form">
 			<input type="text" class="form-control" placeholder="Enter task title..." autofocus>
@@ -128,19 +126,14 @@ const showAddTaskForm = (footer) => {
 	const form = footer.querySelector('.add-task-form');
 	const input = form.querySelector('input');
 
-	// Function to revert the form back to the button.
 	const revertToButton = () => {
 		footer.innerHTML = originalButtonHTML;
 	};
 
-	// When the user clicks away from the input, revert to the button.
 	input.addEventListener('blur', revertToButton);
 
-	// When the user submits the form (hits Enter)...
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
-		// Prevent the blur event from firing and trying to revert twice.
-		input.removeEventListener('blur', revertToButton); 
 		
 		const taskTitle = input.value.trim();
 		if (taskTitle) {
@@ -152,8 +145,10 @@ const showAddTaskForm = (footer) => {
 			setTimeout(() => {
 				newCard.classList.remove('new-card');
 			}, 500);
+			
+			// Clear the input for the next task instead of reverting.
+			input.value = '';
 		}
-		revertToButton();
 	});
 };
 
@@ -164,14 +159,11 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// Use event delegation for click events within the task board.
 	taskBoard.addEventListener('click', (event) => {
-		// Handle the '+ New Task' button click.
 		if (event.target.matches('.btn-add-task')) {
 			showAddTaskForm(event.target.parentElement);
 		}
 	});
 
-	// Initialize the drag and drop functionality.
 	initDragAndDrop();
 };
