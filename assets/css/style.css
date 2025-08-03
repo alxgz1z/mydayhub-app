@@ -406,10 +406,44 @@ body.dev-mode-active #app-header {
 	width: 100%;
 }
 
+/* --- Custom Checkbox Styling --- */
 .task-complete-checkbox {
+	-webkit-appearance: none;
+	appearance: none;
 	flex-shrink: 0;
-	accent-color: var(--text-secondary); /* Use subtle gray for the checkmark */
+	height: 16px;
+	width: 16px;
+	background-color: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: 3px;
+	cursor: pointer;
+	position: relative;
+	transition: background-color 0.2s ease-out;
 }
+
+.task-complete-checkbox:hover {
+	border-color: var(--text-secondary);
+}
+
+.task-complete-checkbox::after {
+	content: '';
+	display: block;
+	position: absolute;
+	width: 5px;
+	height: 10px;
+	border: solid var(--text-secondary);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+	left: 4px;
+	top: 0px;
+	opacity: 0;
+	transition: opacity 0.2s ease-out;
+}
+
+.task-complete-checkbox:checked::after {
+	opacity: 1;
+}
+
 
 .task-title {
 	word-break: break-word;
