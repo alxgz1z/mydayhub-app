@@ -20,10 +20,7 @@
 				 <span class="column-title">${title}</span>
 				 <span class="task-count">0</span>
 				 <div class="column-controls">
-					 <button class="btn-icon move-left" title="Move Left">&larr;</button>
-					 <button class="btn-icon move-right" title="Move Right">&rarr;</button>
-					 <button class="private-column-toggle" title="Mark as Private">V</button>
-					 <button class="delete-column-btn" title="Delete Column"></button>
+					 <button class="btn-icon btn-column-actions" title="Column Actions">&#8230;</button>
 				 </div>
 			 </div>
 			 <div class="card-body">
@@ -146,10 +143,44 @@ const showAddTaskForm = (footer) => {
 				newCard.classList.remove('new-card');
 			}, 500);
 			
-			// Clear the input for the next task instead of reverting.
 			input.value = '';
 		}
 	});
+};
+
+/**
+ * Removes all open action menus from the DOM.
+ */
+const closeAllActionMenus = () => {
+	document.querySelectorAll('.column-actions-menu').forEach(menu => menu.remove());
+};
+
+/**
+ * Toggles the visibility of the actions menu for a specific column.
+ * @param {HTMLElement} buttonEl - The ellipsis button that was clicked.
+ */
+const toggleColumnActionsMenu = (buttonEl) => {
+	const controlsContainer = buttonEl.parentElement;
+	const existingMenu = controlsContainer.querySelector('.column-actions-menu');
+
+	// This ensures only one menu is ever open. We close all menus first.
+	closeAllActionMenus();
+
+	// If the menu we just closed was for the button we just clicked, then we're done.
+	if (existingMenu) {
+		return; 
+	}
+	
+	// Otherwise, create and show the new menu.
+	const menu = document.createElement('div');
+	menu.className = 'column-actions-menu';
+	menu.innerHTML = `
+		<ul>
+			<li><button class="btn-delete-column">Delete Column</button></li>
+		</ul>
+	`;
+	// Add the new menu to the controls container.
+	controlsContainer.appendChild(menu);
 };
 
 /**
@@ -159,9 +190,31 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
+	// A single, delegated click listener for the entire task board.
 	taskBoard.addEventListener('click', (event) => {
+		// Handle the '+ New Task' button click.
 		if (event.target.matches('.btn-add-task')) {
 			showAddTaskForm(event.target.parentElement);
+		}
+		// Handle the '...' column actions button click.
+		else if (event.target.matches('.btn-column-actions')) {
+			toggleColumnActionsMenu(event.target);
+		}
+		// Handle the 'Delete Column' button click within an action menu.
+		else if (event.target.matches('.btn-delete-column')) {
+			const column = event.target.closest('.task-column');
+			if (column && window.confirm('Are you sure you want to delete this column and all its tasks?')) {
+				column.remove();
+			}
+			// Always close menus after an action.
+			closeAllActionMenus();
+		}
+	});
+
+	// A global listener to close the menu if the user clicks elsewhere on the page.
+	document.addEventListener('click', (event) => {
+		if (!event.target.closest('.column-controls')) {
+			closeAllActionMenus();
 		}
 	});
 

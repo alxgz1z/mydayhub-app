@@ -188,6 +188,9 @@ body.dev-mode-active #app-header {
 }
 
 .task-column > .card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
 	background-color: var(--column-header-bg);
 	border-bottom: 1px solid var(--card-border);
 	color: var(--text-primary);
@@ -208,6 +211,26 @@ body.dev-mode-active #app-header {
 	border-radius: 10px;
 	margin-left: 0.75rem;
 }
+
+/* --- Column Header Controls --- */
+.btn-column-actions {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 1.2rem;
+	line-height: 1;
+	font-weight: bold;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-column-actions:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
 
 .card-body {
 	flex-grow: 1;
