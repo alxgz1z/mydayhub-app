@@ -57,6 +57,77 @@ const createTaskCard = (title) => {
 	`;
 };
 
+/**
+ * Initializes drag-and-drop functionality for task cards.
+ */
+const initDragAndDrop = () => {
+	const taskBoard = document.getElementById('task-board-container');
+	if (!taskBoard) return;
+
+	// Add event listeners to the main board container using event delegation.
+	taskBoard.addEventListener('dragstart', (event) => {
+		// Target only the task cards.
+		if (event.target.classList.contains('task-card')) {
+			// Add a 'dragging' class to the card for visual feedback.
+			event.target.classList.add('dragging');
+		}
+	});
+
+	taskBoard.addEventListener('dragend', (event) => {
+		// Target only the task cards.
+		if (event.target.classList.contains('task-card')) {
+			// Clean up by removing the 'dragging' class when the drag ends.
+			event.target.classList.remove('dragging');
+		}
+	});
+
+	taskBoard.addEventListener('dragover', (event) => {
+		// Find the drop zone (the column's body) we are dragging over.
+		const dropZone = event.target.closest('.card-body');
+		if (dropZone) {
+			// Prevent the browser's default drag behavior to allow dropping.
+			event.preventDefault();
+
+			const draggingCard = document.querySelector('.dragging');
+			if (!draggingCard) return;
+
+			// Determine where to place the card relative to other cards.
+			const afterElement = getDragAfterElement(dropZone, event.clientY);
+
+			if (afterElement == null) {
+				// If there's no element to come after, append to the end.
+				dropZone.appendChild(draggingCard);
+			} else {
+				// Otherwise, insert it before the element it should come after.
+				dropZone.insertBefore(draggingCard, afterElement);
+			}
+		}
+	});
+};
+
+/**
+ * Helper function to determine which element the dragged card should be placed before.
+ * @param {HTMLElement} container - The column body (.card-body) being dragged over.
+ * @param {number} y - The vertical mouse coordinate.
+ * @returns {HTMLElement|null} - The element to insert before, or null to append to the end.
+ */
+const getDragAfterElement = (container, y) => {
+	// Get all draggable cards in the container, excluding the one being dragged.
+	const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+	return draggableElements.reduce((closest, child) => {
+		const box = child.getBoundingClientRect();
+		// Calculate the vertical distance from the mouse to the center of the card.
+		const offset = y - box.top - box.height / 2;
+		// If the offset is negative (we are above the center) and it's the closest one we've found so far...
+		if (offset < 0 && offset > closest.offset) {
+			return { offset: offset, element: child };
+		} else {
+			return closest;
+		}
+	}, { offset: Number.NEGATIVE_INFINITY }).element;
+};
+
 
 /**
  * Initializes all event listeners for the Tasks view.
@@ -89,4 +160,7 @@ const initTasksView = () => {
 			}
 		}
 	});
+
+	// Initialize the drag and drop functionality.
+	initDragAndDrop();
 };
