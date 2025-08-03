@@ -189,8 +189,12 @@ const initQuickActions = (longPressTimer, longPressTriggered) => {
 				// Create the menu element
 				const menu = document.createElement('div');
 				menu.className = 'quick-actions-menu';
+				// Store the target task's ID on the menu itself for later reference.
+				menu.dataset.taskId = taskCard.id;
+				
+				// Updated button with new icon and data-action
 				menu.innerHTML = `
-					<button class="quick-action-btn" data-action="toggle-priority" title="Toggle Priority">⭐</button>
+					<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">☯️</button>
 					<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
 				`;
 				
@@ -228,23 +232,25 @@ const initQuickActions = (longPressTimer, longPressTriggered) => {
 };
 
 /**
- * Sorts tasks within a column based on state: Priority > Normal > Completed.
+ * Sorts tasks within a column based on state: High Priority > Normal > Completed.
  */
 const sortTasksInColumn = (columnBody) => {
 	if (!columnBody) return;
-	const priorityTasks = [], normalTasks = [], completedTasks = [];
+	// Updated variable name for clarity
+	const highPriorityTasks = [], normalTasks = [], completedTasks = [];
 
 	columnBody.querySelectorAll('.task-card').forEach(task => {
 		if (task.classList.contains('completed')) {
 			completedTasks.push(task);
-		} else if (task.classList.contains('priority')) {
-			priorityTasks.push(task);
+		} else if (task.classList.contains('high-priority')) { // Updated class name check
+			highPriorityTasks.push(task);
 		} else {
 			normalTasks.push(task);
 		}
 	});
 
-	priorityTasks.forEach(task => columnBody.appendChild(task));
+	// Updated array name in the final sort
+	highPriorityTasks.forEach(task => columnBody.appendChild(task));
 	normalTasks.forEach(task => columnBody.appendChild(task));
 	completedTasks.forEach(task => columnBody.appendChild(task));
 };
@@ -339,7 +345,20 @@ const initTasksView = () => {
 		}
 
 		const target = event.target;
-		if (target.matches('.btn-add-task')) {
+		const quickAction = target.closest('[data-action="toggle-high-priority"]');
+
+		if (quickAction) {
+			const menu = quickAction.closest('.quick-actions-menu');
+			const taskId = menu.dataset.taskId;
+			const taskCard = document.getElementById(taskId);
+			
+			if (taskCard) {
+				taskCard.classList.toggle('high-priority');
+				sortTasksInColumn(taskCard.closest('.card-body'));
+			}
+			closeAllQuickActionsMenus();
+		}
+		else if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
 		} else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);

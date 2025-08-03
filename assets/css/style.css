@@ -459,7 +459,8 @@ body.dev-mode-active #app-header {
 }
 
 /* --- Task Card States --- */
-.task-card.priority .task-status-band {
+/* Updated class name from .priority to .high-priority */
+.task-card.high-priority .task-status-band {
 	background-color: var(--priority-color);
 }
 
