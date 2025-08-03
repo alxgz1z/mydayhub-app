@@ -56,11 +56,14 @@ const createTaskCard = (title) => {
 /**
  * Initializes drag-and-drop functionality for task cards.
  */
-const initDragAndDrop = () => {
+const initDragAndDrop = (longPressTimer) => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
 	taskBoard.addEventListener('dragstart', (event) => {
+		// When a drag starts, we must cancel any pending long-press timer.
+		clearTimeout(longPressTimer.id);
+
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.add('dragging');
 		}
@@ -87,6 +90,37 @@ const initDragAndDrop = () => {
 		}
 	});
 };
+
+/**
+ * Initializes long-press functionality to toggle task priority.
+ */
+const initLongPressPriority = (longPressTimer, longPressTriggered) => {
+	const taskBoard = document.getElementById('task-board-container');
+	if (!taskBoard) return;
+
+	const startPress = (event) => {
+		const taskCard = event.target.closest('.task-card');
+		// Only start the timer if the press is on a card and not on the checkbox itself.
+		if (taskCard && !event.target.matches('.task-complete-checkbox')) {
+			longPressTimer.id = setTimeout(() => {
+				taskCard.classList.toggle('priority');
+				longPressTriggered.value = true; // Flag that a long press occurred.
+			}, 500); // 500ms for a long press
+		}
+	};
+
+	const cancelPress = () => {
+		clearTimeout(longPressTimer.id);
+	};
+
+	taskBoard.addEventListener('mousedown', startPress);
+	taskBoard.addEventListener('touchstart', startPress);
+
+	taskBoard.addEventListener('mouseup', cancelPress);
+	taskBoard.addEventListener('mouseleave', cancelPress, true); // Use capture phase for mouseleave
+	taskBoard.addEventListener('touchend', cancelPress);
+};
+
 
 /**
  * Helper function to determine which element the dragged card should be placed before.
@@ -186,20 +220,27 @@ const toggleColumnActionsMenu = (buttonEl) => {
 const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
+	
+	// Variables to manage the long-press state.
+	let longPressTimer = { id: null };
+	let longPressTriggered = { value: false };
 
 	// A single, delegated listener for the entire task board.
 	taskBoard.addEventListener('click', async (event) => {
+		// If a long press just happened, prevent the click and reset the flag.
+		if (longPressTriggered.value) {
+			longPressTriggered.value = false;
+			return;
+		}
+
 		const target = event.target;
 		
-		// Handle the '+ New Task' button click.
 		if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
 		}
-		// Handle the '...' column actions button click.
 		else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
 		}
-		// Handle the 'Delete Column' button click within an action menu.
 		else if (target.matches('.btn-delete-column')) {
 			const column = target.closest('.task-column');
 			closeAllActionMenus();
@@ -214,7 +255,6 @@ const initTasksView = () => {
 				}
 			}
 		}
-		// Handle the task completion checkbox click.
 		else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
@@ -230,5 +270,6 @@ const initTasksView = () => {
 		}
 	});
 
-	initDragAndDrop();
+	initDragAndDrop(longPressTimer);
+	initLongPressPriority(longPressTimer, longPressTriggered);
 };
