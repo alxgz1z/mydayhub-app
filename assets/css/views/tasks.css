@@ -1,0 +1,324 @@
+/* ==========================================================================
+   MyDayHub 4.0.0 Beta - Tasks View Styles
+   ========================================================================== */
+
+/* ==========================================================================
+   1. TASK BOARD & COLUMNS
+   ========================================================================== */
+#add-column-container {
+	display: none;
+}
+
+/* ONLY show the '+ New Column' button when the tasks view is active. */
+.view-tasks-active #add-column-container {
+	display: flex;
+}
+
+#btn-add-new-column {
+	background: transparent;
+	border: 1px solid transparent;
+	color: var(--text-primary);
+	padding: 0.5rem 1rem;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 0.95rem;
+	transition: background-color 0.2s ease-out;
+}
+
+#btn-add-new-column:hover {
+	background-color: var(--btn-hover-bg);
+}
+
+#add-column-form {
+	display: flex;
+	gap: 0.5rem;
+}
+
+/* The task board is a specific type of view that scrolls horizontally. */
+#task-board-container {
+	flex-direction: row;
+	gap: 1.5rem;
+	overflow-x: auto;
+	padding-top: 1rem;
+}
+
+#task-columns-wrapper {
+	display: flex;
+	gap: 1.5rem;
+	flex-grow: 1;
+	min-height: 0;
+	height: 100%;
+}
+
+.task-column {
+	width: 320px;
+	flex-shrink: 0;
+	background: var(--column-bg);
+	border: 1px solid var(--card-border);
+	display: flex;
+	flex-direction: column;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.task-column > .card-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	background-color: var(--column-header-bg);
+	border-bottom: 1px solid var(--card-border);
+	color: var(--text-primary);
+	padding: 0.5rem 0.75rem;
+}
+
+.column-title {
+	margin: 0 0.5rem;
+	font-size: 1.1rem;
+	font-weight: 500;
+}
+
+.task-count {
+	background-color: var(--input-bg);
+	color: var(--text-secondary);
+	font-size: 0.8em;
+	padding: 2px 8px;
+	border-radius: 10px;
+	margin-left: 0.75rem;
+}
+
+.column-controls {
+	position: relative;
+}
+
+.btn-column-actions {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 1.2rem;
+	line-height: 1;
+	font-weight: bold;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-column-actions:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+.column-actions-menu {
+	position: absolute;
+	top: calc(100% + 5px);
+	right: 0;
+	background-color: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+	z-index: 10;
+	min-width: 160px;
+	padding: 5px;
+}
+
+.column-actions-menu ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.column-actions-menu button {
+	display: block;
+	width: 100%;
+	background: none;
+	border: none;
+	color: var(--text-primary);
+	text-align: left;
+	padding: 8px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.95rem;
+}
+
+.column-actions-menu button:hover {
+	background-color: var(--accent-color);
+	color: white;
+}
+
+.card-body {
+	flex-grow: 1;
+	overflow-y: auto;
+	padding: 0.75rem;
+}
+
+.task-column > .card-footer {
+	background-color: var(--column-header-bg);
+	border-top: 1px solid var(--card-border);
+	padding: 0.5rem;
+}
+
+.btn-add-task {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	padding: 6px 8px;
+	text-align: left;
+	width: 100%;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.95rem;
+	font-weight: normal;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-add-task:hover {
+	background-color: var(--card-bg);
+	color: var(--text-primary);
+}
+
+.card-footer .add-task-form input {
+	width: 100%;
+	box-sizing: border-box;
+}
+
+/* ==========================================================================
+   2. TASK CARD STYLES
+   ========================================================================== */
+.task-card {
+	background-color: var(--card-bg);
+	color: var(--text-primary);
+	margin-bottom: 0.75rem;
+	position: relative;
+	border-radius: 8px;
+	display: flex;
+	border: 1px solid var(--card-border);
+	cursor: grab;
+	transition: opacity 0.2s ease-out;
+}
+
+.task-card.dragging {
+	opacity: 0.5;
+	cursor: grabbing;
+}
+
+.task-status-band {
+	width: 8px;
+	flex-shrink: 0;
+	background-color: var(--accent-color);
+	border-top-left-radius: 8px;
+	border-bottom-left-radius: 8px;
+	transition: background-color 0.2s ease-out;
+}
+
+.task-card-main-content {
+	padding: 0.8rem;
+	flex-grow: 1;
+	min-width: 0;
+}
+
+.task-card-content {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+}
+
+.task-complete-checkbox {
+	-webkit-appearance: none;
+	appearance: none;
+	flex-shrink: 0;
+	height: 16px;
+	width: 16px;
+	background-color: var(--input-bg);
+	border: 1px solid var(--input-border);
+	border-radius: 3px;
+	cursor: pointer;
+	position: relative;
+	transition: background-color 0.2s ease-out;
+}
+
+.task-complete-checkbox:hover {
+	border-color: var(--text-secondary);
+}
+
+.task-complete-checkbox::after {
+	content: '';
+	display: block;
+	position: absolute;
+	width: 5px;
+	height: 10px;
+	border: solid var(--text-secondary);
+	border-width: 0 2px 2px 0;
+	transform: rotate(45deg);
+	left: 4px;
+	top: 0px;
+	opacity: 0;
+	transition: opacity 0.2s ease-out;
+}
+
+.task-complete-checkbox:checked::after {
+	opacity: 1;
+}
+
+.task-title {
+	word-break: break-word;
+	flex-grow: 1;
+	min-width: 0;
+	transition: color 0.2s ease-out;
+	-webkit-user-select: none;
+	user-select: none;
+}
+
+.btn-task-actions {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 8px;
+	margin-left: auto; /* Push to the right */
+	border-radius: 4px;
+	font-size: 1.2rem;
+	line-height: 1;
+	font-weight: bold;
+	flex-shrink: 0;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-task-actions:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+.task-card.high-priority .task-status-band {
+	background-color: var(--priority-color);
+}
+
+.task-card.completed {
+	opacity: 0.7;
+}
+
+.task-card.completed .task-title {
+	text-decoration: line-through;
+	color: var(--text-secondary);
+}
+
+.task-card.completed .task-status-band {
+	background-color: var(--text-secondary);
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.task-card.new-card {
+	animation: fadeInUp 0.5s ease-out;
+}

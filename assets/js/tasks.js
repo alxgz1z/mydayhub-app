@@ -13,6 +13,7 @@
 
 /**
  * Creates the HTML for a new task card WITHOUT the animation class.
+ * This is used for populating the board in DEVMODE.
  * @param {string} title - The title for the new task.
  * @returns {string} - The HTML string for the new task card.
  */
@@ -25,7 +26,7 @@ const createTaskCardDev = (title) => {
 				<div class="task-card-content">
 					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
 					<span class="task-title">${title}</span>
-					<button class="btn-icon btn-task-actions" title="Task Actions">&#8230;</button>
+					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
 			</div>
 		</div>
@@ -68,6 +69,7 @@ const populateDevModeTasks = () => {
 
 /**
  * Creates the HTML for a new column and appends it to the board.
+ * @param {string} title - The title for the new column.
  */
 const addColumnToBoard = (title) => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
@@ -106,7 +108,7 @@ const createTaskCard = (title) => {
 				<div class="task-card-content">
 					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
 					<span class="task-title">${title}</span>
-					<button class="btn-icon btn-task-actions" title="Task Actions">&#8230;</button>
+					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
 			</div>
 		</div>
@@ -121,6 +123,10 @@ const initDragAndDrop = () => {
 	if (!taskBoard) return;
 
 	taskBoard.addEventListener('dragstart', (event) => {
+		// Close any open menus when a drag operation begins.
+		closeAllQuickActionsMenus();
+		closeAllColumnActionMenus();
+		
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.add('dragging');
 		}
@@ -176,10 +182,12 @@ const showQuickActionsMenu = (buttonEl) => {
 	
 	document.body.appendChild(menu);
 	
+	// Position the menu relative to the button that was clicked.
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
 	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
 
+	// Add class to trigger fade-in animation.
 	setTimeout(() => menu.classList.add('visible'), 10);
 };
 
@@ -283,16 +291,17 @@ const initTasksView = () => {
 		populateDevModeTasks();
 	}
 
-	// A single event listener on the document to handle all clicks.
+	// A single event listener on the document to handle all clicks in a delegated manner.
 	document.addEventListener('click', async (event) => {
 		const target = event.target;
-		const quickActionPriority = target.closest('[data-action="toggle-high-priority"]');
 
 		// Close menus if the user clicks "outside" of an interactive element.
 		if (!target.closest('.column-controls, .quick-actions-menu, .btn-task-actions')) {
 			closeAllColumnActionMenus();
 			closeAllQuickActionsMenus();
 		}
+		
+		const quickActionPriority = target.closest('[data-action="toggle-high-priority"]');
 
 		// Handle clicks on specific interactive elements.
 		if (target.matches('.btn-task-actions')) {
@@ -300,14 +309,15 @@ const initTasksView = () => {
 		}
 		else if (quickActionPriority) {
 			const menu = quickActionPriority.closest('.quick-actions-menu');
-			const taskId = menu.dataset.taskId;
-			const taskCard = document.getElementById(taskId);
-			
-			if (taskCard) {
-				taskCard.classList.toggle('high-priority');
-				sortTasksInColumn(taskCard.closest('.card-body'));
+			if (menu) {
+				const taskId = menu.dataset.taskId;
+				const taskCard = document.getElementById(taskId);
+				if (taskCard) {
+					taskCard.classList.toggle('high-priority');
+					sortTasksInColumn(taskCard.closest('.card-body'));
+				}
+				closeAllQuickActionsMenus();
 			}
-			closeAllQuickActionsMenus();
 		}
 		else if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
