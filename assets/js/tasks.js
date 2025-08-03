@@ -128,6 +128,7 @@ const initDragAndDrop = (longPressTimer) => {
 	taskBoard.addEventListener('dragstart', (event) => {
 		// When a drag starts, we must cancel any pending long-press timer.
 		clearTimeout(longPressTimer.id);
+		closeAllQuickActionsMenus();
 
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.add('dragging');
@@ -161,40 +162,58 @@ const initDragAndDrop = (longPressTimer) => {
 };
 
 /**
- * Initializes long-press functionality to toggle task priority.
+ * Removes all open Quick Actions menus from the DOM.
  */
-const initLongPressPriority = (longPressTimer, longPressTriggered) => {
+const closeAllQuickActionsMenus = () => {
+	document.querySelectorAll('.quick-actions-menu').forEach(menu => menu.remove());
+};
+
+/**
+ * Initializes long-press functionality to open a contextual menu for tasks.
+ */
+const initQuickActions = (longPressTimer, longPressTriggered) => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
 	const startPress = (event) => {
+		// Close any other open menus first.
+		closeAllColumnActionMenus();
+		
 		const taskCard = event.target.closest('.task-card');
-		// Only start the timer if the press is on a card and not on the checkbox itself.
+		// Only start the timer if the press is on a card and not on the checkbox.
 		if (taskCard && !event.target.matches('.task-complete-checkbox')) {
 			longPressTimer.id = setTimeout(() => {
-				taskCard.classList.toggle('priority');
 				longPressTriggered.value = true; // Flag that a long press occurred.
+				closeAllQuickActionsMenus(); // Close any existing menus.
 
-				// After changing priority, sort the column.
-				const columnBody = taskCard.closest('.card-body');
-				sortTasksInColumn(columnBody);
+				// Create the menu element
+				const menu = document.createElement('div');
+				menu.className = 'quick-actions-menu';
+				menu.innerHTML = `
+					<button class="quick-action-btn" data-action="toggle-priority" title="Toggle Priority">⭐</button>
+					<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
+				`;
+				
+				// Position and show the menu
+				document.body.appendChild(menu);
+				const clientX = event.clientX || event.touches[0].clientX;
+				const clientY = event.clientY || event.touches[0].clientY;
+				menu.style.top = `${clientY - 25}px`; // Center vertically on cursor
+				menu.style.left = `${clientX - 45}px`; // Center horizontally on cursor
+
+				// Add class to trigger fade-in animation
+				setTimeout(() => menu.classList.add('visible'), 10);
+
 			}, 500); // 500ms for a long press
 		}
 	};
 
 	const cancelPress = () => {
-		// Clear any pending timer.
 		clearTimeout(longPressTimer.id);
-
-		// *** BUG FIX ***
-		// If a long press was successful, the subsequent `click` event is supposed
-		// to be caught and used to reset the `longPressTriggered` flag. However, if the
-		// DOM manipulation from sorting interferes with that click event, the app's
-		// state breaks. This fail-safe timeout ensures the flag is ALWAYS reset.
 		if (longPressTriggered.value) {
 			setTimeout(() => {
 				longPressTriggered.value = false;
-			}, 50); // Reset the flag after a short delay.
+			}, 50); 
 		}
 	};
 
@@ -202,22 +221,18 @@ const initLongPressPriority = (longPressTimer, longPressTriggered) => {
 	taskBoard.addEventListener('touchstart', startPress);
 
 	taskBoard.addEventListener('mouseup', cancelPress);
-	taskBoard.addEventListener('mouseleave', cancelPress, true); // Use capture phase for mouseleave
+	taskBoard.addEventListener('mouseleave', cancelPress, true);
 	taskBoard.addEventListener('touchend', cancelPress);
+	// Also close on scroll, which indicates user has moved on.
+	taskBoard.addEventListener('scroll', closeAllQuickActionsMenus);
 };
 
 /**
  * Sorts tasks within a column based on state: Priority > Normal > Completed.
- * This uses a stable sorting method by grouping and re-appending.
- * @param {HTMLElement} columnBody - The .card-body element of the column to sort.
  */
 const sortTasksInColumn = (columnBody) => {
 	if (!columnBody) return;
-
-	// Group tasks by their status.
-	const priorityTasks = [];
-	const normalTasks = [];
-	const completedTasks = [];
+	const priorityTasks = [], normalTasks = [], completedTasks = [];
 
 	columnBody.querySelectorAll('.task-card').forEach(task => {
 		if (task.classList.contains('completed')) {
@@ -229,7 +244,6 @@ const sortTasksInColumn = (columnBody) => {
 		}
 	});
 
-	// Re-append tasks to the DOM in the correct order, which automatically moves them.
 	priorityTasks.forEach(task => columnBody.appendChild(task));
 	normalTasks.forEach(task => columnBody.appendChild(task));
 	completedTasks.forEach(task => columnBody.appendChild(task));
@@ -237,10 +251,7 @@ const sortTasksInColumn = (columnBody) => {
 
 
 /**
- * Helper function to determine which element the dragged card should be placed before.
- * @param {HTMLElement} container - The column body (.card-body) being dragged over.
- * @param {number} y - The vertical mouse coordinate.
- * @returns {HTMLElement|null} - The element to insert before, or null to append to the end.
+ * Helper function to determine drop position for drag-and-drop.
  */
 const getDragAfterElement = (container, y) => {
 	const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
@@ -249,94 +260,59 @@ const getDragAfterElement = (container, y) => {
 		const box = child.getBoundingClientRect();
 		const offset = y - box.top - box.height / 2;
 		if (offset < 0 && offset > closest.offset) {
-			return {
-				offset: offset,
-				element: child
-			};
+			return { offset: offset, element: child };
 		} else {
 			return closest;
 		}
-	}, {
-		offset: Number.NEGATIVE_INFINITY
-	}).element;
+	}, { offset: Number.NEGATIVE_INFINITY }).element;
 };
 
 /**
- * Replaces the '+ New Task' button with a temporary form for adding a task.
- * @param {HTMLElement} footer - The .card-footer element containing the button.
+ * Replaces the '+ New Task' button with a temporary form.
  */
 const showAddTaskForm = (footer) => {
 	const originalButtonHTML = footer.innerHTML;
-
-	footer.innerHTML = `
-		<form class="add-task-form">
-			<input type="text" class="form-control" placeholder="Enter task title..." autofocus>
-		</form>
-	`;
-
+	footer.innerHTML = `<form class="add-task-form"><input type="text" class="form-control" placeholder="Enter task title..." autofocus></form>`;
 	const form = footer.querySelector('.add-task-form');
 	const input = form.querySelector('input');
 
-	const revertToButton = () => {
-		footer.innerHTML = originalButtonHTML;
-	};
-
-	input.addEventListener('blur', revertToButton);
+	input.addEventListener('blur', () => { footer.innerHTML = originalButtonHTML; });
 
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
-
 		const taskTitle = input.value.trim();
 		if (taskTitle) {
 			const cardBody = footer.closest('.task-column').querySelector('.card-body');
-			const newTaskHTML = createTaskCard(taskTitle);
-			cardBody.insertAdjacentHTML('beforeend', newTaskHTML);
-
-			// Sort the column to ensure the new "normal" task is placed correctly
-			// above any completed tasks.
+			cardBody.insertAdjacentHTML('beforeend', createTaskCard(taskTitle));
 			sortTasksInColumn(cardBody);
-
-			// Animate the new card after it's been sorted into place.
 			const newCard = Array.from(cardBody.querySelectorAll('.new-card')).pop();
 			if (newCard) {
-				setTimeout(() => {
-					newCard.classList.remove('new-card');
-				}, 500); // Animation duration
+				setTimeout(() => newCard.classList.remove('new-card'), 500);
 			}
-
 			input.value = '';
 		}
 	});
 };
 
 /**
- * Removes all open action menus from the DOM.
+ * Removes all open column action menus from the DOM.
  */
-const closeAllActionMenus = () => {
+const closeAllColumnActionMenus = () => {
 	document.querySelectorAll('.column-actions-menu').forEach(menu => menu.remove());
 };
 
 /**
  * Toggles the visibility of the actions menu for a specific column.
- * @param {HTMLElement} buttonEl - The ellipsis button that was clicked.
  */
 const toggleColumnActionsMenu = (buttonEl) => {
 	const controlsContainer = buttonEl.parentElement;
 	const existingMenu = controlsContainer.querySelector('.column-actions-menu');
-
-	closeAllActionMenus();
-
-	if (existingMenu) {
-		return;
-	}
+	closeAllColumnActionMenus();
+	if (existingMenu) return;
 
 	const menu = document.createElement('div');
 	menu.className = 'column-actions-menu';
-	menu.innerHTML = `
-		<ul>
-			<li><button class="btn-delete-column">Delete Column</button></li>
-		</ul>
-	`;
+	menu.innerHTML = `<ul><li><button class="btn-delete-column">Delete Column</button></li></ul>`;
 	controlsContainer.appendChild(menu);
 };
 
@@ -347,23 +323,14 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// In DEVMODE, populate the board with sample data for easy testing.
 	if (document.body.classList.contains('dev-mode-active')) {
 		populateDevModeTasks();
 	}
 
-	// Variables to manage the long-press state.
-	let longPressTimer = {
-		id: null
-	};
-	let longPressTriggered = {
-		value: false
-	};
+	let longPressTimer = { id: null };
+	let longPressTriggered = { value: false };
 
-	// A single, delegated listener for the entire task board.
 	taskBoard.addEventListener('click', async (event) => {
-		// If a long press was successfully triggered, we must prevent this
-		// click event from performing any action and then reset the flag.
 		if (longPressTriggered.value) {
 			event.preventDefault();
 			event.stopPropagation();
@@ -372,43 +339,42 @@ const initTasksView = () => {
 		}
 
 		const target = event.target;
-
 		if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
 		} else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
 		} else if (target.matches('.btn-delete-column')) {
 			const column = target.closest('.task-column');
-			closeAllActionMenus();
+			closeAllColumnActionMenus();
 			if (column) {
 				const confirmed = await showConfirmationModal({
 					title: 'Delete Column',
 					message: 'Are you sure you want to delete this column and all its tasks? This action cannot be undone.',
 					confirmText: 'Delete'
 				});
-				if (confirmed) {
-					column.remove();
-				}
+				if (confirmed) column.remove();
 			}
 		} else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				taskCard.classList.toggle('completed', target.checked);
-
-				// After changing completion status, sort the column.
-				const columnBody = taskCard.closest('.card-body');
-				sortTasksInColumn(columnBody);
+				sortTasksInColumn(taskCard.closest('.card-body'));
 			}
 		}
 	});
 
-	// A global listener to close the menu if the user clicks elsewhere on the page.
+	// Global listener to close menus when clicking elsewhere.
 	document.addEventListener('click', (event) => {
+		// Close column menu if click is outside of its parent controls.
 		if (!event.target.closest('.column-controls')) {
-			closeAllActionMenus();
+			closeAllColumnActionMenus();
+		}
+		// Close quick actions menu if click is outside of a menu or a task card.
+		if (!event.target.closest('.quick-actions-menu, .task-card')) {
+			closeAllQuickActionsMenus();
 		}
 	});
 
 	initDragAndDrop(longPressTimer);
-	initLongPressPriority(longPressTimer, longPressTriggered);
+	initQuickActions(longPressTimer, longPressTriggered);
 };
