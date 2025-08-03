@@ -255,6 +255,13 @@ body.dev-mode-active #app-header {
 	border-radius: 8px;
 	display: flex;
 	border: 1px solid var(--card-border);
+	cursor: grab;
+}
+
+/* Style for the card currently being dragged */
+.task-card.dragging {
+	opacity: 0.5;
+	cursor: grabbing;
 }
 
 .task-status-band {
