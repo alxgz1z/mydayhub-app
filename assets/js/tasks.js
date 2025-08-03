@@ -29,9 +29,7 @@ const addColumnToBoard = (title) => {
 			<div class="card-body">
 				</div>
 			<div class="card-footer">
-				<form class="add-task-form">
-					<input type="text" class="form-control" placeholder="Add new task...">
-				</form>
+				<button class="btn btn-add-task">+ New Task</button>
 			</div>
 		</div>
 	`;
@@ -64,41 +62,28 @@ const initDragAndDrop = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// Add event listeners to the main board container using event delegation.
 	taskBoard.addEventListener('dragstart', (event) => {
-		// Target only the task cards.
 		if (event.target.classList.contains('task-card')) {
-			// Add a 'dragging' class to the card for visual feedback.
 			event.target.classList.add('dragging');
 		}
 	});
 
 	taskBoard.addEventListener('dragend', (event) => {
-		// Target only the task cards.
 		if (event.target.classList.contains('task-card')) {
-			// Clean up by removing the 'dragging' class when the drag ends.
 			event.target.classList.remove('dragging');
 		}
 	});
 
 	taskBoard.addEventListener('dragover', (event) => {
-		// Find the drop zone (the column's body) we are dragging over.
 		const dropZone = event.target.closest('.card-body');
 		if (dropZone) {
-			// Prevent the browser's default drag behavior to allow dropping.
 			event.preventDefault();
-
 			const draggingCard = document.querySelector('.dragging');
 			if (!draggingCard) return;
-
-			// Determine where to place the card relative to other cards.
 			const afterElement = getDragAfterElement(dropZone, event.clientY);
-
 			if (afterElement == null) {
-				// If there's no element to come after, append to the end.
 				dropZone.appendChild(draggingCard);
 			} else {
-				// Otherwise, insert it before the element it should come after.
 				dropZone.insertBefore(draggingCard, afterElement);
 			}
 		}
@@ -112,14 +97,11 @@ const initDragAndDrop = () => {
  * @returns {HTMLElement|null} - The element to insert before, or null to append to the end.
  */
 const getDragAfterElement = (container, y) => {
-	// Get all draggable cards in the container, excluding the one being dragged.
 	const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
 
 	return draggableElements.reduce((closest, child) => {
 		const box = child.getBoundingClientRect();
-		// Calculate the vertical distance from the mouse to the center of the card.
 		const offset = y - box.top - box.height / 2;
-		// If the offset is negative (we are above the center) and it's the closest one we've found so far...
 		if (offset < 0 && offset > closest.offset) {
 			return { offset: offset, element: child };
 		} else {
@@ -128,6 +110,52 @@ const getDragAfterElement = (container, y) => {
 	}, { offset: Number.NEGATIVE_INFINITY }).element;
 };
 
+/**
+ * Replaces the '+ New Task' button with a temporary form for adding a task.
+ * @param {HTMLElement} footer - The .card-footer element containing the button.
+ */
+const showAddTaskForm = (footer) => {
+	// Save the button's current HTML so we can restore it later.
+	const originalButtonHTML = footer.innerHTML;
+	
+	// Replace the button with the form.
+	footer.innerHTML = `
+		<form class="add-task-form">
+			<input type="text" class="form-control" placeholder="Enter task title..." autofocus>
+		</form>
+	`;
+
+	const form = footer.querySelector('.add-task-form');
+	const input = form.querySelector('input');
+
+	// Function to revert the form back to the button.
+	const revertToButton = () => {
+		footer.innerHTML = originalButtonHTML;
+	};
+
+	// When the user clicks away from the input, revert to the button.
+	input.addEventListener('blur', revertToButton);
+
+	// When the user submits the form (hits Enter)...
+	form.addEventListener('submit', (e) => {
+		e.preventDefault();
+		// Prevent the blur event from firing and trying to revert twice.
+		input.removeEventListener('blur', revertToButton); 
+		
+		const taskTitle = input.value.trim();
+		if (taskTitle) {
+			const cardBody = footer.closest('.task-column').querySelector('.card-body');
+			const newTaskHTML = createTaskCard(taskTitle);
+			cardBody.insertAdjacentHTML('beforeend', newTaskHTML);
+
+			const newCard = cardBody.lastElementChild;
+			setTimeout(() => {
+				newCard.classList.remove('new-card');
+			}, 500);
+		}
+		revertToButton();
+	});
+};
 
 /**
  * Initializes all event listeners for the Tasks view.
@@ -136,28 +164,11 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// Use event delegation to handle form submissions for dynamically created columns.
-	taskBoard.addEventListener('submit', (event) => {
-		// Check if the submitted element is an "add-task-form".
-		if (event.target.classList.contains('add-task-form')) {
-			event.preventDefault();
-			const form = event.target;
-			const input = form.querySelector('input');
-			const taskTitle = input.value.trim();
-
-			if (taskTitle) {
-				const cardBody = form.closest('.task-column').querySelector('.card-body');
-				const newTaskHTML = createTaskCard(taskTitle);
-				cardBody.insertAdjacentHTML('beforeend', newTaskHTML);
-
-				// Add and then remove the animation class.
-				const newCard = cardBody.lastElementChild;
-				setTimeout(() => {
-					newCard.classList.remove('new-card');
-				}, 500); // Animation duration is 0.5s
-
-				input.value = ''; // Clear input field
-			}
+	// Use event delegation for click events within the task board.
+	taskBoard.addEventListener('click', (event) => {
+		// Handle the '+ New Task' button click.
+		if (event.target.matches('.btn-add-task')) {
+			showAddTaskForm(event.target.parentElement);
 		}
 	});
 
