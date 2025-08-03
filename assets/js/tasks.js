@@ -6,36 +6,36 @@
  */
 
 /**
- * Creates the HTML for a new column and appends it to the board.
- * @param {string} title - The title for the new column.
- */
-const addColumnToBoard = (title) => {
-	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
-	if (!taskColumnsWrapper) return;
-
-	const columnId = 'column-' + Date.now();
-	const newColumnHTML = `
-		<div class="task-column" id="${columnId}">
-			<div class="card-header">
-				<span class="column-title">${title}</span>
-				<span class="task-count">0</span>
-				<div class="column-controls">
-					<button class="btn-icon move-left" title="Move Left">&larr;</button>
-					<button class="btn-icon move-right" title="Move Right">&rarr;</button>
-					<button class="private-column-toggle" title="Mark as Private">V</button>
-					<button class="delete-column-btn" title="Delete Column"></button>
-				</div>
-			</div>
-			<div class="card-body">
-				</div>
-			<div class="card-footer">
-				<button class="btn btn-add-task">+ New Task</button>
-			</div>
-		</div>
-	`;
-	taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
-};
-
+  * Creates the HTML for a new column and appends it to the board.
+  * @param {string} title - The title for the new column.
+  */
+ const addColumnToBoard = (title) => {
+	 const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
+	 if (!taskColumnsWrapper) return;
+ 
+	 const columnId = 'column-' + Date.now();
+	 const newColumnHTML = `
+		 <div class="task-column" id="${columnId}">
+			 <div class="card-header">
+				 <span class="column-title">${title}</span>
+				 <span class="task-count">0</span>
+				 <div class="column-controls">
+					 <button class="btn-icon move-left" title="Move Left">&larr;</button>
+					 <button class="btn-icon move-right" title="Move Right">&rarr;</button>
+					 <button class="private-column-toggle" title="Mark as Private">V</button>
+					 <button class="delete-column-btn" title="Delete Column"></button>
+				 </div>
+			 </div>
+			 <div class="card-body">
+				 </div>
+			 <div class="card-footer">
+				 <button class="btn-add-task">+ New Task</button>
+			 </div>
+		 </div>
+	 `;
+	 taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
+ };
+ 
 /**
  * Creates the HTML for a new task card.
  * @param {string} title - The title for the new task.

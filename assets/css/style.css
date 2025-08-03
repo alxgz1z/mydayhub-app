@@ -166,7 +166,7 @@ body.dev-mode-active #app-header {
 	border: 1px solid var(--card-border);
 	display: flex;
 	flex-direction: column;
-	border-radius: 12.px;
+	border-radius: 12px;
 	overflow: hidden;
 	box-shadow: 0 4px 12px rgba(0,0,0,0.15);
 }
@@ -202,8 +202,36 @@ body.dev-mode-active #app-header {
 .task-column > .card-footer {
 	background-color: var(--column-header-bg);
 	border-top: 1px solid var(--card-border);
-	padding: 0.75rem;
+	padding: 0.5rem;
 }
+
+
+/* --- Column Footer Components --- */
+
+.btn-add-task {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	padding: 6px 8px;
+	text-align: left;
+	width: 100%;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.95rem;
+	font-weight: normal;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-add-task:hover {
+	background-color: var(--card-bg);
+	color: var(--text-primary);
+}
+
+.card-footer .add-task-form input {
+	width: 100%;
+	box-sizing: border-box; /* Ensures padding doesn't increase total width */
+}
+
 
 /* ==========================================================================
    5. FORMS & INPUTS
@@ -219,6 +247,7 @@ body.dev-mode-active #app-header {
 	color: var(--text-primary);
 	border-radius: 4px;
 	padding: 0.5rem 0.75rem;
+	font-size: 0.95rem;
 }
 
 .form-control:focus {
