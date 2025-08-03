@@ -75,8 +75,6 @@ const initAddColumnButton = () => {
 
 		// If the user clicks away from the input, revert to the button.
 		input.addEventListener('blur', (e) => {
-			// But, if they clicked the 'Add' button, don't revert yet.
-			// Let the submit handler take care of it.
 			if (e.relatedTarget && e.relatedTarget.type === 'submit') {
 				return;
 			}
@@ -89,8 +87,10 @@ const initAddColumnButton = () => {
 			const newTitle = input.value.trim();
 			if (newTitle) {
 				addColumnToBoard(newTitle); // This function lives in tasks.js
+				// Clear the input and re-focus to allow adding another column.
+				input.value = '';
+				input.focus();
 			}
-			revertToButton();
 		});
 	};
 

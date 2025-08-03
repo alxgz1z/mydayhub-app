@@ -35,7 +35,7 @@ require_once __DIR__ . '/includes/config.php';
             </div>
             <div class="header-right">
                 <div id="add-column-container">
-                    <button id="btn-add-new-column" class="btn">+ New Column</button>
+                    <button id="btn-add-new-column">+ New Column</button>
                 </div>
             </div>
         </header>

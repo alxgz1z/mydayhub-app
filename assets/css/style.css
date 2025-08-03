@@ -139,6 +139,22 @@ body.dev-mode-active #app-header {
 	display: flex;
 }
 
+#btn-add-new-column {
+	background: transparent;
+	border: 1px solid transparent;
+	color: var(--text-primary);
+	padding: 0.5rem 1rem;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+	font-size: 0.95rem;
+	transition: background-color 0.2s ease-out;
+}
+
+#btn-add-new-column:hover {
+	background-color: var(--btn-hover-bg);
+}
+
 
 /* ==========================================================================
    4. TASK BOARD & COLUMNS
