@@ -377,6 +377,11 @@ body.dev-mode-active #app-header {
 	border: 1px solid var(--card-border);
 	cursor: grab;
 	transition: opacity 0.2s ease-out;
+	/* Prevent text selection on long-press */
+	-webkit-user-select: none; /* Safari */
+	-moz-user-select: none;    /* Firefox */
+	-ms-user-select: none;     /* IE10+/Edge */
+	user-select: none;         /* Standard */
 }
 
 /* Style for the card currently being dragged */
