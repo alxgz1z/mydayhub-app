@@ -441,9 +441,12 @@ body.dev-mode-active #app-header {
 	backdrop-filter: blur(5px);
 	-webkit-backdrop-filter: blur(5px);
 	z-index: 1000;
-	display: flex;
 	align-items: center;
 	justify-content: center;
+}
+
+.modal-overlay.active {
+	display: flex; /* Show the modal when this class is added */
 }
 
 .modal-dialog {
