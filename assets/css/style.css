@@ -213,6 +213,10 @@ body.dev-mode-active #app-header {
 }
 
 /* --- Column Header Controls --- */
+.column-controls {
+	position: relative; /* Positioning context for the dropdown menu */
+}
+
 .btn-column-actions {
 	background: transparent;
 	border: none;
@@ -229,6 +233,43 @@ body.dev-mode-active #app-header {
 .btn-column-actions:hover {
 	background-color: var(--btn-hover-bg);
 	color: var(--text-primary);
+}
+
+.column-actions-menu {
+	position: absolute;
+	top: calc(100% + 5px); /* Position below the button with a 5px gap */
+	right: 0;
+	background-color: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 6px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+	z-index: 10;
+	min-width: 160px;
+	padding: 5px;
+}
+
+.column-actions-menu ul {
+	margin: 0;
+	padding: 0;
+	list-style: none;
+}
+
+.column-actions-menu button {
+	display: block;
+	width: 100%;
+	background: none;
+	border: none;
+	color: var(--text-primary);
+	text-align: left;
+	padding: 8px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.95rem;
+}
+
+.column-actions-menu button:hover {
+	background-color: var(--accent-color);
+	color: white;
 }
 
 
