@@ -55,7 +55,6 @@ const initAddColumnButton = () => {
 	const container = document.getElementById('add-column-container');
 	if (!container) return;
 
-	// This function replaces the button with the form.
 	const showForm = () => {
 		const originalButtonHTML = container.innerHTML;
 		container.innerHTML = `
@@ -65,35 +64,36 @@ const initAddColumnButton = () => {
 		`;
 
 		const form = container.querySelector('#add-column-form');
-		const input = container.querySelector('#new-column-title');
+		const input = form.querySelector('#new-column-title');
 
-		// Reverts the form back to the button.
 		const revertToButton = () => {
 			container.innerHTML = originalButtonHTML;
 		};
 
-		// If the user clicks away from the input, revert to the button.
 		input.addEventListener('blur', revertToButton);
 
-		// Handle form submission.
 		form.addEventListener('submit', (e) => {
 			e.preventDefault();
 			const newTitle = input.value.trim();
 			if (newTitle) {
-				addColumnToBoard(newTitle); // This function lives in tasks.js
-				// Clear the input and re-focus to allow adding another column.
+				addColumnToBoard(newTitle);
 				input.value = '';
 				input.focus();
 			}
 		});
 	};
 
-	// Listen for clicks on the container to catch the button click.
-	container.addEventListener('click', (event) => {
+	// This handler will be used for both click and touch events.
+	const eventHandler = (event) => {
 		if (event.target.id === 'btn-add-new-column') {
+			// Prevent the browser from firing a "ghost" click after the touch event.
+			event.preventDefault();
 			showForm();
 		}
-	});
+	};
+
+	container.addEventListener('click', eventHandler);
+	container.addEventListener('touchstart', eventHandler);
 };
 
 
