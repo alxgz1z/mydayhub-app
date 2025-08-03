@@ -58,6 +58,17 @@ require_once __DIR__ . '/includes/config.php';
 
     </div>
 
+    <div id="confirmation-modal-overlay" class="modal-overlay">
+        <div class="modal-dialog">
+            <h3 id="modal-title">Confirmation</h3>
+            <p id="modal-message">Are you sure?</p>
+            <div class="modal-actions">
+                <button id="modal-btn-cancel" class="btn btn-secondary">Cancel</button>
+                <button id="modal-btn-confirm" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+
     <script defer src="/assets/js/tasks.js"></script>
     <script defer src="/assets/js/app.js"></script>
 

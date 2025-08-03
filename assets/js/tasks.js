@@ -163,15 +163,12 @@ const toggleColumnActionsMenu = (buttonEl) => {
 	const controlsContainer = buttonEl.parentElement;
 	const existingMenu = controlsContainer.querySelector('.column-actions-menu');
 
-	// This ensures only one menu is ever open. We close all menus first.
 	closeAllActionMenus();
 
-	// If the menu we just closed was for the button we just clicked, then we're done.
 	if (existingMenu) {
 		return; 
 	}
 	
-	// Otherwise, create and show the new menu.
 	const menu = document.createElement('div');
 	menu.className = 'column-actions-menu';
 	menu.innerHTML = `
@@ -179,7 +176,6 @@ const toggleColumnActionsMenu = (buttonEl) => {
 			<li><button class="btn-delete-column">Delete Column</button></li>
 		</ul>
 	`;
-	// Add the new menu to the controls container.
 	controlsContainer.appendChild(menu);
 };
 
@@ -190,8 +186,8 @@ const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
-	// A single, delegated click listener for the entire task board.
-	taskBoard.addEventListener('click', (event) => {
+	// Make the event listener async to use 'await' for the modal.
+	taskBoard.addEventListener('click', async (event) => {
 		// Handle the '+ New Task' button click.
 		if (event.target.matches('.btn-add-task')) {
 			showAddTaskForm(event.target.parentElement);
@@ -203,11 +199,22 @@ const initTasksView = () => {
 		// Handle the 'Delete Column' button click within an action menu.
 		else if (event.target.matches('.btn-delete-column')) {
 			const column = event.target.closest('.task-column');
-			if (column && window.confirm('Are you sure you want to delete this column and all its tasks?')) {
-				column.remove();
-			}
-			// Always close menus after an action.
+			
+			// Close the menu before showing the modal for a cleaner UI.
 			closeAllActionMenus();
+
+			if (column) {
+				// Await the result of our new custom modal.
+				const confirmed = await showConfirmationModal({
+					title: 'Delete Column',
+					message: 'Are you sure you want to delete this column and all its tasks? This action cannot be undone.',
+					confirmText: 'Delete'
+				});
+
+				if (confirmed) {
+					column.remove();
+				}
+			}
 		}
 	});
 

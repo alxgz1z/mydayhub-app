@@ -83,10 +83,8 @@ const initAddColumnButton = () => {
 		});
 	};
 
-	// This handler will be used for both click and touch events.
 	const eventHandler = (event) => {
 		if (event.target.id === 'btn-add-new-column') {
-			// Prevent the browser from firing a "ghost" click after the touch event.
 			event.preventDefault();
 			showForm();
 		}
@@ -94,6 +92,48 @@ const initAddColumnButton = () => {
 
 	container.addEventListener('click', eventHandler);
 	container.addEventListener('touchstart', eventHandler);
+};
+
+/**
+ * Shows a custom confirmation modal and returns a Promise that resolves with the user's choice.
+ * @param {object} options - The options for the modal.
+ * @param {string} options.title - The title of the modal.
+ * @param {string} options.message - The confirmation message.
+ * @param {string} [options.confirmText='OK'] - The text for the confirm button.
+ * @param {string} [options.cancelText='Cancel'] - The text for the cancel button.
+ * @returns {Promise<boolean>} - A promise that resolves to true if confirmed, false otherwise.
+ */
+const showConfirmationModal = ({ title, message, confirmText = 'OK', cancelText = 'Cancel' }) => {
+	const modalOverlay = document.getElementById('confirmation-modal-overlay');
+	const modalTitle = document.getElementById('modal-title');
+	const modalMessage = document.getElementById('modal-message');
+	const btnConfirm = document.getElementById('modal-btn-confirm');
+	const btnCancel = document.getElementById('modal-btn-cancel');
+
+	if (!modalOverlay || !modalTitle || !modalMessage || !btnConfirm || !btnCancel) {
+		console.error("Modal elements not found in the DOM.");
+		return Promise.resolve(false); // Fails safely
+	}
+
+	// Populate the modal with the provided text
+	modalTitle.textContent = title;
+	modalMessage.textContent = message;
+	btnConfirm.textContent = confirmText;
+	btnCancel.textContent = cancelText;
+
+	// Show the modal by adding the .active class (CSS handles the display)
+	modalOverlay.classList.add('active');
+
+	return new Promise(resolve => {
+		const close = (decision) => {
+			modalOverlay.classList.remove('active');
+			resolve(decision);
+		};
+
+		// Add event listeners that only fire once
+		btnConfirm.addEventListener('click', () => close(true), { once: true });
+		btnCancel.addEventListener('click', () => close(false), { once: true });
+	});
 };
 
 
