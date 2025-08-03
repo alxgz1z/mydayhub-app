@@ -72,6 +72,10 @@ const initDragAndDrop = (longPressTimer) => {
 	taskBoard.addEventListener('dragend', (event) => {
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.remove('dragging');
+
+			// After the drag ends, sort the column where the card was dropped.
+			const columnBody = event.target.closest('.card-body');
+			sortTasksInColumn(columnBody);
 		}
 	});
 
@@ -105,6 +109,10 @@ const initLongPressPriority = (longPressTimer, longPressTriggered) => {
 			longPressTimer.id = setTimeout(() => {
 				taskCard.classList.toggle('priority');
 				longPressTriggered.value = true; // Flag that a long press occurred.
+
+				// After changing priority, sort the column.
+				const columnBody = taskCard.closest('.card-body');
+				sortTasksInColumn(columnBody);
 			}, 500); // 500ms for a long press
 		}
 	};
@@ -119,6 +127,35 @@ const initLongPressPriority = (longPressTimer, longPressTriggered) => {
 	taskBoard.addEventListener('mouseup', cancelPress);
 	taskBoard.addEventListener('mouseleave', cancelPress, true); // Use capture phase for mouseleave
 	taskBoard.addEventListener('touchend', cancelPress);
+};
+
+/**
+ * Sorts tasks within a column based on state: Priority > Normal > Completed.
+ * This uses a stable sorting method by grouping and re-appending.
+ * @param {HTMLElement} columnBody - The .card-body element of the column to sort.
+ */
+const sortTasksInColumn = (columnBody) => {
+	if (!columnBody) return;
+
+	// Group tasks by their status.
+	const priorityTasks = [];
+	const normalTasks = [];
+	const completedTasks = [];
+
+	columnBody.querySelectorAll('.task-card').forEach(task => {
+		if (task.classList.contains('completed')) {
+			completedTasks.push(task);
+		} else if (task.classList.contains('priority')) {
+			priorityTasks.push(task);
+		} else {
+			normalTasks.push(task);
+		}
+	});
+
+	// Re-append tasks to the DOM in the correct order, which automatically moves them.
+	priorityTasks.forEach(task => columnBody.appendChild(task));
+	normalTasks.forEach(task => columnBody.appendChild(task));
+	completedTasks.forEach(task => columnBody.appendChild(task));
 };
 
 
@@ -173,10 +210,17 @@ const showAddTaskForm = (footer) => {
 			const newTaskHTML = createTaskCard(taskTitle);
 			cardBody.insertAdjacentHTML('beforeend', newTaskHTML);
 
-			const newCard = cardBody.lastElementChild;
-			setTimeout(() => {
-				newCard.classList.remove('new-card');
-			}, 500);
+			// Sort the column to ensure the new "normal" task is placed correctly
+			// above any completed tasks.
+			sortTasksInColumn(cardBody);
+
+			// Animate the new card after it's been sorted into place.
+			const newCard = Array.from(cardBody.querySelectorAll('.new-card')).pop();
+			if (newCard) {
+				setTimeout(() => {
+					newCard.classList.remove('new-card');
+				}, 500); // Animation duration
+			}
 			
 			input.value = '';
 		}
@@ -259,6 +303,10 @@ const initTasksView = () => {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				taskCard.classList.toggle('completed', target.checked);
+
+				// After changing completion status, sort the column.
+				const columnBody = taskCard.closest('.card-body');
+				sortTasksInColumn(columnBody);
 			}
 		}
 	});
