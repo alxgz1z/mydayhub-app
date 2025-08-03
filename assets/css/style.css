@@ -377,11 +377,6 @@ body.dev-mode-active #app-header {
 	border: 1px solid var(--card-border);
 	cursor: grab;
 	transition: opacity 0.2s ease-out;
-	/* Prevent text selection on long-press */
-	-webkit-user-select: none; /* Safari */
-	-moz-user-select: none;    /* Firefox */
-	-ms-user-select: none;     /* IE10+/Edge */
-	user-select: none;         /* Standard */
 }
 
 /* Style for the card currently being dragged */
@@ -456,10 +451,36 @@ body.dev-mode-active #app-header {
 	flex-grow: 1;
 	min-width: 0;
 	transition: color 0.2s ease-out;
+	/* Prevent text selection on click */
+	-webkit-user-select: none; /* Safari */
+	-moz-user-select: none;    /* Firefox */
+	-ms-user-select: none;     /* IE10+/Edge */
+	user-select: none;         /* Standard */
 }
 
+/* --- Task Card Actions Button (Ellipsis) --- */
+.btn-task-actions {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px 8px;
+	margin-left: auto; /* Push to the right */
+	border-radius: 4px;
+	font-size: 1.2rem;
+	line-height: 1;
+	font-weight: bold;
+	flex-shrink: 0;
+	transition: background-color 0.2s ease-out;
+}
+
+.btn-task-actions:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+
 /* --- Task Card States --- */
-/* Updated class name from .priority to .high-priority */
 .task-card.high-priority .task-status-band {
 	background-color: var(--priority-color);
 }

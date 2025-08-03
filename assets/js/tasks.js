@@ -13,7 +13,6 @@
 
 /**
  * Creates the HTML for a new task card WITHOUT the animation class.
- * This is used for populating the board in DEVMODE to prevent a flash of animations on load.
  * @param {string} title - The title for the new task.
  * @returns {string} - The HTML string for the new task card.
  */
@@ -26,6 +25,7 @@ const createTaskCardDev = (title) => {
 				<div class="task-card-content">
 					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
 					<span class="task-title">${title}</span>
+					<button class="btn-icon btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
 			</div>
 		</div>
@@ -34,15 +34,12 @@ const createTaskCardDev = (title) => {
 
 /**
  * Populates the task board with sample data for faster testing.
- * This function is ONLY called when DEVMODE is active.
  */
 const populateDevModeTasks = () => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
 	if (!taskColumnsWrapper) return;
 
-	// Clear any existing columns to prevent duplicates on hot-reload.
-	taskColumnsWrapper.innerHTML = '';
-
+	taskColumnsWrapper.innerHTML = ''; // Clear board for hot-reloads
 	const devData = {
 		"Weekdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
 		"Colors": ["Blue", "Red", "Green", "Black", "White"],
@@ -56,8 +53,7 @@ const populateDevModeTasks = () => {
 			const cardBody = newColumn.querySelector('.card-body');
 			const tasks = devData[columnTitle];
 			tasks.forEach(taskTitle => {
-				const taskHTML = createTaskCardDev(taskTitle);
-				cardBody.insertAdjacentHTML('beforeend', taskHTML);
+				cardBody.insertAdjacentHTML('beforeend', createTaskCardDev(taskTitle));
 			});
 		}
 	}
@@ -72,7 +68,6 @@ const populateDevModeTasks = () => {
 
 /**
  * Creates the HTML for a new column and appends it to the board.
- * @param {string} title - The title for the new column.
  */
 const addColumnToBoard = (title) => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
@@ -88,8 +83,7 @@ const addColumnToBoard = (title) => {
 					<button class="btn-icon btn-column-actions" title="Column Actions">&#8230;</button>
 				</div>
 			</div>
-			<div class="card-body">
-				</div>
+			<div class="card-body"></div>
 			<div class="card-footer">
 				<button class="btn-add-task">+ New Task</button>
 			</div>
@@ -112,6 +106,7 @@ const createTaskCard = (title) => {
 				<div class="task-card-content">
 					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
 					<span class="task-title">${title}</span>
+					<button class="btn-icon btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
 			</div>
 		</div>
@@ -121,15 +116,11 @@ const createTaskCard = (title) => {
 /**
  * Initializes drag-and-drop functionality for task cards.
  */
-const initDragAndDrop = (longPressTimer) => {
+const initDragAndDrop = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
 
 	taskBoard.addEventListener('dragstart', (event) => {
-		// When a drag starts, we must cancel any pending long-press timer.
-		clearTimeout(longPressTimer.id);
-		closeAllQuickActionsMenus();
-
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.add('dragging');
 		}
@@ -138,8 +129,6 @@ const initDragAndDrop = (longPressTimer) => {
 	taskBoard.addEventListener('dragend', (event) => {
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.remove('dragging');
-
-			// After the drag ends, sort the column where the card was dropped.
 			const columnBody = event.target.closest('.card-body');
 			sortTasksInColumn(columnBody);
 		}
@@ -169,66 +158,29 @@ const closeAllQuickActionsMenus = () => {
 };
 
 /**
- * Initializes long-press functionality to open a contextual menu for tasks.
+ * Creates and displays the quick actions menu for a given task card button.
+ * @param {HTMLElement} buttonEl - The ellipsis button that was clicked.
  */
-const initQuickActions = (longPressTimer, longPressTriggered) => {
-	const taskBoard = document.getElementById('task-board-container');
-	if (!taskBoard) return;
+const showQuickActionsMenu = (buttonEl) => {
+	closeAllQuickActionsMenus();
+	const taskCard = buttonEl.closest('.task-card');
+	if (!taskCard) return;
 
-	const startPress = (event) => {
-		// Close any other open menus first.
-		closeAllColumnActionMenus();
-		
-		const taskCard = event.target.closest('.task-card');
-		// Only start the timer if the press is on a card and not on the checkbox.
-		if (taskCard && !event.target.matches('.task-complete-checkbox')) {
-			longPressTimer.id = setTimeout(() => {
-				longPressTriggered.value = true; // Flag that a long press occurred.
-				closeAllQuickActionsMenus(); // Close any existing menus.
+	const menu = document.createElement('div');
+	menu.className = 'quick-actions-menu';
+	menu.dataset.taskId = taskCard.id;
+	menu.innerHTML = `
+		<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">☯️</button>
+		<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
+	`;
+	
+	document.body.appendChild(menu);
+	
+	const btnRect = buttonEl.getBoundingClientRect();
+	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
+	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
 
-				// Create the menu element
-				const menu = document.createElement('div');
-				menu.className = 'quick-actions-menu';
-				// Store the target task's ID on the menu itself for later reference.
-				menu.dataset.taskId = taskCard.id;
-				
-				// Updated button with new icon and data-action
-				menu.innerHTML = `
-					<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">☯️</button>
-					<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
-				`;
-				
-				// Position and show the menu
-				document.body.appendChild(menu);
-				const clientX = event.clientX || event.touches[0].clientX;
-				const clientY = event.clientY || event.touches[0].clientY;
-				menu.style.top = `${clientY - 25}px`; // Center vertically on cursor
-				menu.style.left = `${clientX - 45}px`; // Center horizontally on cursor
-
-				// Add class to trigger fade-in animation
-				setTimeout(() => menu.classList.add('visible'), 10);
-
-			}, 500); // 500ms for a long press
-		}
-	};
-
-	const cancelPress = () => {
-		clearTimeout(longPressTimer.id);
-		if (longPressTriggered.value) {
-			setTimeout(() => {
-				longPressTriggered.value = false;
-			}, 50); 
-		}
-	};
-
-	taskBoard.addEventListener('mousedown', startPress);
-	taskBoard.addEventListener('touchstart', startPress);
-
-	taskBoard.addEventListener('mouseup', cancelPress);
-	taskBoard.addEventListener('mouseleave', cancelPress, true);
-	taskBoard.addEventListener('touchend', cancelPress);
-	// Also close on scroll, which indicates user has moved on.
-	taskBoard.addEventListener('scroll', closeAllQuickActionsMenus);
+	setTimeout(() => menu.classList.add('visible'), 10);
 };
 
 /**
@@ -236,20 +188,18 @@ const initQuickActions = (longPressTimer, longPressTriggered) => {
  */
 const sortTasksInColumn = (columnBody) => {
 	if (!columnBody) return;
-	// Updated variable name for clarity
 	const highPriorityTasks = [], normalTasks = [], completedTasks = [];
 
 	columnBody.querySelectorAll('.task-card').forEach(task => {
 		if (task.classList.contains('completed')) {
 			completedTasks.push(task);
-		} else if (task.classList.contains('high-priority')) { // Updated class name check
+		} else if (task.classList.contains('high-priority')) {
 			highPriorityTasks.push(task);
 		} else {
 			normalTasks.push(task);
 		}
 	});
 
-	// Updated array name in the final sort
 	highPriorityTasks.forEach(task => columnBody.appendChild(task));
 	normalTasks.forEach(task => columnBody.appendChild(task));
 	completedTasks.forEach(task => columnBody.appendChild(task));
@@ -333,22 +283,23 @@ const initTasksView = () => {
 		populateDevModeTasks();
 	}
 
-	let longPressTimer = { id: null };
-	let longPressTriggered = { value: false };
+	// A single event listener on the document to handle all clicks.
+	document.addEventListener('click', async (event) => {
+		const target = event.target;
+		const quickActionPriority = target.closest('[data-action="toggle-high-priority"]');
 
-	taskBoard.addEventListener('click', async (event) => {
-		if (longPressTriggered.value) {
-			event.preventDefault();
-			event.stopPropagation();
-			longPressTriggered.value = false;
-			return;
+		// Close menus if the user clicks "outside" of an interactive element.
+		if (!target.closest('.column-controls, .quick-actions-menu, .btn-task-actions')) {
+			closeAllColumnActionMenus();
+			closeAllQuickActionsMenus();
 		}
 
-		const target = event.target;
-		const quickAction = target.closest('[data-action="toggle-high-priority"]');
-
-		if (quickAction) {
-			const menu = quickAction.closest('.quick-actions-menu');
+		// Handle clicks on specific interactive elements.
+		if (target.matches('.btn-task-actions')) {
+			showQuickActionsMenu(target);
+		}
+		else if (quickActionPriority) {
+			const menu = quickActionPriority.closest('.quick-actions-menu');
 			const taskId = menu.dataset.taskId;
 			const taskCard = document.getElementById(taskId);
 			
@@ -360,9 +311,11 @@ const initTasksView = () => {
 		}
 		else if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
-		} else if (target.matches('.btn-column-actions')) {
+		} 
+		else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
-		} else if (target.matches('.btn-delete-column')) {
+		} 
+		else if (target.matches('.btn-delete-column')) {
 			const column = target.closest('.task-column');
 			closeAllColumnActionMenus();
 			if (column) {
@@ -373,7 +326,8 @@ const initTasksView = () => {
 				});
 				if (confirmed) column.remove();
 			}
-		} else if (target.matches('.task-complete-checkbox')) {
+		} 
+		else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				taskCard.classList.toggle('completed', target.checked);
@@ -381,19 +335,6 @@ const initTasksView = () => {
 			}
 		}
 	});
-
-	// Global listener to close menus when clicking elsewhere.
-	document.addEventListener('click', (event) => {
-		// Close column menu if click is outside of its parent controls.
-		if (!event.target.closest('.column-controls')) {
-			closeAllColumnActionMenus();
-		}
-		// Close quick actions menu if click is outside of a menu or a task card.
-		if (!event.target.closest('.quick-actions-menu, .task-card')) {
-			closeAllQuickActionsMenus();
-		}
-	});
-
-	initDragAndDrop(longPressTimer);
-	initQuickActions(longPressTimer, longPressTriggered);
+	
+	initDragAndDrop();
 };
