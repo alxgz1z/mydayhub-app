@@ -183,7 +183,19 @@ const initLongPressPriority = (longPressTimer, longPressTriggered) => {
 	};
 
 	const cancelPress = () => {
+		// Clear any pending timer.
 		clearTimeout(longPressTimer.id);
+
+		// *** BUG FIX ***
+		// If a long press was successful, the subsequent `click` event is supposed
+		// to be caught and used to reset the `longPressTriggered` flag. However, if the
+		// DOM manipulation from sorting interferes with that click event, the app's
+		// state breaks. This fail-safe timeout ensures the flag is ALWAYS reset.
+		if (longPressTriggered.value) {
+			setTimeout(() => {
+				longPressTriggered.value = false;
+			}, 50); // Reset the flag after a short delay.
+		}
 	};
 
 	taskBoard.addEventListener('mousedown', startPress);
@@ -350,8 +362,11 @@ const initTasksView = () => {
 
 	// A single, delegated listener for the entire task board.
 	taskBoard.addEventListener('click', async (event) => {
-		// If a long press just happened, prevent the click and reset the flag.
+		// If a long press was successfully triggered, we must prevent this
+		// click event from performing any action and then reset the flag.
 		if (longPressTriggered.value) {
+			event.preventDefault();
+			event.stopPropagation();
 			longPressTriggered.value = false;
 			return;
 		}
