@@ -195,12 +195,19 @@
 	display: flex;
 	border: 1px solid var(--card-border);
 	cursor: grab;
-	transition: opacity 0.2s ease-out;
+	/* MODIFIED: Added transform and box-shadow to the transition for the hover effect */
+	transition: opacity 0.2s ease-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+/* NEW: Added hover effect to "lift" the card, as seen in v3 */
+.task-card:hover {
+	transform: translateY(-3px);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
 }
 
 .task-card.dragging {
 	opacity: 0.5;
-	cursor: grabbing;
+	transform: rotate(2deg); /* MODIFIED: Added rotation to match v3 */
 }
 
 .task-status-band {
@@ -321,4 +328,86 @@
 
 .task-card.new-card {
 	animation: fadeInUp 0.5s ease-out;
+}
+
+/* NEW: Styles for the completion "flash" or "flare" effect */
+.task-card.flash-animation::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 50%;
+	height: 100%;
+	background: linear-gradient(90deg, rgba(255,215,0,0) 0%, rgba(255,215,0,0.4) 50%, rgba(255,215,0,0) 100%);
+	transform: skewX(-25deg);
+	animation: flash 0.35s ease-out;
+}
+
+@keyframes flash {
+	0% { left: -100%; }
+	100% { left: 150%; }
+}
+
+
+/* ==========================================================================
+   3. MOVE MODE STYLES
+   ========================================================================== */
+#move-mode-cancel-bar {
+	display: none; /* Hidden by default */
+	position: fixed;
+	bottom: 0;
+	left: 0;
+	width: 100%;
+	background-color: var(--app-header-bg);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+	padding: 1rem;
+	text-align: center;
+	z-index: 1005;
+	border-top: 1px solid var(--card-border);
+}
+
+body.move-mode-active #move-mode-cancel-bar {
+	display: block; /* Show when move mode is active */
+}
+
+/* Highlight the task being moved */
+.task-card.is-moving {
+	box-shadow: 0 0 0 3px var(--accent-color);
+	border-color: var(--accent-color);
+	cursor: default;
+}
+
+/* When moving, disable the hover effect on the moving card */
+.task-card.is-moving:hover {
+	transform: none;
+	box-shadow: 0 0 0 3px var(--accent-color);
+}
+
+/* Hide the normal footer when in move mode */
+body.move-mode-active .task-column > .card-footer {
+	display: none;
+}
+
+/* Style for the replacement footer with the "Move here" button */
+.move-target-footer {
+	display: block; /* Will be created by JS */
+	padding: 0.5rem;
+	border-top: 1px solid var(--card-border);
+	background-color: var(--column-header-bg);
+}
+
+.btn-move-task-here {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: var(--accent-color);
+	color: var(--text-primary);
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.btn-move-task-here:hover {
+	filter: brightness(115%);
 }

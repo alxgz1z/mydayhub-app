@@ -55,6 +55,10 @@ require_once __DIR__ . '/includes/config.php';
             <div id="meetings-view-container" class="view-container">
             </div>
         </main>
+        
+        <div id="move-mode-cancel-bar">
+            <button id="btn-cancel-move" class="btn btn-secondary">Cancel Move</button>
+        </div>
 
     </div>
 

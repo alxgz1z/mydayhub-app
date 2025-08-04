@@ -5,6 +5,10 @@
  * creating columns, adding tasks, drag-and-drop, etc.
  */
 
+// Module-level state variable to track the ID of the task being moved.
+let taskToMoveId = null;
+
+
 /**
  * =========================================================================
  * DEV MODE FUNCTIONS
@@ -281,6 +285,67 @@ const toggleColumnActionsMenu = (buttonEl) => {
 };
 
 /**
+ * =========================================================================
+ * MOVE MODE FUNCTIONS
+ * =========================================================================
+ */
+
+/**
+ * Puts the UI into "move mode" to allow moving a task across columns.
+ * @param {HTMLElement} taskCardEl The task card element to be moved.
+ */
+const enterMoveMode = (taskCardEl) => {
+	taskToMoveId = taskCardEl.id;
+	document.body.classList.add('move-mode-active');
+	taskCardEl.classList.add('is-moving');
+	closeAllQuickActionsMenus();
+
+	// Change the footers of all other columns to be move targets
+	document.querySelectorAll('.task-column').forEach(column => {
+		if (!column.contains(taskCardEl)) {
+			const footer = column.querySelector('.card-footer');
+			// Store the original content in a data attribute if it's not already stored
+			if (!footer.dataset.originalHtml) {
+				footer.dataset.originalHtml = footer.innerHTML;
+			}
+			// Add a new div with a button to act as the move target
+			const moveTargetFooter = document.createElement('div');
+			moveTargetFooter.className = 'move-target-footer';
+			moveTargetFooter.innerHTML = `<button class="btn-move-task-here">Move here</button>`;
+			footer.style.display = 'none'; // Hide original footer
+			column.appendChild(moveTargetFooter);
+		}
+	});
+};
+
+/**
+ * Exits "move mode" and restores the UI to its normal state.
+ */
+const exitMoveMode = () => {
+	const movingTask = document.querySelector('.task-card.is-moving');
+	if (movingTask) {
+		movingTask.classList.remove('is-moving');
+	}
+
+	document.body.classList.remove('move-mode-active');
+	
+	// Remove all move target footers and restore the original footers
+	document.querySelectorAll('.move-target-footer').forEach(target => target.remove());
+	document.querySelectorAll('.task-column .card-footer').forEach(footer => {
+		footer.style.display = 'block'; // Show original footer again
+	});
+	
+	taskToMoveId = null;
+};
+
+
+/**
+ * =========================================================================
+ * INITIALIZATION
+ * =========================================================================
+ */
+
+/**
  * Initializes all event listeners for the Tasks view.
  */
 const initTasksView = () => {
@@ -295,13 +360,17 @@ const initTasksView = () => {
 	document.addEventListener('click', async (event) => {
 		const target = event.target;
 
-		// Close menus if the user clicks "outside" of an interactive element.
-		if (!target.closest('.column-controls, .quick-actions-menu, .btn-task-actions')) {
-			closeAllColumnActionMenus();
-			closeAllQuickActionsMenus();
+		// Do not close menus if a move is in progress
+		if (!document.body.classList.contains('move-mode-active')) {
+			// Close menus if the user clicks "outside" of an interactive element.
+			if (!target.closest('.column-controls, .quick-actions-menu, .btn-task-actions')) {
+				closeAllColumnActionMenus();
+				closeAllQuickActionsMenus();
+			}
 		}
 		
 		const quickActionPriority = target.closest('[data-action="toggle-high-priority"]');
+		const quickActionMove = target.closest('[data-action="start-move"]');
 
 		// Handle clicks on specific interactive elements.
 		if (target.matches('.btn-task-actions')) {
@@ -318,6 +387,31 @@ const initTasksView = () => {
 				}
 				closeAllQuickActionsMenus();
 			}
+		}
+		else if (quickActionMove) {
+			const menu = quickActionMove.closest('.quick-actions-menu');
+			if (menu && menu.dataset.taskId) {
+				const taskCard = document.getElementById(menu.dataset.taskId);
+				if (taskCard) enterMoveMode(taskCard);
+			}
+		}
+		else if (target.matches('.btn-move-task-here')) {
+			if (taskToMoveId) {
+				const taskToMove = document.getElementById(taskToMoveId);
+				const destinationColumn = target.closest('.task-column');
+				const sourceColumnBody = taskToMove.closest('.card-body');
+				
+				if (taskToMove && destinationColumn) {
+					const destinationBody = destinationColumn.querySelector('.card-body');
+					destinationBody.appendChild(taskToMove);
+					sortTasksInColumn(destinationBody);
+					sortTasksInColumn(sourceColumnBody); // Re-sort source column as well
+				}
+				exitMoveMode();
+			}
+		}
+		else if (target.matches('#btn-cancel-move')) {
+			exitMoveMode();
 		}
 		else if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
@@ -340,7 +434,18 @@ const initTasksView = () => {
 		else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
-				taskCard.classList.toggle('completed', target.checked);
+				const isChecked = target.checked;
+				taskCard.classList.toggle('completed', isChecked);
+
+				// NEW: Trigger the flash animation only when the task is being marked as complete.
+				if (isChecked) {
+					taskCard.classList.add('flash-animation');
+					// Remove the class after the animation finishes so it can be re-triggered.
+					setTimeout(() => {
+						taskCard.classList.remove('flash-animation');
+					}, 400); // Animation duration is 0.35s, 400ms is a safe buffer.
+				}
+				
 				sortTasksInColumn(taskCard.closest('.card-body'));
 			}
 		}
