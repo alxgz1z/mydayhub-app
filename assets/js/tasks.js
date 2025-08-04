@@ -5,26 +5,20 @@
  * creating columns, adding tasks, drag-and-drop, etc.
  */
 
-// Module-level state variable to track the ID of the task being moved.
+// Module-level state variables
 let taskToMoveId = null;
-
+let currentEditingTaskId = null;
 
 /**
  * =========================================================================
  * DEV MODE FUNCTIONS
  * =========================================================================
  */
-
-/**
- * Creates the HTML for a new task card WITHOUT the animation class.
- * This is used for populating the board in DEVMODE.
- * @param {string} title - The title for the new task.
- * @returns {string} - The HTML string for the new task card.
- */
 const createTaskCardDev = (title) => {
 	const taskId = 'task-' + Date.now() + Math.random();
+	// MODIFIED: Added task-card-meta container
 	return `
-		<div class="task-card" id="${taskId}" draggable="true">
+		<div class="task-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
 			<div class="task-status-band"></div>
 			<div class="task-card-main-content">
 				<div class="task-card-content">
@@ -32,53 +26,41 @@ const createTaskCardDev = (title) => {
 					<span class="task-title">${title}</span>
 					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
+				<div class="task-card-meta"></div>
 			</div>
 		</div>
 	`;
 };
 
-/**
- * Populates the task board with sample data for faster testing.
- */
 const populateDevModeTasks = () => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
 	if (!taskColumnsWrapper) return;
-
-	taskColumnsWrapper.innerHTML = ''; // Clear board for hot-reloads
+	taskColumnsWrapper.innerHTML = '';
 	const devData = {
 		"Weekdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
 		"Colors": ["Blue", "Red", "Green", "Black", "White"],
 		"Chores": ["Wash car", "Mow lawn", "Water plant", "Garbage out"]
 	};
-
 	for (const columnTitle in devData) {
 		addColumnToBoard(columnTitle);
 		const newColumn = taskColumnsWrapper.lastElementChild;
 		if (newColumn) {
 			const cardBody = newColumn.querySelector('.card-body');
-			const tasks = devData[columnTitle];
-			tasks.forEach(taskTitle => {
+			devData[columnTitle].forEach(taskTitle => {
 				cardBody.insertAdjacentHTML('beforeend', createTaskCardDev(taskTitle));
 			});
 		}
 	}
 };
 
-
 /**
  * =========================================================================
  * CORE TASK VIEW FUNCTIONS
  * =========================================================================
  */
-
-/**
- * Creates the HTML for a new column and appends it to the board.
- * @param {string} title - The title for the new column.
- */
 const addColumnToBoard = (title) => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
 	if (!taskColumnsWrapper) return;
-
 	const columnId = 'column-' + Date.now() + Math.random();
 	const newColumnHTML = `
 		<div class="task-column" id="${columnId}">
@@ -98,15 +80,11 @@ const addColumnToBoard = (title) => {
 	taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
 };
 
-/**
- * Creates the HTML for a new task card with an animation class.
- * @param {string} title - The title for the new task.
- * @returns {string} - The HTML string for the new task card.
- */
 const createTaskCard = (title) => {
 	const taskId = 'task-' + Date.now();
+	// MODIFIED: Added task-card-meta container
 	return `
-		<div class="task-card new-card" id="${taskId}" draggable="true">
+		<div class="task-card new-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
 			<div class="task-status-band"></div>
 			<div class="task-card-main-content">
 				<div class="task-card-content">
@@ -114,28 +92,44 @@ const createTaskCard = (title) => {
 					<span class="task-title">${title}</span>
 					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
+				<div class="task-card-meta"></div>
 			</div>
 		</div>
 	`;
 };
 
 /**
- * Initializes drag-and-drop functionality for task cards.
+ * NEW: Updates the visual indicators (notes, due date) on a task card.
+ * @param {HTMLElement} taskCardEl - The task card element to update.
  */
+const updateTaskCardMeta = (taskCardEl) => {
+	if (!taskCardEl) return;
+	const metaContainer = taskCardEl.querySelector('.task-card-meta');
+	if (!metaContainer) return;
+
+	metaContainer.innerHTML = ''; // Clear existing indicators
+
+	const dueDate = taskCardEl.dataset.dueDate;
+	if (dueDate) {
+		metaContainer.innerHTML += `<span class="meta-badge due-date">📅 ${dueDate}</span>`;
+	}
+
+	const notes = taskCardEl.dataset.notes;
+	if (notes && notes.trim() !== '') {
+		metaContainer.innerHTML += `<span class="meta-icon" title="This task has notes">📝</span>`;
+	}
+};
+
 const initDragAndDrop = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
-
 	taskBoard.addEventListener('dragstart', (event) => {
-		// Close any open menus when a drag operation begins.
 		closeAllQuickActionsMenus();
 		closeAllColumnActionMenus();
-		
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.add('dragging');
 		}
 	});
-
 	taskBoard.addEventListener('dragend', (event) => {
 		if (event.target.classList.contains('task-card')) {
 			event.target.classList.remove('dragging');
@@ -143,7 +137,6 @@ const initDragAndDrop = () => {
 			sortTasksInColumn(columnBody);
 		}
 	});
-
 	taskBoard.addEventListener('dragover', (event) => {
 		const dropZone = event.target.closest('.card-body');
 		if (dropZone) {
@@ -160,70 +153,48 @@ const initDragAndDrop = () => {
 	});
 };
 
-/**
- * Removes all open Quick Actions menus from the DOM.
- */
 const closeAllQuickActionsMenus = () => {
 	document.querySelectorAll('.quick-actions-menu').forEach(menu => menu.remove());
 };
 
-/**
- * Creates and displays the quick actions menu for a given task card button.
- * @param {HTMLElement} buttonEl - The ellipsis button that was clicked.
- */
 const showQuickActionsMenu = (buttonEl) => {
 	closeAllQuickActionsMenus();
 	const taskCard = buttonEl.closest('.task-card');
 	if (!taskCard) return;
-
 	const menu = document.createElement('div');
 	menu.className = 'quick-actions-menu';
 	menu.dataset.taskId = taskCard.id;
+	// MODIFIED: Added Duplicate and Delete buttons
 	menu.innerHTML = `
+		<button class="quick-action-btn" data-action="edit-task" title="Edit Task">✏️</button>
+		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate Task">📋</button>
 		<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">☯️</button>
 		<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
+		<button class="quick-action-btn" data-action="delete-task" title="Delete Task">🗑️</button>
 	`;
-	
 	document.body.appendChild(menu);
-	
-	// Position the menu relative to the button that was clicked.
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
 	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
-
-	// Add class to trigger fade-in animation.
 	setTimeout(() => menu.classList.add('visible'), 10);
 };
 
-/**
- * Sorts tasks within a column based on state: High Priority > Normal > Completed.
- */
 const sortTasksInColumn = (columnBody) => {
 	if (!columnBody) return;
-	const highPriorityTasks = [], normalTasks = [], completedTasks = [];
-
-	columnBody.querySelectorAll('.task-card').forEach(task => {
-		if (task.classList.contains('completed')) {
-			completedTasks.push(task);
-		} else if (task.classList.contains('high-priority')) {
-			highPriorityTasks.push(task);
-		} else {
-			normalTasks.push(task);
-		}
-	});
-
-	highPriorityTasks.forEach(task => columnBody.appendChild(task));
-	normalTasks.forEach(task => columnBody.appendChild(task));
-	completedTasks.forEach(task => columnBody.appendChild(task));
+	const tasks = Array.from(columnBody.querySelectorAll('.task-card'));
+	tasks.sort((a, b) => {
+		const aCompleted = a.classList.contains('completed');
+		const bCompleted = b.classList.contains('completed');
+		const aPriority = a.classList.contains('high-priority');
+		const bPriority = b.classList.contains('high-priority');
+		if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
+		if (aPriority !== bPriority) return aPriority ? -1 : 1;
+		return 0; // Maintain original order for same-status tasks
+	}).forEach(task => columnBody.appendChild(task));
 };
 
-
-/**
- * Helper function to determine drop position for drag-and-drop.
- */
 const getDragAfterElement = (container, y) => {
 	const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
-
 	return draggableElements.reduce((closest, child) => {
 		const box = child.getBoundingClientRect();
 		const offset = y - box.top - box.height / 2;
@@ -235,17 +206,12 @@ const getDragAfterElement = (container, y) => {
 	}, { offset: Number.NEGATIVE_INFINITY }).element;
 };
 
-/**
- * Replaces the '+ New Task' button with a temporary form.
- */
 const showAddTaskForm = (footer) => {
 	const originalButtonHTML = footer.innerHTML;
 	footer.innerHTML = `<form class="add-task-form"><input type="text" class="form-control" placeholder="Enter task title..." autofocus></form>`;
 	const form = footer.querySelector('.add-task-form');
 	const input = form.querySelector('input');
-
 	input.addEventListener('blur', () => { footer.innerHTML = originalButtonHTML; });
-
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
 		const taskTitle = input.value.trim();
@@ -262,22 +228,15 @@ const showAddTaskForm = (footer) => {
 	});
 };
 
-/**
- * Removes all open column action menus from the DOM.
- */
 const closeAllColumnActionMenus = () => {
 	document.querySelectorAll('.column-actions-menu').forEach(menu => menu.remove());
 };
 
-/**
- * Toggles the visibility of the actions menu for a specific column.
- */
 const toggleColumnActionsMenu = (buttonEl) => {
 	const controlsContainer = buttonEl.parentElement;
 	const existingMenu = controlsContainer.querySelector('.column-actions-menu');
 	closeAllColumnActionMenus();
 	if (existingMenu) return;
-
 	const menu = document.createElement('div');
 	menu.className = 'column-actions-menu';
 	menu.innerHTML = `<ul><li><button class="btn-delete-column">Delete Column</button></li></ul>`;
@@ -289,137 +248,180 @@ const toggleColumnActionsMenu = (buttonEl) => {
  * MOVE MODE FUNCTIONS
  * =========================================================================
  */
-
-/**
- * Puts the UI into "move mode" to allow moving a task across columns.
- * @param {HTMLElement} taskCardEl The task card element to be moved.
- */
 const enterMoveMode = (taskCardEl) => {
 	taskToMoveId = taskCardEl.id;
 	document.body.classList.add('move-mode-active');
 	taskCardEl.classList.add('is-moving');
 	closeAllQuickActionsMenus();
-
-	// Change the footers of all other columns to be move targets
 	document.querySelectorAll('.task-column').forEach(column => {
-		if (!column.contains(taskCardEl)) {
-			const footer = column.querySelector('.card-footer');
-			// Store the original content in a data attribute if it's not already stored
-			if (!footer.dataset.originalHtml) {
-				footer.dataset.originalHtml = footer.innerHTML;
-			}
-			// Add a new div with a button to act as the move target
-			const moveTargetFooter = document.createElement('div');
-			moveTargetFooter.className = 'move-target-footer';
-			moveTargetFooter.innerHTML = `<button class="btn-move-task-here">Move here</button>`;
-			footer.style.display = 'none'; // Hide original footer
-			column.appendChild(moveTargetFooter);
+		const footer = column.querySelector('.card-footer');
+		if (!footer.dataset.originalHtml) {
+			footer.dataset.originalHtml = footer.innerHTML;
+		}
+		if (column.contains(taskCardEl)) {
+			footer.innerHTML = `<button class="btn-cancel-move-inline">Cancel Move</button>`;
+		} else {
+			footer.innerHTML = `<button class="btn-move-task-here">Move here</button>`;
 		}
 	});
 };
 
-/**
- * Exits "move mode" and restores the UI to its normal state.
- */
 const exitMoveMode = () => {
 	const movingTask = document.querySelector('.task-card.is-moving');
-	if (movingTask) {
-		movingTask.classList.remove('is-moving');
-	}
-
+	if (movingTask) movingTask.classList.remove('is-moving');
 	document.body.classList.remove('move-mode-active');
-	
-	// Remove all move target footers and restore the original footers
-	document.querySelectorAll('.move-target-footer').forEach(target => target.remove());
 	document.querySelectorAll('.task-column .card-footer').forEach(footer => {
-		footer.style.display = 'block'; // Show original footer again
+		if (footer.dataset.originalHtml) {
+			footer.innerHTML = footer.dataset.originalHtml;
+			delete footer.dataset.originalHtml;
+		}
 	});
-	
 	taskToMoveId = null;
 };
 
+/**
+ * =========================================================================
+ * EDIT TASK MODAL FUNCTIONS
+ * =========================================================================
+ */
+const openEditTaskModal = (taskCardEl) => {
+	currentEditingTaskId = taskCardEl.id;
+	const modalOverlay = document.getElementById('edit-task-modal-overlay');
+	const titleEl = document.getElementById('edit-task-title');
+	const notesEl = document.getElementById('edit-task-notes');
+	const dueDateEl = document.getElementById('edit-task-due-date');
+	const closeBtn = document.getElementById('edit-task-close');
+	const saveBtn = document.getElementById('edit-task-save');
+	const taskTitle = taskCardEl.querySelector('.task-title').textContent;
+
+	titleEl.textContent = taskTitle;
+	notesEl.value = taskCardEl.dataset.notes || '';
+	dueDateEl.value = taskCardEl.dataset.dueDate || '';
+
+	closeBtn.onclick = () => closeEditTaskModal();
+	saveBtn.onclick = () => {
+		const taskCard = document.getElementById(currentEditingTaskId);
+		if (taskCard) {
+			taskCard.dataset.notes = notesEl.value;
+			taskCard.dataset.dueDate = dueDateEl.value;
+			updateTaskCardMeta(taskCard);
+		}
+		closeEditTaskModal();
+	};
+
+	modalOverlay.classList.add('active');
+};
+
+const closeEditTaskModal = () => {
+	const modalOverlay = document.getElementById('edit-task-modal-overlay');
+	if (modalOverlay) {
+		modalOverlay.classList.remove('active');
+	}
+	currentEditingTaskId = null;
+};
 
 /**
  * =========================================================================
  * INITIALIZATION
  * =========================================================================
  */
-
-/**
- * Initializes all event listeners for the Tasks view.
- */
 const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
-
 	if (document.body.classList.contains('dev-mode-active')) {
 		populateDevModeTasks();
+		document.querySelectorAll('.task-card').forEach(updateTaskCardMeta);
 	}
-
-	// A single event listener on the document to handle all clicks in a delegated manner.
 	document.addEventListener('click', async (event) => {
 		const target = event.target;
-
-		// Do not close menus if a move is in progress
 		if (!document.body.classList.contains('move-mode-active')) {
-			// Close menus if the user clicks "outside" of an interactive element.
 			if (!target.closest('.column-controls, .quick-actions-menu, .btn-task-actions')) {
 				closeAllColumnActionMenus();
 				closeAllQuickActionsMenus();
 			}
 		}
-		
+
+		// Get references to all possible actions
+		const quickActionEdit = target.closest('[data-action="edit-task"]');
+		const quickActionDuplicate = target.closest('[data-action="duplicate-task"]');
 		const quickActionPriority = target.closest('[data-action="toggle-high-priority"]');
 		const quickActionMove = target.closest('[data-action="start-move"]');
+		const quickActionDelete = target.closest('[data-action="delete-task"]');
 
-		// Handle clicks on specific interactive elements.
+
 		if (target.matches('.btn-task-actions')) {
 			showQuickActionsMenu(target);
-		}
-		else if (quickActionPriority) {
-			const menu = quickActionPriority.closest('.quick-actions-menu');
-			if (menu) {
-				const taskId = menu.dataset.taskId;
-				const taskCard = document.getElementById(taskId);
-				if (taskCard) {
-					taskCard.classList.toggle('high-priority');
-					sortTasksInColumn(taskCard.closest('.card-body'));
+		} else if (quickActionEdit) {
+			const menu = quickActionEdit.closest('.quick-actions-menu');
+			const taskCard = document.getElementById(menu.dataset.taskId);
+			if (taskCard) openEditTaskModal(taskCard);
+			closeAllQuickActionsMenus();
+		} else if (quickActionDuplicate) {
+			const menu = quickActionDuplicate.closest('.quick-actions-menu');
+			const originalCard = document.getElementById(menu.dataset.taskId);
+			if (originalCard) {
+				const title = originalCard.querySelector('.task-title').textContent;
+				const newCardHTML = createTaskCard(title);
+				originalCard.insertAdjacentHTML('afterend', newCardHTML);
+				
+				const newCard = originalCard.nextElementSibling;
+				if (newCard) {
+					// Copy data attributes and update meta
+					newCard.dataset.notes = originalCard.dataset.notes;
+					newCard.dataset.dueDate = originalCard.dataset.dueDate;
+					updateTaskCardMeta(newCard);
 				}
-				closeAllQuickActionsMenus();
 			}
-		}
-		else if (quickActionMove) {
+			closeAllQuickActionsMenus();
+		} else if (quickActionDelete) {
+			const menu = quickActionDelete.closest('.quick-actions-menu');
+			const taskCard = document.getElementById(menu.dataset.taskId);
+			if (taskCard) {
+				const confirmed = await showConfirmationModal({
+					title: 'Delete Task',
+					message: 'Are you sure you want to delete this task? This cannot be undone.',
+					confirmText: 'Delete'
+				});
+				if (confirmed) {
+					taskCard.remove();
+				}
+			}
+			closeAllQuickActionsMenus();
+		} else if (quickActionPriority) {
+			const menu = quickActionPriority.closest('.quick-actions-menu');
+			const taskCard = document.getElementById(menu.dataset.taskId);
+			if (taskCard) {
+				taskCard.classList.toggle('high-priority');
+				sortTasksInColumn(taskCard.closest('.card-body'));
+			}
+			closeAllQuickActionsMenus();
+		} else if (quickActionMove) {
+			exitMoveMode();
 			const menu = quickActionMove.closest('.quick-actions-menu');
 			if (menu && menu.dataset.taskId) {
 				const taskCard = document.getElementById(menu.dataset.taskId);
 				if (taskCard) enterMoveMode(taskCard);
 			}
-		}
-		else if (target.matches('.btn-move-task-here')) {
+		} else if (target.matches('.btn-move-task-here')) {
 			if (taskToMoveId) {
 				const taskToMove = document.getElementById(taskToMoveId);
 				const destinationColumn = target.closest('.task-column');
 				const sourceColumnBody = taskToMove.closest('.card-body');
-				
 				if (taskToMove && destinationColumn) {
 					const destinationBody = destinationColumn.querySelector('.card-body');
 					destinationBody.appendChild(taskToMove);
 					sortTasksInColumn(destinationBody);
-					sortTasksInColumn(sourceColumnBody); // Re-sort source column as well
+					if (sourceColumnBody) sortTasksInColumn(sourceColumnBody);
 				}
 				exitMoveMode();
 			}
-		}
-		else if (target.matches('#btn-cancel-move')) {
+		} else if (target.matches('.btn-cancel-move-inline')) {
 			exitMoveMode();
-		}
-		else if (target.matches('.btn-add-task')) {
+		} else if (target.matches('.btn-add-task')) {
 			showAddTaskForm(target.parentElement);
-		} 
-		else if (target.matches('.btn-column-actions')) {
+		} else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
-		} 
-		else if (target.matches('.btn-delete-column')) {
+		} else if (target.matches('.btn-delete-column')) {
 			const column = target.closest('.task-column');
 			closeAllColumnActionMenus();
 			if (column) {
@@ -430,26 +432,20 @@ const initTasksView = () => {
 				});
 				if (confirmed) column.remove();
 			}
-		} 
-		else if (target.matches('.task-complete-checkbox')) {
+		} else if (target.matches('.task-complete-checkbox')) {
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				const isChecked = target.checked;
 				taskCard.classList.toggle('completed', isChecked);
-
-				// NEW: Trigger the flash animation only when the task is being marked as complete.
 				if (isChecked) {
 					taskCard.classList.add('flash-animation');
-					// Remove the class after the animation finishes so it can be re-triggered.
 					setTimeout(() => {
 						taskCard.classList.remove('flash-animation');
-					}, 400); // Animation duration is 0.35s, 400ms is a safe buffer.
+					}, 400);
 				}
-				
 				sortTasksInColumn(taskCard.closest('.card-body'));
 			}
 		}
 	});
-	
 	initDragAndDrop();
 };

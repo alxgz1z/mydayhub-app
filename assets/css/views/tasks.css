@@ -195,11 +195,9 @@
 	display: flex;
 	border: 1px solid var(--card-border);
 	cursor: grab;
-	/* MODIFIED: Added transform and box-shadow to the transition for the hover effect */
 	transition: opacity 0.2s ease-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-/* NEW: Added hover effect to "lift" the card, as seen in v3 */
 .task-card:hover {
 	transform: translateY(-3px);
 	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
@@ -207,7 +205,7 @@
 
 .task-card.dragging {
 	opacity: 0.5;
-	transform: rotate(2deg); /* MODIFIED: Added rotation to match v3 */
+	transform: rotate(2deg);
 }
 
 .task-status-band {
@@ -330,7 +328,6 @@
 	animation: fadeInUp 0.5s ease-out;
 }
 
-/* NEW: Styles for the completion "flash" or "flare" effect */
 .task-card.flash-animation::after {
 	content: '';
 	position: absolute;
@@ -352,25 +349,6 @@
 /* ==========================================================================
    3. MOVE MODE STYLES
    ========================================================================== */
-#move-mode-cancel-bar {
-	display: none; /* Hidden by default */
-	position: fixed;
-	bottom: 0;
-	left: 0;
-	width: 100%;
-	background-color: var(--app-header-bg);
-	backdrop-filter: blur(10px);
-	-webkit-backdrop-filter: blur(10px);
-	padding: 1rem;
-	text-align: center;
-	z-index: 1005;
-	border-top: 1px solid var(--card-border);
-}
-
-body.move-mode-active #move-mode-cancel-bar {
-	display: block; /* Show when move mode is active */
-}
-
 /* Highlight the task being moved */
 .task-card.is-moving {
 	box-shadow: 0 0 0 3px var(--accent-color);
@@ -384,19 +362,7 @@ body.move-mode-active #move-mode-cancel-bar {
 	box-shadow: 0 0 0 3px var(--accent-color);
 }
 
-/* Hide the normal footer when in move mode */
-body.move-mode-active .task-column > .card-footer {
-	display: none;
-}
-
-/* Style for the replacement footer with the "Move here" button */
-.move-target-footer {
-	display: block; /* Will be created by JS */
-	padding: 0.5rem;
-	border-top: 1px solid var(--card-border);
-	background-color: var(--column-header-bg);
-}
-
+/* Style for the "Move here" button in destination column footers */
 .btn-move-task-here {
 	width: 100%;
 	padding: 0.75rem;
@@ -410,4 +376,44 @@ body.move-mode-active .task-column > .card-footer {
 
 .btn-move-task-here:hover {
 	filter: brightness(115%);
+}
+
+/* Style for the "Cancel Move" button in the source column footer */
+.btn-cancel-move-inline {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: var(--card-bg);
+	color: var(--text-secondary);
+	border: 1px solid var(--card-border);
+	border-radius: 4px;
+	cursor: pointer;
+	font-weight: 500;
+}
+
+.btn-cancel-move-inline:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+/* ==========================================================================
+   4. RESPONSIVE STYLES (NEW)
+   ========================================================================== */
+@media (max-width: 768px) {
+	/* Switch the board to vertical scrolling */
+	#task-board-container {
+		flex-direction: column;
+		overflow-x: hidden; /* Hide horizontal scrollbar */
+		gap: 1.5rem; /* This now becomes vertical gap */
+	}
+
+	#task-columns-wrapper {
+		flex-direction: column;
+		height: auto; /* Allow the wrapper to grow vertically */
+	}
+
+	/* Make columns take up the full width */
+	.task-column {
+		width: 100%;
+		max-height: none; /* Allow columns to be as tall as their content */
+	}
 }
