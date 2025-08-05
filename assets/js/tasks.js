@@ -8,6 +8,8 @@
 // Module-level state variables
 let taskToMoveId = null;
 let currentEditingTaskId = null;
+// NEW: Timer ID for the auto-save functionality in the modal.
+let autoSaveTimer = null;
 
 /**
  * =========================================================================
@@ -16,7 +18,7 @@ let currentEditingTaskId = null;
  */
 const createTaskCardDev = (title) => {
 	const taskId = 'task-' + Date.now() + Math.random();
-	// MODIFIED: Added task-card-meta container
+	// UPDATED: Changed class to task-meta-indicators to match new CSS.
 	return `
 		<div class="task-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
 			<div class="task-status-band"></div>
@@ -26,7 +28,7 @@ const createTaskCardDev = (title) => {
 					<span class="task-title">${title}</span>
 					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
-				<div class="task-card-meta"></div>
+				<div class="task-meta-indicators"></div>
 			</div>
 		</div>
 	`;
@@ -82,7 +84,7 @@ const addColumnToBoard = (title) => {
 
 const createTaskCard = (title) => {
 	const taskId = 'task-' + Date.now();
-	// MODIFIED: Added task-card-meta container
+	// UPDATED: Changed class to task-meta-indicators to match new CSS.
 	return `
 		<div class="task-card new-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
 			<div class="task-status-band"></div>
@@ -92,31 +94,42 @@ const createTaskCard = (title) => {
 					<span class="task-title">${title}</span>
 					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
-				<div class="task-card-meta"></div>
+				<div class="task-meta-indicators"></div>
 			</div>
 		</div>
 	`;
 };
 
 /**
- * NEW: Updates the visual indicators (notes, due date) on a task card.
+ * UPDATED: Renamed function and updated its logic to generate the new badge structure
+ * that the new CSS rules target.
  * @param {HTMLElement} taskCardEl - The task card element to update.
  */
-const updateTaskCardMeta = (taskCardEl) => {
+const updateTaskCardIndicators = (taskCardEl) => {
 	if (!taskCardEl) return;
-	const metaContainer = taskCardEl.querySelector('.task-card-meta');
-	if (!metaContainer) return;
+	// UPDATED: Changed selector to match new class name in createTaskCard functions.
+	const indicatorsContainer = taskCardEl.querySelector('.task-meta-indicators');
+	if (!indicatorsContainer) return;
 
-	metaContainer.innerHTML = ''; // Clear existing indicators
-
-	const dueDate = taskCardEl.dataset.dueDate;
-	if (dueDate) {
-		metaContainer.innerHTML += `<span class="meta-badge due-date">📅 ${dueDate}</span>`;
-	}
+	indicatorsContainer.innerHTML = ''; // Clear existing indicators
 
 	const notes = taskCardEl.dataset.notes;
 	if (notes && notes.trim() !== '') {
-		metaContainer.innerHTML += `<span class="meta-icon" title="This task has notes">📝</span>`;
+		// UPDATED: This now creates a styled badge for the note icon.
+		indicatorsContainer.innerHTML += `
+			<span class="meta-indicator" title="This task has notes">
+				<span class="icon">📝</span>
+			</span>`;
+	}
+
+	const dueDate = taskCardEl.dataset.dueDate;
+	if (dueDate) {
+		// UPDATED: This now creates a styled badge for the due date.
+		indicatorsContainer.innerHTML += `
+			<span class="meta-indicator" title="Due Date: ${dueDate}">
+				<span class="icon">📅</span>
+				${dueDate}
+			</span>`;
 	}
 };
 
@@ -164,14 +177,20 @@ const showQuickActionsMenu = (buttonEl) => {
 	const menu = document.createElement('div');
 	menu.className = 'quick-actions-menu';
 	menu.dataset.taskId = taskCard.id;
-	// MODIFIED: Added Duplicate and Delete buttons
+
+	// UPDATED: Reordered actions and updated icons to align with the app spec.
+	// Added placeholders for Share and Private features.
+	// Kept "Move Task" as it's our mobile-friendly solution.
 	menu.innerHTML = `
-		<button class="quick-action-btn" data-action="edit-task" title="Edit Task">✏️</button>
-		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate Task">📋</button>
-		<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">☯️</button>
-		<button class="quick-action-btn" data-action="start-move" title="Move Task">↔️</button>
-		<button class="quick-action-btn" data-action="delete-task" title="Delete Task">🗑️</button>
+		<button class="quick-action-btn" data-action="edit-task" title="Edit Task">✏️ Edit</button>
+		<button class="quick-action-btn" data-action="start-move" title="Move Task">✥ Move</button>
+		<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">⭐ Priority</button>
+		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate Task">📋 Duplicate</button>
+		<button class="quick-action-btn" data-action="share-task" title="Share Task (Coming Soon)">📤 Share</button>
+		<button class="quick-action-btn" data-action="make-private" title="Make Private (Coming Soon)">🔒 Private</button>
+		<button class="quick-action-btn" data-action="delete-task" title="Delete Task">🗑️ Delete</button>
 	`;
+
 	document.body.appendChild(menu);
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
@@ -284,6 +303,34 @@ const exitMoveMode = () => {
  * EDIT TASK MODAL FUNCTIONS
  * =========================================================================
  */
+
+/**
+ * NEW: Centralized function to save task data from the modal.
+ * This can be called manually or by the auto-save timer.
+ */
+const saveTaskData = () => {
+	if (!currentEditingTaskId) return;
+	const taskCard = document.getElementById(currentEditingTaskId);
+	const notesEl = document.getElementById('edit-task-notes');
+	const dueDateEl = document.getElementById('edit-task-due-date');
+	const statusEl = document.getElementById('edit-task-status');
+	if (!taskCard || !notesEl || !dueDateEl || !statusEl) return;
+
+	// Update the data attributes on the task card element
+	taskCard.dataset.notes = notesEl.value;
+	taskCard.dataset.dueDate = dueDateEl.value;
+	
+	// Refresh the meta indicators on the card itself
+	updateTaskCardIndicators(taskCard);
+
+	// Update the "Last saved" timestamp in the modal footer [cite: 33]
+	const now = new Date();
+	statusEl.textContent = `Last saved: ${now.toLocaleTimeString()}`;
+	
+	// In the future, this is where we would send the data to the server API.
+	console.log(`Task ${currentEditingTaskId} saved at ${now.toLocaleTimeString()}`);
+};
+
 const openEditTaskModal = (taskCardEl) => {
 	currentEditingTaskId = taskCardEl.id;
 	const modalOverlay = document.getElementById('edit-task-modal-overlay');
@@ -292,33 +339,44 @@ const openEditTaskModal = (taskCardEl) => {
 	const dueDateEl = document.getElementById('edit-task-due-date');
 	const closeBtn = document.getElementById('edit-task-close');
 	const saveBtn = document.getElementById('edit-task-save');
+	const statusEl = document.getElementById('edit-task-status');
 	const taskTitle = taskCardEl.querySelector('.task-title').textContent;
 
 	titleEl.textContent = taskTitle;
 	notesEl.value = taskCardEl.dataset.notes || '';
 	dueDateEl.value = taskCardEl.dataset.dueDate || '';
+	statusEl.textContent = 'Last saved: Never'; // Reset status text
 
 	closeBtn.onclick = () => closeEditTaskModal();
+	// UPDATED: The save button now calls our new, centralized save function before closing.
 	saveBtn.onclick = () => {
-		const taskCard = document.getElementById(currentEditingTaskId);
-		if (taskCard) {
-			taskCard.dataset.notes = notesEl.value;
-			taskCard.dataset.dueDate = dueDateEl.value;
-			updateTaskCardMeta(taskCard);
-		}
+		saveTaskData();
 		closeEditTaskModal();
 	};
 
 	modalOverlay.classList.add('active');
+
+	// NEW: Start the auto-save timer when the modal opens.
+	// The spec requires saving every 60 seconds. 
+	if (autoSaveTimer) clearInterval(autoSaveTimer); // Clear any lingering timers
+	autoSaveTimer = setInterval(saveTaskData, 60000); // 60,000 ms = 60 seconds
 };
 
 const closeEditTaskModal = () => {
 	const modalOverlay = document.getElementById('edit-task-modal-overlay');
+
+	// NEW: Crucially, we must stop the auto-save timer when the modal closes.
+	if (autoSaveTimer) {
+		clearInterval(autoSaveTimer);
+		autoSaveTimer = null;
+	}
+
 	if (modalOverlay) {
 		modalOverlay.classList.remove('active');
 	}
 	currentEditingTaskId = null;
 };
+
 
 /**
  * =========================================================================
@@ -330,7 +388,8 @@ const initTasksView = () => {
 	if (!taskBoard) return;
 	if (document.body.classList.contains('dev-mode-active')) {
 		populateDevModeTasks();
-		document.querySelectorAll('.task-card').forEach(updateTaskCardMeta);
+		// UPDATED: Called renamed function
+		document.querySelectorAll('.task-card').forEach(updateTaskCardIndicators);
 	}
 	document.addEventListener('click', async (event) => {
 		const target = event.target;
@@ -369,7 +428,8 @@ const initTasksView = () => {
 					// Copy data attributes and update meta
 					newCard.dataset.notes = originalCard.dataset.notes;
 					newCard.dataset.dueDate = originalCard.dataset.dueDate;
-					updateTaskCardMeta(newCard);
+					// UPDATED: Called renamed function
+					updateTaskCardIndicators(newCard);
 				}
 			}
 			closeAllQuickActionsMenus();

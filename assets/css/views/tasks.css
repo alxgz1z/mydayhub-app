@@ -221,6 +221,11 @@
 	padding: 0.8rem;
 	flex-grow: 1;
 	min-width: 0;
+	/* Arrange the main content (title/checkbox) and meta indicators vertically */
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	gap: 0.5rem; /* Space between title area and indicators */
 }
 
 .task-card-content {
@@ -345,9 +350,39 @@
 	100% { left: 150%; }
 }
 
+/* ==========================================================================
+   3. TASK CARD META INDICATORS (NEW)
+   ========================================================================== */
+/* This container will hold all the small indicator badges. */
+/* It will be added via JS when a card has meta info. */
+.task-meta-indicators {
+	display: flex;
+	gap: 0.5rem;
+	align-items: center;
+	/* This container should only appear if it has children. */
+	/* We will handle this logic in JS. If empty, it won't be in the DOM. */
+}
+
+.meta-indicator {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35em;
+	background-color: var(--column-bg); /* Use a subtle background */
+	color: var(--text-secondary);
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 0.8rem;
+	font-weight: 500;
+	border: 1px solid var(--card-border);
+}
+
+/* Specific styling for the emoji inside the badge */
+.meta-indicator .icon {
+	font-size: 0.9em;
+}
 
 /* ==========================================================================
-   3. MOVE MODE STYLES
+   4. MOVE MODE STYLES
    ========================================================================== */
 /* Highlight the task being moved */
 .task-card.is-moving {
@@ -396,7 +431,7 @@
 }
 
 /* ==========================================================================
-   4. RESPONSIVE STYLES (NEW)
+   5. RESPONSIVE STYLES
    ========================================================================== */
 @media (max-width: 768px) {
 	/* Switch the board to vertical scrolling */
