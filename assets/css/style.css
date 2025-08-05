@@ -309,7 +309,7 @@ body.dev-mode-active #app-header {
 }
 
 /* ==========================================================================
-   6. QUICK ACTIONS MENU (CONTEXTUAL)
+   6. QUICK ACTIONS MENU (CONTEXTUAL) - REFINED
    ========================================================================== */
 .quick-actions-menu {
 	position: absolute;
@@ -319,8 +319,9 @@ body.dev-mode-active #app-header {
 	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
 	z-index: 1010;
 	display: flex;
-	gap: 6px;
-	padding: 6px;
+	/* REFINED: Adjusted padding and gap for a cleaner look */
+	gap: 4px;
+	padding: 5px;
 	transform: scale(0.95);
 	opacity: 0;
 	transition: transform 0.1s ease-out, opacity 0.1s ease-out;
@@ -336,12 +337,14 @@ body.dev-mode-active #app-header {
 	border: 1px solid transparent;
 	color: var(--text-primary);
 	border-radius: 50%; /* Circle */
-	width: 40px;
-	height: 40px;
+	width: 38px;  /* REFINED: Slightly smaller for a tighter menu */
+	height: 38px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	font-size: 1.2rem;
+	/* REFINED: Larger font for more prominent icon, and added line-height */
+	font-size: 1.4rem;
+	line-height: 1;
 	cursor: pointer;
 	transition: background-color 0.2s ease-out, border-color 0.2s ease-out;
 }
@@ -350,6 +353,7 @@ body.dev-mode-active #app-header {
 	background-color: var(--accent-color);
 	border-color: var(--accent-color);
 }
+
 
 /* ==========================================================================
    7. MOBILE RESPONSIVE STYLES

@@ -178,17 +178,16 @@ const showQuickActionsMenu = (buttonEl) => {
 	menu.className = 'quick-actions-menu';
 	menu.dataset.taskId = taskCard.id;
 
-	// UPDATED: Reordered actions and updated icons to align with the app spec.
-	// Added placeholders for Share and Private features.
-	// Kept "Move Task" as it's our mobile-friendly solution.
+	// UPDATED: The menu HTML is now replaced with the new icon-only button bar
+	// as per your latest specification. The `title` attribute provides the tooltip.
 	menu.innerHTML = `
-		<button class="quick-action-btn" data-action="edit-task" title="Edit Task">✏️ Edit</button>
-		<button class="quick-action-btn" data-action="start-move" title="Move Task">✥ Move</button>
-		<button class="quick-action-btn" data-action="toggle-high-priority" title="Toggle High Priority">⭐ Priority</button>
-		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate Task">📋 Duplicate</button>
-		<button class="quick-action-btn" data-action="share-task" title="Share Task (Coming Soon)">📤 Share</button>
-		<button class="quick-action-btn" data-action="make-private" title="Make Private (Coming Soon)">🔒 Private</button>
-		<button class="quick-action-btn" data-action="delete-task" title="Delete Task">🗑️ Delete</button>
+		<button class="quick-action-btn" data-action="toggle-high-priority" title="Change Priority">🔄</button>
+		<button class="quick-action-btn" data-action="edit-task" title="Edit Note and Due Date">ℹ️</button>
+		<button class="quick-action-btn" data-action="start-move" title="Move">↔️</button>
+		<button class="quick-action-btn" data-action="share-task" title="Share">👥</button>
+		<button class="quick-action-btn" data-action="make-private" title="Mark as Private">⛔️</button>
+		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate">🈁</button>
+		<button class="quick-action-btn" data-action="delete-task" title="Delete">🗑️</button>
 	`;
 
 	document.body.appendChild(menu);
@@ -323,7 +322,7 @@ const saveTaskData = () => {
 	// Refresh the meta indicators on the card itself
 	updateTaskCardIndicators(taskCard);
 
-	// Update the "Last saved" timestamp in the modal footer [cite: 33]
+	[cite_start]// Update the "Last saved" timestamp in the modal footer [cite: 33]
 	const now = new Date();
 	statusEl.textContent = `Last saved: ${now.toLocaleTimeString()}`;
 	
@@ -357,7 +356,7 @@ const openEditTaskModal = (taskCardEl) => {
 	modalOverlay.classList.add('active');
 
 	// NEW: Start the auto-save timer when the modal opens.
-	// The spec requires saving every 60 seconds. 
+	[cite_start]// The spec requires saving every 60 seconds. [cite: 31]
 	if (autoSaveTimer) clearInterval(autoSaveTimer); // Clear any lingering timers
 	autoSaveTimer = setInterval(saveTaskData, 60000); // 60,000 ms = 60 seconds
 };
