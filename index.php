@@ -73,31 +73,47 @@ require_once __DIR__ . '/includes/config.php';
         </div>
     </div>
 
-    <div id="edit-task-modal-overlay" class="modal-overlay fullscreen-modal">
-        <div class="modal-dialog">
+    <div id="unified-editor-overlay" class="modal-overlay">
+        <div id="unified-editor-container" class="modal-dialog">
+            
             <div class="modal-header">
-                <h3 id="edit-task-title">Task Title Will Go Here</h3>
-                <button id="edit-task-close" class="btn-icon">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div id="edit-task-notes-container">
-                    <label for="edit-task-notes">Notes</label>
-                    <textarea id="edit-task-notes" class="form-control" rows="10" placeholder="Add notes here..."></textarea>
+                <h3 id="editor-title">Edit Note</h3>
+                <div class="editor-controls">
+                    <button id="editor-btn-maximize" class="btn-icon" title="Maximize">□</button>
+                    <button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">⬚</button>
+                    <button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>
                 </div>
-                <div id="edit-task-meta-container">
-                    <div id="edit-task-due-date-container">
-                        <label for="edit-task-due-date">Due Date</label>
-                        <input type="date" id="edit-task-due-date" class="form-control">
-                    </div>
-                    </div>
             </div>
-            <div class="modal-footer">
-                 <div id="edit-task-status">Last saved: Never</div>
-                 <button id="edit-task-save" class="btn btn-primary">Save & Close</button>
+
+            <div id="editor-ribbon">
+                <nav id="editor-ribbon-tabs">
+                    <button class="ribbon-tab active" data-panel="format">Format</button>
+                    <button class="ribbon-tab" data-panel="find-replace">Find & Replace</button>
+                </nav>
+                <div id="editor-ribbon-panels">
+                    <div class="ribbon-panel active" id="editor-panel-format">
+                        </div>
+                    <div class="ribbon-panel" id="editor-panel-find-replace">
+                        </div>
+                </div>
             </div>
+
+            <div class="modal-body">
+                <textarea id="editor-textarea" placeholder="Start writing..."></textarea>
+            </div>
+
+            <div class="modal-footer" id="editor-status-bar">
+                <div id="editor-doc-stats">
+                    <span>Words: 0</span>
+                    <span>Chars: 0</span>
+                </div>
+                <div id="editor-save-status">Last saved: Never</div>
+            </div>
+
         </div>
     </div>
 
+    <script defer src="/assets/js/editor.js"></script>
     <script defer src="/assets/js/tasks.js"></script>
     <script defer src="/assets/js/app.js"></script>
 

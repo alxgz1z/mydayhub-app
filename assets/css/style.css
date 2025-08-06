@@ -4,6 +4,7 @@
 
 /* Import view-specific styles */
 @import url("views/tasks.css");
+@import url("views/editor.css"); /* Added import for the new Unified Editor */
 
 /* ==========================================================================
    1. THEME VARIABLES

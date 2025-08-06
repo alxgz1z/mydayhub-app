@@ -175,6 +175,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Initialize the mobile header menu functionality.
 	initMobileMenu();
 
+	// Initialize the new Unified Editor module.
+	UnifiedEditor.init();
+
 	// Initialize the event listeners for the Tasks view (e.g., adding tasks).
 	initTasksView();
 
