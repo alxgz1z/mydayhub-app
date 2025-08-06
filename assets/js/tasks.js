@@ -7,9 +7,7 @@
 
 // Module-level state variables
 let taskToMoveId = null;
-let currentEditingTaskId = null;
-// NEW: Timer ID for the auto-save functionality in the modal.
-let autoSaveTimer = null;
+
 
 /**
  * =========================================================================
@@ -297,85 +295,6 @@ const exitMoveMode = () => {
 	taskToMoveId = null;
 };
 
-/**
- * =========================================================================
- * EDIT TASK MODAL FUNCTIONS
- * =========================================================================
- */
-
-/**
- * NEW: Centralized function to save task data from the modal.
- * This can be called manually or by the auto-save timer.
- */
-const saveTaskData = () => {
-	if (!currentEditingTaskId) return;
-	const taskCard = document.getElementById(currentEditingTaskId);
-	const notesEl = document.getElementById('edit-task-notes');
-	const dueDateEl = document.getElementById('edit-task-due-date');
-	const statusEl = document.getElementById('edit-task-status');
-	if (!taskCard || !notesEl || !dueDateEl || !statusEl) return;
-
-	// Update the data attributes on the task card element
-	taskCard.dataset.notes = notesEl.value;
-	taskCard.dataset.dueDate = dueDateEl.value;
-	
-	// Refresh the meta indicators on the card itself
-	updateTaskCardIndicators(taskCard);
-
-	[cite_start]// Update the "Last saved" timestamp in the modal footer [cite: 33]
-	const now = new Date();
-	statusEl.textContent = `Last saved: ${now.toLocaleTimeString()}`;
-	
-	// In the future, this is where we would send the data to the server API.
-	console.log(`Task ${currentEditingTaskId} saved at ${now.toLocaleTimeString()}`);
-};
-
-const openEditTaskModal = (taskCardEl) => {
-	currentEditingTaskId = taskCardEl.id;
-	const modalOverlay = document.getElementById('edit-task-modal-overlay');
-	const titleEl = document.getElementById('edit-task-title');
-	const notesEl = document.getElementById('edit-task-notes');
-	const dueDateEl = document.getElementById('edit-task-due-date');
-	const closeBtn = document.getElementById('edit-task-close');
-	const saveBtn = document.getElementById('edit-task-save');
-	const statusEl = document.getElementById('edit-task-status');
-	const taskTitle = taskCardEl.querySelector('.task-title').textContent;
-
-	titleEl.textContent = taskTitle;
-	notesEl.value = taskCardEl.dataset.notes || '';
-	dueDateEl.value = taskCardEl.dataset.dueDate || '';
-	statusEl.textContent = 'Last saved: Never'; // Reset status text
-
-	closeBtn.onclick = () => closeEditTaskModal();
-	// UPDATED: The save button now calls our new, centralized save function before closing.
-	saveBtn.onclick = () => {
-		saveTaskData();
-		closeEditTaskModal();
-	};
-
-	modalOverlay.classList.add('active');
-
-	// NEW: Start the auto-save timer when the modal opens.
-	[cite_start]// The spec requires saving every 60 seconds. [cite: 31]
-	if (autoSaveTimer) clearInterval(autoSaveTimer); // Clear any lingering timers
-	autoSaveTimer = setInterval(saveTaskData, 60000); // 60,000 ms = 60 seconds
-};
-
-const closeEditTaskModal = () => {
-	const modalOverlay = document.getElementById('edit-task-modal-overlay');
-
-	// NEW: Crucially, we must stop the auto-save timer when the modal closes.
-	if (autoSaveTimer) {
-		clearInterval(autoSaveTimer);
-		autoSaveTimer = null;
-	}
-
-	if (modalOverlay) {
-		modalOverlay.classList.remove('active');
-	}
-	currentEditingTaskId = null;
-};
-
 
 /**
  * =========================================================================
@@ -410,9 +329,20 @@ const initTasksView = () => {
 		if (target.matches('.btn-task-actions')) {
 			showQuickActionsMenu(target);
 		} else if (quickActionEdit) {
+			// REPLACED: This block now calls the new UnifiedEditor instead of the old modal.
 			const menu = quickActionEdit.closest('.quick-actions-menu');
 			const taskCard = document.getElementById(menu.dataset.taskId);
-			if (taskCard) openEditTaskModal(taskCard);
+			if (taskCard) {
+				// Construct the data object to pass to the editor
+				const taskData = {
+					id: taskCard.id,
+					title: taskCard.querySelector('.task-title').textContent,
+					notes: taskCard.dataset.notes || '',
+					dueDate: taskCard.dataset.dueDate || ''
+				};
+				// Call the new global editor module
+				UnifiedEditor.open({ type: 'task', data: taskData });
+			}
 			closeAllQuickActionsMenus();
 		} else if (quickActionDuplicate) {
 			const menu = quickActionDuplicate.closest('.quick-actions-menu');
