@@ -176,16 +176,15 @@ const showQuickActionsMenu = (buttonEl) => {
 	menu.className = 'quick-actions-menu';
 	menu.dataset.taskId = taskCard.id;
 
-	// UPDATED: The menu HTML is now replaced with the new icon-only button bar
-	// as per your latest specification. The `title` attribute provides the tooltip.
+	// UPDATED: Replaced with the new set of SVG icons.
 	menu.innerHTML = `
-		<button class="quick-action-btn" data-action="toggle-high-priority" title="Change Priority">🔄</button>
-		<button class="quick-action-btn" data-action="edit-task" title="Edit Note and Due Date">ℹ️</button>
-		<button class="quick-action-btn" data-action="start-move" title="Move">↔️</button>
-		<button class="quick-action-btn" data-action="share-task" title="Share">👥</button>
-		<button class="quick-action-btn" data-action="make-private" title="Mark as Private">⛔️</button>
-		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate">🈁</button>
-		<button class="quick-action-btn" data-action="delete-task" title="Delete">🗑️</button>
+		<button class="quick-action-btn" data-action="toggle-high-priority" title="Change Priority"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9" fill="none" /><path d="M16 12a4 4 0 1 0-4 4"/><polyline points="16 8 16 12 12 12"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="edit-task" title="Edit Note and Due Date"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="2" fill="none"/><rect x="8" y="2" width="8" height="4" rx="1" fill="none"/><path d="M8 12h8M8 16h4"/><path d="M4 4l16 16" stroke-opacity="0.2"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="start-move" title="Move"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="12" x2="18" y2="12"/><polyline points="12 8 8 12 12 16"/><polyline points="12 8 16 12 12 16"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="share-task" title="Share"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><circle cx="15" cy="8" r="3"/><path d="M3 20v-2a4 4 0 014-4h2"/><path d="M21 20v-2a4 4 0 00-4-4h-2"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="make-private" title="Mark as Private"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="10" width="10" height="8" rx="2"/><path d="M12 14v2"/><path d="M9 10V7a3 3 0 016 0v3"/><line x1="6" y1="18" x2="18" y2="6"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="9" width="10" height="10" rx="2"/><rect x="3" y="5" width="10" height="10" rx="2"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
+		<button class="quick-action-btn" data-action="delete-task" title="Delete"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="7" width="14" height="12" rx="2"/><line x1="9" y1="11" x2="15" y2="17"/><line x1="15" y1="11" x2="9" y2="17"/><rect x="10" y="2" width="4" height="4" rx="1"/><filter id="shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#222" /></filter></svg></button>
 	`;
 
 	document.body.appendChild(menu);

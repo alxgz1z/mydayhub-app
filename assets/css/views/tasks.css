@@ -452,3 +452,53 @@
 		max-height: none; /* Allow columns to be as tall as their content */
 	}
 }
+
+/* ==========================================================================
+   6. QUICK ACTIONS MENU (TASK-SPECIFIC)
+   ========================================================================== */
+.quick-actions-menu {
+	position: absolute;
+	background-color: var(--column-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 30px; /* Pill shape */
+	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+	z-index: 1010;
+	display: flex;
+	gap: 4px;
+	padding: 5px;
+	transform: scale(0.95);
+	opacity: 0;
+	transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+}
+
+.quick-actions-menu.visible {
+	transform: scale(1);
+	opacity: 1;
+}
+
+.quick-action-btn {
+	background-color: var(--card-bg);
+	border: 1px solid transparent;
+	/* UPDATED: Default color is now the app's accent color. */
+	color: var(--accent-color);
+	border-radius: 50%; /* Circle */
+	width: 38px;
+	height: 38px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background-color 0.2s ease-out, border-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.quick-action-btn:hover {
+	background-color: var(--accent-color);
+	border-color: var(--accent-color);
+	color: white; /* Makes the SVG icon white on hover */
+}
+
+/* NEW: Rule to style the SVG icons inside the buttons */
+.quick-action-btn svg {
+	width: 22px; /* Adjusted size for crisp look */
+	height: 22px;
+}

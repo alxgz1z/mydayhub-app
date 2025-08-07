@@ -36,8 +36,9 @@
 
 #unified-editor-container.is-default {
 	/* The standard, non-fullscreen size for desktop */
-	width: 75vw;
-	height: 85vh;
+	/* UPDATED: Adjusted based on user feedback. */
+	width: 50vw;
+	height: 70vh;
 	border-radius: 12px;
 	border: 1px solid var(--card-border);
 }
