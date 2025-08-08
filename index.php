@@ -18,6 +18,8 @@ require_once __DIR__ . '/includes/config.php';
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
     <link rel="stylesheet" href="/assets/css/style.css">
     <link rel="stylesheet" href="/assets/css/views/tasks.css">
+    <link rel="stylesheet" href="/assets/css/views/editor.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
 </head>
 <body <?php if (DEVMODE) echo 'class="dev-mode-active"'; ?>>
 
@@ -79,12 +81,12 @@ require_once __DIR__ . '/includes/config.php';
             <div class="modal-header">
                 <h3 id="editor-title">Edit Note</h3>
                 <div class="editor-controls">
-                    <button id="editor-btn-maximize" class="btn-icon" title="Maximize">□</button>
-                    <button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">⬚</button>
+                    <button id="editor-btn-maximize" class="btn-icon" title="Maximize">⬚</button>
+                    <button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">□</button>
                     <button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>
                 </div>
             </div>
-
+    
             <div id="editor-ribbon">
                 <nav id="editor-ribbon-tabs">
                     <button class="ribbon-tab active" data-panel="format">Format</button>
@@ -92,16 +94,30 @@ require_once __DIR__ . '/includes/config.php';
                 </nav>
                 <div id="editor-ribbon-panels">
                     <div class="ribbon-panel active" id="editor-panel-format">
+                        <div class="ribbon-button-group">
+                        <div class="visible-buttons">
+                            <button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
+                            <button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
+                            <button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
+                            <button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
+                            <button class="btn-icon" title="Frame Selection" data-action="frame">[]</button>
+                            
+                            <button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
+                        
+                            <button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
+                            <button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
                         </div>
+                        </div>
+                    </div>
                     <div class="ribbon-panel" id="editor-panel-find-replace">
                         </div>
                 </div>
             </div>
-
+    
             <div class="modal-body">
                 <textarea id="editor-textarea" placeholder="Start writing..."></textarea>
             </div>
-
+    
             <div class="modal-footer" id="editor-status-bar">
                 <div id="editor-doc-stats">
                     <span>Words: 0</span>
@@ -109,7 +125,7 @@ require_once __DIR__ . '/includes/config.php';
                 </div>
                 <div id="editor-save-status">Last saved: Never</div>
             </div>
-
+    
         </div>
     </div>
 
