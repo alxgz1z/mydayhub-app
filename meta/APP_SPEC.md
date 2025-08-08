@@ -1,5 +1,7 @@
-🚀 MYDAYHUB APP SPEC 4.0.0 Beta
-(Internal – Dev/PM Use Only)
+					============================
+					MYDAYHUB APP SPEC 4.0.0 Beta
+					(Internal – Dev/PM Use Only)
+					============================
 
 All features, logic, UI, and modules in this spec are to be developed from scratch
 for 4.0.0 Beta. No legacy code will be reused.
