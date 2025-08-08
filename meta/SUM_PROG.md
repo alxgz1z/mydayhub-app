@@ -2,7 +2,100 @@
 						DEV PROGRESS SUMMARY
 						====================
 
----
+==================================================================================
+### Session Summary & Next Steps (8/8/25, 4 PM)
+This session marked a critical strategic pivot from frontend UI development to the
+foundational backend architecture. After finalizing the Unified Note Editor, we
+prioritized building the persistence layer to make the application's data real
+and durable. This involved designing and creating a new v4 database schema and
+a modern, robust API gateway.
+
+### Key Accomplishments
+* Strategic Pivot to Backend: We made the key decision to pause new view
+	development (like the Journal) and instead focus on building the database
+	and API foundation. This "vertical slice" approach, starting with the Tasks
+	board, ensures we build on a solid, data-driven core.
+* v4 Database Schema Design: Learning from the v3 implementation, we designed
+	and created a new, improved database schema (mydayhub_v4).
+		* Centralized Preferences: Replaced the wide user_preferences table
+		with a single, flexible preferences JSON column in the users table.
+		* Improved Data Integrity: Established direct user_id ownership on the
+		tasks table and used ENUM types for fields like status to prevent
+		ambiguity.
+		* Future-Proofing: Added a plan column to the users table to support
+		future subscription and quota features.
+		* Documentation: We updated the APP_SPEC.md to reflect the new schema
+		and added a dedicated section for the database architecture.
+#### "Single Pipe" API Architecture: We implemented a modern, secure API gateway.
+* Gateway Created: Created a single entry point for all frontend requests
+  at /api/api.php, which improves security and simplifies logic for
+  cross-cutting concerns like authentication and encryption.
+* Modular Handlers: Established a new /api/modules/ directory to hold
+  the business logic for each data type (e.g., tasks.handler.php),
+  keeping the gateway clean and the logic organized.
+
+#### Current Status
+The backend is now fully staged. The mydayhub database schema has been
+created, and the API gateway at /api/api.php is in place with a functional
+getAll action for tasks. The frontend (tasks.js) has not yet been updated
+and is still using temporary, in-browser data.
+
+#### Recommended Next Steps
+Our next session will focus entirely on connecting the frontend to this new
+backend, making the Tasks board the first fully persistent feature in v4.
+* Primary Goal: Make the Tasks board load its data from the database.
+* The Plan: We will perform a careful, incremental update to tasks.js,
+  replacing the dev-mode functions with a fetch call to our new API. All
+  existing UI logic (drag-and-drop, context menus, etc.) will be preserved.
+* The First Action: When we resume, I will provide the specific, incremental
+  changes needed for tasks.js to successfully call the /api/api.php
+  endpoint and render the columns and tasks received from the database.
+
+==================================================================================
+### Session Summary & Next Steps (8/8/25, 10 AM)
+
+Our primary focus this session was to stabilize, polish, and add core
+functionality to the Unified Note Editor. Through an iterative debugging and
+development process, we successfully addressed multiple UI bugs and implemented the
+foundational tools for the editor's format toolbar.
+
+#### Key Accomplishments
+
+* **Iterative UI Polishing:** We systematically fixed several visual and functional
+  bugs in the editor modal, including:
+  * Correcting the layout of the header, ensuring the title and control buttons
+	are properly aligned.
+  * Fixing the styling of the status bar for better readability and layout.
+  * Implementing a functional "Maximize/Restore" feature with correct icon
+	toggling.
+  * Adding a monospace font to the textarea for proper character alignment.
+* **Toolbar Simplification:** Per your feedback, we simplified the editor's scope
+  by removing the complex responsive toolbar logic (`ResizeObserver`) and its
+  associated UI elements, resulting in a cleaner and more stable component.
+* **Core Toolbar Functionality:** We implemented the logic for the main format
+  buttons, adapting robust patterns from the v3 code. This included:
+  * **Text Transformation:** Case changing (upper, lower, title), underlining,
+	and block-framing.
+  * **Tools:** A functional calculator that evaluates a selected mathematical
+	expression.
+  * **View Controls:** Buttons to increase or decrease the font size within the
+	editor's textarea.
+* **Live Document Stats:** We implemented live word, character, and line counts
+  that update as the user types.
+
+#### Current Status
+
+The Unified Note Editor is now in a stable, polished, and functional state,
+meeting all current design and usability requirements.
+
+#### Recommended Next Steps (Post-Approval)
+
+With the editor component now complete, the next logical step is to build out
+the next major, undeveloped view as defined in the application specification: the
+**Journal View**.
+
+
+==================================================================================
 ### Session Summary & Next Steps (8/8/25, 8 AM)
 
 Our primary focus this session was a detailed, iterative design process
@@ -62,7 +155,7 @@ next major feature we had previously planned.
 	implement the HTML changes in `index.php`.
 
 
----
+==================================================================================
 ### Session Summary & Next Steps (8/5/25, 10 PM)
 
 Our primary goal for this session shifted from backend integration to a major
@@ -106,7 +199,7 @@ Our next major task is to make the Editor's Ribbon Toolbar responsive.
 3.  **The First Action:** When we resume, our first action will be to implement the
 	HTML changes in `index.php`.
 
----
+==================================================================================
 ### Session Summary & Next Steps (8/4/25, 11 PM)
 
 Our primary goals were to polish the front-end features of the Tasks board, fix
@@ -142,7 +235,7 @@ The next logical step is to connect the front-end save function to the back-end 
 	add a `fetch()` call that sends a `PUT` request with JSON data to
 	`/api/tasks.php`.
 
----
+==================================================================================
 ### Session Summary & Next Steps (8/4/25, 12 AM)
 
 Our primary goals were to fix the local dev environment and improve the mobile UX.

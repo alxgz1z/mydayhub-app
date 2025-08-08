@@ -240,6 +240,8 @@ Accessed via a menu or settings icon.
 ### 6. Security, Privacy & Zero-Knowledge Architecture
 
 * ✅ All crypto logic is centralized in a dedicated module. No backend encryption.
+  This is enforced through the single API gateway (`/api/api.php`) that can
+  process all incoming and outgoing requests through a central point.
 * ✅ Password changes force re-encryption and require the old password.
 * 🚧 **Session management:**
 	* The latest session has write rights; others become read-only with a "reclaim
@@ -257,9 +259,11 @@ Accessed via a menu or settings icon.
 ---
 ### 7. 🚧 User Preference Management
 
-All settings are managed via a centralized architecture. A single JavaScript object,
-`userPreferences`, is the client-side source of truth, mirrored in a single
-JSON field in the database per user. This ensures data consistency.
+All settings are managed via a centralized architecture. A single JavaScript 
+object, userPreferences, is the client-side source of truth, mirrored in a 
+single preferences JSON field in the users table. This flexible approach replaces 
+the wide user_preferences table from v3 and allows new settings to be added 
+without database schema changes.
 
 ---
 ### 8. 🚧 Import/Export, Data Migration & Backup
@@ -280,10 +284,13 @@ A backup flow allows for a full copy-paste of all user data.
   /js/session.js, /js/telemetry.js: Support modules
   /css/style.css: Main stylesheet
   /css/views/*.css: View-specific styles
-/api/: REST endpoints for all modules
+/api/api.php: Single API Gateway. All frontend requests are sent here.
+/api/modules/*.handler.php: Individual modules that contain the business logic
+  for each resource (e.g., tasks, journal). Included by the gateway.
 /includes/: PHP config, DB, session, SMTP
 /migrations/: SQL scripts for DB migrations
 /debug.log: Backend error log (conditional on DEVMODE)
+/migrations/: SQL scripts for DB migrations (e.g., 001_initial_schema.sql)
 
 ---
 ### 10. Lessons Learned & How They Inform v4
@@ -325,3 +332,17 @@ A backup flow allows for a full copy-paste of all user data.
 | Settings slides, accordions and modals  | 🚧     |
 | Help page with accordions               | 🚧     |
 
+### 12. v4 Database Schema
+The v4 database is designed for clarity, referential integrity, and future 
+extensibility, learning from the limitations of the v3 schema.
+#### users: The central table for all users. It includes a preferences JSON column to 
+flexibly store all user-specific settings (e.g., theme, font size, view states), 
+and a plan column to support future subscription tiers.
+#### columns: Stores the user-created columns for the Tasks board. Each column is 
+directly linked to a user_id.
+#### tasks: Stores individual tasks. Each task now has a direct user_id foreign key 
+for simpler ownership queries and a clear ENUM type for its status ('normal', 
+'priority', 'completed') to prevent data ambiguity.
+#### Foreign Keys & Cascade Deletes: All relationships (e.g., tasks to columns, 
+columns to users) are enforced with foreign key constraints and ON DELETE CASCADE 
+to ensure data integrity.
