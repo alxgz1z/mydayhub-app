@@ -255,6 +255,12 @@ Accessed via a menu or settings icon.
 	* A "pass-through" mode controlled by a `DEVMODE` constant allows testing the
 		full app with readable plaintext data, separating app logic bugs from
 		crypto bugs.
+* **Robust Error Logging:** When the `DEVMODE` constant is set to `true`, a
+		custom error handler defined in `/includes/config.php` is registered. This
+		handler intercepts all PHP errors (Notices, Warnings, Fatal Errors), logs
+		them with a timestamp and full details to `/debug.log` in the project root,
+		and halts script execution. This prevents broken HTML from being sent as a
+		response to API calls and ensures a clean, predictable debugging process.
 
 ---
 ### 7. 🚧 User Preference Management
