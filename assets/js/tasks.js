@@ -8,62 +8,94 @@
 // Module-level state variables
 let taskToMoveId = null;
 
-
 /**
  * =========================================================================
- * DEV MODE FUNCTIONS
+ * API & DATA HANDLING FUNCTIONS
  * =========================================================================
  */
-const createTaskCardDev = (title) => {
-	const taskId = 'task-' + Date.now() + Math.random();
-	// UPDATED: Changed class to task-meta-indicators to match new CSS.
-	return `
-		<div class="task-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
-			<div class="task-status-band"></div>
-			<div class="task-card-main-content">
-				<div class="task-card-content">
-					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
-					<span class="task-title">${title}</span>
-					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
-				</div>
-				<div class="task-meta-indicators"></div>
-			</div>
-		</div>
-	`;
-};
 
-const populateDevModeTasks = () => {
-	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
-	if (!taskColumnsWrapper) return;
-	taskColumnsWrapper.innerHTML = '';
-	const devData = {
-		"Weekdays": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
-		"Colors": ["Blue", "Red", "Green", "Black", "White"],
-		"Chores": ["Wash car", "Mow lawn", "Water plant", "Garbage out"]
-	};
-	for (const columnTitle in devData) {
-		addColumnToBoard(columnTitle);
-		const newColumn = taskColumnsWrapper.lastElementChild;
-		if (newColumn) {
-			const cardBody = newColumn.querySelector('.card-body');
-			devData[columnTitle].forEach(taskTitle => {
-				cardBody.insertAdjacentHTML('beforeend', createTaskCardDev(taskTitle));
-			});
+/**
+ * Fetches the entire board structure (columns and tasks) from the API.
+ */
+async function fetchAndRenderBoard() {
+	try {
+		const response = await fetch('/api/api.php', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json'
+			},
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'getAll'
+			})
+		});
+
+		if (!response.ok) {
+			throw new Error(`API request failed with status ${response.status}`);
+		}
+
+		const result = await response.json();
+
+		if (result.status === 'success') {
+			renderBoard(result.data);
+		} else {
+			throw new Error(result.message || 'Failed to fetch board data.');
+		}
+
+	} catch (error) {
+		console.error('Error fetching board data:', error);
+		// You could show an error message to the user here
+		const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
+		if (taskColumnsWrapper) {
+			taskColumnsWrapper.innerHTML = `<p class="error-message">Could not load board. Please try again later.</p>`;
 		}
 	}
-};
+}
+
+/**
+ * Renders the entire board from the data provided by the API.
+ * @param {Array} boardData - An array of column objects, each with a nested array of task objects.
+ */
+function renderBoard(boardData) {
+	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
+	if (!taskColumnsWrapper) return;
+
+	taskColumnsWrapper.innerHTML = ''; // Clear any existing content
+
+	boardData.forEach(columnData => {
+		// Add the column to the board
+		addColumnToBoard(columnData.column_name, columnData.column_id);
+		const newColumnEl = taskColumnsWrapper.lastElementChild;
+		if (newColumnEl) {
+			const cardBody = newColumnEl.querySelector('.card-body');
+			if (cardBody && columnData.tasks) {
+				// Add all tasks to the column
+				columnData.tasks.forEach(taskData => {
+					const taskCardHTML = createTaskCard(taskData);
+					cardBody.insertAdjacentHTML('beforeend', taskCardHTML);
+				});
+			}
+		}
+	});
+}
+
 
 /**
  * =========================================================================
  * CORE TASK VIEW FUNCTIONS
  * =========================================================================
  */
-const addColumnToBoard = (title) => {
+
+/**
+ * Creates the HTML for a column and adds it to the DOM.
+ * @param {string} title - The title of the column.
+ * @param {number} columnId - The database ID of the column.
+ */
+const addColumnToBoard = (title, columnId) => {
 	const taskColumnsWrapper = document.getElementById('task-columns-wrapper');
 	if (!taskColumnsWrapper) return;
-	const columnId = 'column-' + Date.now() + Math.random();
 	const newColumnHTML = `
-		<div class="task-column" id="${columnId}">
+		<div class="task-column" id="column-${columnId}">
 			<div class="card-header">
 				<span class="column-title">${title}</span>
 				<span class="task-count">0</span>
@@ -80,15 +112,23 @@ const addColumnToBoard = (title) => {
 	taskColumnsWrapper.insertAdjacentHTML('beforeend', newColumnHTML);
 };
 
-const createTaskCard = (title) => {
-	const taskId = 'task-' + Date.now();
-	// UPDATED: Changed class to task-meta-indicators to match new CSS.
+/**
+ * Creates the HTML for a single task card from a data object.
+ * @param {object} task - The task data object from the API.
+ * @returns {string} The HTML string for the task card.
+ */
+const createTaskCard = (task) => {
+	const taskId = `task-${task.task_id}`;
+	// Use the title from the decoded 'data' object
+	const title = task.data.title || 'Untitled Task';
+	const statusClass = task.status === 'priority' ? 'high-priority' : task.status === 'completed' ? 'completed' : '';
+
 	return `
-		<div class="task-card new-card" id="${taskId}" draggable="true" data-notes="" data-due-date="">
+		<div class="task-card ${statusClass}" id="${taskId}" draggable="true" data-notes="" data-due-date="">
 			<div class="task-status-band"></div>
 			<div class="task-card-main-content">
 				<div class="task-card-content">
-					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete">
+					<input type="checkbox" class="task-complete-checkbox" title="Mark as complete" ${task.status === 'completed' ? 'checked' : ''}>
 					<span class="task-title">${title}</span>
 					<button class="btn-task-actions" title="Task Actions">&#8230;</button>
 				</div>
@@ -98,6 +138,7 @@ const createTaskCard = (title) => {
 	`;
 };
 
+
 /**
  * UPDATED: Renamed function and updated its logic to generate the new badge structure
  * that the new CSS rules target.
@@ -105,7 +146,6 @@ const createTaskCard = (title) => {
  */
 const updateTaskCardIndicators = (taskCardEl) => {
 	if (!taskCardEl) return;
-	// UPDATED: Changed selector to match new class name in createTaskCard functions.
 	const indicatorsContainer = taskCardEl.querySelector('.task-meta-indicators');
 	if (!indicatorsContainer) return;
 
@@ -113,7 +153,6 @@ const updateTaskCardIndicators = (taskCardEl) => {
 
 	const notes = taskCardEl.dataset.notes;
 	if (notes && notes.trim() !== '') {
-		// UPDATED: This now creates a styled badge for the note icon.
 		indicatorsContainer.innerHTML += `
 			<span class="meta-indicator" title="This task has notes">
 				<span class="icon">📝</span>
@@ -122,7 +161,6 @@ const updateTaskCardIndicators = (taskCardEl) => {
 
 	const dueDate = taskCardEl.dataset.dueDate;
 	if (dueDate) {
-		// UPDATED: This now creates a styled badge for the due date.
 		indicatorsContainer.innerHTML += `
 			<span class="meta-indicator" title="Due Date: ${dueDate}">
 				<span class="icon">📅</span>
@@ -176,7 +214,6 @@ const showQuickActionsMenu = (buttonEl) => {
 	menu.className = 'quick-actions-menu';
 	menu.dataset.taskId = taskCard.id;
 
-	// UPDATED: Replaced the 'Priority' and 'Move' icons with clearer, more standard alternatives.
 	menu.innerHTML = `
 		<button class="quick-action-btn" data-action="toggle-high-priority" title="Change Priority"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5a9.5 9.5 0 1 0 6.72 2.78"/><path d="M12 8v4l2 1"/><path d="M15.5 2.5V6h-3.5"/></svg></button>
 		<button class="quick-action-btn" data-action="edit-task" title="Edit Note and Due Date"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
@@ -232,12 +269,11 @@ const showAddTaskForm = (footer) => {
 		const taskTitle = input.value.trim();
 		if (taskTitle) {
 			const cardBody = footer.closest('.task-column').querySelector('.card-body');
-			cardBody.insertAdjacentHTML('beforeend', createTaskCard(taskTitle));
+			// THIS WILL NEED TO BE UPDATED to call the API to create a task
+			// For now, we just add it visually.
+			const tempTaskData = { task_id: Date.now(), data: { title: taskTitle }, status: 'normal' };
+			cardBody.insertAdjacentHTML('beforeend', createTaskCard(tempTaskData));
 			sortTasksInColumn(cardBody);
-			const newCard = Array.from(cardBody.querySelectorAll('.new-card')).pop();
-			if (newCard) {
-				setTimeout(() => newCard.classList.remove('new-card'), 500);
-			}
 			input.value = '';
 		}
 	});
@@ -303,11 +339,10 @@ const exitMoveMode = () => {
 const initTasksView = () => {
 	const taskBoard = document.getElementById('task-board-container');
 	if (!taskBoard) return;
-	if (document.body.classList.contains('dev-mode-active')) {
-		populateDevModeTasks();
-		// UPDATED: Called renamed function
-		document.querySelectorAll('.task-card').forEach(updateTaskCardIndicators);
-	}
+	
+	// Fetch and render the board data from the API on initialization
+	fetchAndRenderBoard();
+	
 	document.addEventListener('click', async (event) => {
 		const target = event.target;
 		if (!document.body.classList.contains('move-mode-active')) {
@@ -328,40 +363,34 @@ const initTasksView = () => {
 		if (target.matches('.btn-task-actions')) {
 			showQuickActionsMenu(target);
 		} else if (quickActionEdit) {
-			// REPLACED: This block now calls the new UnifiedEditor instead of the old modal.
 			const menu = quickActionEdit.closest('.quick-actions-menu');
 			const taskCard = document.getElementById(menu.dataset.taskId);
 			if (taskCard) {
-				// Construct the data object to pass to the editor
 				const taskData = {
 					id: taskCard.id,
 					title: taskCard.querySelector('.task-title').textContent,
 					notes: taskCard.dataset.notes || '',
 					dueDate: taskCard.dataset.dueDate || ''
 				};
-				// Call the new global editor module
 				UnifiedEditor.open({ type: 'task', data: taskData });
 			}
 			closeAllQuickActionsMenus();
 		} else if (quickActionDuplicate) {
+			// This will need to be updated to call the API
 			const menu = quickActionDuplicate.closest('.quick-actions-menu');
 			const originalCard = document.getElementById(menu.dataset.taskId);
 			if (originalCard) {
-				const title = originalCard.querySelector('.task-title').textContent;
-				const newCardHTML = createTaskCard(title);
-				originalCard.insertAdjacentHTML('afterend', newCardHTML);
-				
-				const newCard = originalCard.nextElementSibling;
-				if (newCard) {
-					// Copy data attributes and update meta
-					newCard.dataset.notes = originalCard.dataset.notes;
-					newCard.dataset.dueDate = originalCard.dataset.dueDate;
-					// UPDATED: Called renamed function
-					updateTaskCardIndicators(newCard);
-				}
+				const tempId = Date.now();
+				const tempTaskData = { 
+					task_id: tempId, 
+					data: { title: originalCard.querySelector('.task-title').textContent + ' (Copy)' }, 
+					status: 'normal' 
+				};
+				originalCard.insertAdjacentHTML('afterend', createTaskCard(tempTaskData));
 			}
 			closeAllQuickActionsMenus();
 		} else if (quickActionDelete) {
+			// This will need to be updated to call the API
 			const menu = quickActionDelete.closest('.quick-actions-menu');
 			const taskCard = document.getElementById(menu.dataset.taskId);
 			if (taskCard) {
@@ -376,6 +405,7 @@ const initTasksView = () => {
 			}
 			closeAllQuickActionsMenus();
 		} else if (quickActionPriority) {
+			// This will need to be updated to call the API
 			const menu = quickActionPriority.closest('.quick-actions-menu');
 			const taskCard = document.getElementById(menu.dataset.taskId);
 			if (taskCard) {
@@ -391,6 +421,7 @@ const initTasksView = () => {
 				if (taskCard) enterMoveMode(taskCard);
 			}
 		} else if (target.matches('.btn-move-task-here')) {
+			// This will need to be updated to call the API
 			if (taskToMoveId) {
 				const taskToMove = document.getElementById(taskToMoveId);
 				const destinationColumn = target.closest('.task-column');
@@ -410,6 +441,7 @@ const initTasksView = () => {
 		} else if (target.matches('.btn-column-actions')) {
 			toggleColumnActionsMenu(target);
 		} else if (target.matches('.btn-delete-column')) {
+			// This will need to be updated to call the API
 			const column = target.closest('.task-column');
 			closeAllColumnActionMenus();
 			if (column) {
@@ -421,6 +453,7 @@ const initTasksView = () => {
 				if (confirmed) column.remove();
 			}
 		} else if (target.matches('.task-complete-checkbox')) {
+			// This will need to be updated to call the API
 			const taskCard = target.closest('.task-card');
 			if (taskCard) {
 				const isChecked = target.checked;

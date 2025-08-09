@@ -7,16 +7,16 @@
  * This script routes requests to the appropriate module handler.
  */
 
-// Set the content type to JSON for all responses
-header('Content-Type: application/json');
+// This will be replaced by a real session handler later.
+$userId = 1; 
 
 // Load the core application configuration and database connection.
+// The custom error handler in config.php will manage any errors from here.
 require_once __DIR__ . '/../includes/config.php';
 require_once __DIR__ . '/../includes/db.php'; // Establishes $pdo connection
 
-// --- Generic User Setup ---
-// This will be replaced by a real session handler later.
-$userId = 1; 
+// Set the content type to JSON for all responses
+header('Content-Type: application/json');
 
 // --- Main Request Handling ---
 

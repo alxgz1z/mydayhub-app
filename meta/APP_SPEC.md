@@ -18,8 +18,8 @@ for 4.0.0 Beta. No legacy code will be reused.
 ### ❗️ IMPORTANT:
 
 We operate in two environments.
-- The production app runs in mydayhub.com.
-- The development app runs in localhost:8888.
+- The production app runs in mydayhub.com. (Hostinger)
+- The development app runs in localhost:8888. (XAMPP)
 These environments are isolated.
 
 ---
