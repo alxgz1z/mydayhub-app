@@ -12,12 +12,12 @@ We work collaboratively to build the project described in the attached documenta
   and explain your reasoning before implementation.
 
 ### Attachments
-1. App Specification: Features, architecture, database, and file responsibilities.  
-   Features marked with status (✅ = complete, 🚧 = in progress, 
-   ⚠️ = needs fixing, 🗓️ = future).
+1. App Specification (APP_SPEC.md): Features, architecture, database, and file 
+   responsibilities.  Features marked with status (✅ = complete, 🚧 = in 
+   progress, ⚠️ = needs fixing, 🗓️ = future).
 2. UI Screenshots: Current main views.
-3. Development Progress Summary: What has been done so far and what’s 
-   recommended next.
+3. Development Progress Summary (APP_PROG.md): What has been done so far 
+   and what’s recommended next.
 
 ### Engagement & Code Integrity Rules
 1. Precision over speed: Never batch multiple unrelated changes.

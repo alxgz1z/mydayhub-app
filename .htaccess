@@ -11,9 +11,18 @@ DirectoryIndex index.php
 
 # --- URL Rewriting Engine ---
 
-# Enable the URL rewriting engine. This will be critical later for our
-# Single Page App (SPA) to handle "clean" URLs without page reloads.
+# Enable the URL rewriting engine. This is critical for our API and Single
+# Page App (SPA) to handle "clean" URLs without page reloads.
 RewriteEngine On
+
+# --- API ROUTING (ADDED) ---
+# This is the crucial rule that was missing.
+# It tells the server that any request starting with "api/" that is NOT for a
+# real file (-f) or directory (-d) should be passed to our main gateway script.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^api/(.*)$ api/api.php [L,QSA]
+
 
 # --- Security Headers ---
 

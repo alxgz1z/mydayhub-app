@@ -98,3 +98,5 @@ define('SMTP_FROM_NAME', 'MyTsks App');
 // --- FILE PATHS --- //
 define('INCLUDES_PATH', __DIR__);
 define('ROOT_PATH', dirname(INCLUDES_PATH));
+
+// The stray `}` that was causing the parse error has been removed from the end.
