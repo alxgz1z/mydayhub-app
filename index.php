@@ -3,16 +3,13 @@
  * MyDayHub 4.0.0 Beta - Main Application Shell
  */
 
-// Load the core application configuration.
 require_once __DIR__ . '/includes/config.php';
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
     <title>MyDayHub</title>
 
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
@@ -40,30 +37,26 @@ require_once __DIR__ . '/includes/config.php';
                 <div id="add-column-container">
                     <button id="btn-add-new-column">+ New Column</button>
                 </div>
-
                 <button id="mobile-menu-toggle" class="btn-icon">&#9776;</button>
                 <div id="mobile-menu-dropdown"></div>
             </div>
         </header>
 
         <main id="main-content">
-            <div id="task-board-container" class="view-container active">
-                <div id="task-columns-wrapper">
+            <!-- IMPORTANT: view id must match app.js expectation: ${view}-view-container -->
+            <div id="tasks-view-container" class="view-container active">
+                <div id="task-board-container">
+                    <div id="task-columns-wrapper"></div>
                 </div>
             </div>
-        
-            <div id="journal-view-container" class="view-container">
-            </div>
-        
-            <div id="outlines-view-container" class="view-container">
-            </div>
-        
-            <div id="meetings-view-container" class="view-container">
-            </div>
+
+            <div id="journal-view-container" class="view-container"></div>
+            <div id="outlines-view-container" class="view-container"></div>
+            <div id="meetings-view-container" class="view-container"></div>
         </main>
-        
     </div>
 
+    <!-- Reusable confirmation modal -->
     <div id="confirmation-modal-overlay" class="modal-overlay">
         <div class="modal-dialog">
             <h3 id="modal-title">Confirmation</h3>
@@ -75,9 +68,9 @@ require_once __DIR__ . '/includes/config.php';
         </div>
     </div>
 
+    <!-- Unified note editor -->
     <div id="unified-editor-overlay" class="modal-overlay">
         <div id="unified-editor-container" class="modal-dialog">
-            
             <div class="modal-header">
                 <h3 id="editor-title">Edit Note</h3>
                 <div class="editor-controls">
@@ -86,7 +79,7 @@ require_once __DIR__ . '/includes/config.php';
                     <button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>
                 </div>
             </div>
-    
+
             <div id="editor-ribbon">
                 <nav id="editor-ribbon-tabs">
                     <button class="ribbon-tab active" data-panel="format">Format</button>
@@ -95,29 +88,26 @@ require_once __DIR__ . '/includes/config.php';
                 <div id="editor-ribbon-panels">
                     <div class="ribbon-panel active" id="editor-panel-format">
                         <div class="ribbon-button-group">
-                        <div class="visible-buttons">
-                            <button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
-                            <button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
-                            <button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
-                            <button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
-                            <button class="btn-icon" title="Frame Selection" data-action="frame">[]</button>
-                            
-                            <button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
-                        
-                            <button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
-                            <button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
-                        </div>
+                            <div class="visible-buttons">
+                                <button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
+                                <button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
+                                <button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
+                                <button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
+                                <button class="btn-icon" title="Frame Selection" data-action="frame">[]</button>
+                                <button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
+                                <button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
+                                <button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
+                            </div>
                         </div>
                     </div>
-                    <div class="ribbon-panel" id="editor-panel-find-replace">
-                        </div>
+                    <div class="ribbon-panel" id="editor-panel-find-replace"></div>
                 </div>
             </div>
-    
+
             <div class="modal-body">
                 <textarea id="editor-textarea" placeholder="Start writing..."></textarea>
             </div>
-    
+
             <div class="modal-footer" id="editor-status-bar">
                 <div id="editor-doc-stats">
                     <span>Words: 0</span>
@@ -125,13 +115,11 @@ require_once __DIR__ . '/includes/config.php';
                 </div>
                 <div id="editor-save-status">Last saved: Never</div>
             </div>
-    
         </div>
     </div>
 
     <script defer src="/assets/js/editor.js"></script>
     <script defer src="/assets/js/tasks.js"></script>
     <script defer src="/assets/js/app.js"></script>
-
 </body>
 </html>

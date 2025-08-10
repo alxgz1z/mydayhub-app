@@ -3,64 +3,68 @@
  * MyDayHub v4.0.0
  * Main API Gateway (Single Pipe)
  *
- * All frontend requests are sent to this single endpoint.
- * This script routes requests to the appropriate module handler.
+ * Routes all frontend requests to module handlers.
+ * This version initializes PDO and passes it to handlers.
  */
 
-// This will be replaced by a real session handler later.
-$userId = 1; 
+declare(strict_types=1);
 
-// Load the core application configuration.
-// The custom error handler in config.php will manage any errors from here.
+// TEMP: hardcoded dev user until auth exists.
+$userId = 1;
+
+// Core config (DEVMODE, DB constants, error handler, etc.)
 require_once __DIR__ . '/../includes/config.php';
 
-// ERROR REMOVED: The line "require_once '/../includes/db.php';" was here.
-// We removed it because we confirmed that file does not exist. Database
-// connections will be handled inside the specific module handlers.
-
-// Set the content type to JSON for all responses
+// Respond JSON always
 header('Content-Type: application/json');
 
-// --- Main Request Handling ---
+// --- Parse request payload (POST JSON) with GET fallback for quick testing ---
+$rawBody = file_get_contents('php://input') ?: '';
+$payload = json_decode($rawBody, true) ?: [];
 
-// Get the raw POST data from the request body
-// Note: We will switch to GET requests for fetching data later for simplicity.
-$request_body = file_get_contents('php://input');
-$payload = json_decode($request_body, true);
+$module = $_GET['module'] ?? ($payload['module'] ?? null);
+$action = $_GET['action'] ?? ($payload['action'] ?? null);
+$data   = $payload['data'] ?? [];
 
-// For now, to unblock the frontend, let's also support GET requests for getAll
-// This is a temporary measure to simplify debugging the initial data load.
-$action = $_GET['action'] ?? null;
-$module = $_GET['module'] ?? null;
-
-
-if (!$action || !$module) {
-	if (json_last_error() !== JSON_ERROR_NONE || !isset($payload['module']) || !isset($payload['action'])) {
-		http_response_code(400); // Bad Request
-		echo json_encode(['status' => 'error', 'message' => 'Invalid request or missing module/action.']);
-		exit;
-	}
-	$module = $payload['module'];
-	$action = $payload['action'];
+if (!$module || !$action) {
+	http_response_code(400);
+	echo json_encode(['status' => 'error', 'message' => 'Missing module or action.']);
+	exit;
 }
 
-$data = $payload['data'] ?? []; // Optional data for the action
+// --- Initialize PDO (UTF-8, exceptions, no emulation) ---
+try {
+	$dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
+	$options = [
+		PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
+		PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+		PDO::ATTR_EMULATE_PREPARES   => false,
+	];
+	$pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
+} catch (PDOException $e) {
+	// Log in dev; keep response tidy
+	if (defined('DEVMODE') && DEVMODE === true) {
+		$log = "[" . date('Y-m-d H:i:s') . "] PDO connect error in " . __FILE__ . ": " . $e->getMessage() . "\n";
+		// __DIR__ is /api ; go up one to project root
+		file_put_contents(__DIR__ . '/../debug.log', $log, FILE_APPEND);
+	}
+	http_response_code(500);
+	echo json_encode(['status' => 'error', 'message' => 'Database connection failed.']);
+	exit;
+}
 
-// Route to the appropriate module handler
+// --- Route to module handler ---
 switch ($module) {
 	case 'tasks':
-		// Load the handler for task-related actions
 		require_once __DIR__ . '/modules/tasks.handler.php';
-		// Call the appropriate function within the handler
-		handle_tasks_action($action, $data, $userId);
+		// Handler echoes JSON and exits
+		handle_tasks_action($action, $data, $pdo, $userId);
 		break;
 
-	// We can add more cases here later (e.g., 'journal', 'users')
+	// Future: journal, users, etc.
 
 	default:
-		http_response_code(404); // Not Found
+		http_response_code(404);
 		echo json_encode(['status' => 'error', 'message' => "Module '{$module}' not found."]);
 		break;
 }
-
-// ERROR REMOVED: The stray `}` that was causing the parse error has been removed from the end.
