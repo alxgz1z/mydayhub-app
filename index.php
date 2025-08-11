@@ -1,16 +1,26 @@
 <?php
 /**
- * MyDayHub 4.0.0 Beta - Main Application Shell
+ * MyDayHub 4.1.0 Beta - Main Application Shell
  */
-
 require_once __DIR__ . '/includes/config.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+$CSRF = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>MyDayHub</title>
+
+    <meta name="csrf" content="<?php echo $CSRF; ?>">
 
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
     <link rel="stylesheet" href="/assets/css/style.css">
@@ -37,16 +47,15 @@ require_once __DIR__ . '/includes/config.php';
                 <div id="add-column-container">
                     <button id="btn-add-new-column">+ New Column</button>
                 </div>
+
                 <button id="mobile-menu-toggle" class="btn-icon">&#9776;</button>
                 <div id="mobile-menu-dropdown"></div>
             </div>
         </header>
 
         <main id="main-content">
-            <!-- IMPORTANT: view id must match app.js expectation: ${view}-view-container -->
-            <div id="tasks-view-container" class="view-container active">
-                <div id="task-board-container">
-                    <div id="task-columns-wrapper"></div>
+            <div id="task-board-container" class="view-container active">
+                <div id="task-columns-wrapper">
                 </div>
             </div>
 
@@ -54,9 +63,9 @@ require_once __DIR__ . '/includes/config.php';
             <div id="outlines-view-container" class="view-container"></div>
             <div id="meetings-view-container" class="view-container"></div>
         </main>
+
     </div>
 
-    <!-- Reusable confirmation modal -->
     <div id="confirmation-modal-overlay" class="modal-overlay">
         <div class="modal-dialog">
             <h3 id="modal-title">Confirmation</h3>
@@ -68,9 +77,9 @@ require_once __DIR__ . '/includes/config.php';
         </div>
     </div>
 
-    <!-- Unified note editor -->
     <div id="unified-editor-overlay" class="modal-overlay">
         <div id="unified-editor-container" class="modal-dialog">
+
             <div class="modal-header">
                 <h3 id="editor-title">Edit Note</h3>
                 <div class="editor-controls">
@@ -115,6 +124,7 @@ require_once __DIR__ . '/includes/config.php';
                 </div>
                 <div id="editor-save-status">Last saved: Never</div>
             </div>
+
         </div>
     </div>
 
