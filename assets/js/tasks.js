@@ -1,8 +1,10 @@
 /**
- * MyDayHub 4.1.0 Beta - Tasks View Module
+ * MyDayHub 4.3.1 Beta - Tasks View Module
+ * - Persists status (complete/priority) and in-column ordering.
+ * - FIX: Cross-column drag now persists final ordered positions.
  */
 
-// Module-level state variables
+// Module-level state
 let taskToMoveId = null;
 let dragFromColumnId = null;
 
@@ -65,8 +67,7 @@ function renderBoard(boardData) {
 		const html = createTaskCard(taskData);
 		body.insertAdjacentHTML('beforeend', html);
 	  });
-	  // ensure initial sort after rendering tasks
-	  sortTasksInColumn(body);
+	  sortTasksInColumn(body); // initial grouped sort; ties by data-position
 	}
 	updateColumnTaskCount(columnEl);
   });
@@ -105,8 +106,12 @@ const createTaskCard = (task) => {
 	task.status === 'priority' ? 'high-priority' :
 	task.status === 'completed' ? 'completed' : '';
 
+  // store server position to use as tie-breaker during sorting
+  const position = Number.isFinite(task.position) ? Number(task.position) : 0;
+
   return `
-	<div class="task-card ${statusClass}" id="${taskId}" draggable="true" data-notes="" data-due-date="">
+	<div class="task-card ${statusClass}" id="${taskId}" draggable="true"
+		 data-position="${position}" data-notes="" data-due-date="">
 	  <div class="task-status-band"></div>
 	  <div class="task-card-main-content">
 		<div class="task-card-content">
@@ -120,7 +125,7 @@ const createTaskCard = (task) => {
   `;
 };
 
-// --- counts ---
+// counts
 const updateColumnTaskCount = (columnEl) => {
   if (!columnEl) return;
   const countEl = columnEl.querySelector('.task-count');
@@ -133,7 +138,7 @@ const updateAllColumnCounts = () => {
   document.querySelectorAll('.task-column').forEach(updateColumnTaskCount);
 };
 
-// --- sorting ---
+// sorting with tie-breaker on stored position
 const sortTasksInColumn = (body) => {
   if (!body) return;
   const tasks = Array.from(body.querySelectorAll('.task-card'));
@@ -144,11 +149,38 @@ const sortTasksInColumn = (body) => {
 	const bPriority = b.classList.contains('high-priority');
 	if (aCompleted !== bCompleted) return aCompleted ? 1 : -1;
 	if (aPriority !== bPriority) return aPriority ? -1 : 1;
-	return 0;
+	// tie-breaker: numeric data-position (lower first)
+	const ap = parseInt(a.dataset.position || '0', 10);
+	const bp = parseInt(b.dataset.position || '0', 10);
+	return ap - bp;
   }).forEach(t => body.appendChild(t));
 };
 
-// --- DnD (persists cross-column moves) ---
+// compute final column order respecting groups
+const computeOrderedIdsForColumn = (columnEl) => {
+  const cards = Array.from(columnEl.querySelectorAll('.task-card'));
+  const completed = cards.filter(c => c.classList.contains('completed'));
+  const incompletes = cards.filter(c => !c.classList.contains('completed'));
+  const priority = incompletes.filter(c => c.classList.contains('high-priority'));
+  const normal = incompletes.filter(c => !c.classList.contains('high-priority'));
+  const orderedCards = [...priority, ...normal, ...completed];
+  return orderedCards.map(c => parseInt(c.id.replace('task-',''),10));
+};
+
+const applyOrderToColumnDom = (columnEl, orderedIds) => {
+  const body = columnEl.querySelector('.card-body');
+  if (!body) return;
+  orderedIds.forEach(id => {
+	const el = body.querySelector(`#task-${id}`);
+	if (el) body.appendChild(el);
+  });
+};
+
+/**
+ * =========================================================================
+ * DnD (persist cross-column moves; persist same-column reorder)
+ * =========================================================================
+ */
 const initDragAndDrop = () => {
   const board = document.getElementById('task-board-container');
   if (!board) return;
@@ -171,35 +203,84 @@ const initDragAndDrop = () => {
 
 	const destBody = card.closest('.card-body');
 	if (!destBody) return;
-
 	const destColumn = destBody.closest('.task-column');
 	const destColumnId = destColumn ? parseInt(destColumn.id.replace('column-',''),10) : null;
 
-	// Always sort & update counts locally
-	sortTasksInColumn(destBody);
-	updateColumnTaskCount(destColumn);
-	if (dragFromColumnId && destColumnId && dragFromColumnId !== destColumnId) {
+	if (!dragFromColumnId || !destColumnId) return;
+
+	// Case 1: moved to a different column
+	if (dragFromColumnId !== destColumnId) {
+	  // Respect user's drop: compute grouped order based on DOM, then apply
+	  const orderedIds = computeOrderedIdsForColumn(destColumn);
+	  applyOrderToColumnDom(destColumn, orderedIds);
+
+	  // Update counters
+	  updateColumnTaskCount(destColumn);
 	  const fromColumnEl = document.getElementById(`column-${dragFromColumnId}`);
 	  if (fromColumnEl) updateColumnTaskCount(fromColumnEl);
 
-	  // Persist the move (append at dest end)
+	  // Persist move, then persist full ordered list for destination
 	  const taskId = parseInt(card.id.replace('task-',''),10);
 	  try {
-		const res = await apiPost({
+		// 1) Move card's column (server will append at end temporarily)
+		const resMove = await apiPost({
 		  module: 'tasks',
 		  action: 'moveTask',
 		  data: { task_id: taskId, to_column_id: destColumnId }
+		});
+		const jsonMove = await resMove.json();
+		if (!resMove.ok || jsonMove.status !== 'success') {
+		  throw new Error(jsonMove.message || `HTTP ${resMove.status}`);
+		}
+
+		// 2) Persist the exact destination order as dropped
+		const resReorder = await apiPost({
+		  module: 'tasks',
+		  action: 'reorderColumn',
+		  data: { column_id: destColumnId, ordered: orderedIds }
+		});
+		const jsonReorder = await resReorder.json();
+		if (!resReorder.ok || jsonReorder.status !== 'success') {
+		  throw new Error(jsonReorder.message || `HTTP ${resReorder.status}`);
+		}
+
+		// 3) Update data-position locally to mirror server positions
+		const body = destColumn.querySelector('.card-body');
+		Array.from(body.querySelectorAll('.task-card')).forEach((c, i) => {
+		  c.dataset.position = String(i);
+		});
+	  } catch (err) {
+		console.error('moveTask/reorderColumn failed:', err);
+		alert('Could not save the move. Reloading the board.');
+		fetchAndRenderBoard();
+	  }
+	} else {
+	  // Case 2: re-ordered within SAME column → compute full order and persist
+	  const orderedIds = computeOrderedIdsForColumn(destColumn);
+	  applyOrderToColumnDom(destColumn, orderedIds);
+	  updateColumnTaskCount(destColumn);
+
+	  try {
+		const res = await apiPost({
+		  module: 'tasks',
+		  action: 'reorderColumn',
+		  data: { column_id: destColumnId, ordered: orderedIds }
 		});
 		const json = await res.json();
 		if (!res.ok || json.status !== 'success') {
 		  throw new Error(json.message || `HTTP ${res.status}`);
 		}
+		// Update each card's data-position to match its new index
+		const body = destColumn.querySelector('.card-body');
+		const cards = Array.from(body.querySelectorAll('.task-card'));
+		cards.forEach((c, idx) => { c.dataset.position = String(idx); });
 	  } catch (err) {
-		console.error('moveTask failed:', err);
-		alert('Could not save the move. Reloading the board.');
+		console.error('reorderColumn failed:', err);
+		alert('Could not save the new order. Reloading the board.');
 		fetchAndRenderBoard();
 	  }
 	}
+
 	dragFromColumnId = null;
   });
 
@@ -229,7 +310,7 @@ const getDragAfterElement = (container, y) => {
   }, { offset: Number.NEGATIVE_INFINITY }).element;
 };
 
-// --- Quick actions / menus ---
+// Quick actions / menus (unchanged UI; priority persists elsewhere)
 const closeAllQuickActionsMenus = () => {
   document.querySelectorAll('.quick-actions-menu').forEach(m => m.remove());
 };
@@ -378,6 +459,7 @@ const initTasksView = () => {
 
 	if (target.matches('.btn-task-actions')) {
 	  showQuickActionsMenu(target);
+
 	} else if (quickActionEdit) {
 	  const menu = quickActionEdit.closest('.quick-actions-menu');
 	  const taskCard = document.getElementById(menu.dataset.taskId);
@@ -391,6 +473,7 @@ const initTasksView = () => {
 		UnifiedEditor.open({ type: 'task', data: taskData });
 	  }
 	  closeAllQuickActionsMenus();
+
 	} else if (quickActionDuplicate) {
 	  const menu = quickActionDuplicate.closest('.quick-actions-menu');
 	  const originalCard = document.getElementById(menu.dataset.taskId);
@@ -398,6 +481,7 @@ const initTasksView = () => {
 		const tempId = Date.now();
 		const tempTaskData = {
 		  task_id: tempId,
+		  position: 9999,
 		  data: { title: originalCard.querySelector('.task-title').textContent + ' (Copy)' },
 		  status: 'normal'
 		};
@@ -405,16 +489,48 @@ const initTasksView = () => {
 		updateColumnTaskCount(originalCard.closest('.task-column'));
 	  }
 	  closeAllQuickActionsMenus();
+
 	} else if (quickActionPriority) {
+	  // Optimistic: toggle visual, then persist
 	  const menu = quickActionPriority.closest('.quick-actions-menu');
 	  const taskCard = document.getElementById(menu.dataset.taskId);
 	  if (taskCard) {
+		const wasPriority = taskCard.classList.contains('high-priority');
 		taskCard.classList.toggle('high-priority');
-		const body = taskCard.closest('.card-body');
-		sortTasksInColumn(body);
-		updateColumnTaskCount(body.closest('.task-column'));
+		const column = taskCard.closest('.task-column');
+
+		// Recompute DOM order by groups and apply before persisting
+		const orderedIds = computeOrderedIdsForColumn(column);
+		applyOrderToColumnDom(column, orderedIds);
+
+		const taskId = parseInt(taskCard.id.replace('task-',''),10);
+		try {
+		  const res = await apiPost({
+			module: 'tasks',
+			action: 'togglePriority',
+			data: { task_id: taskId, on: !wasPriority }
+		  });
+		  const json = await res.json();
+		  if (!res.ok || json.status !== 'success') throw new Error(json.message || `HTTP ${res.status}`);
+
+		  // After status change, persist new order for the column as well
+		  await apiPost({
+			module: 'tasks',
+			action: 'reorderColumn',
+			data: { column_id: parseInt(column.id.replace('column-',''),10), ordered: orderedIds }
+		  });
+
+		  // Update data-position locally
+		  const body = column.querySelector('.card-body');
+		  Array.from(body.querySelectorAll('.task-card')).forEach((c, i) => c.dataset.position = String(i));
+		} catch (err) {
+		  console.error('togglePriority/reorderColumn failed:', err);
+		  taskCard.classList.toggle('high-priority', wasPriority);
+		  alert('Could not update priority. Please try again.');
+		}
 	  }
 	  closeAllQuickActionsMenus();
+
 	} else if (quickActionMove) {
 	  exitMoveMode();
 	  const menu = quickActionMove.closest('.quick-actions-menu');
@@ -422,6 +538,7 @@ const initTasksView = () => {
 		const taskCard = document.getElementById(menu.dataset.taskId);
 		if (taskCard) enterMoveMode(taskCard);
 	  }
+
 	} else if (target.matches('.btn-move-task-here')) {
 	  if (taskToMoveId) {
 		const taskToMove = document.getElementById(taskToMoveId);
@@ -430,37 +547,54 @@ const initTasksView = () => {
 		if (taskToMove && destinationColumn) {
 		  const destinationBody = destinationColumn.querySelector('.card-body');
 		  destinationBody.appendChild(taskToMove);
-		  sortTasksInColumn(destinationBody);
-		  updateColumnTaskCount(destinationColumn);
-		  updateColumnTaskCount(sourceColumnBody.closest('.task-column'));
 
-		  // Persist the move
+		  // Apply grouped order for destination, then persist column order
+		  const orderedIds = computeOrderedIdsForColumn(destinationColumn);
+		  applyOrderToColumnDom(destinationColumn, orderedIds);
+
+		  updateColumnTaskCount(destinationColumn);
+		  if (sourceColumnBody) updateColumnTaskCount(sourceColumnBody.closest('.task-column'));
+
 		  const movedId = parseInt(taskToMoveId.replace('task-',''),10);
 		  const destId = parseInt(destinationColumn.id.replace('column-',''),10);
 		  try {
+			// Persist the cross-column move first
 			const res = await apiPost({
 			  module: 'tasks',
 			  action: 'moveTask',
 			  data: { task_id: movedId, to_column_id: destId }
 			});
 			const json = await res.json();
-			if (!res.ok || json.status !== 'success') {
-			  throw new Error(json.message || `HTTP ${res.status}`);
-			}
+			if (!res.ok || json.status !== 'success') throw new Error(json.message || `HTTP ${res.status}`);
+
+			// Then persist the final order of destination column
+			await apiPost({
+			  module: 'tasks',
+			  action: 'reorderColumn',
+			  data: { column_id: destId, ordered: orderedIds }
+			});
+
+			// Update data-position locally
+			const body = destinationColumn.querySelector('.card-body');
+			Array.from(body.querySelectorAll('.task-card')).forEach((c, i) => c.dataset.position = String(i));
 		  } catch (err) {
-			console.error('moveTask failed:', err);
+			console.error('moveTask/reorderColumn failed:', err);
 			alert('Could not save the move. Reloading the board.');
 			fetchAndRenderBoard();
 		  }
 		}
 		exitMoveMode();
 	  }
+
 	} else if (target.matches('.btn-cancel-move-inline')) {
 	  exitMoveMode();
+
 	} else if (target.matches('.btn-add-task')) {
 	  showAddTaskForm(target.parentElement);
+
 	} else if (target.matches('.btn-column-actions')) {
 	  toggleColumnActionsMenu(target);
+
 	} else if (target.matches('.btn-delete-column')) {
 	  const column = target.closest('.task-column');
 	  closeAllColumnActionMenus();
@@ -475,23 +609,61 @@ const initTasksView = () => {
 	}
   });
 
-  // Completion handling: ensure sort runs after state change
-  document.addEventListener('change', (event) => {
+  // Completion persistence with grouped re-order and column reorder persist
+  document.addEventListener('change', async (event) => {
 	const target = event.target;
 	if (!target.matches('.task-complete-checkbox')) return;
 
 	const card = target.closest('.task-card');
 	if (!card) return;
 
-	const isChecked = target.checked;
-	card.classList.toggle('completed', isChecked);
-	if (isChecked) {
+	const wasCompleted = card.classList.contains('completed');
+	const nowCompleted = target.checked;
+
+	// Optimistic UI
+	card.classList.toggle('completed', nowCompleted);
+	if (nowCompleted) {
 	  card.classList.add('flash-animation');
 	  setTimeout(() => { card.classList.remove('flash-animation'); }, 400);
 	}
-	const body = card.closest('.card-body');
-	sortTasksInColumn(body);
-	updateColumnTaskCount(body.closest('.task-column'));
+
+	const column = card.closest('.task-column');
+	// Apply grouped order first (priority, normal, completed)
+	const orderedIds = computeOrderedIdsForColumn(column);
+	applyOrderToColumnDom(column, orderedIds);
+	updateColumnTaskCount(column);
+
+	const taskId = parseInt(card.id.replace('task-',''),10);
+	try {
+	  // Persist status
+	  const res = await apiPost({
+		module: 'tasks',
+		action: 'toggleComplete',
+		data: { task_id: taskId, completed: nowCompleted }
+	  });
+	  const json = await res.json();
+	  if (!res.ok || json.status !== 'success') throw new Error(json.message || `HTTP ${res.status}`);
+
+	  // Persist the final column order after status change
+	  await apiPost({
+		module: 'tasks',
+		action: 'reorderColumn',
+		data: { column_id: parseInt(column.id.replace('column-',''),10), ordered: orderedIds }
+	  });
+
+	  // Update data-position locally
+	  const body = column.querySelector('.card-body');
+	  Array.from(body.querySelectorAll('.task-card')).forEach((c, i) => c.dataset.position = String(i));
+
+	} catch (err) {
+	  console.error('toggleComplete/reorderColumn failed:', err);
+	  // rollback UI
+	  card.classList.toggle('completed', wasCompleted);
+	  target.checked = wasCompleted;
+	  const rollbackOrder = computeOrderedIdsForColumn(column);
+	  applyOrderToColumnDom(column, rollbackOrder);
+	  alert('Could not update completion. Please try again.');
+	}
   });
 };
-// end of /assets/js/tasks.js v4.1.0
+// end of /assets/js/tasks.js v4.3.1
