@@ -5,7 +5,7 @@ The next session may not have context of what we have been doing.
 So what you will provide is critical to inform that session properly.
 
 # Deliverables required
-A) A bried note of 50 words or less to describ what we have done with the code
+A) A bried note of 100 words or less to describe what we have done with the code
 that will be used as a comment in the last commit to github at session end.
 
 B) Summary of what we have done since we started this session and what would

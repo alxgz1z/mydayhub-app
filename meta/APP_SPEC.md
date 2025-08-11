@@ -1,354 +1,324 @@
-					============================
-					MYDAYHUB APP SPEC 4.0.0 Beta
-					(Internal – Dev/PM Use Only)
-					============================
+============================
+MYDAYHUB APP SPEC 4.1.0 Beta
+(Internal – Dev/PM Use Only)
+============================
 
-All features, logic, UI, and modules in this spec are to be developed from scratch
-for 4.0.0 Beta. No legacy code will be reused.
+This specification defines the functional and technical blueprint for
+MyDayHub v4. It describes user flows, views, backend contracts, data schema,
+security, and implementation responsibilities. It is the single source of
+truth for the current milestone.
+
+Document version: 4.1.0 Beta  
+Spec owners: Alex (PM/Dev), Coding Copilot (LAMP)
+
+Changelog (since 4.0.0 Beta)
+- ✅ Added persisted task creation via API (createTask) with normalized return.
+- ✅ Column counters refresh on add and drag-and-drop (source/destination).
+- ✅ Completion flare animation confined to task card; no column bleed.
+- ✅ Sorting consistently re-runs on checkbox change.
+- 🚧 Clarified persistence status for move/complete/priority/delete/duplicate.
+- ✨ Reorganized spec, normalized styles, added versioning guidance.
 
 ---
-### Visual Status Icons
+## Visual Status Icons
 
-🚧 In Progress / Not Developed Yet
-✅ Complete
-⚠️ Not Working as Specified
+✅ Complete  
+🚧 In Progress / Partially Implemented  
+⚠️ Not Working as Specified  
 📅 Planned for Future Release
 
 ---
-### ❗️ IMPORTANT:
+## 1. Executive Summary
 
-We operate in two environments.
-- The production app runs in mydayhub.com. (Hostinger)
-- The development app runs in localhost:8888. (XAMPP)
-These environments are isolated.
-
----
-### 1. Executive Summary
-
-MyDayHub 4.0.0 Beta is a secure, zero-knowledge productivity hub, rebuilt with
-full modularity, privacy, and cross-device usability as its core tenets. This
-release is shaped by hard-earned lessons from previous versions—including privacy
-at every level, strict session and quota controls, explicit handling of
-encryption and sharing, and a relentless focus on elegant, app-like simplicity.
-
-Every function, screen, and component is to be coded anew. All implementation,
-UX, and operational patterns are designed for maintainability and extensibility.
+MyDayHub is a focused productivity app that blends a kanban task board, a
+journal, outline trees, and meeting plans into a simple, fast, and durable
+tool. Version 4 targets a modern LAMP stack, strong client ergonomics, clear
+APIs, and practical persistence. Privacy, predictable performance, and clear
+UX are core values.
 
 ---
-### 2. App Description & Philosophy
+## 2. Principles
 
-#### Simplicity
-* UI is intentionally minimal: rounded corners, clean sans-serif typography, soft
-	shadows, and backdrop-filter effects for depth.
-* No modal overload or overwhelming toolbars; progressive disclosure only.
-* Consistent visual spacing, card elevation, and hover feedback for all
-	interactive elements.
+### Simplicity
+- Small, understandable features that compose well.
+- Clear naming and minimal ceremony.
 
-#### Privacy by Design
-* 🚧 Zero-knowledge encryption: All user data—including tasks, journal entries,
-	outlines, meeting notes—is encrypted and decrypted in the browser. The server
-	never has access to plaintext content.
-* 🚧 Every item (task, column, entry, outline, meeting segment) supports a "Mark
-	as Private" switch, present at both the data model and UI levels.
-* All sharing leverages public/private key cryptography. Password changes and
-	sharing flows are designed to avoid historical flaws and data loss.
+### Privacy by Design
+- Least data collected. Per-user ownership checks at API layer.
+- Future: encrypted-at-rest content for tasks/notes (scope TBD).
 
-#### Fluidity & Mobile-First
-* 🚧 SPA (Single Page App) with no reloads: All content updates, drag-drop, view
-	changes, and modals are animated and instant.
-* 🚧 App is built mobile-first: On mobile, controls are touch-optimized,
-	toolbars collapse to sticky menus or bottom bars, and columns/cards respond
-	to swipe and tap.
-* On desktop, the layout is expansive and multi-column with subtle, elegant
-	color contrasts (dark mode default, light mode optional and user-persistent).
+### Fluidity & Mobile-First
+- Fast first paint, consistent 60fps interactions, keyboard affordances.
+- Responsive UI; mobile header patterns; no layout thrash.
 
 ---
-### 3. General Requirements & Feature Matrix
+## 3. Architecture Overview
 
-| Requirement                 | Status | Notes                                           |
-| --------------------------- | :----: | ----------------------------------------------- |
-| Multi-user auth/session mgmt| 🚧     | Hybrid session: last login has write ctrl       |
-| Client-side encryption      | 🚧     | All user content, incl. sharing                 |
-| Per-item privacy switch     | 🚧     | All tasks, columns, journal, outlines           |
-| Fluid, reload-free UI       | 🚧     | Optimistic, animated, no reloads                |
-| Responsive mobile design    | 🚧     | Works on all device widths                      |
-| Quotas/usage plans          | 🚧     | Tiered item/share limits, enforced server-side  |
-| Telemetry & analytics       | 🚧     | CRUD, sharing, navigation, log events           |
-| DEVMODE                     | 🚧     | Visual markers, logs, extra debug info          |
-| Mail-to-task/journal        | ✅     | Unique token per user, IMAP/Sender              |
-| OS notifications            | 🚧     | Push/alerts via Service Worker                  |
-| Offline support             | 📅     | Phased PWA Strategy (see below)                 |
-| Meeting agenda view         | 🚧     | Multi-segment, drag/drop, notes                 |
-| Modular codebase            | 🚧     | Each major view and logic separated             |
-| Import/export (JSON)        | 🚧     | For migration and backup                        |
-| Calendar overlays           | 🚧     | CRUD for overlays, per-user selection           |
+### Stack
+- PHP 8.2, Apache, MySQL (InnoDB), Vanilla JS modules, CSS (scoped per view).
+- Single API gateway `/api/api.php` dispatches `{ module, action }` to
+  handlers in `/api/modules/`.
 
-**Phased PWA Strategy for Offline Support:**
-The app will be evolved into a Progressive Web App (PWA) in distinct phases.
-* **Phase 1 (Core Online App):** Complete all primary features assuming a
-	persistent internet connection. This is the current focus.
-* **Phase 2 (App Shell Caching):** Implement a Service Worker to cache the app's
-	shell (CSS, JS, images) for instant loading and basic offline UI access.
-* **Phase 3 (Data Synchronization):** Implement offline data handling using
-	IndexedDB, creating a local data mirror and syncing changes on reconnection.
+### Frontend modules
+- `/assets/js/app.js`: glue; view switching; modals; mobile menu.
+- `/assets/js/tasks.js`: tasks board UI, sorting, counts, DnD, API calls.
+- `/assets/js/editor.js`: unified editor overlay and ribbon tools.
+
+### Backend modules
+- `/api/modules/tasks.handler.php`: task actions (getAll, createTask, …).
+
+### Config & logging
+- `/includes/config.php`: `DEVMODE` controls error display and logs to
+  `/debug.log` in the app root (no HTML errors in JSON responses).
 
 ---
-### 4. User Stories & Use Cases
+## 4. Feature Matrix (at a glance)
 
-* 🚧 Mark any item as private and filter/hide accordingly.
-* 🚧 Drag and drop items with smooth, animated feedback.
-* 🚧 See usage stats and plan limits; receive UI warnings when close to quota.
-* ✅ Email a task or note into the board/journal using a unique secret token.
-* ✅ Share tasks or journal entries one-to-one with revocable, encrypted access.
-* ✅ Use the app seamlessly on both desktop (multi-column) and mobile.
-* 🚧 Work offline with automatic sync and resolution when reconnecting.
-* 🚧 Avoid conflicts: Only the most recent session has write rights, with a
-	"reclaim control" option.
-* 🚧 Access help and onboarding, with clear feedback via toasts and OS notifications.
-* 🚧 Keep user preferences always persisted in the backend instantly.
+Tasks Board (Kanban)
+- ✅ Load board: columns with tasks (`getAll`)
+- ✅ Add task via footer field (persist via `createTask`)
+- ✅ Sorting: priority first, then normal; completed at bottom
+- ✅ Column counters: update on add and drag-and-drop
+- 🚧 Drag-and-drop: UI complete; DB persistence pending
+- 🚧 Toggle complete / priority: UI complete; DB persistence pending
+- 🚧 Delete / duplicate: UI complete; DB persistence pending
+- 📅 Share / make private (policy and flows)
 
----
-### 5. App Views & Detailed UX Requirements
+Journal
+- 📅 Cards, notes, quick capture, search
 
-#### 🚧 Aesthetic Foundations
-* **Minimalist & Modern:** Rounded corners, clean sans-serif font, soft shadows,
-	backdrop-filter blur on overlays. Default to dark mode with a user toggle.
-* **Responsive:**
-	* **Mobile:** Single column view, Floating Action Button (FAB) for new items,
-	  sticky bottom bar for filters.
-	* **Desktop:** Side-by-side columns, docked toolbars, clear drag-drop zones.
+Outlines (Tree)
+- 📅 Branch/node editing, collapse/expand, drag-and-drop tree ops
 
-#### A. Tasks Board (Kanban)
+Meetings
+- 📅 Plans with segments; agenda tooling and timers
 
-* 🚧 **Horizontal Column Layout:**
-	* 🚧 Columns are user-defined, reorderable via drag-drop, with persisted order.
-	* 🚧 Header: Editable title, task count, and an ellipsis (...) menu for all
-		column actions (delete, move, toggle privacy).
-	* ⚠️ "Add Column" Control: A `+ New Column` button in the header transforms into
-		a focused text input for rapid column creation.
-	* ✅ **Mobile-Friendly "Move Mode" (↔️):** An action in the context menu
-		highlights a card and adds a "Move here" button to other columns for
-		easy, tap-based moving.
-	* 🚧 **Column Footer & Adding Tasks:** A `+ New Task` text control in each
-		column footer transforms into a focused input for rapid task entry.
+Unified Editor
+- 🚧 Modal editor with ribbon tools (case, underline, frame, calculate,
+  font-size). Will become shared editing surface for notes and entries.
 
-* ✅ **Task Cards:**
-	* **Interaction Model:**
-		* **Status Band:** A visual-only colored band on the left indicates status
-		  (Normal, Priority, Completed).
-		* **Completion:** A dedicated checkbox marks a task as complete.
-		* **Priority:** Toggled via a refresh icon (🔄) in the contextual menu.
-	* ✅ **Elements:** Completion checkbox, editable title, optional due date,
-		privacy lock, and a share icon.
-	* ✅ **Contextual Menu (…):** A horizontal bar of icon-only buttons appears.
-		* 🔄 Change Priority
-		* 📝 Edit Note and Due Date
-		* ↔️ Move (Mobile-friendly mode)
-		* 👥 Share
-		* ⛔ Mark as Private
-		* 👯 Duplicate
-		* 🗑️ Delete (with confirmation)
-	* **Notes:** Plain text, auto-saved, max 1024 chars. A notes icon appears if
-		notes exist.
-	* **Visuals:** Priority tasks float to the top, completed tasks sink to the
-		bottom (grayed out, strikethrough). Shared tasks have distinct styling.
-		Optional "whoosh" sound and gold flash on completion.
+Settings
+- 🚧 Theme, font sizes, keyboard prefs, view toggles
 
-* ✅ **Sorting & Persistence:**
-	* Sorting is per-column, applied instantly. Logic is in a dedicated utility.
-	* All updates (status, order, etc.) are persisted to the database.
+Import/Export
+- 📅 CSV/JSON backup and restore; migration from v3
 
-* ✅ **Task Import/Export:**
-	* Import accepts JSON. Prompts user to map or auto-create unknown columns.
-	* Export allows selecting all, active, or completed tasks to a JSON file.
-
-* ✅ **Sharing:**
-	* Share via modal, entering a user's `@alias`.
-	* Shared tasks appear in a "Shared with Me" column (read-only except for
-		notes, priority, due date).
-	* Sharing is encrypted with the recipient's public key.
-
-#### B. Journal View
-
-* 🚧 **Date-based columns:**
-	* Each column is a date (user-preferred format). Scrollable H/V.
-	* 1, 3, or 5-day view (user-persistent). Weekends can be styled or hidden.
-	* Header: Navigation arrows, calendar overlay badges, current date highlighted.
-* 🚧 **Journal Entries:**
-	* Card with an editable title. Clicking opens the **Unified Note Editor**.
-	* Drag/drop between columns. Ellipsis menu for actions.
-	* A notes icon (📝) appears next to the title if notes exist.
-* 🚧 **Journal Import/Export:**
-	* Import/Export via JSON, with filters for date ranges.
-* 🚧 **Search:**
-	* Search by keyword or date range with an instant result overlay.
-* 🚧 **Wrap-up:**
-	* A button to auto-create a summary note for the day, aggregating entries.
-
-#### C. Outlines View (Hierarchical Notes)
-
-* 🚧 **Tree structure:**
-	* Nodes can be added at any level with inline title editing.
-	* Drag/drop to re-parent or re-order. Delete nodes or entire branches.
-* 🚧 **Styling:**
-	* Tree lines, node icons, minimal indentation. Private nodes have an overlay.
-* 🚧 **Export/Import:**
-	* Supports JSON format for backup and migration.
-
-#### D. Meeting Agendas / Planner View
-
-* 🚧 **Agendas as first-class objects:**
-	* Create agendas with a title, date(s), and multiple segments.
-	* Each segment can contain notes and tasks, supporting all standard card
-		features (privacy, sharing, etc.). Drag/drop to reorder.
-
-#### E. 🚧 Unified Note Editor
-
-A single, reusable, self-contained component for all rich text editing.
-* **Architecture:** Decoupled module (`/assets/js/editor.js`) with a simple API.
-* **UI Model:** Opens in a non-fullscreen modal by default. On mobile, it expands
-	to fill the screen. Desktop users have controls to maximize.
-* **Features (via Tabbed "Ribbon"):**
-	* **Core (Must-Haves):**
-		* Format Panel: Insert symbols (☆, 🔥, !), change case, insert timestamp/rule.
-		* Find & Replace Panel.
-		* Info/Status Bar: Word/char/line counts, auto-save status.
-	* **High-Value Optional:**
-		* "Add Task" Panel: Create a new task in any column from within the editor.
-		* "Search" Panel: Search across all other journal entries.
-
-#### F. 🚧 Settings & Preferences Panel
-
-Accessed via a menu or settings icon.
-* **Controls:** Theme toggle (Dark/Light), sound effects toggle, private view
-	switch, session timeout, font size, manage calendar overlays, manage contact
-	aliases, import/export, help, logout.
-* All preferences are persisted per user.
-
-#### G. Toolbar, Calendar Overlays, and Notifications
-
-* **Toolbar:** Varies per section. Always shows the current date and toggles for
-	filtering completed/priority/private items.
-* 🚧 **Calendar Overlays:**
-	* Users can perform CRUD operations on overlays (e.g., fiscal weeks).
-	* Labels appear as colored badges in Journal headers. Import/Export via JSON.
-* 🚧 **Notifications:**
-	* In-app toasts for all actions (success/error).
-	* Optional OS-level browser notifications for reminders, shares, etc.
+Security & Privacy
+- ✅ DEVMODE logging; gateway path normalization; JSON-only APIs
+- 🚧 Ownership checks on every action (documented; enforce per action)
 
 ---
-### 6. Security, Privacy & Zero-Knowledge Architecture
+## 5. App Views & UX
 
-* ✅ All crypto logic is centralized in a dedicated module. No backend encryption.
-  This is enforced through the single API gateway (`/api/api.php`) that can
-  process all incoming and outgoing requests through a central point.
-* ✅ Password changes force re-encryption and require the old password.
-* 🚧 **Session management:**
-	* The latest session has write rights; others become read-only with a "reclaim
-	  control" option. Uses Server-Sent Events (SSE) for live updates.
-* 🚧 **Plan/quota enforcement:**
-	* Free and paid tiers. Limits are enforced server-side.
-* 🚧 **Telemetry:**
-	* All key actions are logged (anonymized) for admin analytics. No external
-		trackers.
-* **Development-Friendly Encryption Architecture:**
-	* A "pass-through" mode controlled by a `DEVMODE` constant allows testing the
-		full app with readable plaintext data, separating app logic bugs from
-		crypto bugs.
-* **Robust Error Logging:** When the `DEVMODE` constant is set to `true`, a
-		custom error handler defined in `/includes/config.php` is registered. This
-		handler intercepts all PHP errors (Notices, Warnings, Fatal Errors), logs
-		them with a timestamp and full details to `/debug.log` in the project root,
-		and halts script execution. This prevents broken HTML from being sent as a
-		response to API calls and ensures a clean, predictable debugging process.
+### A. Tasks Board (Kanban)
 
----
-### 7. 🚧 User Preference Management
+#### Board & Columns
+- Columns render horizontally (desktop) and vertically (mobile).
+- Column header shows name and a live task counter.
 
-All settings are managed via a centralized architecture. A single JavaScript 
-object, userPreferences, is the client-side source of truth, mirrored in a 
-single preferences JSON field in the users table. This flexible approach replaces 
-the wide user_preferences table from v3 and allows new settings to be added 
-without database schema changes.
+#### Column Footer & Adding Tasks  ✅
+- A `+ New Task` control expands into an input.
+- On submit, client calls `createTask`. Server returns a normalized task:
+  `{ task_id, column_id, position, status, data: { title } }`.
+- Client inserts and re-sorts column; counter refreshes. Errors show alert in
+  UI while details log to `/debug.log` when `DEVMODE=true`.
 
----
-### 8. 🚧 Import/Export, Data Migration & Backup
+#### Sorting (UI)  ✅
+- Incomplete above completed. Within incomplete, `priority` above `normal`.
+- Stable order for items with equal status/priority.
+- Sorting re-runs on:
+  - Checkbox change (complete/incomplete)
+  - Priority toggle (UI)
+  - Drag-and-drop end
 
-All key data types are importable/exportable in a clear JSON format. The import
-process can create missing items (columns, dates) or prompt the user to map them.
-A backup flow allows for a full copy-paste of all user data.
+#### Drag-and-Drop (UI)  🚧
+- Smooth card drag; drop within/between columns.
+- After drop: sort column, refresh counters for source and destination.
+- Next: persist new `column_id` and positions; reconcile server order.
 
----
-### 9. 🚧 File Structure & Module Responsibilities
+#### Quick Actions (UI)  🚧
+- Change priority, edit note/due date, move, share, privacy, duplicate,
+  delete. Currently visual-only except where noted.
 
-/index.php: Main app shell
-/login.php, /register.php, etc.: Auth pages
-/assets/
-  /js/app.js: SPA glue, state, router
-  /js/tasks.js, /js/journal.js, etc.: View-specific modules
-  /js/crypto.js: All encryption, decryption, sharing logic
-  /js/session.js, /js/telemetry.js: Support modules
-  /css/style.css: Main stylesheet
-  /css/views/*.css: View-specific styles
-/api/api.php: Single API Gateway. All frontend requests are sent here.
-/api/modules/*.handler.php: Individual modules that contain the business logic
-  for each resource (e.g., tasks, journal). Included by the gateway.
-/includes/: PHP config, DB, session, SMTP
-/migrations/: SQL scripts for DB migrations
-/debug.log: Backend error log (conditional on DEVMODE)
-/migrations/: SQL scripts for DB migrations (e.g., 001_initial_schema.sql)
+#### Completion Feedback  ✅
+- Gold flare animation plays on completion and is clipped to the card only.
+- `overflow: hidden` on `.task-card`; flare `::after` is non-interactive.
+
+### B. Journal View  📅
+- Entry cards with title and body; quick capture; search and filters.
+- Future: per-entry privacy; share links.
+
+### C. Outlines View (Tree)  📅
+- Branches and nodes; indent/outdent; collapse/expand; drag re-parent.
+- Keyboard shortcuts for structure manipulation.
+
+### D. Meeting Plans  📅
+- Plans composed of segments with timings and notes.
+- Simple presenter view and elapsed timers.
+
+### E. Unified Note Editor  🚧
+- Ribbon tools: case transforms, underline line, framing block, calculator,
+  font size control. Live counts of words/chars/lines.
+- Opens for task note edits; becomes the shared editor across views.
+
+### F. Settings & Preferences  🚧
+- Theme, font size, shortcut toggles.
+- Persist preferences in `users.preferences` JSON (schema below).
 
 ---
-### 10. Lessons Learned & How They Inform v4
+## 6. API Gateway & Contracts
 
-* All encryption logic **must** be centralized.
-* Updates should be full-file, drop-in replacements, not fragments.
-* Boolean data types must be handled consistently between JS (true/false) and the
-	database (1/0).
-* Naming conventions (snake_case in PHP/DB, camelCase in JS) must be explicit.
-* `DEV_MODE` must be a visible flag that controls all logging.
-* Mobile responsiveness must be validated continuously, not patched later.
-* Session management is critical to prevent data conflicts.
-* User preferences are not optional; every setting must be saved.
-* Import/export must handle incomplete data gracefully.
-* All features require unit and integration testing.
+### Request model
+- All requests target `/api/api.php` and send JSON:
+  `{ module: "tasks", action: "getAll" | "createTask" | …, data?: { … } }`.
+- The gateway resolves handler and invokes `handle_{module}_action`.
+- Responses are JSON with `{ status: "success"|"error", data?, message? }`.
+
+### Tasks actions (current)
+
+#### getAll  ✅
+- Returns columns and tasks for the authenticated user.
+- Data shape:
+  `[{ column_id, column_name, tasks: [{ task_id, column_id, position, status,
+	 data: { title } }] }]`.
+
+#### createTask  ✅
+- Method: POST
+- Payload: `data: { column_id: int, title: string, status?: "normal"|"priority" }`
+- Behavior: inserts at `MAX(position)+1` for the user-owned column.
+- Response: `{ status: "success", data: { task_id, column_id, position,
+  status, data: { title } } }`
+- Ownership: verify `columns.user_id` matches current user.
+
+### Tasks actions (planned)  🚧
+- `toggleComplete(task_id: int, completed: bool)` → update `status`.
+- `togglePriority(task_id: int, on: bool)` → `status` swap with rules.
+- `moveTask(task_id: int, to_column_id: int, to_position: int)` → reorder
+  both source and destination positions atomically.
+- `deleteTask(task_id: int)` → remove and close gaps in positions.
+- `duplicateTask(task_id: int)` → insert copy at `MAX(position)+1`.
+
+### Error handling
+- Non-2xx returns set appropriate `http_response_code`.
+- In `DEVMODE=true`, write detailed diagnostics to `/debug.log`.
 
 ---
-### 11. Summary Table: What Must Be Developed
+## 7. Security & Privacy
 
-| Module / Feature                        | Status |
-| --------------------------------------- | :----: |
-| All authentication flows                | 🚧     |
-| Full zero-knowledge encryption          | 🚧     |
-| Modular SPA & all views                 | 🚧     |
-| Tasks board (all behaviors/UI)          | 🚧     |
-| Journal (all columns/cards/search)      | 🚧     |
-| Outlines (hierarchical/tree notes)      | 🚧     |
-| Agendas/Meetings planner                | 🚧     |
-| Unified Note Editor                     | 🚧     |
-| Import/export, backup, restore          | 🚧     |
-| Calendar overlays & management          | 🚧     |
-| Sharing (tasks, entries)                | 🚧     |
-| Session management, hybrid control      | 🚧     |
-| Plan/quota logic, usage bars            | 🚧     |
-| Telemetry, admin analytics              | 🚧     |
-| Offline support (service worker)        | 🚧     |
-| Mail to task/journal                    | 🚧     |
-| All file structure/modules (see above)  | 🚧     |
-| Settings slides, accordions and modals  | 🚧     |
-| Help page with accordions               | 🚧     |
+- Enforce per-user ownership on every mutating action (server-side checks).
+- Sanitize/validate all inputs; never trust client `position` without checks.
+- No HTML error output in JSON routes; log to file instead.
+- Future: encrypted fields for notes and private tasks (TBD).
 
-### 12. v4 Database Schema
-The v4 database is designed for clarity, referential integrity, and future 
-extensibility, learning from the limitations of the v3 schema.
-#### users: The central table for all users. It includes a preferences JSON column to 
-flexibly store all user-specific settings (e.g., theme, font size, view states), 
-and a plan column to support future subscription tiers.
-#### columns: Stores the user-created columns for the Tasks board. Each column is 
-directly linked to a user_id.
-#### tasks: Stores individual tasks. Each task now has a direct user_id foreign key 
-for simpler ownership queries and a clear ENUM type for its status ('normal', 
-'priority', 'completed') to prevent data ambiguity.
-#### Foreign Keys & Cascade Deletes: All relationships (e.g., tasks to columns, 
-columns to users) are enforced with foreign key constraints and ON DELETE CASCADE 
-to ensure data integrity.
+---
+## 8. Preferences & Settings (Data Model)  🚧
+
+- `users.preferences` (JSON) may include:
+  - `theme`, `font_size`, `keyboard`, `view_state`
+- Client reads on bootstrap; server returns defaults if unset.
+
+---
+## 9. Import/Export & Backup  📅
+
+- CSV/JSON export of columns/tasks.
+- Import with validation and dry-run preview.
+- Automated backup job (daily) for paid tiers (future).
+
+---
+## 10. File Structure & Responsibilities
+
+- `/index.php`: shell HTML, view containers, script/style includes.
+- `/includes/config.php`: constants, DB creds, `DEVMODE`, error handler.
+- `/assets/css/style.css`: base theme, shared components, view imports.
+- `/assets/css/views/tasks.css`: tasks view styles (card, menus, flare).
+- `/assets/css/views/editor.css`: unified editor styles.
+- `/assets/js/app.js`: init, view switcher, confirmation modal, mobile menu.
+- `/assets/js/tasks.js`: board rendering, add task, DnD, sort, counters,
+  quick actions, editor integration.
+- `/assets/js/editor.js`: modal editor state, ribbon actions, stats.
+- `/api/api.php`: single entrypoint; JSON router to module handlers.
+- `/api/modules/tasks.handler.php`: tasks actions: getAll, createTask, next
+  actions as listed above.
+
+Notes
+- Completion uses checkbox `change` event to ensure sort timing is correct.
+- Add-task footer restores idempotently to avoid blur/submit race.
+
+---
+## 11. Lessons Learned
+
+- Keep API surface thin and explicit; avoid leaky coupling to the UI.
+- Prefer delegated event listeners for dynamic DOM (cards, menus).
+- Sort rules must run after state changes (use `change`, not `click`).
+- Keep visual polish scoped (flare clipped to card; z-index safe).
+
+---
+## 12. Database Schema (v4)
+
+### users
+- `user_id` PK
+- `email`, `password_hash`, `created_at`
+- `preferences` JSON (theme, font, keyboard, view state)
+- `plan` ENUM (future tiers)
+
+### columns
+- `column_id` PK, `user_id` FK → `users.user_id` (ON DELETE CASCADE)
+- `column_name`, `position`, `created_at`
+
+### tasks
+- `task_id` PK, `user_id` FK, `column_id` FK (both ON DELETE CASCADE)
+- `encrypted_data` JSON (currently stores `{ "title": string }`)
+- `status` ENUM('normal','priority','completed') NOT NULL DEFAULT 'normal'
+- `position` INT NOT NULL
+- `created_at`, `updated_at`
+
+Integrity
+- Composite indexes for (`user_id`, `column_id`, `position`).
+- Positions are dense per column (compaction on delete/move).
+
+---
+## 13. Versioning & Releases
+
+We use Semantic Versioning for the **spec** and **app**:
+
+- **MAJOR** (X.0.0): incompatible changes (e.g., DB schema break).
+- **MINOR** (4.X.0): backward-compatible features added to spec/app.
+- **PATCH** (4.1.X): fixes, clarifications, or non-breaking polish.
+
+Current document version: **4.1.0 Beta**
+- Reason: adds a new persisted feature (createTask) and clarifies contracts,
+  reorgs spec structure, and updates UX behavior.
+
+GitHub usage
+- Each merge to main increments the spec/app version when appropriate.
+- Tag releases: `v4.1.0-beta` for packaged checkpoints.
+- Routine commits that do not alter external behavior can omit a version
+  bump (aggregate into the next patch).
+- When DB schema or API contract changes, bump MINOR (or MAJOR if breaking)
+  and add a schema migration note.
+
+---
+## 14. Roadmap (near-term)
+
+1) Persist task updates:
+   - `toggleComplete`, `togglePriority` → update `status`, return task.
+2) Persist move:
+   - `moveTask` → update `column_id` and dense positions atomically.
+3) Persist delete/duplicate:
+   - `deleteTask`, `duplicateTask` with consistent compaction/insert rules.
+4) Error UX:
+   - Standardized toast/inline error component and retry guidance.
+5) Editor expansion:
+   - Use unified editor for journal/outline notes; add link/monospace tools.
+
+---
+## 15. Glossary
+
+Task card (task)  
+Journal entry card (entry)  
+Journal entry note (note)  
+Meeting plan (plan)  
+Meeting plan segment (segment)  
+Outlines tree (tree)  
+Tree branch (branch)  
+Branch node (node)

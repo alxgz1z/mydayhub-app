@@ -2,6 +2,64 @@
 						DEV PROGRESS SUMMARY
 						====================
 
+
+### Session progress & next steps (84-char wrap)
+*Summary of progress*
+We focused on the Tasks view reliability and one piece of persistence.
+The app now loads real columns/tasks from the API, lets users create new
+tasks that persist to the database, and keeps visual ordering and counts
+consistent across interactions.
+
+*What we built / changed*
+
+API: Added a new createTask action in the tasks module handler that
+inserts a task at the next position in a column and returns a normalized
+task object (id, column_id, position, status, data.title).
+Frontend: Hooked the “+ New Task” footer form to the API. On success we
+render the server object, re-sort the column, and refresh the column
+counter.
+Stability: Fixed a blur/submit race in the add-task form so the footer
+restores exactly once. Switched completion handling from click to change
+to ensure the sort logic always runs.
+UX polish: Column counters update after drag-and-drop both at source and
+destination. The completion “flare” animation is now clipped to the card
+only.
+
+*What’s working now*
+
+Board loads via /api/api.php with module=tasks, action=getAll.
+Creating a task persists and appears immediately in the correct column
+order.
+Sorting rules hold: incomplete at top (priority first), completed at the
+bottom. Counters stay in sync.
+
+*Known gaps / open items*
+Move task (drag or “Move here”) is visual-only; no backend update yet.
+Toggle complete / toggle priority are visual-only; status not persisted.
+Delete and duplicate are visual-only.
+No optimistic reconciliation with server if any call fails post-render.
+
+*Recommended next steps (in order)*
+Persist task status changes:
+	toggleComplete(task_id, completed) and togglePriority(task_id, on).
+	Update DB status, return updated task; re-render+sort on success.
+Persist move operations:
+	moveTask(task_id, to_column_id, to_position) and reorder positions
+	in both source and destination. Return normalized tasks/positions.
+Persist delete and duplicate:
+	deleteTask(task_id), duplicateTask(task_id) creating a sibling.
+Hardening:
+	Centralize fetch wrapper with error UI, retry hints, and DEV logging.
+	Consider ETag or updated_at to prevent stale overwrites later.
+UX niceties:
+	Inline task title edit; keyboard flows; minimal empty-state guidance.
+
+*Testing notes*
+Verified getAll via curl; UI loads expected “Weekdays/Chores” sample.
+Confirmed “+ New Task” persists and sorts properly in the column.
+Verified counters after DnD and after add/duplicate visual flows.
+
+
 ==================================================================================
 ### Session Summary & Next Steps (8/8/25, 10 PM)
 
