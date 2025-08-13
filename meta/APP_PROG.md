@@ -187,3 +187,82 @@ documented and scheduled.
 6) Error UX
 7) Replace alerts with a small toast; standardize error envelope and logging.
 
+
+---
+## 2025-08-10 22:15 — Session Summary & Next Steps
+
+**Session scope**
+
+Focus: make board interactions fully persistent and smooth across desktop
+and mobile. We prioritized correctness (DB writes) and UX (sorting and
+mobile reachability).
+
+**What changed in this session**
+
+Backend (PHP)
+  •	Gateway (/api/api.php)
+  •	Confirms JSON for POST, validates CSRF on mutations, returns JSON with
+proper status codes.
+  •	Tasks module (/api/modules/tasks.handler.php)
+  •	Added actions: createColumn, deleteColumn, duplicateTask,
+deleteTask, reorderColumn, toggleComplete, togglePriority,
+moveTask, getAll.
+  •	Cross-column moves now append at destination and re-compact positions
+in the source column.
+  •	Same-column manual order saved via reorderColumn.
+  •	Defensive ownership checks on every mutating action.
+  •	Dense, zero-based positions per column are maintained.
+  •	Debug logging writes to debug.log when DEVMODE=true.
+
+Frontend (JS/CSS)
+  •	tasks.js v4.5
+  •	Uses X-CSRF-Token header from <meta name="csrf">.
+  •	Adds persisted duplicate and delete (quick actions).
+  •	Fixes race in add-task footer (blur vs submit).
+  •	Re-sorts after completion/priority changes; counters refresh correctly.
+  •	Drag-and-drop persists cross-column moves; manual same-column order is
+queued through reorderColumn.
+  •	“Move here” flow persists through API and exits move mode safely.
+  •	CSS
+  •	Mobile bottom safe-area spacer so column footers (“+ New Task”, move
+target) are reachable on iOS Safari/Chrome.
+  •	Kept flare animation scoped to the task card, not the whole column.
+
+Data model notes
+  •	tasks.status is ENUM('normal','priority','completed').
+  •	columns.position and tasks.position are dense per user+column.
+
+Security
+  •	Sessions issue CSRF token; gateway requires the token for all mutations.
+  •	Reads can be GET or POST JSON; mutations must be POST JSON with CSRF.
+
+Testing performed
+  •	CURL/jq sanity checks for getAll, create/move, and columns.
+  •	UI tests for add, delete, duplicate, move (both methods), complete, and
+priority toggles.
+  •	Mobile tests on iOS Chrome and Safari for footer reachability.
+
+Known gaps / watch-list
+  •	Quick actions for priority toggle are UI-only (persisting server-side is
+available; we should wire it).
+  •	Completed tasks currently ignore priority toggling by design; document
+clearly in spec.
+  •	Column reordering (drag columns left-right) not implemented yet.
+  •	No soft-delete/undo for tasks or columns.
+  •	No auth; userId is stubbed to 1.
+
+**Recommended next steps (ordered)**
+  1.	Wire priority persistence: call togglePriority in tasks.js and
+update the UI only on success (with optimistic UI + rollback).
+  2.	Persist completion from checkbox: we already sort locally; add a
+call to toggleComplete so status is saved immediately.
+  3.	Column management UX: add “Rename column” and persist; add
+drag-to-reorder columns and a reorderColumns endpoint.
+  4.	Error handling polish: unify toast/inline errors instead of alerts;
+include reason strings from backend.
+  5.	Auth stub to multi-user: introduce a simple login in dev or set
+userId via session to test per-user isolation.
+  6.	Undo affordance: brief snackbar with “Undo” for task delete and
+column delete (server-side soft delete or restore).
+  7.	Spec and docs: incorporate the API/CSRF updates and mobile behavior
+so new contributors can ramp quickly.

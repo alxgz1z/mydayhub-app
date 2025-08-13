@@ -1,26 +1,34 @@
 <?php
 /**
- * MyDayHub 4.1.0 Beta - Main Application Shell
+ * MyDayHub 4.4.0 Beta - Main Application Shell
  */
+
 require_once __DIR__ . '/includes/config.php';
 
-if (session_status() === PHP_SESSION_NONE) {
+/**
+ * Ensure a PHP session exists and expose a CSRF token for the frontend.
+ * The API gateway also relies on the same session cookie, so the token here
+ * and the token the API validates are the same value.
+ */
+if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
-$CSRF = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
+$CSRF_TOKEN = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- viewport-fit=cover is needed for iOS safe-area handling -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 
     <title>MyDayHub</title>
 
-    <meta name="csrf" content="<?php echo $CSRF; ?>">
+    <!-- Expose CSRF token for /assets/js/* to read -->
+    <meta name="csrf" content="<?php echo htmlspecialchars($CSRF_TOKEN, ENT_QUOTES, 'UTF-8'); ?>">
 
     <link rel="icon" href="assets/images/favicon.png" type="image/png">
     <link rel="stylesheet" href="/assets/css/style.css">
@@ -55,8 +63,7 @@ $CSRF = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
 
         <main id="main-content">
             <div id="task-board-container" class="view-container active">
-                <div id="task-columns-wrapper">
-                </div>
+                <div id="task-columns-wrapper"></div>
             </div>
 
             <div id="journal-view-container" class="view-container"></div>
@@ -131,5 +138,6 @@ $CSRF = htmlspecialchars($_SESSION['csrf_token'], ENT_QUOTES, 'UTF-8');
     <script defer src="/assets/js/editor.js"></script>
     <script defer src="/assets/js/tasks.js"></script>
     <script defer src="/assets/js/app.js"></script>
+
 </body>
 </html>

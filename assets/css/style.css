@@ -29,14 +29,28 @@
 /* ==========================================================================
    2. GLOBAL & LAYOUT STYLES
    ========================================================================== */
+html {
+	height: 100%;
+}
+
 body {
 	background-color: var(--bg-color);
 	color: var(--text-primary);
 	font-family: 'Roboto', sans-serif;
 	margin: 0;
-	height: 100vh;
+
+	/* Make the page a flex column; the main area will scroll */
+	height: 100vh;              /* fallback */
+	min-height: 100vh;          /* fallback */
+
+	/* Modern viewport units for iOS Safari to avoid toolbar jumps */
+	height: 100dvh;
+	min-height: 100dvh;
+
 	display: flex;
 	flex-direction: column;
+
+	/* Prevent body from scrolling; we will scroll the main content */
 	overflow: hidden;
 }
 
@@ -48,12 +62,22 @@ body {
 	height: 100%;
 }
 
+/* We keep the original rule for layout & padding… */
 #main-app-container > main {
 	flex: 1;
 	display: flex;
 	flex-direction: column;
 	min-height: 0;
 	padding: 0.75rem 1.5rem 1rem 1.5rem;
+}
+
+/* …and explicitly make the main element the vertical scroller.
+   This is critical for iOS Safari. */
+#main-content {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch; /* iOS momentum scroll */
 }
 
 /* Base styles for all main view containers. They are hidden by default. */
@@ -290,10 +314,17 @@ body.dev-mode-active #app-header {
 	color: var(--text-primary);
 }
 
-
+/* ---- Mobile layout adjustments ---- */
 @media (max-width: 768px) {
 	#main-app-container > main {
+		/* Narrower side padding on mobile */
 		padding: 0.75rem 0.5rem;
+	}
+
+	/* Make sure the scroll container has *extra bottom padding* to expose the
+	   last column footer (add safe-area inset as well). */
+	#main-content {
+		padding-bottom: calc(180px + env(safe-area-inset-bottom, 0px));
 	}
 
 	.view-tabs {

@@ -196,8 +196,6 @@
 	border: 1px solid var(--card-border);
 	cursor: grab;
 	transition: opacity 0.2s ease-out, transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-	/* Clip flare animation to the card bounds */
-	overflow: hidden;
 }
 
 .task-card:hover {
@@ -345,9 +343,7 @@
 	background: linear-gradient(90deg, rgba(255,215,0,0) 0%, rgba(255,215,0,0.4) 50%, rgba(255,215,0,0) 100%);
 	transform: skewX(-25deg);
 	animation: flash 0.35s ease-out;
-	/* Keep flare inside card and out of the hit-testing flow */
-	pointer-events: none;
-	z-index: 1;
+	pointer-events: none; /* ensure it never blocks clicks */
 }
 
 @keyframes flash {
@@ -506,4 +502,22 @@
 .quick-action-btn svg {
 	width: 22px; /* Adjusted size for crisp look */
 	height: 22px;
+}
+
+/* ==========================================================================
+   7. MOBILE BOTTOM SPACER (NEW)
+   ========================================================================== */
+/* Hidden by default; only shown on small screens.
+   The element itself is placed after #task-columns-wrapper in index.php. */
+.mobile-bottom-spacer {
+	display: none;
+}
+
+@media (max-width: 768px) {
+	.mobile-bottom-spacer {
+		display: block;
+		height: calc(160px + env(safe-area-inset-bottom, 0px));
+		flex: 0 0 auto;
+		pointer-events: none; /* never intercept taps */
+	}
 }

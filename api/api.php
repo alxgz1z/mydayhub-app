@@ -1,6 +1,6 @@
 <?php
 /**
- * MyDayHub v4.1.0
+ * MyDayHub v4.1.1
  * Main API Gateway (Single Pipe)
  *
  * Frontend sends JSON to this endpoint:
@@ -31,6 +31,17 @@ if (session_status() === PHP_SESSION_NONE) {
 // Always JSON.
 header('Content-Type: application/json');
 
+// Small helper for dev logging.
+$devlog = function (string $msg): void {
+	if (defined('DEVMODE') && DEVMODE === true) {
+		@file_put_contents(
+			dirname(__DIR__) . '/debug.log',
+			'[' . date('Y-m-d H:i:s') . '] ' . $msg . PHP_EOL,
+			FILE_APPEND
+		);
+	}
+};
+
 // Current user (stub – replace with real auth later).
 $userId = 1;
 
@@ -39,13 +50,7 @@ try {
 	$pdo = get_pdo();
 } catch (Throwable $e) {
 	http_response_code(500);
-	if (defined('DEVMODE') && DEVMODE === true) {
-		file_put_contents(
-			dirname(__DIR__) . '/debug.log',
-			'[' . date('Y-m-d H:i:s') . '] PDO bootstrap error: ' . $e->getMessage() . PHP_EOL,
-			FILE_APPEND
-		);
-	}
+	$devlog('PDO bootstrap error: ' . $e->getMessage());
 	echo json_encode(['status' => 'error', 'message' => 'Database unavailable.']);
 	exit;
 }
@@ -66,7 +71,10 @@ if ($method === 'GET') {
 	$ct = $_SERVER['CONTENT_TYPE'] ?? '';
 	if (stripos($ct, 'application/json') !== 0) {
 		http_response_code(415);
-		echo json_encode(['status' => 'error', 'message' => 'Unsupported Media Type. Expect application/json.']);
+		echo json_encode([
+			'status'  => 'error',
+			'message' => 'Unsupported Media Type. Expect application/json.'
+		]);
 		exit;
 	}
 	$raw = file_get_contents('php://input') ?: '';
@@ -93,7 +101,10 @@ if (!$module || !$action) {
 
 // For now, allow GET for reads. Mutations must be POST.
 $mutatingActions = [
-	'createTask','toggleComplete','togglePriority','moveTask','deleteTask','duplicateTask'
+	// existing
+	'createTask','toggleComplete','togglePriority','moveTask','deleteTask','duplicateTask',
+	// added for columns persistence
+	'createColumn','deleteColumn'
 ];
 $isMutation = in_array($action, $mutatingActions, true);
 
@@ -105,8 +116,8 @@ if ($isMutation && $method !== 'POST') {
 
 // CSRF validation only for mutations to avoid breaking legacy GET/POST reads.
 if ($isMutation) {
-	$csrfHeader = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-	$csrfSession = $_SESSION['csrf_token'] ?? '';
+	$csrfHeader  = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+	$csrfSession = $_SESSION['csrf_token']       ?? '';
 	if (!$csrfHeader || !$csrfSession || !hash_equals($csrfSession, $csrfHeader)) {
 		http_response_code(403);
 		echo json_encode(['status' => 'error', 'message' => 'CSRF token invalid or missing.']);
@@ -131,12 +142,6 @@ try {
 	}
 } catch (Throwable $e) {
 	http_response_code(500);
-	if (defined('DEVMODE') && DEVMODE === true) {
-		file_put_contents(
-			dirname(__DIR__) . '/debug.log',
-			'[' . date('Y-m-d H:i:s') . "] Uncaught in gateway ({$module}/{$action}): " . $e->getMessage() . PHP_EOL,
-			FILE_APPEND
-		);
-	}
+	$devlog("Uncaught in gateway ({$module}/{$action}): " . $e->getMessage());
 	echo json_encode(['status' => 'error', 'message' => 'Server error. Try again.']);
 }

@@ -46,7 +46,7 @@ We work collaboratively to build the project described in the attached documenta
 
 ### Environments
 * Production: https://mydayhub.com (App v3)
-* Development: locahost:8888 (App v4)
+* Development: locahost (App v4)
 	* Environments are completely isolated: users, databases, and files do 
 	  not overlap.
 * Backend add-on: composer-runtime-api (SMTP service).
@@ -70,15 +70,15 @@ We work collaboratively to build the project described in the attached documenta
 * Host: Localhost running xampp
 * Browser: Chrome
 * VCS: GitHub
-* OS: MacOS
+* OS: MacOS 26
 
 ### Lessons Learned
 * If you need to propose code for a new file, ask if the file exists already.
 * We have made important architectural decisions; review the App Spec Document.
 * Keep me (Alex)  in check if I propose something that goes against 
   best practices.
-* I will ask for snippets to describe github commits.  Keept them under 50 words.
-* I will ask for updates to the Apps Spec and Summary of Progress docs.  
+* Sporadically I will ask for snippets to describe github commits.  Keept them under 100 words.
+* After a coding session I will ask for updates to the Apps Spec and Summary of Progress docs.  
   Keep lines un 85 chars.
 
 ### Current Purpose

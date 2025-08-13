@@ -1,47 +1,33 @@
 <?php
 /**
- * MyDayHub v4.3.0
+ * MyDayHub v4.4.4
  * Tasks Module Handler
  *
  * Business logic for all "tasks" module actions.
  * Included by /api/api.php (gateway).
- */
-
-// No strict_types for compatibility with existing gateway.
-
-/**
- * Main routing function for task-related actions.
  *
- * @param string $action The action to perform.
- * @param array  $data   The data payload from the client.
- * @param PDO    $pdo    The database connection object.
- * @param int    $userId The authenticated user id.
+ * Gateway calls:
+ *   handle_tasks_action($action, $data, $pdo, $userId)
  */
+
+declare(strict_types=1);
+
 function handle_tasks_action($action, $data, $pdo, $userId) {
 	switch ($action) {
-		case 'getAll':
-			get_all_board_data($pdo, (int)$userId);
-			break;
+		case 'getAll':          get_all_board_data($pdo, (int)$userId);         break;
+		case 'createTask':      create_task($pdo, (int)$userId, $data);         break;
+		case 'moveTask':        move_task($pdo, (int)$userId, $data);           break;
+		case 'toggleComplete':  toggle_complete($pdo, (int)$userId, $data);     break;
+		case 'togglePriority':  toggle_priority($pdo, (int)$userId, $data);     break;
+		case 'reorderColumn':   reorder_column($pdo, (int)$userId, $data);      break;
 
-		case 'createTask':
-			create_task($pdo, (int)$userId, $data);
-			break;
+		// Columns
+		case 'createColumn':    create_column($pdo, (int)$userId, $data);       break;
+		case 'deleteColumn':    delete_column($pdo, (int)$userId, $data);       break;
 
-		case 'moveTask':
-			move_task($pdo, (int)$userId, $data);
-			break;
-
-		case 'toggleComplete':
-			toggle_complete($pdo, (int)$userId, $data);
-			break;
-
-		case 'togglePriority':
-			toggle_priority($pdo, (int)$userId, $data);
-			break;
-
-		case 'reorderColumn':
-			reorder_column($pdo, (int)$userId, $data);
-			break;
+		// NEW: Tasks – persistence for quick actions
+		case 'deleteTask':      delete_task($pdo, (int)$userId, $data);         break;
+		case 'duplicateTask':   duplicate_task($pdo, (int)$userId, $data);      break;
 
 		default:
 			http_response_code(404);
@@ -50,22 +36,25 @@ function handle_tasks_action($action, $data, $pdo, $userId) {
 	}
 }
 
-/**
- * Fetch all columns and their tasks for a given user.
- */
+/** ---------------------------------------------------------------------- **
+ * Board (columns + tasks)
+ ** ---------------------------------------------------------------------- */
 function get_all_board_data(PDO $pdo, int $userId): void {
 	try {
 		$stmtColumns = $pdo->prepare(
-			"SELECT column_id, column_name
+			"SELECT column_id, column_name, position
 			   FROM `columns`
 			  WHERE user_id = :uid
 			  ORDER BY position ASC"
 		);
 		$stmtColumns->execute([':uid' => $userId]);
+
 		$columnsMap = [];
 		while ($row = $stmtColumns->fetch(PDO::FETCH_ASSOC)) {
-			$row['tasks'] = [];
-			$columnsMap[(int)$row['column_id']] = $row;
+			$row['column_id'] = (int)$row['column_id'];
+			$row['position']  = (int)$row['position'];
+			$row['tasks']     = [];
+			$columnsMap[$row['column_id']] = $row;
 		}
 
 		$stmtTasks = $pdo->prepare(
@@ -75,19 +64,22 @@ function get_all_board_data(PDO $pdo, int $userId): void {
 			  ORDER BY position ASC"
 		);
 		$stmtTasks->execute([':uid' => $userId]);
+
 		while ($task = $stmtTasks->fetch(PDO::FETCH_ASSOC)) {
 			$cid = (int)$task['column_id'];
 			if (!isset($columnsMap[$cid])) continue;
-			$taskData = json_decode($task['encrypted_data'], true);
-			$task['data'] = (json_last_error() === JSON_ERROR_NONE)
-				? $taskData : ['title' => 'Untitled Task'];
-			unset($task['encrypted_data']);
-			$columnsMap[$cid]['tasks'][] = $task;
+			$data = json_decode($task['encrypted_data'], true);
+			$columnsMap[$cid]['tasks'][] = [
+				'task_id'   => (int)$task['task_id'],
+				'column_id' => $cid,
+				'position'  => (int)$task['position'],
+				'status'    => $task['status'],
+				'data'      => (json_last_error() === JSON_ERROR_NONE) ? $data : ['title' => 'Untitled Task']
+			];
 		}
 
 		http_response_code(200);
 		echo json_encode(['status' => 'success', 'data' => array_values($columnsMap)]);
-
 	} catch (PDOException $e) {
 		_log_pdo(__FILE__, $e);
 		http_response_code(500);
@@ -95,16 +87,16 @@ function get_all_board_data(PDO $pdo, int $userId): void {
 	}
 }
 
-/**
- * Create a new task at end of a column.
- * data: { column_id:int, title:string, status?:"normal"|"priority" }
- */
+/** ---------------------------------------------------------------------- **
+ * Tasks: create / move / toggle / reorder
+ ** ---------------------------------------------------------------------- */
 function create_task(PDO $pdo, int $userId, array $data): void {
 	try {
 		$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
 		$title    = isset($data['title']) ? trim((string)$data['title']) : '';
-		$status   = (isset($data['status']) && in_array($data['status'], ['normal','priority'], true))
-			? $data['status'] : 'normal';
+		$status   = (isset($data['status']) &&
+					 in_array($data['status'], ['normal','priority','completed'], true))
+				   ? $data['status'] : 'normal';
 
 		if ($columnId <= 0 || $title === '') {
 			http_response_code(400);
@@ -112,20 +104,29 @@ function create_task(PDO $pdo, int $userId, array $data): void {
 			return;
 		}
 
-		if (!_column_owned_by($pdo, $columnId, $userId)) {
+		$cstmt = $pdo->prepare("SELECT 1 FROM `columns` WHERE column_id = :cid AND user_id = :uid");
+		$cstmt->execute([':cid' => $columnId, ':uid' => $userId]);
+		if (!$cstmt->fetchColumn()) {
 			http_response_code(403);
 			echo json_encode(['status' => 'error', 'message' => 'Forbidden.']);
 			return;
 		}
 
-		$nextPos = _next_position($pdo, $userId, $columnId);
+		$pstmt = $pdo->prepare(
+			"SELECT COALESCE(MAX(position), -1) + 1
+			   FROM tasks
+			  WHERE user_id = :uid AND column_id = :cid"
+		);
+		$pstmt->execute([':uid' => $userId, ':cid' => $columnId]);
+		$nextPos = (int)$pstmt->fetchColumn();
 
 		$edata = json_encode(['title' => $title], JSON_UNESCAPED_UNICODE);
-		$ins = $pdo->prepare(
+
+		$istmt = $pdo->prepare(
 			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, status, created_at, updated_at)
 			 VALUES (:uid, :cid, :edata, :pos, :status, NOW(), NOW())"
 		);
-		$ins->execute([
+		$istmt->execute([
 			':uid'    => $userId,
 			':cid'    => $columnId,
 			':edata'  => $edata,
@@ -134,7 +135,6 @@ function create_task(PDO $pdo, int $userId, array $data): void {
 		]);
 
 		$newId = (int)$pdo->lastInsertId();
-
 		http_response_code(201);
 		echo json_encode([
 			'status' => 'success',
@@ -146,7 +146,6 @@ function create_task(PDO $pdo, int $userId, array $data): void {
 				'data'      => ['title' => $title]
 			]
 		]);
-
 	} catch (PDOException $e) {
 		_log_pdo(__FILE__, $e);
 		http_response_code(500);
@@ -154,10 +153,6 @@ function create_task(PDO $pdo, int $userId, array $data): void {
 	}
 }
 
-/**
- * Move a task to another column, append to end, compact source.
- * data: { task_id:int, to_column_id:int }
- */
 function move_task(PDO $pdo, int $userId, array $data): void {
 	$taskId     = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	$toColumnId = isset($data['to_column_id']) ? (int)$data['to_column_id'] : 0;
@@ -171,7 +166,14 @@ function move_task(PDO $pdo, int $userId, array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		$task = _load_task_for_update($pdo, $userId, $taskId);
+		$tstmt = $pdo->prepare(
+			"SELECT task_id, user_id, column_id, position, status, encrypted_data
+			   FROM tasks
+			  WHERE task_id = :tid AND user_id = :uid
+			  FOR UPDATE"
+		);
+		$tstmt->execute([':tid' => $taskId, ':uid' => $userId]);
+		$task = $tstmt->fetch(PDO::FETCH_ASSOC);
 		if (!$task) {
 			$pdo->rollBack();
 			http_response_code(404);
@@ -181,42 +183,66 @@ function move_task(PDO $pdo, int $userId, array $data): void {
 
 		$fromColumnId = (int)$task['column_id'];
 		if ($fromColumnId === $toColumnId) {
-			// Nothing to do
 			$pdo->commit();
 			http_response_code(200);
-			echo json_encode(['status' => 'success', 'data' => _normalize_task_row($task)]);
+			echo json_encode(['status' => 'success', 'data' => _normalize_task($task)]);
 			return;
 		}
 
-		if (!_column_owned_by($pdo, $toColumnId, $userId)) {
+		$cstmt = $pdo->prepare("SELECT 1 FROM `columns` WHERE column_id = :cid AND user_id = :uid");
+		$cstmt->execute([':cid' => $toColumnId, ':uid' => $userId]);
+		if (!$cstmt->fetchColumn()) {
 			$pdo->rollBack();
 			http_response_code(403);
 			echo json_encode(['status' => 'error', 'message' => 'Forbidden.']);
 			return;
 		}
 
-		$nextPos = _next_position($pdo, $userId, $toColumnId);
+		$pstmt = $pdo->prepare(
+			"SELECT COALESCE(MAX(position), -1) + 1
+			   FROM tasks
+			  WHERE user_id = :uid AND column_id = :cid"
+		);
+		$pstmt->execute([':uid' => $userId, ':cid' => $toColumnId]);
+		$nextPos = (int)$pstmt->fetchColumn();
 
-		$upd = $pdo->prepare(
+		$ustmt = $pdo->prepare(
 			"UPDATE tasks
 				SET column_id = :to_cid, position = :pos, updated_at = NOW()
 			  WHERE task_id = :tid AND user_id = :uid"
 		);
-		$upd->execute([
+		$ustmt->execute([
 			':to_cid' => $toColumnId,
 			':pos'    => $nextPos,
 			':tid'    => $taskId,
 			':uid'    => $userId
 		]);
 
-		_compact_positions($pdo, $userId, $fromColumnId);
+		$sstmt = $pdo->prepare(
+			"SELECT task_id
+			   FROM tasks
+			  WHERE user_id = :uid AND column_id = :cid
+			  ORDER BY position ASC"
+		);
+		$sstmt->execute([':uid' => $userId, ':cid' => $fromColumnId]);
 
-		$final = _load_task($pdo, $userId, $taskId);
+		$newPos = 0;
+		$up = $pdo->prepare("UPDATE tasks SET position = :p, updated_at = NOW() WHERE task_id = :tid");
+		while ($id = $sstmt->fetchColumn()) {
+			$up->execute([':p' => $newPos++, ':tid' => (int)$id]);
+		}
+
+		$dstmt = $pdo->prepare(
+			"SELECT task_id, column_id, position, status, encrypted_data
+			   FROM tasks
+			  WHERE task_id = :tid"
+		);
+		$dstmt->execute([':tid' => $taskId]);
+		$final = $dstmt->fetch(PDO::FETCH_ASSOC);
+
 		$pdo->commit();
-
 		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => _normalize_task_row($final)]);
-
+		echo json_encode(['status' => 'success', 'data' => _normalize_task($final)]);
 	} catch (PDOException $e) {
 		if ($pdo->inTransaction()) $pdo->rollBack();
 		_log_pdo(__FILE__, $e);
@@ -225,41 +251,42 @@ function move_task(PDO $pdo, int $userId, array $data): void {
 	}
 }
 
-/**
- * Toggle completion.
- * data: { task_id:int, completed:bool }
- * MVP: completed=true → 'completed'; false → 'normal'
- */
 function toggle_complete(PDO $pdo, int $userId, array $data): void {
 	$taskId    = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-	$completed = isset($data['completed']) ? (bool)$data['completed'] : null;
+	$completed = isset($data['completed']) ? (bool)$data['completed'] : false;
 
-	if ($taskId <= 0 || $completed === null) {
+	if ($taskId <= 0) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id or completed.']);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id.']);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
 
-		$task = _load_task_for_update($pdo, $userId, $taskId);
-		if (!$task) {
+		$ustatus = $completed ? 'completed' : 'normal';
+		$pdo->prepare(
+			"UPDATE tasks SET status = :st, updated_at = NOW()
+			  WHERE task_id = :tid AND user_id = :uid"
+		)->execute([':st' => $ustatus, ':tid' => $taskId, ':uid' => $userId]);
+
+		$sel = $pdo->prepare(
+			"SELECT task_id, column_id, position, status, encrypted_data
+			   FROM tasks
+			  WHERE task_id = :tid AND user_id = :uid"
+		);
+		$sel->execute([':tid' => $taskId, ':uid' => $userId]);
+		$row = $sel->fetch(PDO::FETCH_ASSOC);
+		if (!$row) {
 			$pdo->rollBack();
 			http_response_code(404);
 			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
 			return;
 		}
 
-		$newStatus = $completed ? 'completed' : 'normal';
-		_set_task_status($pdo, $taskId, $userId, $newStatus);
-
-		$final = _load_task($pdo, $userId, $taskId);
 		$pdo->commit();
-
 		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => _normalize_task_row($final)]);
-
+		echo json_encode(['status' => 'success', 'data' => _normalize_task($row)]);
 	} catch (PDOException $e) {
 		if ($pdo->inTransaction()) $pdo->rollBack();
 		_log_pdo(__FILE__, $e);
@@ -268,105 +295,87 @@ function toggle_complete(PDO $pdo, int $userId, array $data): void {
 	}
 }
 
-/**
- * Toggle priority.
- * data: { task_id:int, on:bool }
- * Rules: on=true → 'priority'; on=false → 'normal'
- * Note: If it was 'completed', enabling priority will un-complete it.
- */
 function toggle_priority(PDO $pdo, int $userId, array $data): void {
-	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-	$on     = isset($data['on']) ? (bool)$data['on'] : null;
+	$taskId   = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$priority = isset($data['priority']) ? (bool)$data['priority'] : false;
 
-	if ($taskId <= 0 || $on === null) {
+	if ($taskId <= 0) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id or on.']);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id.']);
 		return;
 	}
 
 	try {
-		$pdo->beginTransaction();
-
-		$task = _load_task_for_update($pdo, $userId, $taskId);
-		if (!$task) {
-			$pdo->rollBack();
+		$cur = $pdo->prepare(
+			"SELECT status FROM tasks WHERE task_id = :tid AND user_id = :uid"
+		);
+		$cur->execute([':tid' => $taskId, ':uid' => $userId]);
+		$st = $cur->fetchColumn();
+		if ($st === false) {
 			http_response_code(404);
 			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
 			return;
 		}
+		if ($st === 'completed') { // keep completed immutable to priority toggles
+			http_response_code(200);
+			echo json_encode(['status' => 'success']);
+			return;
+		}
 
-		$newStatus = $on ? 'priority' : 'normal';
-		_set_task_status($pdo, $taskId, $userId, $newStatus);
-
-		$final = _load_task($pdo, $userId, $taskId);
-		$pdo->commit();
+		$newStatus = $priority ? 'priority' : 'normal';
+		$pdo->prepare(
+			"UPDATE tasks SET status = :st, updated_at = NOW()
+			  WHERE task_id = :tid AND user_id = :uid"
+		)->execute([':st' => $newStatus, ':tid' => $taskId, ':uid' => $userId]);
 
 		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => _normalize_task_row($final)]);
-
+		echo json_encode(['status' => 'success']);
 	} catch (PDOException $e) {
-		if ($pdo->inTransaction()) $pdo->rollBack();
 		_log_pdo(__FILE__, $e);
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'Could not update priority.']);
 	}
 }
 
-/**
- * Reorder every task in a column according to client-provided order.
- * data: { column_id:int, ordered:int[] } — ordered contains task_ids in final order.
- * We validate ownership and normalize: any missing tasks from the column are
- * appended after the provided list to keep positions dense.
- */
 function reorder_column(PDO $pdo, int $userId, array $data): void {
 	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
 	$ordered  = isset($data['ordered']) && is_array($data['ordered']) ? $data['ordered'] : [];
 
 	if ($columnId <= 0 || empty($ordered)) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid column_id or ordered array.']);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid column_id or empty order.']);
 		return;
 	}
 
 	try {
-		if (!_column_owned_by($pdo, $columnId, $userId)) {
+		$pdo->beginTransaction();
+
+		$c = $pdo->prepare("SELECT 1 FROM `columns` WHERE column_id = :cid AND user_id = :uid");
+		$c->execute([':cid' => $columnId, ':uid' => $userId]);
+		if (!$c->fetchColumn()) {
+			$pdo->rollBack();
 			http_response_code(403);
 			echo json_encode(['status' => 'error', 'message' => 'Forbidden.']);
 			return;
 		}
 
-		$pdo->beginTransaction();
-
-		// Get current tasks in the column
-		$sel = $pdo->prepare(
-			"SELECT task_id
-			   FROM tasks
-			  WHERE user_id = :uid AND column_id = :cid
-			  ORDER BY position ASC"
+		$u = $pdo->prepare(
+			"UPDATE tasks
+				SET position = :pos, updated_at = NOW()
+			  WHERE task_id = :tid AND user_id = :uid AND column_id = :cid"
 		);
-		$sel->execute([':uid' => $userId, ':cid' => $columnId]);
-		$currentIds = array_map('intval', $sel->fetchAll(PDO::FETCH_COLUMN, 0));
-
-		// Sanitize provided order (intersection)
-		$ordered = array_values(array_unique(array_map('intval', $ordered)));
-		$ordered = array_values(array_intersect($ordered, $currentIds));
-
-		// Append any missing ids to keep a total ordering
-		$missing = array_values(array_diff($currentIds, $ordered));
-		$finalOrder = array_merge($ordered, $missing);
-
-		// Apply positions
-		$upd = $pdo->prepare("UPDATE tasks SET position = :p, updated_at = NOW() WHERE task_id = :tid AND user_id = :uid");
-		$pos = 0;
-		foreach ($finalOrder as $tid) {
-			$upd->execute([':p' => $pos++, ':tid' => $tid, ':uid' => $userId]);
+		foreach ($ordered as $i => $taskId) {
+			$u->execute([
+				':pos' => (int)$i,
+				':tid' => (int)$taskId,
+				':uid' => $userId,
+				':cid' => $columnId
+			]);
 		}
 
 		$pdo->commit();
-
 		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => ['column_id' => $columnId, 'count' => count($finalOrder)]]);
-
+		echo json_encode(['status' => 'success']);
 	} catch (PDOException $e) {
 		if ($pdo->inTransaction()) $pdo->rollBack();
 		_log_pdo(__FILE__, $e);
@@ -375,79 +384,277 @@ function reorder_column(PDO $pdo, int $userId, array $data): void {
 	}
 }
 
-/* =========================
- * Internal helper functions
- * ========================= */
+/** ---------------------------------------------------------------------- **
+ * Columns
+ ** ---------------------------------------------------------------------- */
+function create_column(PDO $pdo, int $userId, array $data): void {
+	$name = isset($data['column_name']) ? trim((string)$data['column_name']) : '';
+	if ($name === '') {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Column name required.']);
+		return;
+	}
 
-function _column_owned_by(PDO $pdo, int $columnId, int $userId): bool {
-	$st = $pdo->prepare("SELECT 1 FROM `columns` WHERE column_id = :cid AND user_id = :uid");
-	$st->execute([':cid' => $columnId, ':uid' => $userId]);
-	return (bool)$st->fetchColumn();
-}
+	try {
+		$pdo->beginTransaction();
 
-function _next_position(PDO $pdo, int $userId, int $columnId): int {
-	$st = $pdo->prepare(
-		"SELECT COALESCE(MAX(position), -1) + 1
-		   FROM tasks
-		  WHERE user_id = :uid AND column_id = :cid"
-	);
-	$st->execute([':uid' => $userId, ':cid' => $columnId]);
-	return (int)$st->fetchColumn();
-}
+		$q = $pdo->prepare(
+			"SELECT COALESCE(MAX(position), -1) + 1 FROM `columns` WHERE user_id = :uid"
+		);
+		$q->execute([':uid' => $userId]);
+		$nextPos = (int)$q->fetchColumn();
 
-function _compact_positions(PDO $pdo, int $userId, int $columnId): void {
-	$sel = $pdo->prepare(
-		"SELECT task_id
-		   FROM tasks
-		  WHERE user_id = :uid AND column_id = :cid
-		  ORDER BY position ASC"
-	);
-	$sel->execute([':uid' => $userId, ':cid' => $columnId]);
-	$ids = $sel->fetchAll(PDO::FETCH_COLUMN, 0);
+		try {
+			$ins = $pdo->prepare(
+				"INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at)
+				 VALUES (:uid, :name, :pos, NOW(), NOW())"
+			);
+			$ins->execute([':uid' => $userId, ':name' => $name, ':pos' => $nextPos]);
+		} catch (PDOException $e) {
+			if ($e->getCode() !== '42S22') throw $e; // unknown column
+			$ins2 = $pdo->prepare(
+				"INSERT INTO `columns` (user_id, column_name, position)
+				 VALUES (:uid, :name, :pos)"
+			);
+			$ins2->execute([':uid' => $userId, ':name' => $name, ':pos' => $nextPos]);
+		}
 
-	$newPos = 0;
-	$upd = $pdo->prepare("UPDATE tasks SET position = :p, updated_at = NOW() WHERE task_id = :tid");
-	foreach ($ids as $id) {
-		$upd->execute([':p' => $newPos++, ':tid' => (int)$id]);
+		$newId = (int)$pdo->lastInsertId();
+		$pdo->commit();
+
+		http_response_code(201);
+		echo json_encode(['status' => 'success', 'data' => [
+			'column_id'   => $newId,
+			'column_name' => $name,
+			'position'    => $nextPos
+		]]);
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not create column.']);
 	}
 }
 
-function _load_task(PDO $pdo, int $userId, int $taskId): ?array {
-	$st = $pdo->prepare(
-		"SELECT task_id, user_id, column_id, position, status, encrypted_data
-		   FROM tasks
-		  WHERE task_id = :tid AND user_id = :uid"
-	);
-	$st->execute([':tid' => $taskId, ':uid' => $userId]);
-	$row = $st->fetch(PDO::FETCH_ASSOC);
-	return $row ?: null;
-}
-
-function _load_task_for_update(PDO $pdo, int $userId, int $taskId): ?array {
-	$st = $pdo->prepare(
-		"SELECT task_id, user_id, column_id, position, status, encrypted_data
-		   FROM tasks
-		  WHERE task_id = :tid AND user_id = :uid
-		  FOR UPDATE"
-	);
-	$st->execute([':tid' => $taskId, ':uid' => $userId]);
-	$row = $st->fetch(PDO::FETCH_ASSOC);
-	return $row ?: null;
-}
-
-function _set_task_status(PDO $pdo, int $taskId, int $userId, string $status): void {
-	if (!in_array($status, ['normal','priority','completed'], true)) {
-		throw new InvalidArgumentException('Invalid status');
+function delete_column(PDO $pdo, int $userId, array $data): void {
+	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
+	if ($columnId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid column_id.']);
+		return;
 	}
-	$st = $pdo->prepare(
-		"UPDATE tasks
-			SET status = :s, updated_at = NOW()
-		  WHERE task_id = :tid AND user_id = :uid"
-	);
-	$st->execute([':s' => $status, ':tid' => $taskId, ':uid' => $userId]);
+
+	try {
+		$pdo->beginTransaction();
+
+		$chk = $pdo->prepare(
+			"SELECT position FROM `columns` WHERE column_id = :cid AND user_id = :uid FOR UPDATE"
+		);
+		$chk->execute([':cid' => $columnId, ':uid' => $userId]);
+		if (!$chk->fetch(PDO::FETCH_ASSOC)) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Column not found.']);
+			return;
+		}
+
+		$pdo->prepare(
+			"DELETE FROM tasks WHERE user_id = :uid AND column_id = :cid"
+		)->execute([':uid' => $userId, ':cid' => $columnId]);
+
+		$pdo->prepare(
+			"DELETE FROM `columns` WHERE column_id = :cid AND user_id = :uid"
+		)->execute([':cid' => $columnId, ':uid' => $userId]);
+
+		$sel = $pdo->prepare(
+			"SELECT column_id FROM `columns` WHERE user_id = :uid ORDER BY position ASC"
+		);
+		$sel->execute([':uid' => $userId]);
+
+		$pos = 0;
+		$withUpdated = true;
+		while ($cid = $sel->fetchColumn()) {
+			try {
+				if ($withUpdated) {
+					$up = $pdo->prepare(
+						"UPDATE `columns` SET position = :p, updated_at = NOW() WHERE column_id = :cid"
+					);
+				} else {
+					$up = $pdo->prepare(
+						"UPDATE `columns` SET position = :p WHERE column_id = :cid"
+					);
+				}
+				$up->execute([':p' => $pos++, ':cid' => (int)$cid]);
+			} catch (PDOException $e) {
+				if ($e->getCode() === '42S22' && $withUpdated) {
+					$withUpdated = false;
+					$pdo->prepare(
+						"UPDATE `columns` SET position = :p WHERE column_id = :cid"
+					)->execute([':p' => $pos - 1, ':cid' => (int)$cid]);
+				} else {
+					throw $e;
+				}
+			}
+		}
+
+		$pdo->commit();
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => ['column_id' => $columnId]]);
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not delete column.']);
+	}
 }
 
-function _normalize_task_row(array $row): array {
+/** ---------------------------------------------------------------------- **
+ * NEW: Tasks – delete / duplicate
+ ** ---------------------------------------------------------------------- */
+
+/**
+ * Delete a task and recompact the positions in the same column.
+ * Expects: data = { task_id: int }
+ */
+function delete_task(PDO $pdo, int $userId, array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		$sel = $pdo->prepare(
+			"SELECT column_id FROM tasks WHERE task_id = :tid AND user_id = :uid FOR UPDATE"
+		);
+		$sel->execute([':tid' => $taskId, ':uid' => $userId]);
+		$row = $sel->fetch(PDO::FETCH_ASSOC);
+		if (!$row) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			return;
+		}
+		$columnId = (int)$row['column_id'];
+
+		$pdo->prepare("DELETE FROM tasks WHERE task_id = :tid AND user_id = :uid")
+			->execute([':tid' => $taskId, ':uid' => $userId]);
+
+		// Compact positions in that column
+		$ids = $pdo->prepare(
+			"SELECT task_id FROM tasks WHERE user_id = :uid AND column_id = :cid ORDER BY position ASC"
+		);
+		$ids->execute([':uid' => $userId, ':cid' => $columnId]);
+
+		$posU = $pdo->prepare("UPDATE tasks SET position = :p, updated_at = NOW() WHERE task_id = :tid");
+		$p = 0;
+		while ($id = $ids->fetchColumn()) {
+			$posU->execute([':p' => $p++, ':tid' => (int)$id]);
+		}
+
+		$pdo->commit();
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => ['task_id' => $taskId]]);
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not delete task.']);
+	}
+}
+
+/**
+ * Duplicate a task into the same column at the end.
+ * Resets status to 'normal'. Returns the newly created task.
+ * Expects: data = { task_id: int }
+ */
+function duplicate_task(PDO $pdo, int $userId, array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Lock source task
+		$src = $pdo->prepare(
+			"SELECT column_id, encrypted_data
+			   FROM tasks
+			  WHERE task_id = :tid AND user_id = :uid
+			  FOR UPDATE"
+		);
+		$src->execute([':tid' => $taskId, ':uid' => $userId]);
+		$row = $src->fetch(PDO::FETCH_ASSOC);
+		if (!$row) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			return;
+		}
+		$columnId = (int)$row['column_id'];
+
+		// Next position at end of the same column
+		$pstmt = $pdo->prepare(
+			"SELECT COALESCE(MAX(position), -1) + 1
+			   FROM tasks
+			  WHERE user_id = :uid AND column_id = :cid"
+		);
+		$pstmt->execute([':uid' => $userId, ':cid' => $columnId]);
+		$nextPos = (int)$pstmt->fetchColumn();
+
+		// Build new title "… (Copy)"
+		$srcData  = json_decode($row['encrypted_data'], true);
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($srcData)) {
+			$srcData = ['title' => 'Untitled Task'];
+		}
+		$srcTitle = (string)($srcData['title'] ?? 'Untitled Task');
+		$newTitle = $srcTitle . ' (Copy)';
+		$edata    = json_encode(['title' => $newTitle], JSON_UNESCAPED_UNICODE);
+
+		// Insert duplicate with status 'normal'
+		$ins = $pdo->prepare(
+			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, status, created_at, updated_at)
+			 VALUES (:uid, :cid, :edata, :pos, 'normal', NOW(), NOW())"
+		);
+		$ins->execute([
+			':uid'   => $userId,
+			':cid'   => $columnId,
+			':edata' => $edata,
+			':pos'   => $nextPos
+		]);
+
+		$newId = (int)$pdo->lastInsertId();
+		$pdo->commit();
+
+		http_response_code(201);
+		echo json_encode([
+			'status' => 'success',
+			'data'   => [
+				'task_id'   => $newId,
+				'column_id' => $columnId,
+				'position'  => $nextPos,
+				'status'    => 'normal',
+				'data'      => ['title' => $newTitle]
+			]
+		]);
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not duplicate task.']);
+	}
+}
+
+/** ---------------------------------------------------------------------- **
+ * Helpers
+ ** ---------------------------------------------------------------------- */
+function _normalize_task(array $row): array {
 	$data = json_decode($row['encrypted_data'], true);
 	return [
 		'task_id'   => (int)$row['task_id'],
@@ -460,7 +667,9 @@ function _normalize_task_row(array $row): array {
 
 function _log_pdo(string $file, PDOException $e): void {
 	if (defined('DEVMODE') && DEVMODE === true) {
-		$logMessage = "[" . date('Y-m-d H:i:s') . "] PDOException in {$file}: " . $e->getMessage() . "\n";
-		file_put_contents(__DIR__ . '/../../debug.log', $logMessage, FILE_APPEND);
+		@file_put_contents(__DIR__ . '/../../debug.log',
+			'[' . date('Y-m-d H:i:s') . "] PDOException in {$file}: {$e->getMessage()}\n",
+			FILE_APPEND
+		);
 	}
 }

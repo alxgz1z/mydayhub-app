@@ -1,12 +1,5 @@
 /**
  * MyDayHub 4.0.0 Beta - Main Application Logic (Glue)
- *
- * This file contains the primary client-side logic that connects different
- * parts of the application, such as view switching and initializing
- * event listeners for various modules.
- *
- * @version 4.0.0
- * @author Alex & Gemini
  */
 
 /**
@@ -27,17 +20,13 @@ const initViewSwitcher = () => {
 			const targetViewId = tab.dataset.view;
 			const targetView = document.getElementById(`${targetViewId}-view-container`);
 
-			if (tab.classList.contains('active')) {
-				return;
-			}
+			if (tab.classList.contains('active')) return;
 
 			viewTabs.forEach(t => t.classList.remove('active'));
 			viewContainers.forEach(c => c.classList.remove('active'));
 
 			tab.classList.add('active');
-			if (targetView) {
-				targetView.classList.add('active');
-			}
+			if (targetView) targetView.classList.add('active');
 
 			body.classList.remove('view-tasks-active', 'view-journal-active', 'view-outlines-active', 'view-meetings-active');
 			body.classList.add(`view-${targetViewId}-active`);
@@ -47,7 +36,6 @@ const initViewSwitcher = () => {
 
 /**
  * REFACTORED: Creates and displays the 'Add New Column' form in the header.
- * This is now a standalone function called by a delegated event listener.
  */
 const showAddColumnForm = () => {
 	const container = document.getElementById('add-column-container');
@@ -64,31 +52,25 @@ const showAddColumnForm = () => {
 	const input = form.querySelector('#new-column-title');
 
 	const revertToButton = () => {
-		// Only revert if the form is still present in the DOM.
 		if (document.getElementById('add-column-form')) {
 			container.innerHTML = originalButtonHTML;
 		}
 	};
 
-	// When the input loses focus, revert back to the button.
 	input.addEventListener('blur', revertToButton);
 
-	// Handle form submission.
 	form.addEventListener('submit', (e) => {
 		e.preventDefault();
 		const newTitle = input.value.trim();
-		// The addColumnToBoard function is available globally from tasks.js
 		if (newTitle && typeof addColumnToBoard === 'function') {
 			addColumnToBoard(newTitle);
 		}
-		// Always revert back to the button after submission.
 		revertToButton();
 	});
 };
 
-
 /**
- * Shows a custom confirmation modal and returns a Promise that resolves with the user's choice.
+ * Shows a custom confirmation modal and returns a Promise<boolean>.
  */
 const showConfirmationModal = ({ title, message, confirmText = 'OK', cancelText = 'Cancel' }) => {
 	const modalOverlay = document.getElementById('confirmation-modal-overlay');
@@ -112,7 +94,7 @@ const showConfirmationModal = ({ title, message, confirmText = 'OK', cancelText 
 	return new Promise(resolve => {
 		const close = (decision) => {
 			modalOverlay.classList.remove('active');
-			btnConfirm.onclick = null; // Clean up listeners
+			btnConfirm.onclick = null;
 			btnCancel.onclick = null;
 			resolve(decision);
 		};
@@ -132,7 +114,7 @@ const initMobileMenu = () => {
 	let isMenuPopulated = false;
 
 	const populateMenu = () => {
-		dropdown.innerHTML = ''; 
+		dropdown.innerHTML = '';
 
 		const viewTabs = document.querySelectorAll('.view-tabs .view-tab');
 		viewTabs.forEach(tab => {
@@ -152,9 +134,7 @@ const initMobileMenu = () => {
 
 	toggleBtn.addEventListener('click', (event) => {
 		event.stopPropagation();
-		if (!isMenuPopulated) {
-			populateMenu();
-		}
+		if (!isMenuPopulated) populateMenu();
 		dropdown.classList.toggle('show');
 	});
 
@@ -165,23 +145,37 @@ const initMobileMenu = () => {
 	});
 };
 
+/* ========= NEW: Dynamic viewport height fix for iOS/Android browsers ====== */
+const setViewportHeightVar = () => {
+	// 1% of the current viewport height
+	const vh = window.innerHeight * 0.01;
+	document.documentElement.style.setProperty('--vh', `${vh}px`);
+};
+
+/* ========================================================================= */
 
 document.addEventListener('DOMContentLoaded', () => {
+	// Set dynamic vh once and on viewport changes
+	setViewportHeightVar();
+	window.addEventListener('resize', setViewportHeightVar);
+	window.addEventListener('orientationchange', setViewportHeightVar);
+
 	console.log("MyDayHub App Initialized");
 
-	// Initialize the main navigation tab switcher and contextual body class.
 	initViewSwitcher();
-
-	// Initialize the mobile header menu functionality.
 	initMobileMenu();
 
 	// Initialize the new Unified Editor module.
-	UnifiedEditor.init();
+	if (typeof UnifiedEditor !== 'undefined' && UnifiedEditor.init) {
+		UnifiedEditor.init();
+	}
 
-	// Initialize the event listeners for the Tasks view (e.g., adding tasks).
-	initTasksView();
+	// Initialize the event listeners for the Tasks view.
+	if (typeof initTasksView === 'function') {
+		initTasksView();
+	}
 
-	// Global delegated event listener for actions like the '+ New Column' button.
+	// Global delegated event listener for '+ New Column' button.
 	document.addEventListener('click', (event) => {
 		if (event.target && event.target.id === 'btn-add-new-column') {
 			event.preventDefault();
