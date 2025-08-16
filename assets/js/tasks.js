@@ -6,6 +6,10 @@
 let taskToMoveId = null;
 let dragFromColumnId = null;
 
+// Modified for double_tap_support
+let __lastTapTime = 0;
+let __lastTapTarget = null;
+
 // --- Small helpers for API calls ---
 const getCsrfToken = () =>
   (document.querySelector('meta[name="csrf"]')?.content || '');
@@ -148,11 +152,12 @@ const sortTasksInColumn = (body) => {
   }).forEach(t => body.appendChild(t));
 };
 
-// --- DnD (persists cross-column moves) ---
+// Modified for persist_in_column_reorder
 const initDragAndDrop = () => {
   const board = document.getElementById('task-board-container');
   if (!board) return;
 
+  // Track where the drag started so we know if it’s a cross-column move
   board.addEventListener('dragstart', (e) => {
 	closeAllQuickActionsMenus();
 	closeAllColumnActionMenus();
@@ -160,7 +165,7 @@ const initDragAndDrop = () => {
 	if (card) {
 	  card.classList.add('dragging');
 	  const fromColumn = card.closest('.task-column');
-	  dragFromColumnId = fromColumn ? parseInt(fromColumn.id.replace('column-',''),10) : null;
+	  dragFromColumnId = fromColumn ? parseInt(fromColumn.id.replace('column-',''), 10) : null;
 	}
   });
 
@@ -169,22 +174,19 @@ const initDragAndDrop = () => {
 	if (!card) return;
 	card.classList.remove('dragging');
 
-	const destBody = card.closest('.card-body');
+	const destBody   = card.closest('.card-body');
 	if (!destBody) return;
-
 	const destColumn = destBody.closest('.task-column');
-	const destColumnId = destColumn ? parseInt(destColumn.id.replace('column-',''),10) : null;
+	const destColumnId = destColumn ? parseInt(destColumn.id.replace('column-',''), 10) : null;
 
-	// Always sort & update counts locally
+	// Local UI feedback first
 	sortTasksInColumn(destBody);
 	updateColumnTaskCount(destColumn);
-	if (dragFromColumnId && destColumnId && dragFromColumnId !== destColumnId) {
-	  const fromColumnEl = document.getElementById(`column-${dragFromColumnId}`);
-	  if (fromColumnEl) updateColumnTaskCount(fromColumnEl);
 
-	  // Persist the move (append at dest end)
-	  const taskId = parseInt(card.id.replace('task-',''),10);
-	  try {
+	try {
+	  if (dragFromColumnId && destColumnId && dragFromColumnId !== destColumnId) {
+		// Cross-column move: persist append at destination (existing behavior)
+		const taskId = parseInt(card.id.replace('task-',''), 10);
 		const res = await apiPost({
 		  module: 'tasks',
 		  action: 'moveTask',
@@ -194,12 +196,32 @@ const initDragAndDrop = () => {
 		if (!res.ok || json.status !== 'success') {
 		  throw new Error(json.message || `HTTP ${res.status}`);
 		}
-	  } catch (err) {
-		console.error('moveTask failed:', err);
-		alert('Could not save the move. Reloading the board.');
-		fetchAndRenderBoard();
+		// Update source column count too
+		const fromColumnEl = document.getElementById(`column-${dragFromColumnId}`);
+		if (fromColumnEl) updateColumnTaskCount(fromColumnEl);
+	  } else if (dragFromColumnId && destColumnId && dragFromColumnId === destColumnId) {
+		// Same-column reorder: gather ordered task IDs and persist
+		const orderedIds = Array.from(destBody.querySelectorAll('.task-card'))
+		  .map(el => parseInt(el.id.replace('task-',''), 10))
+		  .filter(Number.isFinite);
+
+		const res = await apiPost({
+		  module: 'tasks',
+		  action: 'reorderColumn',
+		  data: { column_id: destColumnId, ordered: orderedIds }
+		});
+		const json = await res.json();
+		if (!res.ok || json.status !== 'success') {
+		  throw new Error(json.message || `HTTP ${res.status}`);
+		}
 	  }
+	} catch (err) {
+	  console.error('DnD persist failed:', err);
+	  alert('Could not save the new order. Reloading the board.');
+	  fetchAndRenderBoard();
 	}
+
+	// Reset tracker for next drag
 	dragFromColumnId = null;
   });
 
@@ -215,6 +237,8 @@ const initDragAndDrop = () => {
 	}
   });
 };
+
+
 
 const getDragAfterElement = (container, y) => {
   const others = [...container.querySelectorAll('.task-card:not(.dragging)')];
@@ -348,23 +372,33 @@ const showAddTaskForm = (footer) => {
  * MOVE MODE (persist on "Move here")
  * =========================================================================
  */
-const enterMoveMode = (taskCardEl) => {
-  taskToMoveId = taskCardEl.id;
-  document.body.classList.add('move-mode-active');
-  taskCardEl.classList.add('is-moving');
-  closeAllQuickActionsMenus();
-  document.querySelectorAll('.task-column').forEach(column => {
-	const footer = column.querySelector('.card-footer');
-	if (!footer.dataset.originalHtml) {
-	  footer.dataset.originalHtml = footer.innerHTML;
-	}
-	if (column.contains(taskCardEl)) {
-	  footer.innerHTML = `<button class="btn-cancel-move-inline">Cancel Move</button>`;
-	} else {
-	  footer.innerHTML = `<button class="btn-move-task-here">Move here</button>`;
-	}
-  });
-};
+// Modified for move_mode_hardening
+ const enterMoveMode = (taskCardEl) => {
+   if (!taskCardEl) return;
+   taskToMoveId = taskCardEl.id;
+ 
+   document.body.classList.add('move-mode-active');
+   taskCardEl.classList.add('is-moving');
+   closeAllQuickActionsMenus();
+ 
+   document.querySelectorAll('.task-column').forEach((column) => {
+	 const footer = column.querySelector('.card-footer');
+	 if (!footer) return; // Be null-safe
+ 
+	 // Remember original footer markup once
+	 if (!footer.dataset.originalHtml) {
+	   footer.dataset.originalHtml = footer.innerHTML;
+	 }
+ 
+	 // Show context actions
+	 if (column.contains(taskCardEl)) {
+	   footer.innerHTML = `<button class="btn-cancel-move-inline">Cancel Move</button>`;
+	 } else {
+	   footer.innerHTML = `<button class="btn-move-task-here">Move here</button>`;
+	 }
+   });
+ };
+
 
 const exitMoveMode = () => {
   const movingTask = document.querySelector('.task-card.is-moving');
@@ -454,60 +488,64 @@ const initTasksView = () => {
 	  }
 	  closeAllQuickActionsMenus();
 
+	// Modified for togglePriority_persistence (task_id normalization)
 	} else if (quickActionPriority) {
-	  const menu = quickActionPriority.closest('.quick-actions-menu');
-	  const taskCard = document.getElementById(menu.dataset.taskId);
-	  if (taskCard) {
-		taskCard.classList.toggle('high-priority');
-		const body = taskCard.closest('.card-body');
+	  const menu     = quickActionPriority.closest('.quick-actions-menu');
+	  const cardId   = menu?.dataset?.taskId || ''; // may be "task-123" or "123"
+	  const numericIdMatch = String(cardId).match(/\d+/);
+	  const taskId   = numericIdMatch ? Number(numericIdMatch[0]) : NaN;
+	
+	  const taskCard = document.getElementById(cardId);
+	  if (!taskCard || Number.isNaN(taskId)) {
+		console.error('togglePriority: cannot resolve task_id from', { cardId });
+		alert('Could not identify task. Please refresh and try again.');
+		closeAllQuickActionsMenus();
+		return;
+	  }
+	
+	  // Guard: backend ignores priority changes when task is completed.
+	  if (taskCard.classList.contains('completed')) {
+		alert('Completed tasks cannot be prioritized.');
+		closeAllQuickActionsMenus();
+		return;
+	  }
+	
+	  const body       = taskCard.closest('.card-body');
+	  const wasHigh    = taskCard.classList.contains('high-priority');
+	  const nextIsHigh = !wasHigh;
+	
+	  // Optimistic UI
+	  taskCard.classList.toggle('high-priority', nextIsHigh);
+	  sortTasksInColumn(body);
+	  updateColumnTaskCount(body.closest('.task-column'));
+	
+	  try {
+		// Helpful log in dev
+		console.debug('togglePriority → POST', { task_id: taskId, priority: nextIsHigh });
+	
+		const res  = await apiPost({
+		  module: 'tasks',
+		  action: 'togglePriority',
+		  data: {
+			task_id: taskId,           // NOTE: always numeric
+			priority: nextIsHigh       // boolean
+		  }
+		});
+		const json = await res.json();
+		if (!res.ok || json.status !== 'success') {
+		  throw new Error(json.message || `HTTP ${res.status}`);
+		}
+		// Success: keep optimistic state.
+	  } catch (err) {
+		// Rollback on error
+		taskCard.classList.toggle('high-priority', wasHigh);
 		sortTasksInColumn(body);
 		updateColumnTaskCount(body.closest('.task-column'));
+		console.error('togglePriority failed:', err);
+		alert('Could not update priority. Please try again.');
+	  } finally {
+		closeAllQuickActionsMenus();
 	  }
-	  closeAllQuickActionsMenus();
-
-	} else if (quickActionMove) {
-	  exitMoveMode();
-	  const menu = quickActionMove.closest('.quick-actions-menu');
-	  if (menu && menu.dataset.taskId) {
-		const taskCard = document.getElementById(menu.dataset.taskId);
-		if (taskCard) enterMoveMode(taskCard);
-	  }
-
-	} else if (quickActionDelete) {
-	  // PERSISTED DELETE
-	  const menu = quickActionDelete.closest('.quick-actions-menu');
-	  const taskCard = document.getElementById(menu.dataset.taskId);
-	  if (taskCard) {
-		const confirmed = await showConfirmationModal({
-		  title: 'Delete Task',
-		  message: 'Delete this task? This cannot be undone.',
-		  confirmText: 'Delete'
-		});
-		if (!confirmed) { closeAllQuickActionsMenus(); return; }
-
-		const taskId = parseInt(taskCard.id.replace('task-',''), 10);
-		const column = taskCard.closest('.task-column');
-		const body   = taskCard.closest('.card-body');
-
-		try {
-		  const res = await apiPost({
-			module: 'tasks',
-			action: 'deleteTask',
-			data: { task_id: taskId }
-		  });
-		  const json = await res.json();
-		  if (!res.ok || json.status !== 'success') {
-			throw new Error(json.message || `HTTP ${res.status}`);
-		  }
-		  taskCard.remove();
-		  if (body) sortTasksInColumn(body);
-		  if (column) updateColumnTaskCount(column);
-		} catch (err) {
-		  console.error('deleteTask failed:', err);
-		  alert('Could not delete the task. Please try again.');
-		}
-	  }
-	  closeAllQuickActionsMenus();
 
 	} else if (target.matches('.btn-move-task-here')) {
 	  if (taskToMoveId) {
@@ -542,13 +580,85 @@ const initTasksView = () => {
 		}
 		exitMoveMode();
 	  }
+	
+	// Modified for move_mode_hardening
+	} else if (quickActionMove) {
+	  // End any previous move context first
+	  exitMoveMode();
+	
+	  // Resolve the task card robustly
+	  const menu = quickActionMove.closest('.quick-actions-menu');
+	  const fromButtonCard = quickActionMove.closest('.task-card');
+	  const cardIdRaw =
+		(menu && menu.dataset && menu.dataset.taskId) ||
+		(fromButtonCard && fromButtonCard.id) ||
+		'';
+	
+	  const idMatch = String(cardIdRaw).match(/\d+/);
+	  const numId = idMatch ? Number(idMatch[0]) : NaN;
+	
+	  // Try both "task-<id>" and "<id>" as DOM ids
+	  const taskCard =
+		document.getElementById(cardIdRaw) ||
+		document.getElementById(`task-${numId}`);
+	
+	  if (!taskCard || Number.isNaN(numId)) {
+		console.error('start-move: could not resolve task card/id', { cardIdRaw });
+		alert('Could not identify the task to move. Please refresh and try again.');
+		closeAllQuickActionsMenus();
+		return;
+	  }
+	
+	  // Enter move mode and reveal footers with Move/Cancel controls
+	  enterMoveMode(taskCard);
+	
+	  // Close the floating menu so the footer buttons are easy to see/click
+	  closeAllQuickActionsMenus();
 
+	
 	} else if (target.matches('.btn-cancel-move-inline')) {
 	  exitMoveMode();
 
 	} else if (target.matches('.btn-add-task')) {
 	  showAddTaskForm(target.parentElement);
-
+	
+	// Modified for createColumn_persistence
+	} else if (target.matches('#btn-add-new-column')) {
+	  // Ask for the column name (minimal UI for now; can swap to modal later)
+	  const name = (prompt('Name your new column:') || '').trim();
+	  if (!name) {
+		// No-op if user cancelled or blank name
+		closeAllColumnActionMenus();
+		closeAllQuickActionsMenus();
+		return;
+	  }
+	
+	  try {
+		const res = await apiPost({
+		  module: 'tasks',
+		  action: 'createColumn',
+		  data: { column_name: name }
+		});
+		const json = await res.json();
+		if (!res.ok || json.status !== 'success') {
+		  throw new Error(json.message || `HTTP ${res.status}`);
+		}
+	
+		// Render the persisted column returned by the server
+		addColumnToBoard(json.data.column_name, json.data.column_id);
+	
+		// Optional nicety: scroll last column into view
+		const wrap = document.getElementById('task-columns-wrapper');
+		if (wrap && wrap.lastElementChild) {
+		  wrap.lastElementChild.scrollIntoView({ behavior: 'smooth', inline: 'end' });
+		}
+	  } catch (err) {
+		console.error('createColumn failed:', err);
+		alert('Could not create the column. Please try again.');
+	  } finally {
+		closeAllColumnActionMenus();
+		closeAllQuickActionsMenus();
+	  }
 	} else if (target.matches('.btn-column-actions')) {
 	  toggleColumnActionsMenu(target);
 
@@ -584,23 +694,272 @@ const initTasksView = () => {
 	}
   });
 
-  // Completion handling: ensure sort runs after state change
-  document.addEventListener('change', (event) => {
-	const target = event.target;
-	if (!target.matches('.task-complete-checkbox')) return;
+  // Modified for inline_rename_columns
+  // Double-click to inline-edit a column title; Enter/blur commits; Esc cancels.
+  // Modified for inline_rename_columns_guard
+  document.addEventListener('dblclick', (e) => {
+	if (document.body.classList.contains('move-mode-active')) return;
+  
+	const titleEl = e.target.closest('.column-title');
+	if (!titleEl) return;
+  
+	const columnEl = titleEl.closest('.task-column');
+	if (!columnEl) return;
+  
+	const columnId = parseInt(String(columnEl.id).replace('column-',''), 10);
+	if (!Number.isFinite(columnId)) return;
+  
+	const original = (titleEl.textContent || '').trim();
+  
+	const input = document.createElement('input');
+	input.type = 'text';
+	input.className = 'inline-title-input';
+	input.value = original;
+	input.setAttribute('maxlength', '120');
+	input.style.width = Math.max(120, titleEl.clientWidth) + 'px';
+  
+	titleEl.replaceWith(input);
+	input.focus();
+	input.select();
+  
+	let finalized = false; // guard against double commit (Enter + blur)
+  
+	const restoreSpan = (text) => {
+	  const span = document.createElement('span');
+	  span.className = 'column-title';
+	  span.textContent = text;
+	  if (input.isConnected) input.replaceWith(span);
+	  else {
+		const existing = columnEl.querySelector('.column-title');
+		if (existing) existing.textContent = text;
+	  }
+	};
+  
+	const commit = async () => {
+	  if (finalized) return;
+	  finalized = true;
+	  input.removeEventListener('blur', commit);
+	  const name = (input.value || '').trim();
+  
+	  if (!name || name === original) {
+		restoreSpan(original);
+		return;
+	  }
+  
+	  // Optimistic UI
+	  restoreSpan(name);
+  
+	  try {
+		const res = await apiPost({
+		  module: 'tasks',
+		  action: 'renameColumn',
+		  data: { column_id: columnId, column_name: name }
+		});
+		const json = await res.json();
+		if (!res.ok || json.status !== 'success') throw new Error(json.message || `HTTP ${res.status}`);
+  
+		const span = columnEl.querySelector('.column-title');
+		if (span) span.textContent = json.data?.column_name ?? name;
+	  } catch (err) {
+		console.error('renameColumn failed:', err);
+		alert('Could not rename the column. Restoring previous title.');
+		const span = columnEl.querySelector('.column-title');
+		if (span) span.textContent = original;
+	  }
+	};
+  
+	const cancel = () => {
+	  if (finalized) return;
+	  finalized = true;
+	  input.removeEventListener('blur', commit);
+	  restoreSpan(original);
+	};
+  
+	input.addEventListener('keydown', (ev) => {
+	  if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+	  else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+	});
+	input.addEventListener('blur', commit, { once: true });
+  });
 
-	const card = target.closest('.task-card');
+
+  // Modified for inline_rename_tasks
+  // Double-click to inline-edit a task title; Enter/blur commits; Esc cancels.
+  // Modified for inline_rename_tasks_guard
+  document.addEventListener('dblclick', (e) => {
+	if (document.body.classList.contains('move-mode-active')) return;
+  
+	const span = e.target.closest('.task-title');
+	if (!span) return;
+  
+	const card = span.closest('.task-card');
 	if (!card) return;
+  
+	const idMatch = String(card.id).match(/\d+/);
+	const taskId  = idMatch ? Number(idMatch[0]) : NaN;
+	if (!Number.isFinite(taskId)) return;
+  
+	const original = (span.textContent || '').trim();
+  
+	const input = document.createElement('input');
+	input.type = 'text';
+	input.className = 'inline-title-input';
+	input.value = original;
+	input.setAttribute('maxlength', '200');
+	input.style.width = Math.max(140, span.clientWidth) + 'px';
+  
+	span.replaceWith(input);
+	input.focus();
+	input.select();
+  
+	let finalized = false; // prevents Enter+blur double-run
+  
+	const restoreSpan = (text) => {
+	  const s = document.createElement('span');
+	  s.className = 'task-title';
+	  s.textContent = text;
+	  if (input.isConnected) input.replaceWith(s);
+	  else {
+		const existing = card.querySelector('.task-title');
+		if (existing) existing.textContent = text;
+	  }
+	};
+  
+	const commit = async () => {
+	  if (finalized) return;
+	  finalized = true;
+	  input.removeEventListener('blur', commit);
+	  const name = (input.value || '').trim();
+  
+	  if (!name || name === original) {
+		restoreSpan(original);
+		return;
+	  }
+  
+	  // Optimistic
+	  restoreSpan(name);
+  
+	  try {
+		const res = await apiPost({
+		  module: 'tasks',
+		  action: 'renameTaskTitle',
+		  data: { task_id: taskId, title: name }
+		});
+		const json = await res.json();
+		if (!res.ok || json.status !== 'success') throw new Error(json.message || `HTTP ${res.status}`);
+  
+		const s = card.querySelector('.task-title');
+		if (s) s.textContent = json.data?.data?.title ?? name;
+	  } catch (err) {
+		console.error('renameTaskTitle failed:', err);
+		alert('Could not rename the task. Restoring previous title.');
+		const s = card.querySelector('.task-title');
+		if (s) s.textContent = original;
+	  }
+	};
+  
+	const cancel = () => {
+	  if (finalized) return;
+	  finalized = true;
+	  input.removeEventListener('blur', commit);
+	  restoreSpan(original);
+	};
+  
+	input.addEventListener('keydown', (ev) => {
+	  if (ev.key === 'Enter') { ev.preventDefault(); commit(); }
+	  else if (ev.key === 'Escape') { ev.preventDefault(); cancel(); }
+	});
+	input.addEventListener('blur', commit, { once: true });
+  });
 
-	const isChecked = target.checked;
-	card.classList.toggle('completed', isChecked);
-	if (isChecked) {
-	  card.classList.add('flash-animation');
-	  setTimeout(() => { card.classList.remove('flash-animation'); }, 400);
+
+  // Modified for double_tap_support
+  // Mobile: treat a fast second tap on a title as a double-click.
+  document.addEventListener('touchend', (e) => {
+	const el = e.target.closest('.column-title, .task-title');
+	if (!el) return;
+
+	const now = Date.now();
+	if (__lastTapTarget === el && (now - __lastTapTime) < 300) {
+	  e.preventDefault();
+	  // Fire a synthetic dblclick so the above handlers run.
+	  el.dispatchEvent(new MouseEvent('dblclick', { bubbles: true }));
+	  __lastTapTime = 0;
+	  __lastTapTarget = null;
+	} else {
+	  __lastTapTime = now;
+	  __lastTapTarget = el;
 	}
-	const body = card.closest('.card-body');
-	sortTasksInColumn(body);
-	updateColumnTaskCount(body.closest('.task-column'));
+  }, { passive: true });
+
+  // Modified for toggleComplete_persistence
+  // Delegated handler for completion checkbox changes
+  document.addEventListener('change', async (e) => {
+	const el = e.target;
+	// Try common selectors for the completion checkbox:
+	//  - .task-complete-checkbox   (recommended class)
+	//  - input[type="checkbox"][data-complete]
+	// If your markup differs, this still works because we fall back to finding
+	// the nearest task card and its id.
+	const isCompletionToggle =
+	  el.matches('.task-complete-checkbox') ||
+	  el.matches('input[type="checkbox"][data-complete]');
+  
+	if (!isCompletionToggle) return;
+  
+	// Resolve the task card and numeric id (handles "task-123" and "123")
+	const taskCard = el.closest('.task-card') || el.closest('[id^="task-"]') || el.closest('[id]');
+	const cardId   = taskCard ? taskCard.id : '';
+	const idMatch  = String(cardId).match(/\d+/);
+	const taskId   = idMatch ? Number(idMatch[0]) : NaN;
+  
+	if (!taskCard || Number.isNaN(taskId)) {
+	  console.error('toggleComplete: cannot resolve task_id from', { cardId });
+	  alert('Could not identify task. Please refresh and try again.');
+	  return;
+	}
+  
+	// Desired state from the checkbox
+	const nextCompleted = !!el.checked;
+  
+	// Optimistic UI: toggle class and reflow
+	const body    = taskCard.closest('.card-body');
+	const wasDone = taskCard.classList.contains('completed');
+	taskCard.classList.toggle('completed', nextCompleted);
+	if (body) {
+	  sortTasksInColumn(body);
+	  const col = body.closest('.task-column');
+	  if (col) updateColumnTaskCount(col);
+	}
+  
+	try {
+	  console.debug('toggleComplete → POST', { task_id: taskId, completed: nextCompleted });
+	  const res  = await apiPost({
+		module: 'tasks',
+		action: 'toggleComplete',
+		data: {
+		  task_id: taskId,          // numeric
+		  completed: nextCompleted  // boolean
+		}
+	  });
+	  const json = await res.json();
+	  if (!res.ok || json.status !== 'success') {
+		throw new Error(json.message || `HTTP ${res.status}`);
+	  }
+	  // Success: keep optimistic state (no-op).
+	} catch (err) {
+	  // Rollback UI if server rejected
+	  console.error('toggleComplete failed:', err);
+	  taskCard.classList.toggle('completed', wasDone);
+	  if (body) {
+		sortTasksInColumn(body);
+		const col = body.closest('.task-column');
+		if (col) updateColumnTaskCount(col);
+	  }
+	  // Rollback checkbox state to match UI
+	  el.checked = wasDone;
+	  alert('Could not update completion. Please try again.');
+	}
   });
 };
 // end of /assets/js/tasks.js v4.5.0

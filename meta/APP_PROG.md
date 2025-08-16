@@ -266,3 +266,55 @@ userId via session to test per-user isolation.
 column delete (server-side soft delete or restore).
   7.	Spec and docs: incorporate the API/CSRF updates and mobile behavior
 so new contributors can ramp quickly.
+
+## 2025-08-15 00:00 — Inline Editing + Persistence Pass
+**Focus**
+Bring v3’s inline rename UX to v4 and finish persistence for priority,
+complete, and task ordering while hardening move mode.
+
+**Key work**
+
+> Column titles are inline editable (dbl-click / double-tap).
+> Task titles are inline editable with optimistic UI and rollback.
+> Added API actions: renameColumn, renameTaskTitle.
+> Fixed priority/complete wiring (now persisted immediately).
+> Same-column reordering persists via reorderColumn.
+> Cross-column moves persist and compact source positions.
+> Quick action “Move” restored; move-mode footers hardened.
+> Guarded inline editors against Enter+blur double commits.
+
+**Why it matters**
+Editors match v3 muscle memory on desktop and mobile, reduce friction,
+and keep board state consistent across refreshes and devices.
+
+**Implementation highlights**
+
+> JS: dblclick handlers create a scoped input, commit on Enter/blur,
+cancel on Esc; single-fire guard prevents replaceWith race.
+> PHP: tasks.handler.php gained renameTaskTitle() and renameColumn();
+all mutating routes retain CSRF and ownership checks.
+> Business rule enforced: completed tasks cannot be re-prioritized.
+
+**Testing performed**
+> Desktop: Chrome drag/drop, rename, priority, complete, duplicate,
+delete, create; refresh persistence verified.
+
+>Mobile: iOS Safari/Chrome double-tap rename, move-mode buttons within
+thumb reach; counts/sorting remain correct.
+
+**Known gaps / watch-list**
+> Column left↔right drag reordering not implemented.
+> No undo UI for delete operations.
+> Alerts remain; move to toasts/snackbars with reasons.
+> Auth is still stubbed; multi-user not yet enabled.
+
+**Next steps (recommended)**
+1. Column reorder (drag headers left↔right) + reorderColumns API.
+2. Replace alerts with non-blocking toasts and add short “Undo” for
+   deletes (soft-delete or restore endpoint).
+3. Unify quick actions to include “Rename” as fallback when dbl-tap is
+   unavailable (accessibility).
+4. Add lightweight auth in dev so userId comes from session; keep
+   ownership checks intact.
+5. Extend encrypted task payload to include optional notes and
+   dueDate; wire Unified Editor save.

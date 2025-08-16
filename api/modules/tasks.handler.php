@@ -24,10 +24,14 @@ function handle_tasks_action($action, $data, $pdo, $userId) {
 		// Columns
 		case 'createColumn':    create_column($pdo, (int)$userId, $data);       break;
 		case 'deleteColumn':    delete_column($pdo, (int)$userId, $data);       break;
+		case 'renameColumn':    rename_column($pdo, (int)$userId, $data);       break;
 
 		// NEW: Tasks – persistence for quick actions
 		case 'deleteTask':      delete_task($pdo, (int)$userId, $data);         break;
 		case 'duplicateTask':   duplicate_task($pdo, (int)$userId, $data);      break;
+
+		// Modified for inline_rename_tasks
+		case 'renameTaskTitle': rename_task_title($pdo, (int)$userId, $data);   break;
 
 		default:
 			http_response_code(404);
@@ -295,45 +299,85 @@ function toggle_complete(PDO $pdo, int $userId, array $data): void {
 	}
 }
 
-function toggle_priority(PDO $pdo, int $userId, array $data): void {
-	$taskId   = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-	$priority = isset($data['priority']) ? (bool)$data['priority'] : false;
-
-	if ($taskId <= 0) {
+/**
+ * Toggle a task's priority status and return the updated task.
+ *
+ * Input (JSON data under "data"):
+ *   { "task_id": <int>, "priority": <bool> }
+ */
+function toggle_priority(PDO $pdo, int $userId, array $data): void
+{
+	if (!isset($data['task_id'], $data['priority'])) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id.']);
+		echo json_encode([
+			'status'  => 'error',
+			'message' => 'Missing required fields: task_id, priority',
+			'code'    => 400
+		]);
 		return;
 	}
 
+	$taskId   = (int)$data['task_id'];
+	$toHigh   = (bool)$data['priority'];
+	$newState = $toHigh ? 'priority' : 'normal';
+
 	try {
-		$cur = $pdo->prepare(
-			"SELECT status FROM tasks WHERE task_id = :tid AND user_id = :uid"
-		);
-		$cur->execute([':tid' => $taskId, ':uid' => $userId]);
-		$st = $cur->fetchColumn();
-		if ($st === false) {
+		$stmt = $pdo->prepare("
+			SELECT task_id, user_id, column_id, status
+			  FROM tasks
+			 WHERE task_id = :task_id
+			 LIMIT 1
+		");
+		$stmt->execute([':task_id' => $taskId]);
+		$task = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$task) {
 			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found', 'code' => 404]);
 			return;
 		}
-		if ($st === 'completed') { // keep completed immutable to priority toggles
-			http_response_code(200);
-			echo json_encode(['status' => 'success']);
+		if ((int)$task['user_id'] !== $userId) {
+			http_response_code(403);
+			echo json_encode(['status' => 'error', 'message' => 'Forbidden', 'code' => 403]);
+			return;
+		}
+		if ($task['status'] === 'completed') {
+			http_response_code(403);
+			echo json_encode(['status' => 'error', 'message' => 'Completed tasks cannot be prioritized', 'code' => 403]);
 			return;
 		}
 
-		$newStatus = $priority ? 'priority' : 'normal';
-		$pdo->prepare(
-			"UPDATE tasks SET status = :st, updated_at = NOW()
-			  WHERE task_id = :tid AND user_id = :uid"
-		)->execute([':st' => $newStatus, ':tid' => $taskId, ':uid' => $userId]);
+		$upd = $pdo->prepare("
+			UPDATE tasks
+			   SET status = :status, updated_at = NOW()
+			 WHERE task_id = :task_id AND user_id = :user_id
+			 LIMIT 1
+		");
+		$upd->execute([
+			':status'  => $newState,
+			':task_id' => $taskId,
+			':user_id' => $userId
+		]);
+
+		$out = $pdo->prepare("
+			SELECT t.task_id, t.user_id, t.column_id, t.status, t.position, t.encrypted_data, t.created_at, t.updated_at
+			  FROM tasks t
+			 WHERE t.task_id = :task_id
+			 LIMIT 1
+		");
+		$out->execute([':task_id' => $taskId]);
+		$updated = $out->fetch(PDO::FETCH_ASSOC);
+		if (!$updated) {
+			http_response_code(500);
+			echo json_encode(['status' => 'error', 'message' => 'Task update failed to load', 'code' => 500]);
+			return;
+		}
 
 		http_response_code(200);
-		echo json_encode(['status' => 'success']);
-	} catch (PDOException $e) {
-		_log_pdo(__FILE__, $e);
+		echo json_encode(['status' => 'success', 'data' => $updated]);
+	} catch (Throwable $e) {
 		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'Could not update priority.']);
+		echo json_encode(['status' => 'error', 'message' => 'Server error while toggling priority', 'code' => 500]);
 	}
 }
 
@@ -505,6 +549,132 @@ function delete_column(PDO $pdo, int $userId, array $data): void {
 		_log_pdo(__FILE__, $e);
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'Could not delete column.']);
+	}
+}
+
+/** Modified for inline_rename_columns (already required by JS) */
+function rename_column(PDO $pdo, int $userId, array $data): void {
+	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
+	$name     = isset($data['column_name']) ? trim((string)$data['column_name']) : '';
+
+	if ($columnId <= 0 || $name === '') {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid column_id or column_name.']);
+		return;
+	}
+
+	try {
+		$chk = $pdo->prepare("SELECT column_id, user_id FROM `columns` WHERE column_id = :cid LIMIT 1");
+		$chk->execute([':cid' => $columnId]);
+		$row = $chk->fetch(PDO::FETCH_ASSOC);
+
+		if (!$row) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Column not found.']);
+			return;
+		}
+		if ((int)$row['user_id'] !== $userId) {
+			http_response_code(403);
+			echo json_encode(['status' => 'error', 'message' => 'Forbidden.']);
+			return;
+		}
+
+		try {
+			$upd = $pdo->prepare(
+				"UPDATE `columns`
+					SET column_name = :name, updated_at = NOW()
+				  WHERE column_id = :cid AND user_id = :uid
+				  LIMIT 1"
+			);
+			$upd->execute([':name' => $name, ':cid' => $columnId, ':uid' => $userId]);
+		} catch (PDOException $e) {
+			if ($e->getCode() !== '42S22') throw $e;
+			$upd2 = $pdo->prepare(
+				"UPDATE `columns`
+					SET column_name = :name
+				  WHERE column_id = :cid AND user_id = :uid
+				  LIMIT 1"
+			);
+			$upd2->execute([':name' => $name, ':cid' => $columnId, ':uid' => $userId]);
+		}
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => ['column_id' => $columnId, 'column_name' => $name]]);
+	} catch (PDOException $e) {
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not rename column.']);
+	}
+}
+
+// Modified for inline_rename_tasks
+/**
+ * Rename a task's title (updates the encrypted_data JSON).
+ * Input:  data = { "task_id": <int>, "title": <string> }
+ * Output: {"status":"success","data": <normalized task> }
+ */
+function rename_task_title(PDO $pdo, int $userId, array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$title  = isset($data['title']) ? trim((string)$data['title']) : '';
+
+	if ($taskId <= 0 || $title === '') {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid task_id or title.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		$sel = $pdo->prepare("
+			SELECT task_id, user_id, column_id, position, status, encrypted_data
+			  FROM tasks
+			 WHERE task_id = :tid AND user_id = :uid
+			 FOR UPDATE
+		");
+		$sel->execute([':tid' => $taskId, ':uid' => $userId]);
+		$row = $sel->fetch(PDO::FETCH_ASSOC);
+		if (!$row) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			return;
+		}
+
+		// Preserve any existing fields; only update title
+		$dataJson = json_decode((string)$row['encrypted_data'], true);
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($dataJson)) {
+			$dataJson = [];
+		}
+		$dataJson['title'] = $title;
+		$edata = json_encode($dataJson, JSON_UNESCAPED_UNICODE);
+
+		$upd = $pdo->prepare("
+			UPDATE tasks
+			   SET encrypted_data = :edata, updated_at = NOW()
+			 WHERE task_id = :tid AND user_id = :uid
+			 LIMIT 1
+		");
+		$upd->execute([':edata' => $edata, ':tid' => $taskId, ':uid' => $userId]);
+
+		// Return normalized task
+		$get = $pdo->prepare("
+			SELECT task_id, column_id, position, status, encrypted_data
+			  FROM tasks
+			 WHERE task_id = :tid
+			 LIMIT 1
+		");
+		$get->execute([':tid' => $taskId]);
+		$out = $get->fetch(PDO::FETCH_ASSOC);
+
+		$pdo->commit();
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => _normalize_task($out)]);
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		_log_pdo(__FILE__, $e);
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'Could not rename task.']);
 	}
 }
 
