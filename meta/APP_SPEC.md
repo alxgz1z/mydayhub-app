@@ -1,364 +1,246 @@
-MyDayHub — Application Spec (Beta 4)
+MYDAYHUB — APPLICATION SPECIFICATION (V4.7.0)
 
-Version: 4.6.0 (Dev)
-Environments:
-• Prod (v3): isolated; no shared users/DB/files
-• Dev (v4): localhost (127.0.0.1), Apache+PHP 8, MySQL, XAMPP
+Audience: Internal Development & PM Use Only
+## Environments
 
-Visual Status Icons:
-✅ Complete | 🚧 In progress | ⚠️ Needs fix | 🗓️ Planned (future) | 🚀 Idea
+• Prod (v3): Isolated; no shared users/DB/files
+• Dev (v4): Localhost (127.0.0.1), Apache+PHP 8, MySQL, XAMPP
 
-⸻
+## Status Legend
 
-Purpose
-This document is the source of truth for how v4 works and how we intend it to
-evolve. It balances product behavior (what the user sees) with technical
-contracts (DB, API, security). It is written for new contributors and for
-future-Alex to resume work quickly.
-⸻
+[DONE] Feature complete, matches spec intent
+[WIP] Under construction, present but evolving
+[FIX] Implemented, needs refactoring/bugfixes
+[PLAN] Scheduled for future milestone
+[IDEA] Proposed, not yet scheduled**
 
-Product goals
-• A lightweight, fast Tasks + Journal tool with minimal ceremony.
-• Smooth, app-like interactions (no full page reloads during normal use).
-• Opinionated defaults: dark mode, simple sorting, clear affordances.
-• Secure by default in v4: CSRF, ownership checks, predictable APIs.
-• A foundation that can grow into sharing, search, and journaling at pace.
-⸻
-General requirements
-✅ Modern, minimalist UI: rounded corners, soft shadows, clean typography
-✅ Dark theme by default; global variables enable future light theme
-✅ Fully responsive: desktop → mobile; touch gestures supported where natural
-✅ Heavy front-end logic; minimal server round-trips for reads
-✅ Inline interactions: create/move/delete without full reloads
-✅ View switcher toggles sections (Tasks, Journal placeholder, etc.)
-✅ Dev banner when DEVMODE = true (visual indicator in header)
-✅ Standard tooltips/titles on interactive icons and buttons
-✅ CSRF protection for all mutating API requests (see §10)
-✅ Ownership checks on the server for all user-owned records
-🚧 Unified Editor integrations (Tasks entry point wired; Journal next)
-🗓️ Multi-user auth (dev uses stub user id; see §11 roadmap)
-🚀 Client-side encryption (zero-knowledge) parity with v3
-⸻
+## ExecutiveSummary
 
-Layout: major components
-3.1 App header (always visible)
-• App title and view tabs (Tasks, Journal placeholder)
-• Context controls by view (see view sections)
-• Mobile: header collapses spacing; tabs move to a mobile menu
-3.2 Main content area
-• Hosts the current view container.
-• Takes ≥85% vertical space on desktop.
-• Uses flex layout to allow scrollable inner panes.
+• MyDayHub v4 is a ground-up reinvention, guided by lessons from v3. We strive for a cleaner codebase, smarter interactions, robust privacy, and features for modern teams.
 
-3.3 Mobile menu and safe-area handling
-• iOS Safari/Chrome can overlay toolbars; we reserve space with a bottom
-spacer (.mobile-safe-spacer) so the last column’s footer remains visible.
-• Safe-area CSS variables (env(safe-area-inset-*))) are respected.
+• The vision: a productivity tool for tasks, journaling, planning, and sharing, usable by all skill levels, direct yet flexible.
 
-⸻
+• This spec is a living resource for contributors, testers, and future "Alex”.
 
-Tasks view (Kanban board)
-Status: Core features complete; polishing continues.
-4.1 Columns
+## App Description And Philosophy
 
-✅ Horizontally scrollable on desktop; stacked vertically on mobile
-✅ User-created columns persist to DB with dense, zero-based position
-✅ Delete column: cascades task delete; compacts remaining positions
-✅ Rename column: inline editor + API (renameColumn)
-🗓️ Reorder columns by drag (left↔right) and persist
+• MyDayHub is focused on instant feedback, direct manipulation, minimal dialog popups, and safety for all edge cases.
+	• Responsive layouts and gesture support for mobile and desktop.
+	• Modular features for agile development and future pivots.
 
-Column structure
-• Header: editable title (✅), task count badge (✅), actions menu (✅)
-• Body: scrollable list of task cards (✅)
-• Footer: “+ New Task” quick entry (✅); “Move here” button in move mode (✅)
+• Core Product Goals:
+	• Minimal ceremony, fast entry, and context switching.
+	• Fluid UX: inline edits, drag/drop, app like flow without reloads.
+	• Dark-first UI for comfort and accessibility with light mode as a choice.
+	• Security-first: CSRF, ownership, strong session handling, planned privacy switches, zero knowledge.
+	• Growable foundation: easily extendable for sharing, analytics, quotas, journaling.
 
-Inline column rename
-• Trigger: dbl-click (desktop) or double-tap (mobile).
-• Commit: Enter or blur. Cancel: Esc.
-• Guarded against Enter+blur double commit; optimistic UI with rollback.
+## Narrative High Level Requirements
 
-4.2 Tasks (cards)
+[DONE] *Modular visibility and dynamic UI*
+	• Fast toggling of task board, journal, outlines, meeting, preserving context.
+	• Column drag/drop supports intuitive workflow management.
 
-✅ Create in footer input; press Enter creates, clears, and refocuses
-✅ Drag & drop within a column (persist order)
-✅ Drag & drop across columns (append to end; compact source column)
-✅ Quick actions menu (ellipsis): Edit, Duplicate, Move, Delete, Priority
-✅ Completion checkbox next to title (persists immediately)
-✅ Visual status band at left indicates state (normal/priority/completed)
-✅ Inline title rename on dbl-click/double-tap; optimistic UI + rollback
-🚧 Band click to toggle priority (today via menu button)
-🗓️ Due date mini-suffix, delegated markers (@name) and filters
+[WIP] *Privacy switch on every item*
+	• Each task, journal, outline, or meeting has per-item privacy toggle.
 
-Sorting rules (client-side for UX, then persisted where applicable)
+[WIP] *Multi-user authentication/session management*
+• Hybrid session: last login has write control. Change notifications.
+• Sessions are isolated—no overwrite by concurrent writers.
 
-Non-completed above completed.
-Among non-completed, priority above normal.
-Manual order within a column is authoritative once persisted.
-Persistence
-• Create: append to end of the column.
-• Move across columns: append to end of destination; compact source.
-• Move within a column: persist the full ordered list (reorderColumn).
-• Duplicate: same column end; title "(Copy)"; status resets to normal.
-• Delete: remove then compact positions in that column.
-• Complete / Priority: immediate persistence; completed tasks cannot be
-prioritized (server rule).
-Feedback
-• Hover lift/shadow; completion adds a brief gold “flare” animation.
-• Counts update live per column; errors surface as concise alerts (to be
-migrated to toasts).
+[DONE] *Fluid, reload-free UI*
+	• Optimistic UI: all actions animate visibly and rollback if errors.
+	• Hover, drag, and completion animations (“gold flare” for check-off), live counts.
 
-⸻
+[WIP] *Responsive, mobile-first design*
+	• Touch gestures and pull-to-create actions.
 
-Journal view (scaffold)
-Status: Planned, modeled after v3 with improvements.
-🗓️ Date-based columns (YYYY.MMM.DD, Weekday), scrollable past/future
-🗓️ Day navigation (prev/next), 1-day/3-day/5-day virtualized views
-🗓️ Weekend color accents; center column emphasis
-🗓️ Footer quick entry for new journal entry
+[WIP] *Unified Editor*
+	• Opens from 'Edit' on Task.
+	• [PLAN] Edit titles, notes, due dates, direct new task creation.
 
-⸻
+[PLAN] *Quotas and usage plans—tiered item/sharing limits and upgrade prompts*
 
-Journal entry cards (future)
-🗓️ Editable title; click band or card to open editor
-🗓️ Lift on hover; distinct band color when entry has notes
-🗓️ Drag between journal columns; share/duplicate/delete via menu
-⸻
+[WIP] *Telemetry and analytics—track CRUD, navigation, sharing for future improvements*
 
-Unified Editor (notes)
-Status: In progress. Editor framework exists; Tasks entry point opens it.
-🚧 Open from “Edit” quick action (Tasks) to manage title, notes, due date
-🗓️ From editor, “New Task” form to create a task into a chosen column
-🗓️ Format bar with text helpers; print; search; ESC to close
+[PLAN] *Import/export (JSON) for migration, backup, test*
 
-⸻
+[PLAN] *Notification support—desktop/mobile alerts, meeting reminders, mail-to-task/journal entry via unique user tokens*
 
-Toolbar controls
-8.1 Tasks toolbar
-✅ “+ New Column” control in header (desktop)
-✅ Mobile menu exposes “+ New Column”
-🚧 Filters: show/hide completed; only priority; mine/delegated
-🗓️ Column sharing entry point in header
+[PLAN] *Offline support—Service Worker queue, auto-sync*
 
-8.2 Journal toolbar (future)
+[PLAN] *Meeting agenda view—multi-segment planning, drag/drop, status, outlining*
 
-🗓️ Date range toggle (1/3/5 days) and weekend toggle
-🗓️ Wrap-up action creates a daily summary entry
+## User Stories And Use Cases
 
-⸻
+**As a user, I want to mark any item as private so I can hide sensitive data instantly**
 
-Help and Settings
-🚧 Help: accordion topics (Tasks, Journal, Editor, Search, Toolbar, etc.)
-🚧 Settings: sound toggle, theme toggle, session timeout, account actions
-🗓️ Password change / recovery (with SMTP back-end)
-⸻
+**As a power user, I want to see usage quotas to optimize my plan**
 
-Security and request model
-10.1 CSRF (complete)
-• On page render, server seeds $_SESSION['csrf_token'] and injects
-<meta name="csrf" content="...">.
-• All mutating requests must be POST application/json with header:
-X-CSRF-Token: <token>.
-• API rejects missing/invalid tokens with HTTP 403.
-• Read action (getAll) may be GET or POST JSON without CSRF.
-10.2 Ownership checks (complete)
-• Every mutating action confirms the target row belongs to the current user.
-• Dev uses userId = 1 stub; real auth will set this from session.
+**As a team member, I want to update notes on shared tasks, acknowledge status, and avoid accidental loss**
 
-⸻
+**As a user, I want to prevent multiple sessions overwriting my changes.**
 
-Database schema
-users (
-user_id INT PK
--- plus auth fields (future)
-)
-columns (
-column_id INT PK,
-user_id INT NOT NULL, -- FK → users.user_id
-column_name VARCHAR(64) NOT NULL,
-position INT NOT NULL, -- dense, zero-based per user
-created_at DATETIME NULL, -- tolerated missing
-updated_at DATETIME NULL
-)
+**As a user, I want offline support for adding and moving tasks, with sync on reconnect**
 
-tasks (
-task_id INT PK,
-user_id INT NOT NULL, -- FK → users.user_id
-column_id INT NOT NULL, -- FK → columns.column_id
-encrypted_data TEXT NOT NULL, -- JSON (title, future fields)
-position INT NOT NULL, -- dense within its column
-status ENUM('normal','priority','completed') NOT NULL,
-created_at DATETIME NULL,
-updated_at DATETIME NULL
-)
+**As a leader, I want to organize meetings, delegate, and outline next steps**
 
-encrypted_data shape (current and planned)
-• Today: { "title": "string" }
-• Planned: { "title": "string", "notes"?: "string", "dueDate"?: "YYYY-MM-DD" }
+## Feature Deep Dives And UX Commentary
 
-Position compaction
-• Inserts: append to MAX(position)+1.
-• Cross-column moves: append at destination; compact source to 0..n-1.
-• Deletes: compact in the affected column.
-• Manual reorders: client sends full ordered id list; server rewrites 0..n-1.
+*TasksView (Kanban Board)*
 
-⸻
+**Columns**
+	[DONE] User-created with persistent zero-based DB positions.
+	[DONE] Editable header, live count, quick actions, inline rename.
+	[DONE] Drag/drop within and across columns; instant client sort, server compaction.
+	[DONE] Deletion cascades; positions recompact.
+	[PLAN] Drag columns to reorder board.
+	[DONE] Task footer for adding new tasks, “Move here” support.
 
-API gateway (single pipe)
-Endpoint: /api/api.php
-Envelope (POST JSON):
-{ "module": "tasks", "action": "<ActionName>", "data": { ... } }
+**TaskCards**
+	[DONE] Inline title edit, duplicate, move, delete, priority/complete.
+	[DONE] Status bands for completion/urgency.
+	[PLAN] Due date badges, delegation (@user), filters.
+	[DONE] Optimistic UI and error rollback.
 
-Common responses:
-• Success → {"status":"success","data":...}
-• Error → {"status":"error","message":"..."}
+**Sorting And Persistence**
+[DONE] Non-completed float below completed.
+[DONE] Above before normal.
+[DONE] Manual drag order persists; duplicates appended.
+[DONE] Delete/complete instantly compacts.
+[DONE] Hover/check-off: gold flare, shadow lift, live counts.
 
-HTTP semantics:
-• 200 OK (reads/updates), 201 Created, 400 Bad Request, 403 Forbidden,
-404 Not Found, 405 Wrong Method, 415 Unsupported Media Type, 500 Error.
+**Journal View And EntryCards**
+[PLAN] Each day = column; arrow/swipe for navigation.
+[PLAN] Weekend accent, central focus for today.
+[PLAN] Footer for rapid entry creation; lift-on-hover animation.
+[PLAN] Rich editing—notes, sharing, duplication, delete.
+[PLAN] Drag/drop between columns.
 
-When DEVMODE = true, exceptions are appended to debug.log with file/time.
+**Unified Editor (Notes, Titles, Dates)**
+[WIP] Invoked from Tasks for current editing.
+[PLAN] Format bar: helpers, search, print/export, ESC to close.
+[PLAN] Task creation direct from Editor.
 
-⸻
+**Toolbar And Controls**
 
-Tasks module API (current surface)
-All actions enforce ownership. Mutations require CSRF.
-getAll (✅)
-• Purpose: fetch all columns + tasks ordered by position.
-• Req: GET ?module=tasks&action=getAll or POST JSON.
-• Res: array of columns each with tasks:[...].
+[DONE] "+ New Column" in header/mobile.
+[WIP] Filters for completed, priority, delegated.
+[PLAN] Sharing for columns/journal/meeting segments.
+[PLAN] Toggle date range, create daily summary.
 
-createTask (✅)
-• Purpose: create a task in a column.
-• Data: {column_id, title, status?='normal'|'priority'}
-• Res: new task object; position = append index.
+**Security Model And Privacy**
+[DONE] CSRF protection: session/meta injection; rejects unsafe requests.
+[DONE] Ownership checks; all mutations filtered at server per user.
+[PLAN] Real multi-user sessions, renewal, token-based.
+[PLAN] Per-item privacy flag, zero-knowledge encryption parity.
+	• Rationale: Data security and privacy toggles built to prevent cross-user leaks.
+	• Universally necessary for individual/team productivity.
 
-moveTask (✅)
-• Purpose: move task to another column (append there).
-• Data: {task_id, to_column_id}
-• Res: updated task object.
+## Technical Architecture
 
-reorderColumn (✅)
-• Purpose: persist manual order within a column.
-• Data: {column_id, ordered:[taskId,...]}
-• Res: success.
+**Database Schema V4 Core**
 
-toggleComplete (✅)
-• Purpose: mark task completed/uncompleted.
-• Data: {task_id, completed:boolean}
-• Res: normalized task object.
+• users
+	user_id INT PK (future fields for auth/plans)
 
-togglePriority (✅)
-• Purpose: set priority on/off.
-• Data: {task_id, priority:boolean}
-• Res: success.
-• Rule: if status is 'completed', priority changes are rejected.
+• columns
+	column_id INT PK
+	user_id INT NOT NULL
+	column_name VARCHAR(64) NOT NULL
+	position INT NOT NULL
+	created_at, updated_at DATETIME NULL
 
-deleteTask (✅)
-• Purpose: delete task and compact positions in that column.
-• Data: {task_id}
-• Res: {task_id}.
+• tasks
+	task_id INT PK
+	user_id, column_id INT NOT NULL
+	encrypted_data TEXT NOT NULL
+	position INT NOT NULL
+	status ENUM('normal','priority','completed') NOT NULL
+	created_at, updated_at DATETIME NULL
 
-duplicateTask (✅)
-• Purpose: clone a task to end of same column; status becomes normal.
-• Data: {task_id}
-• Res: new task object with "(Copy)" suffix.
+**Future Schema Extensions**
 
-createColumn (✅)
-• Purpose: add a new column at end for the user.
-• Data: {column_name}
-• Res: {column_id, column_name, position}.
+• tasks.encrypted_data: "notes", "dueDate"
+• tasks.delegated_to: INT FK
+• tasks.is_private: BOOL privacy switch
+• task_shares: (task_id, owner_id, shared_with_user_id, permissions, shared_at)
+• column_shares: (column_id, owner_id, shared_with_user_id, permissions, shared_at)
+• Usage logs, plan tiers, analytics tables [PLAN]
+• Compaction: Position indices recompact on any task/column change, for fast UI/DB.
 
-deleteColumn (✅)
-• Purpose: delete a column and its tasks; compact remaining columns.
-• Data: {column_id}
-• Res: {column_id}.
+## API Gateway And Contracts
 
-renameColumn (✅)
-• Purpose: change a column’s title.
-• Data: {column_id, column_name}
-• Res: {column_id, column_name}.
+• Endpoint: /api/api.php
+• Requests: POST JSON {module, action, data}
+•  Response: {"status": "...", "data": ...} or {"status": "error", "message": ...}
+• All mutations require CSRF token.
+• Current Endpoints:
+	• getAll [DONE]
+	• createTask [DONE]
+	• moveTask [DONE]
+	• reorderColumn [DONE]
+	• toggleComplete [DONE]
+	• togglePriority [DONE]
+	• deleteTask [DONE]
+	• duplicateTask [DONE]
+	• renameTaskTitle [DONE]
+	• createColumn [DONE]
+	• deleteColumn [DONE]
+	• renameColumn [DONE]
+	• reorderColumns [PLAN]
+	• HTTP codes: 200, 201, 400, 403, 404, etc.
 
-renameTaskTitle (✅)
-• Purpose: change a task’s title (stored in encrypted_data).
-• Data: {task_id, title}
-• Res: normalized task object.
+## Front end Architecture
 
-🗓️ reorderColumns (left↔right) to be added.
+• assets/js/app.js: bootstrap, tab/view switch, modal helpers, DEVMODE banner.
+• assets/js/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
+• assets/css/style.css: global responsive layout.
+• assets/css/views/tasks.css, /editor.css: feature-specific styling.
 
-⸻
+Mobile UX
 
-Front-end modules
-14.1 assets/js/app.js
-• App bootstrap; tab switching; modal helpers (confirmation dialog).
-• Mobile menu toggle; dev-mode header indicator.
-14.2 assets/js/tasks.js
-• Render board from API; column creation and deletion.
-• Task lifecycles: create, move (DnD and move-mode), duplicate, delete.
-• Sorting rules and counts; mobile behaviors and safe spacer.
-• Inline editors for column and task titles with single-fire guards to avoid
-Enter+blur double commits; optimistic UI with rollback on error.
-• API wrapper attaches X-CSRF-Token from <meta name="csrf">.
+[DONE] Columns stack vertically at ≤768px width; mobile supports all features.
+[DONE] Footer spacers for iOS Safari overlays.
+[FIX] Optimize scroll, button hits [pending QA].
+[PLAN] Pull-to-create for mobile.
 
-14.3 CSS
-• assets/css/style.css sets theme, header, tabs, modals, responsive base.
-• assets/css/views/tasks.css styles board, cards, quick actions, move mode.
-• assets/css/views/editor.css holds Unified Editor visuals.
+## Versioning And Workflow
 
-⸻
+• Spec version: v4.7.0 (merged).
+• Minor: new features.
+• Patch: docs or refactors.
+• Source files tagged.
+• Git: commits ≤100 words, scope/files explicit.
+• Tags: v4.7.x-dev for merged feature sets.
 
-Mobile specifics
-✅ Columns stack vertically ≤768px width.
-✅ Bottom safe spacer keeps column footers accessible behind iOS toolbars.
-✅ Header compacts; tabs move into a mobile dropdown.
-⚠️ Fine-tune momentum scroll and hit targets for smaller displays.
-🗓️ Add pull-to-create in Tasks footer for faster mobile entry.
-⸻
+## Debug And Testing Patterns
 
-Versioning and workflow
-• Spec version: this doc → 4.6.0 (Dev).
-• Bump minor when features land (e.g., column/task inline rename).
-• Bump patch for docs/refactors with no user-visible change.
-• Code headers: each file carries its own version stamp.
-• Git: keep commits small; message ≤100 words, describe scope+files.
-• Tags: cut v4.6.x-dev type tags when a coherent feature set lands.
-⸻
-Testing (dev helpers)
-Examples (adjust ids, include CSRF header for mutations):
-Read board
-curl -s 'http://localhost/api/api.php?module=tasks&action=getAll' | jq .
-Create a task
-curl -s -X POST http://localhost/api/api.php
--H 'Content-Type: application/json'
--H "X-CSRF-Token: <token>"
--d '{"module":"tasks","action":"createTask","data":{"column_id":3,"title":"Wash car"}}'
-| jq .
-Move task to another column
-curl -s -X POST http://localhost/api/api.php
--H 'Content-Type: application/json'
--H "X-CSRF-Token: <token>"
--d '{"module":"tasks","action":"moveTask","data":{"task_id":42,"to_column_id":4}}'
-| jq .
-Reorder a column
-curl -s -X POST http://localhost/api/api.php
--H 'Content-Type: application/json'
--H "X-CSRF-Token: <token)"
--d '{"module":"tasks","action":"reorderColumn","data":{"column_id":3,"ordered":[7,9,6,10]}}'
-Find <token> in the page source: <meta name="csrf" content="...">.
+• Set /includes/config.php DEVMODE=true for debug.log.
+• Test API via curl/REST with CSRF.
+• Dev test accounts: alfa, delta, omega.
 
-⸻
 
-Roadmap (near-term)
-Column drag ↔ reorder with reorderColumns server action.
-Replace alerts with non-blocking toasts; add undo for delete (soft-delete
-or restore endpoint).
-Add “Rename” fallback in quick actions for accessibility where dbl-tap is
-unreliable.
-Extend task encrypted_data to include optional notes and dueDate;
-wire Unified Editor save.
-Introduce simple auth to replace stub user id (enable multi-user tests).
-Journal scaffolding: columns, entries, editor flow parity with v3.
-⸻
-Glossary
+## Roadmap
+
+*NearTerm:*
+
+• Column drag/reorder with reorderColumns.
+• Toast/undo for error/deletes.
+• Extending encrypted_data, unified editor logic.
+• Multi-user auth migration.
+• Journal parity with v3.
+
+*Mid Term And Future:*
+
+• Per-item privacy toggle, sharing logic.
+• Quota/plan usage, upgrades.
+• Analytics/telemetry logs.
+• Offline support/sync.
+• Meeting segment enhancements.
+
+## Glossary
+
 • Task card = task
 • Journal entry card = entry
 • Journal entry note = note
@@ -367,5 +249,5 @@ Glossary
 • Outlines tree = tree
 • Tree branch = branch
 • Branch node = node
-⸻
-End of APP_SPEC.md v4.6.0
+
+// End of APP_SPEC v4.7.0 //
