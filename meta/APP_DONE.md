@@ -318,3 +318,21 @@ thumb reach; counts/sorting remain correct.
    ownership checks intact.
 5. Extend encrypted task payload to include optional notes and
    dueDate; wire Unified Editor save.
+   
+## 2025-08-20 22:00 — Rollback & Stabilization
+   **Focus**Preserve stability by reverting failed journal scaffold and confirm tasks flow integrity.
+   **Key work**
+   * Discarded partial journal view scaffold after repeated 500 errors.
+   * Restored last stable commit; tasks board functions as expected.
+   * Verified API gateway + tasks.handler.php still stable.
+   * Confirmed task create, move, sort, and counter updates persist correctly.
+   * Debug logging mechanism present but debug.log pending creation.
+   
+   ⠀**Status**Stable baseline recovered. Tasks view persists smoothly; journal view not yet started.
+   
+   **Recommended next steps**
+   1 Create debug.log in project root with writable permissions. (verify with test.php to create it)
+   2 Reintroduce journal view incrementally with isolated code to avoid regressions.
+   3 Add column reordering (drag headers ↔).
+   4 Replace alerts with toast/snackbar error UX.
+   5 Introduce lightweight dev auth (session userId).
