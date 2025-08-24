@@ -153,3 +153,13 @@
 	border-color: var(--accent-color);
 	color: white;
 }
+
+/* Modified for notes_save_close */
+#btn-editor-save-close.btn-icon {
+  background-color: var(--card-bg);
+}
+#btn-editor-save-close.btn-icon:hover {
+  background-color: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+}

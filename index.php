@@ -90,6 +90,10 @@ $CSRF_TOKEN = $_SESSION['csrf_token'];
             <div class="modal-header">
                 <h3 id="editor-title">Edit Note</h3>
                 <div class="editor-controls">
+                    <!-- Modified for notes_save_close -->
+                    <button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
+                      💾
+                    </button>
                     <button id="editor-btn-maximize" class="btn-icon" title="Maximize">⬚</button>
                     <button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">□</button>
                     <button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>

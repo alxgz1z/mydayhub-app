@@ -267,11 +267,17 @@ const showQuickActionsMenu = (buttonEl) => {
   menu.dataset.taskId = card.id;
   menu.innerHTML = `
 	<button class="quick-action-btn" data-action="toggle-high-priority" title="Change Priority"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2.5a9.5 9.5 0 1 0 6.72 2.78"/><path d="M12 8v4l2 1"/><path d="M15.5 2.5V6h-3.5"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="edit-task" title="Edit Note and Due Date"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="start-move" title="Move"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5m0 14-4-4m4 4 4-4M5 12h14M5 12l4-4M5 12l4 4"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="share-task" title="Share"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98m0-9.98-6.83 3.98"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="make-private" title="Mark as Private"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="duplicate-task" title="Duplicate"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg></button>
+	
 	<button class="quick-action-btn" data-action="delete-task" title="Delete"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg></button>
   `;
   document.body.appendChild(menu);
@@ -454,7 +460,18 @@ const initTasksView = () => {
 		  notes: taskCard.dataset.notes || '',
 		  dueDate: taskCard.dataset.dueDate || ''
 		};
-		UnifiedEditor.open({ type: 'task', data: taskData });
+		// Modified for notes_button_fix: use the unified Editor API
+		if (window.Editor && typeof window.Editor.open === 'function') {
+		  window.Editor.open({
+			id: String(taskData.id).replace(/^task-/, ''),
+			kind: 'task',
+			title: 'Edit Note',
+			content: taskData.notes || ''
+		  });
+		} else {
+		  console.warn('Editor API not available');
+		  alert('Editor not available.');
+		}
 	  }
 	  closeAllQuickActionsMenus();
 
@@ -961,5 +978,61 @@ const initTasksView = () => {
 	  alert('Could not update completion. Please try again.');
 	}
   });
+  
+  // Modified for notes_button_fix
+  document.addEventListener('click', function (e) {
+	// Works for taps and clicks inside the task context menu
+	const btn =
+	  e.target.closest('[data-task-action="edit-notes"]') ||
+	  e.target.closest('[data-entry-action="edit-notes"]') || // fallback if menu used this name
+	  e.target.closest('.menu-item-edit-notes');               // legacy class fallback
+  
+	if (!btn) return;
+  
+	e.preventDefault();
+  
+	// Find the owning task card
+	const card = btn.closest('.task-card') ||
+				 document.querySelector(`#${btn.dataset.taskId}`) ||
+				 btn.closest('[data-task-id]');
+	if (!card) return;
+  
+	// Resolve task id and existing note text
+	const taskId =
+	  card.dataset.taskId ||
+	  card.getAttribute('data-task-id') ||
+	  card.id?.replace(/^task-/, '') ||
+	  null;
+  
+	// Prefer a dedicated notes holder if present; otherwise empty string
+	const existingNotes =
+	  (card.querySelector('.task-notes')?.textContent ?? '')
+		.toString()
+		.trim();
+  
+	// Open the unified editor
+	if (window.Editor && typeof window.Editor.open === 'function') {
+	  window.Editor.open({
+		id: taskId,
+		kind: 'task',
+		title: 'Edit Note',
+		content: existingNotes
+	  });
+	} else {
+	  // Minimal fallback to avoid dead click if Editor failed to load
+	  alert('Editor not available.');
+	}
+  
+	// Close the context menu if your code exposes a closer
+	if (typeof window.closeTaskContextMenu === 'function') {
+	  window.closeTaskContextMenu();
+	} else {
+	  // Generic fallback: remove any open menus
+	  document.querySelectorAll('.task-context-menu, .entry-actions-menu')
+		.forEach(el => el.remove());
+	}
+  });
+
+  
 };
 // end of /assets/js/tasks.js v4.5.0
