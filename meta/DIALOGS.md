@@ -508,3 +508,54 @@ Do not attempt to build all of this at once. We should layer in offline capabili
 		3.  Create the Sync Queue: A separate process, managed by our main app.js and the Service Worker, will watch for changes in the IndexedDB "outbox" and sync them with the server API when a connection is available.  
 	* Rationale: By separating this from the initial build, we can focus entirely on the challenges of offline data management, including the conflict resolution you mentioned. We will start with a simple "last write wins" strategy as planned.
 By following this phased approach, we ensure that we build on a stable foundation at each step, preventing the need to go back and re-architect core parts of the application later.
+
+
+********************************************************************************
+## ABOUT TASK CLASSIFICATION FOR BETTER FOCUS
+*ALEX ASKED*
+so you know the app I've been working on.  I'll scale down the scope in order to start a MVP production for the next release as soon as possible.  I'll leave only tasks view in scope for now.  But I wanted to complement that view with an algorithm that tracks signal vs noise.  Let me expand the concept.  If I have a mission, everything that advances me toward that mission is signal.  Everything else is noise.  So in the tasks app as specified today, we have high priority, normal priority and closed.   I think a good task classification should be clearers around true priorities that advance my mission at work and in my personal realm.  One alternate way would be to go with the urgent/important cuadrant.  The point is that I want this tasks view to really help users make conscious decisions about what's important and what is possibly better if delegated.   Any ideas or recommendations in terms of a way to put these ideas together and then move on to implement them?
+
+*LLM RESPONSE*
+Got it 👍 — you want to slim the scope to Tasks View only for MVP, but still make it meaningful by layering a “signal vs. noise” concept. That’s a strong idea. Here’s a way to structure it:
+Step 1 — Clarify the Classification Model
+You have three current states:
+High priority
+Normal priority
+Closed
+That’s functional, but too shallow to really guide decision-making. Two practical alternatives:
+Mission Alignment (Signal/Noise)
+Signal → Directly advances your mission (work/personal).
+Support → Helps enable signal tasks indirectly.
+Noise → Doesn’t advance the mission. Candidate for delegation or dropping.
+Urgent vs. Important Quadrant (Eisenhower Matrix)
+Urgent + Important = Do now.
+Important, not urgent = Schedule.
+Urgent, not important = Delegate.
+Neither = Ignore or archive.
+Step 2 — Translate Into MVP UX
+Don’t overbuild yet. You could:
+Add one extra classification dropdown when creating/editing a task (e.g. “Classification”).
+Use color bands/icons to make classification visually obvious.
+Keep priority (High/Normal) as a secondary attribute for now, since users already understand it.
+Example minimal schema update:
+ALTER TABLE tasks ADD COLUMN classification ENUM(
+  'signal', 'support', 'noise'
+);
+or if you go Eisenhower:
+ALTER TABLE tasks ADD COLUMN quadrant ENUM(
+  'urgent_important', 'important', 'urgent', 'none'
+);
+Step 3 — Signal-to-Noise Algorithm
+Later you can add analytics:
+% of signal tasks completed vs noise.
+Dashboard: “This week you closed 8 signal tasks, 5 noise tasks.”
+Nudges: “You’ve been spending 70% on noise. Consider delegating.”
+For MVP, the algorithm is just classification + simple counts. Implementation can be:
+SELECT classification, COUNT(*) FROM tasks WHERE user_id = ? GROUP BY classification;
+Step 4 — Keep It Flexible
+Since this is the first MVP:
+Build the schema to support both models.
+Default UI could be Signal/Support/Noise (easier to explain than Eisenhower).
+Later you can test adding the 2x2 urgent/important view as a toggle.
+✅ My recommendation:
+Start with Signal / Support / Noise for simplicity. It directly matches your mission concept and is easier to explain than the Eisenhower quadrant in v1. Once users adopt it, you can extend toward quadrant view as an alternate visualization.

@@ -1,8 +1,11 @@
 # MYDAYHUB
 
-## APPLICATION SPECIFICATION (V4.7.0)
+## APPLICATION SPECIFICATION (Beta 4.8.0)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
+
+## APP SCOPE (*IMPORTANT*)
+From Beta 4.8.0 on and until further notice we will be focused in perfecting the tasks view.  We need to double down on the minimalist spirit that triggered the creation of this application.  For the time being the views Journal, Outlines and Events are out of scope.  
 
 ## ENVIRONMENTS
 * Prod (v3): Isolated; no shared users/DB/files
@@ -33,6 +36,10 @@ Our development is guided by a few core principles to ensure the best possible e
 * **Fluid Experience:** MyDayHub feels like a native app. Edit text inline, drag and drop items, and switch between tools instantly without ever waiting for a page to reload. The interface is fully responsive, working beautifully on any screen from your phone to your desktop.
 * **Modern & Minimalist Design:** We believe in simplicity. The interface is clean, direct, and never overwhelming, allowing you to focus on what matters most. Our design defaults to a comfortable dark theme to reduce eye strain, but you always have the choice to switch to a bright light theme.
 * **Work Anywhere:** Full **offline support** allows you to keep working without an internet connection. Your data will sync automatically the next time you connect. Smart session handling also prevents data conflicts if you're logged in on multiple devices.
+* **Signal over Noise:** Productivity is not just finishing tasks, but finishing
+the *right* tasks. We classify each item by how directly it advances the
+user’s mission. This provides awareness, nudges conscious decision-making,
+and prevents getting lost in busywork.
 
 ## GENERAL REQUIREMENTS
 
@@ -143,20 +150,24 @@ Our development is guided by a few core principles to ensure the best possible e
 * _As a user, I want to mark any item as "private" to instantly hide it from view._
 * _As a user, I want to prevent concurrent sessions from accidentally overwriting each other's changes._
 * _As a user, I want offline support to add and edit items, with changes syncing automatically when I reconnect._
-* _As a user, I want to fluidly drag and drop tasks, journal entries, and meeting segments._
-* _As a user, I want to email a task or note directly into my board or journal._
+* _As a user, I want to fluidly drag and drop tasks (future: journal entries, and meeting segments)._
+* _(Future: As a user, I want to email a task or note directly into my board or journal.)_
 * _As a mobile user, I want the app to have a responsive layout so I can work effectively one-handed on my phone._
 * _As a power user, I want to see my usage statistics and quotas so I can manage or upgrade my plan._
-* _As a team lead, I want to organize meetings, delegate tasks, and outline next steps._
+* _As a team lead, I want to delegate tasks (future:, and outline next steps)._
 * _As a team lead, I want to securely share items with my team and be able to revoke access at any time._
 * _As a team member, I want to update notes and change the status of shared items to collaborate effectively with my team._
+* _As a user, I want to classify tasks as Signal, Support, or Noise so I can
+  clearly distinguish what drives my mission from what distracts me._
+* _As a user, I want to see my completed tasks in context, so I can review how
+  much of my effort went to Signal vs. Noise._
 
 ### USE CASES
-* Mark any task, journal entry, outline node, or event segment as private and filter/hide accordingly.
-* Drag and drop tasks, journal entries, outline nodes, and event segments with smooth, animated feedback.
+* Mark any task (Future: journal entry, outline node, or event segment) as private and filter/hide accordingly.
+* Drag and drop tasks (Future: journal entries, outline nodes, and event segments) with smooth, animated feedback.
 * See usage stats and plan limits; receive UI warnings when close to quota.
-* Email a task or note into the board/journal using a unique secret token.
-* Share tasks or journal entries one-to-one using @alias or modal UI, with revocable, encrypted access.
+* Email a task or note into the board using a unique secret token.
+* Share tasks (Future: or journal entries) one-to-one using @alias or modal UI, with revocable, encrypted access.
 * Use the app seamlessly on both desktop (multi-column) and mobile (single-column/fab/menus).
 * Work offline with automatic sync and resolution when reconnecting.
 * Avoid conflicts: When multiple sessions are open, only the most recent has write rights, with “reclaim control” as needed.
@@ -171,30 +182,30 @@ Our development is guided by a few core principles to ensure the best possible e
   Includes:
 	* Hamburger button to open Settings slider
 	* App title on left (default: “MyDayHub”)
-	* Section tabs ("Tasks", "Journal", "Outlines", "Events")
+	* (Future: Section tabs ("Tasks", "Journal", "Outlines", "Events"))
 	* Context-sensitive controls (visible based on view selected):
-	  * Journal: "Today" button and calendar date picker to make the desired date the central column in the view.
+	  * (Future: Journal: "Today" button and calendar date picker to make the desired date the central column in the view.)
 	  * Tasks: Add Column form.
-	  * Journal: "Search" (keyword, etc.) to lookup Entries from the user Journal.
-	* Responsive Header: "more options" dropdown menu (⋮) appears on narrow screens to house controls like "Search," "Today," etc., preventing UI overflow.
+	  * (Future: Journal: "Search" (keyword, etc.) to lookup Entries from the user Journal.
+	* Responsive Header: "more options" dropdown menu (⋮) appears on narrow screens to house controls like "Search," "Today," etc., preventing UI overflow.)
   
 ### BOTTOM TOOLBAR
 Full-width, one-row control bar
-Contents vary depending on active section (Tasks, Journal, Outlines, Events)
+(Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
   **Toolbar Controls**
 	* **Left:** Current date
 	* **Center:** Context aware buttons
 		* **Tasks View:** Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
-		* ** Journal View:** Buttons with "1","3" and "5" to determine how many columns are displayed. Button "Wrap-Up" to create a new Entry that aggregates all the entries in the focus date.  This new Entry is added on top.
+		(Future: * ** Journal View:** Buttons with "1","3" and "5" to determine how many columns are displayed. Button "Wrap-Up" to create a new Entry that aggregates all the entries in the focus date.  This new Entry is added on top.)
 	* **Right:** Current Username within square parethensis (example: "[alfa]")
  
 ### SETTINGS
   Slider accessible from title bar
 * Theme switch (dark/light)
 * Show/Hide private items switch
-* Skip weekends in journal swtich
+* (Future: Skip weekends in journal swtich)
 * Global App Font Size (A-/A+ buttons)
-* Calendar Overlays (button opens modal)
+* (Future: Calendar Overlays (button opens modal))
 * Automatic Logout (dropdown select 5 mins, 30 min, 3 hours, never)
 * Change Password (button opens modal)
 * Import/Export (button opens modal)
@@ -228,11 +239,11 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Delegation & Sharing:** Shared tasks have distinct styling. A share icon (@user) appears, showing recipients on hover.
 
 * **Status Indicators:**
-  * **Status Band:** A color band on the left of the card thst indicates task status.
-	* High Priority: Orange
-	* Normal: Blue
-	* Completed: Gray
-  * **Completion:** A checkbox marks the task as complete. Completed tasks are styled in light gray.
+  * **Status Band:** A color band on the left of the card indicates classification:
+  * **Signal**: Green — directly advances the mission
+  * **Support**: Blue — indirectly contributes or enables progress
+  * **Noise**: Orange — activity that doesn’t truly advance the mission
+  * **Completed**: Gray — finished tasks, archived at the bottom
 
 * **Actions Menu** (Ellipsis ... on hover)
   * **Priority:** Flips priority normal -> high -> normal 
@@ -248,10 +259,11 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * Manual adjustments are permitted for tasks within their category group, sorting rules are enforced.
   * All reordering actions are persisted instantly.
   * **Automatic Sorting Rules:**
-	**1** **Priority** tasks are always sorted to the top of the column.
-	**2** **Normal** tasks appear below priority tasks.
-	**3** **Completed** tasks are always moved to the bottom of the column.
-  * **Manual Sorting:** Within each status group (Priority, Normal, Completed), the user's manual drag-and-drop order is maintained.
+  **1** Signal tasks are always sorted to the top of the column.
+  **2** Support tasks appear below Signal.
+  **3** Noise tasks appear below Support.
+  **4** Completed tasks are always moved to the bottom.
+  * **Manual Sorting:** Within each status group (Signal, Support, Noise, Completed), the user's manual drag-and-drop order is maintained.
   * **Triggers:** Sorting logic is applied instantly whenever a task is created, moved, dropped, duplicated, or its status changes.
 
 * **UI/UX Feedback & Animations**
@@ -260,7 +272,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Compaction:** Deleting or completing a task instantly compacts the list, removing empty space.
 
 
-### JOURNAL VIEW
+### JOURNAL VIEW (Future)
   
 This view provides a chronological, date-based layout for journal entries, organized into horizontally scrollable daily columns. The interface is designed for fluid navigation through time and rapid logging of notes and ideas.
   
@@ -320,7 +332,7 @@ Each card represents a single journal entry for a given day.
 	* Support for multiple calendar types (e.g., "fiscal", "holidays", "birthdays").
 	* Ability to import/export calendar data.
 	  
- ### OUTLINES VIEW
+ ### OUTLINES VIEW (Future)
    
  This mind-map inspired view provides a flexible, hierarchical note-taking system for structuring complex ideas, planning projects, researching, or breaking down large topics into manageable parts. The interface is designed as a collapsible tree, allowing users to focus on details or view the big picture.
    
@@ -364,7 +376,7 @@ Each card represents a single journal entry for a given day.
 * **Journal Integration:** A single Journal entry can be linked to an Outline node, allowing diary-style entries to be embedded as contextual notes within a larger structure.
 * **Data Integrity:** The connections are non-destructive. Deleting a linked Task column or a linked Journal entry from the outline will not delete the original item in its native view, ensuring no accidental data loss. Similarly, deleting the outline will not delete the linked Task column. 
 
-### EVENTS VIEW (AGENDA PLANNER)
+### EVENTS VIEW (AGENDA PLANNER) (Future)
 
   This view provides a specialized tool for planning and organizing complex, multi-day events. It functions like a calendar, allowing users to create detailed agendas by arranging event segments (cards) chronologically across daily columns. The goal is to enable holistic preparation and streamlined execution for any scheduled event.
     
@@ -476,7 +488,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   user_id, column_id INT NOT NULL
   encrypted_data TEXT NOT NULL
   position INT NOT NULL
-  status ENUM('normal','priority','completed') NOT NULL
+  classification ENUM('signal','support','noise','completed') NOT NULL
   created_at, updated_at DATETIME NULL
 
 **Future Schema Extensions**
@@ -549,6 +561,10 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 * Outlines tree = tree
 * Tree branch = branch
 * Branch node = node
+* Signal task = directly advances the mission
+* Support task = indirectly enables Signal
+* Noise task = does not advance the mission, candidate for delegation or drop
+* Completed task = finished item, archived at bottom
 
 ## WIREFRAME MOCKUPS
 
@@ -572,7 +588,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 │ 19.Aug.25, Tuesday             [F1] [F2] [F3] [F4]                 [alfa] │
 └───────────────────────────────────────────────────────────────────────────┘
 
-### JOURNAL VIEW
+### JOURNAL VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]                      │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -590,7 +606,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 │ 19.Aug.25, Tuesday  [<<][<] [>][>>] View [1][3][5] Days [Wrap-up]   (alfa)│
 └───────────────────────────────────────────────────────────────────────────┘
 
-### OUTLINES VIEW
+### OUTLINES VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Outline] │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -616,8 +632,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 │ 19.Aug.25, Tuesday       [Promote] [Demote] [Fold] [Unfold]        (alfa) │
 └───────────────────────────────────────────────────────────────────────────┘
 
-### EVENTS VIEW
-
+### EVENTS VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]       [+ New Event]  │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -678,5 +693,92 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 ┌─────────────────────────────────────────────┐
 │ W: 231  Ch: 1664  L: 12   Last saved: Never │
 └─────────────────────────────────────────────┘
+
+## APP ICONS
+
+### MENU BAR
+* Mug
+  <svg width="40" height="42" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xml:space="preserve" overflow="hidden"><g transform="translate(-1489 -343)"><g><path d="M2093.33 371.5C2045.98 427.328 1998.63 483.155 2002.75 538.251 2006.87 593.348 2112.54 651.369 2118.03 702.078 2123.52 752.786 2079.61 797.643 2035.69 842.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M2298.11 371.5C2250.36 427.328 2202.6 483.155 2206.75 538.251 2210.91 593.348 2317.49 651.369 2323.03 702.078 2328.57 752.786 2284.27 797.643 2239.97 842.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M2502.33 371.5C2454.98 427.328 2407.63 483.155 2411.75 538.251 2415.87 593.348 2521.54 651.369 2527.03 702.078 2532.52 752.786 2488.61 797.643 2444.69 842.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M1190.39 0 95.6097 0C42.8063 0 0.000721782 42.8027 0.000721782 95.6025L0.000721782 192.904 0 192.904 0.000721782 192.909 0.000721782 198.605 0.807313 198.605 52.9553 566.952C67.5786 670.243 122.687 757.828 199.964 815.935L209.914 822.698 216.229 830.351C284.598 898.716 379.049 941 483.376 941L802.622 941C906.95 941 1001.4 898.716 1069.77 830.351L1076.08 822.701 1086.04 815.935C1163.31 757.828 1218.42 670.243 1233.04 566.953L1285.19 198.605 1286 198.605 1286 95.6025C1286 42.8027 1243.19 0 1190.39 0Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none" fill-rule="evenodd" transform="matrix(-1 0 0 1 2909.5 1011.5)"/><path d="M2922.18 1209.85C2950.38 1205.65 2978.58 1201.45 3006.78 1209.85 3034.98 1218.25 3068.52 1240.01 3091.38 1260.24 3114.25 1280.48 3132.54 1304.14 3143.97 1331.25 3155.41 1358.36 3160.36 1393.86 3159.98 1422.87 3159.6 1451.89 3149.69 1483.96 3141.69 1505.33 3133.68 1526.71 3131.4 1535.11 3111.96 1551.15 3092.53 1567.18 3071.57 1579.4 3025.07 1601.54 2978.58 1623.68 2866.92 1672.93 2833 1684" stroke="currentColor" stroke-width="64.1667" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M1519.5 1889.5C1603.15 1952.67 1686.8 2015.84 1753.26 2052.59 1819.72 2089.34 1831.57 2098.53 1918.27 2110.01 2004.98 2121.5 2139.24 2121.5 2273.5 2121.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M0 0C83.6505 63.1683 167.301 126.337 233.763 163.089 300.225 199.842 312.066 209.03 398.772 220.515 485.478 232 619.739 232 754 232" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" fill="none" fill-rule="evenodd" transform="matrix(-1 0 0 1 3010.5 1889.5)"/><rect x="2111.5" y="1363.5" width="307" height="282" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-opacity="1" fill="none"/><path d="M2220.5 1446.5 2286.53 1556.34" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" fill="none" fill-rule="evenodd"/><path d="M0 0 235.307 386.402" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" stroke-opacity="1" fill="none" fill-rule="evenodd" transform="matrix(-1 0 0 1 2521.81 1170.5)"/></g></g></svg>
+
+### CONTEXTUAL MENU
+* Change priority
+  <svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor"
+     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="6 15 12 21 18 15"></polyline>
+    <polyline points="18 9 12 3 6 9"></polyline>
+  </svg>
+
+* Edit Note and Due Date  
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+  
+* Change Column
+  <svg xmlns="http://www.w3.org/2000/svg"
+    width="24" height="24" viewBox="0 0 24 24"
+    fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="15 6 21 12 15 18"></polyline>
+    <polyline points="9 18 3 12 9 6"></polyline>
+  </svg>
+
+* Share
+  <svg width="24" height="24" viewBox="0 0 24 24" 
+    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98m0-9.98-6.83 3.98"/>
+  </svg>
+* Mark as Private
+  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
+    viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a20.29 20.29 0 0 1 4.23-5.29"/>
+    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.29 20.29 0 0 1-2.88 3.88"/>
+    <circle cx="12" cy="12" r="3"></circle>
+    <line x1="2" y1="2" x2="22" y2="22"></line>
+  </svg>
+  
+* Duplicate Task
+  <svg width="24" height="24" viewBox="0 0 24 24" 
+    fill="none" 	stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+  </svg>
+  
+* Delete Task
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
+    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+  </svg>
+  
+### NOTES EDITOR
+
+* Expand
+  <svg xmlns="http://www.w3.org/2000/svg"
+       width="24" height="24" viewBox="0 0 24 24"
+       fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="rotate(45 12 12)">
+      <polyline points="6 15 12 21 18 15"></polyline>
+      <polyline points="18 9 12 3 6 9"></polyline>
+    </g>
+  </svg>
+
+* Collapse
+  <svg xmlns="http://www.w3.org/2000/svg"
+       width="24" height="24" viewBox="0 0 24 24"
+       fill="none" stroke="currentColor"
+       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <g transform="rotate(45 12 12)">
+      <polyline points="15 6 21 12 15 18"></polyline>
+      <polyline points="9 18 3 12 9 6"></polyline>
+    </g>
+  </svg>
+  
+* Save and Close
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="24" height="24" viewBox="0 0 24 24"
+     fill="none" stroke="currentColor"
+     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+  <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
+  <polyline points="8 14 11 17 16 12"></polyline>
+</svg>
+
+
 
 // End of APP_SPEC v4.7.0 //
