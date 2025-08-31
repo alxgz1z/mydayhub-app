@@ -9,6 +9,9 @@
  * @author Alex & Gemini
  */
 
+// Modified to include config for APP_URL
+require_once __DIR__ . '/incs/config.php';
+
 // Start a session if one is not already active.
 if (session_status() === PHP_SESSION_NONE) {
 	session_start();
@@ -16,31 +19,27 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // SECURITY: Redirect to the login page if the user is not authenticated.
 if (!isset($_SESSION['user_id'])) {
-	// Use an absolute path for the redirect.
-	header('Location: /login/login.php');
+	header('Location: ' . APP_URL . '/login/login.php');
 	exit(); // Always call exit() after a header redirect.
 }
 
 // Make the username available for display.
 $username = $_SESSION['username'] ?? 'User';
 
-// Determine the base path of the application.
-$basePath = rtrim(str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']), '/');
-
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="viewport" content="width=device-width, initial-scale-1.0">
 	<title>MyDayHub</title>
-	<link rel="stylesheet" href="/uix/style.css">
-	<link rel="stylesheet" href="/uix/tasks.css">
+	<link rel="stylesheet" href="uix/style.css">
+	<link rel="stylesheet" href="uix/tasks.css">
 
 	<script>
 		// Expose server-side configuration to client-side JavaScript.
 		window.MyDayHub_Config = {
-			baseURL: "<?php echo $basePath; ?>"
+			appURL: "<?php echo APP_URL; ?>"
 		};
 	</script>
 </head>
@@ -77,14 +76,14 @@ $basePath = rtrim(str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['S
 				</div>
 			<div class="footer-right">
 				<span>[<?php echo htmlspecialchars($username); ?>]</span>
-				<a href="/login/logout.php">Logout</a>
+				<a href="login/logout.php">Logout</a>
 			</div>
 		</footer>
 
 	</div>
 
-	<script src="/uix/app.js" defer></script>
-	<script src="/uix/tasks.js" defer></script>
+	<script src="uix/app.js" defer></script>
+	<script src="uix/tasks.js" defer></script>
 
 </body>
 </html>

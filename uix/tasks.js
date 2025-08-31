@@ -55,7 +55,6 @@ function initEventListeners() {
 			}
 		});
 
-		// Modified for drag and drop
 		boardContainer.addEventListener('dragstart', (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.add('dragging');
@@ -112,8 +111,8 @@ function getDragAfterElement(container, y) {
  */
 async function reorderTasks(columnId, tasks) {
 	try {
-		const baseURL = window.MyDayHub_Config?.baseURL || '';
-		const response = await fetch(`${baseURL}/api/api.php`, {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -144,8 +143,8 @@ async function reorderTasks(columnId, tasks) {
 async function toggleTaskComplete(taskId, isComplete) {
 	const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
 	try {
-		const baseURL = window.MyDayHub_Config?.baseURL || '';
-		const response = await fetch(`${baseURL}/api/api.php?action=toggleComplete`, {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -204,8 +203,8 @@ function showAddColumnForm() {
 		const columnName = input.value.trim();
 		if (columnName) {
 			try {
-				const baseURL = window.MyDayHub_Config?.baseURL || '';
-				const response = await fetch(`${baseURL}/api/api.php`, {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify({
@@ -244,8 +243,8 @@ function showAddColumnForm() {
  */
 async function createNewTask(columnId, taskTitle, columnEl) {
 	try {
-		const baseURL = window.MyDayHub_Config?.baseURL || '';
-		const response = await fetch(`${baseURL}/api/api.php`, {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -289,14 +288,15 @@ async function fetchAndRenderBoard() {
 	}
 
 	try {
-		const baseURL = window.MyDayHub_Config?.baseURL || '';
-		const apiURL = `${baseURL}/api/api.php?module=tasks&action=getAll`;
+		// Modified for robust API pathing
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const apiURL = `${appURL}/api/api.php?module=tasks&action=getAll`;
 
 		const response = await fetch(apiURL);
 
 		if (!response.ok) {
 			if (response.status === 401) {
-				window.location.href = '/login/login.php';
+				window.location.href = `${appURL}/login/login.php`;
 				return;
 			}
 			throw new Error(`API responded with status: ${response.status}`);

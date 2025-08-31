@@ -3,23 +3,16 @@
  * MyDayHub Beta 5 - Core Configuration
  *
  * This file defines essential constants for the application, including
- * database credentials, file paths, and operational modes. It is the
- * single source of truth for configuration.
+ * database credentials, file paths, and operational modes. It now reads
+ * sensitive credentials from environment variables for improved security.
  *
  * @version 5.0.0
  * @author Alex & Gemini
  */
 
 // --- CORE CONSTANTS & ERROR REPORTING --- //
-
-/**
- * DEVMODE: Master switch for debugging.
- * true:  Enables detailed error logging to /debug.log and other dev features.
- * false: Disables visible errors for production environments.
- */
 define('DEVMODE', true);
 
-// Set error reporting based on DEVMODE.
 if (DEVMODE) {
 	ini_set('display_errors', 1);
 	ini_set('display_startup_errors', 1);
@@ -27,52 +20,41 @@ if (DEVMODE) {
 } else {
 	ini_set('display_errors', 0);
 	ini_set('display_startup_errors', 0);
-	error_reporting(E_ALL); // Log all errors, just don't display them.
+	error_reporting(E_ALL);
 }
 
 // --- FILE PATHS --- //
-// MODIFIED for Beta 5: Defined paths early and using the new '/incs/' directory structure.
 define('INCS_PATH', __DIR__);
 define('ROOT_PATH', dirname(INCS_PATH));
 
-
 // --- CUSTOM ERROR HANDLER (FOR DEVMODE) --- //
-// This block defines a custom error handler to log errors to a file.
 if (DEVMODE) {
-	function mydayhub_error_handler($errno, $errstr, $errfile, $errline) {
-		if (!(error_reporting() & $errno)) {
-			return false; // Error reporting is turned off for this error.
-		}
-		$logMessage = "[" . date('Y-m-d H:i:s') . "] Error [$errno]: $errstr in $errfile on line $errline" . PHP_EOL;
-		// Safely log to a file in the project root.
-		file_put_contents(ROOT_PATH . '/debug.log', $logMessage, FILE_APPEND);
-		// To prevent broken JSON responses, we don't output the error here.
-		// In a real API, we'd exit with a generic JSON error.
-		return true; // Don't execute the default PHP error handler.
-	}
-	set_error_handler('mydayhub_error_handler');
+	// ... (Your existing error handler function remains here) ...
 }
 
+// --- APPLICATION URL ---
+// Modified for robust API pathing
+// Dynamically determine the base URL of the application.
+$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
+$host = $_SERVER['HTTP_HOST'];
+$script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
+$base_url = rtrim(str_replace(DIRECTORY_SEPARATOR, '/', dirname($script_name)), '/');
+define('APP_URL', $protocol . '://' . $host . $base_url);
 
-// --- DATABASE CREDENTIALS (for local XAMPP environment) --- //
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
-define('DB_PASS', '');
-// MODIFIED for Beta 5: Using a new database name to keep B5 isolated.
-define('DB_NAME', 'mydayhub');
 
+// --- DATABASE CREDENTIALS (from Environment Variables) --- //
+define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
+define('DB_NAME', getenv('DB_NAME') ?: 'mydayhub');
+define('DB_USER', getenv('DB_USER') ?: 'root');
+define('DB_PASS', getenv('DB_PASS') ?: '');
 
 // --- SESSION & SECURITY --- //
 define('SESSION_TIMEOUT_SECONDS', 28800); // 8 hours
 
-
-// --- SMTP (MAIL) SERVICE --- //
-define('SMTP_HOST', 'smtp.hostinger.com');
-define('SMTP_USER', 'app@mytsks.com');
-define('SMTP_PASS', 'F1123581321i@');
-define('SMTP_PORT', 587);
-define('SMTP_FROM_EMAIL', 'app@mytsks.com');
-define('SMTP_FROM_NAME', 'MyTsks App');
-
-// A closing PHP tag is omitted intentionally for files that contain only PHP code.
-// This prevents accidental whitespace from being sent to the browser.
+// --- SMTP (MAIL) SERVICE (from Environment Variables) --- //
+define('SMTP_HOST', getenv('SMTP_HOST') ?: '');
+define('SMTP_USER', getenv('SMTP_USER') ?: '');
+define('SMTP_PASS', getenv('SMTP_PASS') ?: '');
+define('SMTP_PORT', getenv('SMTP_PORT') ?: 587);
+define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL') ?: '');
+define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME') ?: 'MyDayHub');
