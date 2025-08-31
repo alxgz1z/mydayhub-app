@@ -31,12 +31,25 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 // --- ROUTING ---
-// Get the authenticated user's ID from the session.
 $userId = (int)$_SESSION['user_id'];
+$method = $_SERVER['REQUEST_METHOD'];
+$data = [];
 
-// Get module and action from the request (e.g., ?module=tasks&action=getAll).
-$module = $_GET['module'] ?? null;
-$action = $_GET['action'] ?? null;
+if ($method === 'GET') {
+	$module = $_GET['module'] ?? null;
+	$action = $_GET['action'] ?? null;
+} elseif ($method === 'POST') {
+	$json_data = file_get_contents('php://input');
+	$input = json_decode($json_data, true);
+	$module = $input['module'] ?? null;
+	$action = $input['action'] ?? null;
+	$data = $input['data'] ?? [];
+} else {
+	http_response_code(405); // Method Not Allowed
+	echo json_encode(['status' => 'error', 'message' => 'Method not allowed.']);
+	exit();
+}
+
 
 if (!$module || !$action) {
 	http_response_code(400); // Bad Request
@@ -47,20 +60,12 @@ if (!$module || !$action) {
 try {
 	$pdo = get_pdo();
 
-	// Route the request to the appropriate module handler.
 	switch ($module) {
 		case 'tasks':
-			// Modified for your file name
-			// Require the tasks handler file.
 			require_once __DIR__ . '/tasks.php';
-			
-			// Route to the specific action within the tasks module.
-			if ($action === 'getAll') {
-				handle_get_all_board_data($pdo, $userId);
-			} else {
-				http_response_code(404);
-				echo json_encode(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."]);
-			}
+			// Modified for better routing
+			// The handler will now route the specific action.
+			handle_tasks_action($action, $method, $pdo, $userId, $data);
 			break;
 
 		default:

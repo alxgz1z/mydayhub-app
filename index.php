@@ -24,6 +24,9 @@ if (!isset($_SESSION['user_id'])) {
 // Make the username available for display.
 $username = $_SESSION['username'] ?? 'User';
 
+// Determine the base path of the application.
+$basePath = rtrim(str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']), '/');
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -32,6 +35,14 @@ $username = $_SESSION['username'] ?? 'User';
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MyDayHub</title>
 	<link rel="stylesheet" href="/uix/style.css">
+	<link rel="stylesheet" href="/uix/tasks.css">
+
+	<script>
+		// Expose server-side configuration to client-side JavaScript.
+		window.MyDayHub_Config = {
+			baseURL: "<?php echo $basePath; ?>"
+		};
+	</script>
 </head>
 <body>
 
@@ -42,21 +53,25 @@ $username = $_SESSION['username'] ?? 'User';
 				<h1 id="app-title">MyDayHub</h1>
 				<nav class="view-tabs">
 					<button class="view-tab active" data-view="tasks">Tasks</button>
-					</nav>
+				</nav>
 			</div>
 			<div class="header-right">
+				<div id="add-column-container">
+					<button id="btn-add-column" class="btn-header">+ New Column</button>
 				</div>
+			</div>
 		</header>
 
 		<main id="main-content">
 			<div id="task-board-container">
 				<p>Loading Task Board...</p>
 			</div>
+			<div class="mobile-bottom-spacer"></div>
 		</main>
 
 		<footer id="app-footer">
 			<div class="footer-left">
-				<span id="footer-date">August 30, 2025</span>
+				<span id="footer-date">August 31, 2025</span>
 			</div>
 			<div class="footer-center">
 				</div>

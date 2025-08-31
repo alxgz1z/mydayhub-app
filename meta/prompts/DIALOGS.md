@@ -935,3 +935,22 @@ Many tasks and projects are repeatable (e.g., "Onboard New Client," "Publish Wee
 Refine the User Onboarding Experience.
 When a new user signs up, their board is currently empty. Create a default "Welcome to MyDayHub!" column for them. Populate it with a few pre-made tasks that teach them how to use the app (e.g., "✅ Drag me to another column," "⭐ Click my left edge to change my status," "Double-click me to rename me"). This turns learning into an interactive first experience.
 I'm very impressed with the progress and the architectural leap from Beta 3 to Beta 4. By focusing on the Tasks view and integrating the critical privacy logic from your previous version, you are on an excellent track to building a truly differentiated and valuable productivity tool.
+
+********************************************************************************
+## ABOUT BETA 3 AND BETA 4 CODE BASES, LOGICAL, US/UX DECISIONS AND GUIDANCE FOR BETA 5
+*ALEX ASKED TO GEMINI*
+1) at what point do we start encrypting information going to the database?
+2) at what point do we start creating the asymmetric encryption for sharing?
+3) at what point do we start tracking telemetry? (i.e., number of columns, tasks, notes, storage use, number of images)
+4) at what point do we start off-line support setup? (Wouldn't it be better to do it from the beginning?)
+*GEMINI RESPONDED*
+Those are also excellent architectural questions that are important to address now.
+Answers to Your Architectural Questions
+
+1) Symmetric Encryption (Zero-Knowledge): We will begin implementing this immediately after the basic create, read, update, and delete (CRUD) functionality for columns and tasks is working with plaintext. This allows us to build and test the core application logic first, then layer on encryption as a separate, dedicated step. This is the cleanest approach and prevents bugs from being ambiguous.
+
+2) Asymmetric Encryption (for Sharing): This is a more complex feature that depends on the core task functionality and symmetric encryption being complete. We will tackle this after the main Tasks view is fully functional for a single user.
+
+3) Telemetry Tracking: We will start this after the core features are built. Once you can create columns, tasks, and notes, we'll have meaningful actions to track. We will create a simple, dedicated API endpoint for logging events.
+
+4) Offline Support: You're right to think about this early. However, building for offline support from the very beginning adds a tremendous amount of complexity (Service Workers, IndexedDB, sync logic). The professional standard is to build the core online application first and ensure it's stable. Then, we will layer on offline capabilities. This phased approach is much faster and less prone to bugs.

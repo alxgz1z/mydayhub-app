@@ -13,7 +13,270 @@
  */
 function initTasksView() {
 	fetchAndRenderBoard();
+	initEventListeners();
 }
+
+/**
+ * Sets up the main event listeners for the tasks view.
+ */
+function initEventListeners() {
+	document.addEventListener('click', (e) => {
+		if (e.target && e.target.id === 'btn-add-column') {
+			showAddColumnForm();
+		}
+	});
+
+	const boardContainer = document.getElementById('task-board-container');
+	if (boardContainer) {
+		boardContainer.addEventListener('keypress', async (e) => {
+			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
+				e.preventDefault();
+				const input = e.target;
+				const taskTitle = input.value.trim();
+				const columnEl = input.closest('.task-column');
+				const columnId = columnEl.dataset.columnId;
+
+				if (taskTitle && columnId) {
+					await createNewTask(columnId, taskTitle, columnEl);
+					input.value = '';
+				}
+			}
+		});
+
+		boardContainer.addEventListener('change', async (e) => {
+			if (e.target.matches('.task-checkbox')) {
+				const checkbox = e.target;
+				const taskCard = checkbox.closest('.task-card');
+				const taskId = taskCard.dataset.taskId;
+
+				if (taskId) {
+					toggleTaskComplete(taskId, checkbox.checked);
+				}
+			}
+		});
+
+		// Modified for drag and drop
+		boardContainer.addEventListener('dragstart', (e) => {
+			if (e.target.matches('.task-card')) {
+				e.target.classList.add('dragging');
+			}
+		});
+
+		boardContainer.addEventListener('dragend', (e) => {
+			if (e.target.matches('.task-card')) {
+				e.target.classList.remove('dragging');
+				const columnEl = e.target.closest('.task-column');
+				if (columnEl) {
+					const columnId = columnEl.dataset.columnId;
+					const tasks = Array.from(columnEl.querySelectorAll('.task-card')).map(card => card.dataset.taskId);
+					reorderTasks(columnId, tasks);
+				}
+			}
+		});
+
+		boardContainer.addEventListener('dragover', (e) => {
+			const columnBody = e.target.closest('.column-body');
+			if (columnBody) {
+				e.preventDefault();
+				const draggingCard = document.querySelector('.dragging');
+				const afterElement = getDragAfterElement(columnBody, e.clientY);
+				if (afterElement == null) {
+					columnBody.appendChild(draggingCard);
+				} else {
+					columnBody.insertBefore(draggingCard, afterElement);
+				}
+			}
+		});
+	}
+}
+
+/**
+ * Gets the element to drop a dragged element after.
+ */
+function getDragAfterElement(container, y) {
+	const draggableElements = [...container.querySelectorAll('.task-card:not(.dragging)')];
+
+	return draggableElements.reduce((closest, child) => {
+		const box = child.getBoundingClientRect();
+		const offset = y - box.top - box.height / 2;
+		if (offset < 0 && offset > closest.offset) {
+			return { offset: offset, element: child };
+		} else {
+			return closest;
+		}
+	}, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+/**
+ * Sends the new order of tasks to the API.
+ */
+async function reorderTasks(columnId, tasks) {
+	try {
+		const baseURL = window.MyDayHub_Config?.baseURL || '';
+		const response = await fetch(`${baseURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'reorderTasks',
+				data: {
+					column_id: columnId,
+					tasks: tasks
+				}
+			})
+		});
+
+		const result = await response.json();
+
+		if (result.status !== 'success') {
+			alert(`Error: ${result.message}`);
+		}
+	} catch (error) {
+		alert('A network error occurred. Please try again.');
+		console.error('Reorder tasks error:', error);
+	}
+}
+
+
+/**
+ * Toggles a task's completion status.
+ */
+async function toggleTaskComplete(taskId, isComplete) {
+	const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+	try {
+		const baseURL = window.MyDayHub_Config?.baseURL || '';
+		const response = await fetch(`${baseURL}/api/api.php?action=toggleComplete`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'toggleComplete',
+				data: { task_id: taskId }
+			})
+		});
+
+		const result = await response.json();
+
+		if (result.status === 'success') {
+			taskCard.classList.toggle('completed', isComplete);
+		} else {
+			alert(`Error: ${result.message}`);
+			taskCard.querySelector('.task-checkbox').checked = !isComplete;
+		}
+	} catch (error) {
+		alert('A network error occurred. Please try again.');
+		taskCard.querySelector('.task-checkbox').checked = !isComplete;
+		console.error('Toggle complete error:', error);
+	}
+}
+
+
+/**
+ * Displays an input form to add a new column in place of the button.
+ */
+function showAddColumnForm() {
+	const container = document.getElementById('add-column-container');
+	if (!container || container.querySelector('#form-add-column')) {
+		return;
+	}
+	const originalButton = container.innerHTML;
+
+	container.innerHTML = `
+		<form id="form-add-column">
+			<input type="text" id="input-new-column-name" placeholder="Column Name..." required autofocus />
+		</form>
+	`;
+
+	const form = document.getElementById('form-add-column');
+	const input = document.getElementById('input-new-column-name');
+
+	const revertToButton = () => {
+		if (container.contains(form)) {
+			 container.innerHTML = originalButton;
+		}
+	};
+	
+	input.addEventListener('blur', revertToButton);
+
+	form.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		input.removeEventListener('blur', revertToButton);
+		const columnName = input.value.trim();
+		if (columnName) {
+			try {
+				const baseURL = window.MyDayHub_Config?.baseURL || '';
+				const response = await fetch(`${baseURL}/api/api.php`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({
+						module: 'tasks',
+						action: 'createColumn',
+						data: { column_name: columnName }
+					})
+				});
+
+				const result = await response.json();
+
+				if (result.status === 'success') {
+					const boardContainer = document.getElementById('task-board-container');
+					
+					const placeholder = boardContainer.querySelector('p');
+					if (placeholder && placeholder.textContent.startsWith('No columns found')) {
+						placeholder.remove();
+					}
+
+					const newColumnEl = createColumnElement(result.data);
+					boardContainer.appendChild(newColumnEl);
+				} else {
+					alert(`Error: ${result.message}`);
+				}
+			} catch (error) {
+				alert('A network error occurred. Please try again.');
+				console.error('Create column error:', error);
+			}
+		}
+		container.innerHTML = originalButton;
+	});
+}
+
+/**
+ * Sends a new task to the API and renders the response.
+ */
+async function createNewTask(columnId, taskTitle, columnEl) {
+	try {
+		const baseURL = window.MyDayHub_Config?.baseURL || '';
+		const response = await fetch(`${baseURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'createTask',
+				data: {
+					column_id: columnId,
+					task_title: taskTitle
+				}
+			})
+		});
+
+		const result = await response.json();
+
+		if (result.status === 'success') {
+			const columnBody = columnEl.querySelector('.column-body');
+			const placeholder = columnBody.querySelector('.no-tasks-message');
+			if (placeholder) {
+				placeholder.remove();
+			}
+			const newTaskCardHTML = createTaskCard(result.data);
+			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+		} else {
+			alert(`Error: ${result.message}`);
+		}
+	} catch (error) {
+		alert('A network error occurred while creating the task.');
+		console.error('Create task error:', error);
+	}
+}
+
 
 /**
  * Fetches the complete board data from the API and initiates rendering.
@@ -26,12 +289,13 @@ async function fetchAndRenderBoard() {
 	}
 
 	try {
-		const response = await fetch('/api/api.php?module=tasks&action=getAll');
+		const baseURL = window.MyDayHub_Config?.baseURL || '';
+		const apiURL = `${baseURL}/api/api.php?module=tasks&action=getAll`;
+
+		const response = await fetch(apiURL);
 
 		if (!response.ok) {
-			// If the user is not authenticated, the API returns a 401, which is handled here.
 			if (response.status === 401) {
-				// Redirect to login if the session is invalid or expired.
 				window.location.href = '/login/login.php';
 				return;
 			}
@@ -54,14 +318,15 @@ async function fetchAndRenderBoard() {
 
 /**
  * Renders the entire board from the data provided by the API.
- * @param {Array} boardData - An array of column objects, each containing an array of tasks.
  */
 function renderBoard(boardData) {
 	const container = document.getElementById('task-board-container');
-	container.innerHTML = ''; // Clear the "Loading..." message.
+	container.innerHTML = ''; 
 
 	if (boardData.length === 0) {
-		container.innerHTML = '<p>No columns found. Create your first column to get started!</p>';
+		const placeholder = document.createElement('p');
+		placeholder.textContent = 'No columns found. Create your first column to get started!';
+		container.appendChild(placeholder);
 		return;
 	}
 
@@ -73,12 +338,10 @@ function renderBoard(boardData) {
 
 /**
  * Creates the HTML element for a single column and its tasks.
- * @param {object} columnData - The data for a single column.
- * @returns {HTMLElement} The fully constructed column element.
  */
 function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
-	columnEl.className = 'task-column'; // We'll style this class later
+	columnEl.className = 'task-column';
 	columnEl.dataset.columnId = columnData.column_id;
 
 	let tasksHTML = '';
@@ -97,7 +360,7 @@ function createColumnElement(columnData) {
 			${tasksHTML}
 		</div>
 		<div class="column-footer">
-			<input type="text" placeholder="+ New Task" />
+			<input type="text" class="new-task-input" placeholder="+ New Task" />
 		</div>
 	`;
 	return columnEl;
@@ -105,16 +368,22 @@ function createColumnElement(columnData) {
 
 /**
  * Creates the HTML string for a single task card.
- * @param {object} taskData - The data for a single task.
- * @returns {string} The HTML string for the task card.
  */
 function createTaskCard(taskData) {
-	// NOTE: For now, we are not decrypting the task data.
-	// We are just displaying a placeholder to prove the data pipeline works.
-	const taskTitle = 'Encrypted Task';
+	let taskTitle = 'Encrypted Task';
+	try {
+		const data = JSON.parse(taskData.encrypted_data);
+		taskTitle = data.title;
+	} catch(e) {
+		console.error("Could not parse task data:", taskData.encrypted_data);
+	}
+
+	const isCompleted = taskData.classification === 'completed';
 
 	return `
-		<div class="task-card" data-task-id="${taskData.task_id}">
+		<div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${taskData.task_id}" draggable="true">
+			<div class="task-status-band"></div>
+			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
 			<span class="task-title">${taskTitle}</span>
 		</div>
 	`;

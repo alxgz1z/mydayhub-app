@@ -382,3 +382,29 @@ thumb reach; counts/sorting remain correct.
    4.  **Build "Create Task" functionality.** Add the "+ New Task" UI to each
 	   column and wire it up to the backend.
 
+---
+## 2025-08-31 12:00 — Tasks View: Core Interactivity & Persistence
+
+**Focus**
+Build out the core user interactions for the Tasks view, including creating columns and tasks, marking tasks as complete, and reordering tasks. The goal was to make the board feel alive and ensure all user actions are saved to the database.
+
+**Key work**
+* **Create Column:** Implemented the full frontend and backend logic. The "+ New Column" button now transforms into an inline input field, calls the API, and renders the new column without a page reload.
+* **Create Task:** Implemented the full frontend and backend logic. The "+ New Task" input in each column footer is now active, creating and rendering new tasks in real-time.
+* **Task Styling & Structure:** Added view-specific CSS to `/uix/tasks.css` to style the columns and task cards, including the status band and checkbox.
+* **Mobile-First Layout:** Implemented responsive CSS that stacks columns vertically on narrow screens, ensuring a usable mobile experience.
+* **Toggle Task Completion:** Built the full stack for this feature. Clicking the checkbox on a task card now calls the backend `toggleComplete` action, persists the new `classification` (`completed` or `support`), and updates the card's visual style.
+* **Drag & Drop (DnD):** The foundation for DnD has been implemented.
+   * **Frontend:** Task cards are now draggable. The JavaScript correctly handles the drag events to reorder cards visually within a column.
+   * **Backend:** A `reorderTasks` API action was created to receive the new order of tasks and update their `position` in the database.
+
+**Status**
+The main tasks view is now highly interactive. Users can build out their board by creating columns and tasks. Task completion is fully functional and persisted. The visual foundation for drag and drop is in place, but we stopped just before fully connecting the frontend `dragend` event to the backend persistence logic.
+
+**Recommended next steps (priority order)**
+1.  **Fix DnD Persistence:** The final connection for drag-and-drop is not working. We need to debug the `dragend` event handler in `tasks.js` to ensure it correctly calls the `reorderTasks` API and that the column's task count is updated after the drop.
+2.  **Implement Task Classification:** The spec's core "Signal/Support/Noise" feature is next. This involves:
+   * Adding a UI element (e.g., clicking the status band) to cycle a task's classification.
+   * Updating the backend to handle a `toggleClassification` action.
+   * Adding CSS to color-code the status bands according to the spec (Green, Blue, Orange).
+3.  **Build Column & Task Actions:** Implement the dropdown/context menus for columns (Rename, Delete) and tasks (Edit, Duplicate, Delete, etc.).

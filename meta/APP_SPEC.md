@@ -590,22 +590,24 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   * getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
   * uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. Requires task_id.
   * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
-  
+
 ### API Implementation tracking
 * Implemented API Actions:
   * [RDY] register (in auth.php)
   * [RDY] login (in auth.php)
   * [RDY] getAll (in tasks.php)
+  * [RDY] createColumn (in tasks.php)
+  * [RDY] createTask (in tasks.php)
+  * [RDY] toggleComplete (in tasks.php)
+  * [RDY] reorderTasks (in tasks.php)
 * Future API Actions:
-  * [FUT] createTask
   * [FUT] moveTask
   * [FUT] reorderColumn
-  * [FUT] toggleComplete
   * [FUT] togglePriority
+  * [FUT] renateTask
   * [FUT] deleteTask
   * [FUT] duplicateTask
   * [FUT] renameTaskTitle
-  * [FUT] createColumn
   * [FUT] deleteColumn
   * [FUT] renameColumn
 

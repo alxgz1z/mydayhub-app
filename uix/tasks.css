@@ -1,0 +1,185 @@
+/* MyDayHub Beta 5 - Tasks View Specific Styles */
+
+/* ==========================================================================
+   1. TASK BOARD LAYOUT
+   ========================================================================== */
+
+#task-board-container {
+	display: flex;
+	gap: 1rem;
+	align-items: flex-start; /* Align columns to the top */
+	overflow-x: auto; /* Allow horizontal scrolling */
+	height: 100%;
+}
+
+/* ==========================================================================
+   2. COLUMN STYLES
+   ========================================================================== */
+
+.task-column {
+	background-color: var(--toolbar-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	width: 320px;
+	flex-shrink: 0; /* Prevent columns from shrinking */
+	display: flex;
+	flex-direction: column;
+	max-height: 100%;
+}
+
+.column-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.column-title {
+	font-size: 1.1rem;
+	font-weight: 500;
+	margin: 0;
+}
+
+.task-count {
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+	background-color: var(--bg-color);
+	padding: 2px 8px;
+	border-radius: 10px;
+}
+
+.column-body {
+	padding: 0.5rem;
+	overflow-y: auto;
+	flex-grow: 1;
+}
+
+.column-footer {
+	padding: 0.5rem;
+	border-top: 1px solid var(--border-color);
+}
+
+.column-footer input {
+	width: 100%;
+	background-color: transparent;
+	border: none;
+	color: var(--text-secondary);
+	padding: 0.5rem;
+	border-radius: 4px;
+	box-sizing: border-box;
+}
+
+.column-footer input:focus {
+	outline: none;
+	background-color: var(--bg-color);
+}
+
+.no-tasks-message {
+	padding: 1rem;
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+}
+
+
+/* ==========================================================================
+   3. TASK CARD STYLES
+   ========================================================================== */
+
+.task-card {
+	display: flex;
+	align-items: center;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	padding: 0.75rem;
+	border-radius: 6px;
+	margin-bottom: 0.5rem;
+}
+
+.task-status-band {
+	width: 4px;
+	height: 24px;
+	background-color: var(--accent-color);
+	border-radius: 2px;
+	margin-right: 0.75rem;
+}
+
+.task-checkbox {
+	margin-right: 0.75rem;
+}
+
+/* Styles for completed tasks */
+.task-card.completed {
+	opacity: 0.6;
+}
+
+.task-card.completed .task-title {
+	text-decoration: line-through;
+	color: var(--text-secondary);
+}
+
+.task-card.completed .task-status-band {
+	background-color: var(--text-secondary);
+}
+
+/* Styling for the task card being dragged */
+.task-card.dragging {
+	opacity: 0.5;
+	transform: rotate(2deg);
+}
+
+/* ==========================================================================
+   4. HEADER CONTROLS
+   ========================================================================== */
+
+/* Styling for the inline 'Add Column' form */
+#form-add-column {
+	display: inline-block;
+}
+
+#input-new-column-name {
+	padding: 0.5rem 1rem;
+	border: 1px solid var(--accent-color);
+	background-color: var(--bg-color);
+	color: var(--text-primary);
+	border-radius: 6px;
+	font-size: 1rem;
+}
+
+#input-new-column-name:focus {
+	outline: none;
+}
+
+/* Styling for the header button */
+.btn-header {
+	background: none;
+	border: 1px solid transparent;
+	color: var(--text-secondary);
+	padding: 0.5rem 1rem;
+	font-size: 1rem;
+	cursor: pointer;
+	border-radius: 6px;
+}
+
+.btn-header:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+
+/* ==========================================================================
+   5. RESPONSIVE & MOBILE STYLES
+   ========================================================================== */
+
+@media (max-width: 768px) {
+	#task-board-container {
+		flex-direction: column; /* Stack columns vertically */
+		overflow-x: hidden; /* Hide horizontal scrollbar */
+		gap: 1.5rem; /* Space between vertical columns */
+	}
+
+	.task-column {
+		width: 100%; /* Make columns take up the full width */
+	}
+}
+
