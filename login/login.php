@@ -1,10 +1,20 @@
+<?php
+// Modified for robust API pathing
+require_once __DIR__ . '/../incs/config.php';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Log In - MyDayHub</title>
-	<link rel="stylesheet" href="/uix/login.css">
+	<link rel="stylesheet" href="../uix/login.css">
+
+	<script>
+		window.MyDayHub_Config = {
+			appURL: "<?php echo APP_URL; ?>"
+		};
+	</script>
 </head>
 <body>
 
@@ -29,6 +39,6 @@
 		</div>
 	</div>
 
-	<script src="/uix/auth.js" defer></script>
+	<script src="../uix/auth.js" defer></script>
 </body>
 </html>
