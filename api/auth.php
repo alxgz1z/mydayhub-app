@@ -8,29 +8,28 @@
  * @author Alex & Gemini
  */
 
+// TEMPORARY DEBUGGING: Force display of errors
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 // Set the content type to JSON for all responses.
 header('Content-Type: application/json');
 
 // --- BOOTSTRAP ---
-// Load core application files.
 require_once __DIR__ . '/../incs/config.php';
 require_once __DIR__ . '/../incs/db.php';
 
 // --- SESSION MANAGEMENT ---
-// Modified for login
-// Start a session if one doesn't already exist. This is required for login.
 if (session_status() === PHP_SESSION_NONE) {
 	session_start();
 }
 
 // --- INPUT HANDLING ---
-// Get the raw POST data from the request body.
 $json_data = file_get_contents('php://input');
-// Decode the JSON data into a PHP associative array.
 $input = json_decode($json_data, true);
 
 // --- ROUTING ---
-// Determine the action from a query parameter (e.g., /api/auth.php?action=register).
 $action = $_GET['action'] ?? '';
 
 switch ($action) {
@@ -38,13 +37,11 @@ switch ($action) {
 		handle_register($input);
 		break;
 
-	// Modified for login
 	case 'login':
 		handle_login($input);
 		break;
 
 	default:
-		// If the action is unknown or not provided, return a 404 error.
 		http_response_code(404);
 		echo json_encode(['status' => 'error', 'message' => 'Unknown API action.']);
 		break;
@@ -57,7 +54,6 @@ switch ($action) {
  * @return void
  */
 function handle_register(?array $data): void {
-	// --- SERVER-SIDE VALIDATION ---
 	if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
 		http_response_code(400); // Bad Request
 		echo json_encode(['status' => 'error', 'message' => 'All fields are required.']);
@@ -79,7 +75,6 @@ function handle_register(?array $data): void {
 	try {
 		$pdo = get_pdo();
 
-		// Check if username or email already exists to prevent duplicates.
 		$stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = :username OR email = :email");
 		$stmt->execute([
 			':username' => $data['username'],
@@ -92,16 +87,11 @@ function handle_register(?array $data): void {
 			return;
 		}
 
-		// --- PASSWORD HASHING ---
-		// Modified for PHP compatibility
-		// Use PASSWORD_DEFAULT to automatically select the best available algorithm.
 		$password_hash = password_hash($data['password'], PASSWORD_DEFAULT);
 		if ($password_hash === false) {
 			 throw new Exception('Password hashing failed.');
 		}
 
-		// --- DATABASE INSERTION ---
-		// Use a prepared statement to safely insert the new user.
 		$stmt = $pdo->prepare(
 			"INSERT INTO users (username, email, password_hash) VALUES (:username, :email, :password_hash)"
 		);
@@ -111,12 +101,10 @@ function handle_register(?array $data): void {
 			':password_hash' => $password_hash
 		]);
 
-		// --- SUCCESS RESPONSE ---
 		http_response_code(201); // Created
 		echo json_encode(['status' => 'success', 'message' => 'Registration successful! You can now log in.']);
 
 	} catch (Exception $e) {
-		// Log the real error if in DEVMODE
 		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in auth.php handle_register(): ' . $e->getMessage());
 		}
@@ -133,7 +121,6 @@ function handle_register(?array $data): void {
  * @return void
  */
 function handle_login(?array $data): void {
-	// --- SERVER-SIDE VALIDATION ---
 	if (empty($data['username']) || empty($data['password'])) {
 		http_response_code(400); // Bad Request
 		echo json_encode(['status' => 'error', 'message' => 'Username and password are required.']);
@@ -143,28 +130,21 @@ function handle_login(?array $data): void {
 	try {
 		$pdo = get_pdo();
 
-		// Find the user by their username.
 		$stmt = $pdo->prepare("SELECT user_id, username, password_hash FROM users WHERE username = :username");
 		$stmt->execute([':username' => $data['username']]);
 		$user = $stmt->fetch();
 
-		// Verify the user exists and the password is correct.
-		// We use a generic error message for both cases to prevent username enumeration.
 		if (!$user || !password_verify($data['password'], $user['password_hash'])) {
 			http_response_code(401); // Unauthorized
 			echo json_encode(['status' => 'error', 'message' => 'Invalid credentials.']);
 			return;
 		}
 
-		// --- SESSION CREATION ---
-		// Regenerate the session ID to prevent session fixation attacks.
 		session_regenerate_id(true);
 
-		// Store user information in the session.
 		$_SESSION['user_id'] = $user['user_id'];
 		$_SESSION['username'] = $user['username'];
 
-		// --- SUCCESS RESPONSE ---
 		http_response_code(200); // OK
 		echo json_encode(['status' => 'success', 'message' => 'Login successful!']);
 
