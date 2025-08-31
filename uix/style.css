@@ -1,0 +1,110 @@
+/* MyDayHub Beta 5 - Main Application Styles */
+
+/* ==========================================================================
+   1. THEME VARIABLES & GLOBAL STYLES
+   ========================================================================== */
+:root {
+	--bg-color: #202124;
+	--app-header-bg: rgba(32, 33, 36, 0.85);
+	--toolbar-bg: #282a2d;
+	--text-primary: #e8eaed;
+	--text-secondary: #9aa0a6;
+	--accent-color: #8ab4f8;
+	--border-color: #3c4043;
+	--btn-hover-bg: rgba(255, 255, 255, 0.1);
+}
+
+body {
+	background-color: var(--bg-color);
+	color: var(--text-primary);
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	margin: 0;
+	height: 100vh;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden; /* Prevent body scroll */
+}
+
+/* ==========================================================================
+   2. MAIN APP LAYOUT
+   ========================================================================== */
+#main-app-container {
+	display: flex;
+	flex-direction: column;
+	flex-grow: 1; /* Take up all available vertical space */
+	min-height: 0; /* Necessary for flexbox scrolling children */
+}
+
+#app-header {
+	flex-shrink: 0; /* Prevent header from shrinking */
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 1.5rem;
+	background-color: var(--app-header-bg);
+	border-bottom: 1px solid var(--border-color);
+	backdrop-filter: blur(10px);
+	-webkit-backdrop-filter: blur(10px);
+}
+
+#main-content {
+	flex-grow: 1; /* Allow main content to fill space */
+	overflow-y: auto; /* Enable vertical scroll ONLY for the main content */
+	padding: 1rem 1.5rem;
+}
+
+#app-footer {
+	flex-shrink: 0; /* Prevent footer from shrinking */
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 1.5rem;
+	background-color: var(--toolbar-bg);
+	border-top: 1px solid var(--border-color);
+}
+
+/* ==========================================================================
+   3. HEADER & FOOTER COMPONENTS
+   ========================================================================== */
+.header-left, .header-right, .footer-left, .footer-center, .footer-right {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+#app-title {
+	font-size: 1.5rem;
+	font-weight: 500;
+	margin: 0;
+}
+
+.view-tabs {
+	display: flex;
+	gap: 0.5rem;
+	margin-left: 1rem;
+}
+
+.view-tab {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	padding: 0.5rem 1rem;
+	font-size: 1rem;
+	cursor: pointer;
+	border-radius: 6px;
+}
+
+.view-tab.active, .view-tab:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--accent-color);
+}
+
+.footer-center {
+	justify-content: center;
+	flex-grow: 1;
+}
+
+.footer-right a {
+	color: #d94f46; /* Red color for logout */
+	text-decoration: none;
+}

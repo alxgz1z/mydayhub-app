@@ -336,3 +336,49 @@ thumb reach; counts/sorting remain correct.
    3 Add column reordering (drag headers ↔).
    4 Replace alerts with toast/snackbar error UX.
    5 Introduce lightweight dev auth (session userId).
+
+---
+   ## 2025-08-30 23:00 — Beta 5 Foundation & Core Authentication
+   
+   **Focus**
+   Start a complete rebuild for Beta 5, establishing a robust and secure
+   foundation before implementing core features. The primary goal was to move away
+   from hardcoded user stubs and build a proper, session-based authentication
+   system from the ground up.
+   
+   **Key work**
+   * Established the new, spec-aligned lowercase directory structure.
+   * Created the Beta 5 database schema for `users`, `columns`, and `tasks`.
+   * Built the core backend files: `/incs/config.php` and `/incs/db.php`.
+   * Implemented the full user **registration flow**, including the frontend
+	   page, shared CSS, and the backend API with `password_hash`.
+   * Implemented the full user **login flow**, including the frontend page,
+	   backend API with `password_verify` for security, and session creation.
+   * Created the main application shell, `index.php`, which is now protected by a
+	   session check that redirects unauthenticated users.
+   * Built the backend API for fetching the task board (`/api/api.php` gateway
+	   and `/api/tasks.php` handler).
+   * Created initial frontend scripts (`app.js`, `tasks.js`) to call the API.
+   * Identified a 404 error caused by an incorrect relative path in the
+	   JavaScript `fetch` call.
+   
+   **Status**
+   The foundational authentication system is complete and functional. Users can
+   register, log in, and access a protected `index.php` page. The backend API to
+   supply task board data is in place. We have just identified the final issue
+   preventing the frontend from fetching this data.
+   
+   **Recommended next steps (priority order)**
+   1.  **Fix the 404 pathing error.** Modify `index.php` to provide a base URL
+	   to the JavaScript, and update `tasks.js` to use it, ensuring API calls
+	   work correctly regardless of the project's subdirectory.
+   2.  **Implement Client-Side Decryption.** Update `tasks.js` to handle the
+	   zero-knowledge encryption specified in the spec. This involves creating a
+	   crypto helper, deriving the key from the user's password on login, and
+	   decrypting task data after it's fetched.
+   3.  **Build "Create Column" functionality.** Add the "+ New Column" UI to
+	   `index.php` and create the corresponding `createColumn` action in the
+	   backend API and `tasks.js`.
+   4.  **Build "Create Task" functionality.** Add the "+ New Task" UI to each
+	   column and wire it up to the backend.
+

@@ -1,15 +1,30 @@
 # MYDAYHUB
 
-## APPLICATION SPECIFICATION (Beta 4.8.0)
+## WHY ARE WE DOING THIS
+* Because I need to collaborate with an small team and promote productivity on activities that matter.
+* Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
+* Because I'm curious and this is a way to channel my creativity and passion for development. 
+
+## APPLICATION SPECIFICATION (Beta 5.0.0)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
 
 ## APP SCOPE (*IMPORTANT*)
-From Beta 4.8.0 on and until further notice we will be focused in perfecting the tasks view.  We need to double down on the minimalist spirit that triggered the creation of this application.  For the time being the views Journal, Outlines and Events are out of scope.  
+From Beta 5.0.0 on, the application scope is strictly focused on perfecting the Tasks View. All development, UI, and architecture improvements will support this “tasks-first” approach. Other views (Journal, Outlines, Events) and their code remain deferred, except for maintenance work required for future integration. This narrowly defined scope is foundational to delivering a high-quality, fluid, and privacy-focused experience.
 
 ## ENVIRONMENTS
 * Prod (v3): Isolated; no shared users/DB/files
 * Dev (v4): Localhost, Apache+PHP 8, mariaDB, XAMPP
+
+## FILE LOCATIONS
+* \ 		only index.php here
+* \api\		all api files, no subdirectories.
+* \uix\		all js and css files, no subdirectories.
+* \media\	sounds, images, icons and all other app ui files, no subdirectories.
+* \imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
+* \incs\	any includes needed by the app, no subdirectories, except migrations if applicable.
+* \login\	all login, logout, register, etc. needed for registration, authentication, password management, etc.
+* \meta\	documents explaning the app scope, status, next steps, etc.
 
 ## STATUS LEGENDS
 **Important**
@@ -23,16 +38,16 @@ From Beta 4.8.0 on and until further notice we will be focused in perfecting the
 * **[CNS]** Under consideration, not yet scheduled
 
 ## APP DESCRIPTION
-**MyDayHub** is your next-generation productivity hub, built from the ground up for focus, simplicity, and absolute privacy. We integrate four powerful tools into one seamless, app-like experience. Inspired by Apple's clean and modern web aesthetic, the interface defaults to a comfortable dark mode that’s easy on the eyes, with a crisp light mode just a click away.
+**MyDayHub** is a next-generation productivity hub, built from the ground up for focus, simplicity, and absolute privacy. We start with task management and in the future plan to integrate other powerful tools into one seamless, app-like experience. The interface takes inspiration from the latest productivity and fintech UI trends, integrating dark backgrounds, vivid accent gradients, and translucent overlays for overlays and modals. Rounded cards, ample white space, and legible, scalable typography reinforce clarity and intention. The color-coded status bands and quick-action icons for classification, privacy, attachments, and sharing are visible at all times—making key features discoverable while keeping the workspace visually calm and focused.   All user content is encrypted end-to-end with zero-knowledge encryption—no plaintext content is ever stored on or leaves the client device. The only content that is stored remotely is encrypted data or metadata essential for synchronization and session handling.
 
 * **Tasks:** Kanban inspired tasks board for flexible task tracking. Create custom columns, prioritize with a click, and manage your entire workflow with simple drag-and-drop.
-* **Journal:** Capture your daily thoughts, notes, and ideas in a chronological log. Your entire history is archived and instantly searchable.
-* **Outlines:** Structure complex ideas and connect your thoughts by creating hierarchical, tree-like notes.
-* **Events:** Effortlessly plan complex, multi-day events. Build a clear agenda by arranging activity blocks for multiple teams or participants, keeping everyone perfectly in sync.
+* **Journal:** (Future development) Capture your daily thoughts, notes, and ideas in a chronological log. Your entire history is archived and instantly searchable.
+* **Outlines:** (Future development) Structure complex ideas and connect your thoughts by creating hierarchical, tree-like notes.
+* **Events:** (Future development) Effortlessly plan complex, multi-day events. Build a clear agenda by arranging activity blocks for multiple teams or participants, keeping everyone perfectly in sync.
 
 ## GENERAL PHILOSOPHY
 Our development is guided by a few core principles to ensure the best possible experience.
-* **Absolute Privacy:** Your data is yours alone. We use **zero-knowledge encryption**, meaning all your content is encrypted and decrypted directly on your device. We can never see your data, and neither can anyone else.
+* **Absolute Privacy:** Your data is yours alone. We use **zero-knowledge encryption**, meaning all your content is encrypted and decrypted directly on your device. We can never see your data, and neither can anyone else. True Zero-Knowledge: Every item (task, note) is encrypted client-side using a per-item Data Encryption Key (DEK). Each DEK is itself encrypted with a Master Key derived on-device via Argon2id from the user’s passphrase and a user-specific salt.
 * **Fluid Experience:** MyDayHub feels like a native app. Edit text inline, drag and drop items, and switch between tools instantly without ever waiting for a page to reload. The interface is fully responsive, working beautifully on any screen from your phone to your desktop.
 * **Modern & Minimalist Design:** We believe in simplicity. The interface is clean, direct, and never overwhelming, allowing you to focus on what matters most. Our design defaults to a comfortable dark theme to reduce eye strain, but you always have the choice to switch to a bright light theme.
 * **Work Anywhere:** Full **offline support** allows you to keep working without an internet connection. Your data will sync automatically the next time you connect. Smart session handling also prevents data conflicts if you're logged in on multiple devices.
@@ -40,6 +55,11 @@ Our development is guided by a few core principles to ensure the best possible e
 the *right* tasks. We classify each item by how directly it advances the
 user’s mission. This provides awareness, nudges conscious decision-making,
 and prevents getting lost in busywork.
+* **Accessibility & Inclusivity**
+	* All screens, controls, and modals are fully navigable with both touch gestures and keyboard shortcuts; tab order and ARIA labels are implemented for screen readers.
+	* Users can increase/decrease font size globally (A+/A-) and toggle high-contrast mode in settings.
+	* Focus indicators, clear error feedback, and persistent status messages appear for all user-triggered actions across desktop and mobile contexts.
+	* Visual hierarchy carefully guides attention, using both color and relative card elevation.
 
 ## GENERAL REQUIREMENTS
 
@@ -53,6 +73,13 @@ and prevents getting lost in busywork.
   * Use accent color for highlights, active tab, and focus states
   * Consistent visual spacing, card elevation, and hover feedback for all interactive elements.
   * No modal overload or overwhelming toolbars; progressive disclosure only.
+  * Enhanced Visual Language & Accessibility
+  	* The visual design deliberately uses distinct accent colors, deep card backgrounds, and clear status bands to reinforce actionable priorities and privacy states for tasks, columns, and notes.
+  	* All interactive elements utilize large, touch-friendly targets and maintain a minimum contrast ratio of 4.5:1 for both text and icons, supporting WCAG AA accessibility.
+  	* Responsive layouts maintain card padding and flexible column stacking for horizontal scroll on desktop and vertical stacking on mobile, ensuring information is always accessible and readable.
+  	* Every control state (hover, focus, active) exhibits smooth elevation and color changes for improved discoverability and feedback.
+  	* Per-item privacy toggles and encrypted status indicators should incorporate subtle, universally recognizable iconography (e.g., locks, diagonal bands, or shading).
+  	* Animations for drag-and-drop, completion, and modal transitions use a “gentle spring” pattern, reducing cognitive load and minimizing distraction.
 
 * **Modular visibility and dynamic UI**
   * Fast toggling of task board, journal, outlines, meeting, preserving context.
@@ -74,6 +101,10 @@ and prevents getting lost in busywork.
 
 * **Responsive, mobile-first design**
   * Touch gestures and pull-to-create actions.
+  * On screens ≤768px, columns reorganize into a single vertical flow, and controls collapse into sticky bottom navigation bars.
+  * All tap targets meet or exceed 48x48px, with swipe and pull-to-create gestures accessible from all major app views.
+  * Floating action buttons and thumb-reachable menus are employed for rapid task creation and navigation in every mobile context.
+  * Settings, notifications, and contextual menus are thumb-accessible and feature haptic feedback on supported devices.
 
 * **Quotas and usage plans**
   * tiered item/sharing limits and upgrade prompts
@@ -94,54 +125,23 @@ and prevents getting lost in busywork.
   * Rationale: Data security and privacy toggles built to prevent cross-user leaks.
   * Universally necessary for individual/team productivity.
 
-* **Frontend Encryption**
-  * Crypto module boundary:  “All crypto lives in assets/js/crypto.js; app code never encrypts/decrypts directly.”
-  * Switch: ENCRYPTION_ENABLED (dev passthrough = plaintext). (Matches your “proxy layer” goal.)
-  * Key strategy
-	* Symmetric: per-item Data Encryption Key (DEK); DEK encrypted by a per-user Master Key.
-	* Master Key derivation: Argon2id(PBKDF) from user passphrase + salt; never sent to server.
-	* Asymmetric (sharing): X25519 (ECDH) for key wrapping; Ed25519 for signatures.
-	* Sharing envelope: For each recipient, store {recipient_user_id, wrapped_DEK, sender_sig}.
-  * Minimal new fields
-	* users.key_salt VARBINARY(32) (server-stored salt).
-	* task_shares(wrapped_dek VARBINARY, sender_sig VARBINARY).
-	* Keep ciphertext in tasks.encrypted_data (already present). 
-	* API contracts (new)
-	* crypto/getPublicKey, crypto/setPublicKey.
-	* share/create, share/revoke, share/list.
-	* Error map for: “missing public key”, “stale share”, “signature failed”.
-  * Threat model note
-	* “DB, backups, and app server are untrusted for content. Only metadata is readable.”
-	* “Rotation: per-user master-key rewrap; per-item DEK optional rotate.”
-  * Acceptance tests
-	* “Flip plaintext mode ON → all CRUD passes; flip back → same actions pass with ciphertext stored.”
-	* “Share to user B; revoke; verify B cannot decrypt.”
-	* Offline/PWA — spec gaps to close
+* **Frontend Encryption (Zero-Knowledge Boundary)**
+  * All encryption and decryption logic is encapsulated in assets/js/crypto.js.
+  * Every task and note is encrypted on the client using a per-item DEK; never decrypted or re-encrypted by server-side code.
+  * DEKs are encrypted with a per-user Master Key, itself derived on device via Argon2id from passphrase + salt.
+  * Master Key or passphrase is never sent to the server.
+  * Sharing uses X25519 (ECDH) for wrapping; Ed25519 for signatures; tasks can be shared only if recipient has registered public keys.
+  * Sharing envelope for each recipient: {recipient_user_id, wrapped_DEK, sender_sig}.
+  * Accepts only encrypted data at rest and in transit—plaintext storage is disabled except in development mode for local testing.
+  * Acceptance: All CRUD actions must operate with encryption enabled. Tests ensure rewraps, share/revoke, and offline sync are successful and private keys remain undisclosed at all times.
   
 * **Offline support**
-  * Service Worker queue, auto-sync
-  * Phased rollout
-	* P1 App-shell cache only (static assets).
-	* P2 Read-through IndexedDB mirror for lists.
-	* P3 Write queue + background sync + conflict policy.
-  * Service Worker
-	* File: /service-worker.js, scope /.
-	* Caches: app-shell-v1, api-fallback.
-  * Network strategy: stale-while-revalidate for shell; network-first for authenticated API where online; fallback to IndexedDB.
-  * Sync engine
-	* Online check: navigator.onLine + heartbeat endpoint.
-	* Queue writes offline to outbox; flush on reconnect or periodicSync.
-	* Backoff: 1s→2→4→… max 60s per item; cap retries; quarantine poison items.
-  * Conflict policy
-	* Default: Last-Write-Wins using (updated_at, version, device_id).
-	* Surface conflicts in UI (badge on card); simple “keep mine / take remote” chooser.
-	* Server validates version; returns 409 with server copy for client merge.
-  * API headers
-	* Send X-Client-Id, X-Client-Version, If-Match: <version>; server returns new ETag.
-  * Acceptance tests
-	* Create/edit offline; kill app; reopen; ensure local load from IndexedDB.
-	* Reconnect; verify queued ops drain; spot-check server rows.
-	* Forced conflict scenario returns 409 and renders chooser.
+  * Service Worker: /service-worker.js pre-caches app shell; IndexedDB mirrors all lists for instant load and offline work.
+  * Write Queue: All local changes queue in IndexedDB when offline and auto-flush upon reconnect, with visual feedback (banner or icon state).
+  * Conflict Handling: Last-write-wins (by updated_at, version, device_id); UI badge highlights conflicts, user chooses to “keep mine” or “take remote”.
+  * Network Strategy: Stale-while-revalidate shell; network-first API for mutations, local fallback for lists.
+  * Acceptance: CRUD and move actions fully tested for offline/online transitions; deliberate network drops simulated in tests.
+  * Planned: Progressive roll-out for automatic background sync and intelligent retry policy.
   
 ## USER STORIES AND USE CASES
 
@@ -161,6 +161,13 @@ and prevents getting lost in busywork.
   clearly distinguish what drives my mission from what distracts me._
 * _As a user, I want to see my completed tasks in context, so I can review how
   much of my effort went to Signal vs. Noise._
+* _As a user, I want to cycle a task’s status among Signal, Support, Noise, and Completed with a single action and see task groupings reflect this._
+* _As a user, I want all team and sharing actions to respect privacy and encryption, making sure only people I choose can read shared tasks._
+* _As a user, I want to attach images to a task by dragging and dropping, pasting, or selecting a file, so I can provide visual context._
+* _As a user, I want to see at a glance which tasks have attachments and how many there are._
+* _As a user, I want to be notified when I'm nearing my storage limit so I can manage my files._
+* _As a user, I want to be prompted before my oldest images are deleted to make space for new ones._
+
 
 ### USE CASES
 * Mark any task (Future: journal entry, outline node, or event segment) as private and filter/hide accordingly.
@@ -193,24 +200,22 @@ and prevents getting lost in busywork.
 Full-width, one-row control bar
 (Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
   **Toolbar Controls**
-	* **Left:** Current date
+	* **Left:** Current date, Theme switch (dark/light), Show/Hide private items switch, Global App Font Size (A-/A+ buttons)
 	* **Center:** Context aware buttons
-		* **Tasks View:** Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
+		* **Tasks View Filters:** Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
 		(Future: * ** Journal View:** Buttons with "1","3" and "5" to determine how many columns are displayed. Button "Wrap-Up" to create a new Entry that aggregates all the entries in the focus date.  This new Entry is added on top.)
-	* **Right:** Current Username within square parethensis (example: "[alfa]")
+	* **Right:** Current Username within square parethensis (example: "[alfa]"), Logout ("⏻ Logout" in red)
  
 ### SETTINGS
-  Slider accessible from title bar
-* Theme switch (dark/light)
-* Show/Hide private items switch
+Slider accessible from title bar
+* High-Contrast/Colorblind Mode toggle: Increases color separation for icons, status bands, and accents
+* Keyboard & screen reader navigation mode: Option to enable strict tab order for all actionable controls.
 * (Future: Skip weekends in journal swtich)
-* Global App Font Size (A-/A+ buttons)
 * (Future: Calendar Overlays (button opens modal))
 * Automatic Logout (dropdown select 5 mins, 30 min, 3 hours, never)
 * Change Password (button opens modal)
 * Import/Export (button opens modal)
 * Help (button opens User Manual)
-* Logout ("⏻ Logout" in red)
 
 ### TASKS VIEW
 
@@ -237,12 +242,22 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Drag & Drop:** Tasks can be fluidly dragged within their current column or dropped into a different column.
   * **Due Date:** An optional due date badge is displayed as a suffix (e.g., !08/18).
   * **Delegation & Sharing:** Shared tasks have distinct styling. A share icon (@user) appears, showing recipients on hover.
+  * Task card status bands are a minimum of 6px wide, running edge-to-edge vertically, and display clear, distinct colors for Signal (green), Support (blue), Noise (orange), and Completed (gray).
+  * Privacy, attachment, and sharing icons are always visible on both card and column headers, featuring subtle animations (opacity and blur transitions) on hover/tap.
+  * Card borders and backgrounds utilize a “soft shadow ring” and backdrop blur for depth without clutter, consistent from mobile to desktop layouts.
+  * All drag-and-drop gestures trigger animated “lift” and “drop” UI cues, scalable for touch and pointer events.
+
+* **Attachments Display:**
+  * An attachment icon (e.g., 📎) with a count badge will appear on cards with attachments.
+  * On hover, a tooltip will list the image filenames.
+  * Clicking the icon opens a simple gallery modal displaying thumbnails of the attached images. Clicking a thumbnail shows the full-size image.
+  * The entire task card will act as a drop zone, highlighted visually when a file is dragged over it.
 
 * **Status Indicators:**
-  * **Status Band:** A color band on the left of the card indicates classification:
-  * **Signal**: Green — directly advances the mission
-  * **Support**: Blue — indirectly contributes or enables progress
-  * **Noise**: Orange — activity that doesn’t truly advance the mission
+  * **Status Band:** Each task card prominently displays a colored status band on its left edge:
+  * **Signal**: Green — Actions with direct mission impact
+  * **Support**: Blue — Enablers and indirect progress
+  * **Noise**: Orange — Activities that distract or have unclear value
   * **Completed**: Gray — finished tasks, archived at the bottom
 
 * **Actions Menu** (Ellipsis ... on hover)
@@ -257,6 +272,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
 * **Sorting and Persistence**
   * The vertical order of tasks within a column is automatic and enforces sorting rules
   * Manual adjustments are permitted for tasks within their category group, sorting rules are enforced.
+  * By default, columns group tasks by classification in the order: Signal > Support > Noise > Completed. Manual drag-and-drop is possible within those groups only. Moving a card between groups cycles its classification accordingly.
   * All reordering actions are persisted instantly.
   * **Automatic Sorting Rules:**
   **1** Signal tasks are always sorted to the top of the column.
@@ -265,15 +281,35 @@ Columns are user-created, re-orderable via header controls, and their positions 
   **4** Completed tasks are always moved to the bottom.
   * **Manual Sorting:** Within each status group (Signal, Support, Noise, Completed), the user's manual drag-and-drop order is maintained.
   * **Triggers:** Sorting logic is applied instantly whenever a task is created, moved, dropped, duplicated, or its status changes.
+  * The **classification** db field serves as the primary mechanism for sorting and visual grouping in the UI.
 
 * **UI/UX Feedback & Animations**
   * **Hover Effect:** A soft "lift" shadow appears when hovering over a task card.
   * **Completion Effect:** Checking off a task triggers a gold flash animation, and updates all relevant task counts.
   * **Compaction:** Deleting or completing a task instantly compacts the list, removing empty space.
 
+#### TASK ATTACHMENTS
+  This feature allows users to attach images to tasks for visual reference, mockups, or context. Attachments are managed within a storage quota to control server space.
+
+  * Upload Methods:
+  	* File Picker: Clicking an "Add Attachment" button in the gallery modal opens the native file dialog.
+  	* Drag and Drop: Dropping image files directly onto a task card initiates an upload for that task.
+  	* Paste: Pasting image data from the clipboard (e.g., a screenshot) while a task card or its attachment gallery is in focus initiates an upload.
+  
+  * File Handling:
+	* Supported formats: JPEG, PNG, GIF, WebP.
+	* Per-file size limit: 5 MB.
+	* The UI must provide feedback for upload progress (e.g., a spinning icon on the attachment badge) and show clear success or error messages.
+  
+  * Storage Quota:
+  	* Each user has a defined storage quota (e.g., 50 MB).
+  	* Before an upload, the system checks if the new file will exceed the user's quota.
+  	* Pruning Policy: If the quota is exceeded, the user will be presented with a confirmation modal: "Uploading this file will exceed your storage limit. The oldest attachment, [oldest_image_filename.jpg], will be deleted to make space. Continue?".
+  	* Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
+
 
 ### JOURNAL VIEW (Future)
-  
+   
 This view provides a chronological, date-based layout for journal entries, organized into horizontally scrollable daily columns. The interface is designed for fluid navigation through time and rapid logging of notes and ideas.
   
   
@@ -332,7 +368,7 @@ Each card represents a single journal entry for a given day.
 	* Support for multiple calendar types (e.g., "fiscal", "holidays", "birthdays").
 	* Ability to import/export calendar data.
 	  
- ### OUTLINES VIEW (Future)
+### OUTLINES VIEW (Future)
    
  This mind-map inspired view provides a flexible, hierarchical note-taking system for structuring complex ideas, planning projects, researching, or breaking down large topics into manageable parts. The interface is designed as a collapsible tree, allowing users to focus on details or view the big picture.
    
@@ -377,7 +413,7 @@ Each card represents a single journal entry for a given day.
 * **Data Integrity:** The connections are non-destructive. Deleting a linked Task column or a linked Journal entry from the outline will not delete the original item in its native view, ensuring no accidental data loss. Similarly, deleting the outline will not delete the linked Task column. 
 
 ### EVENTS VIEW (AGENDA PLANNER) (Future)
-
+   
   This view provides a specialized tool for planning and organizing complex, multi-day events. It functions like a calendar, allowing users to create detailed agendas by arranging event segments (cards) chronologically across daily columns. The goal is to enable holistic preparation and streamlined execution for any scheduled event.
     
 #### SETUP
@@ -425,7 +461,7 @@ Each card represents a single journal entry for a given day.
    
 This component is a universal, dual size (small-factor and full-screen modal) editor that provides a focused, distraction-free writing environment. It serves as the single, consistent interface for creating and editing detailed notes for Tasks, Journal entries, Planning segments and Outline nodes. The core philosophy is to maintain a simple, fast, plain-text editing experience while empowering it with modern tools for text transformation, lightweight formatting, and seamless integration with other app modules.
 
-#### CORE PHILOSOPHY & BEHAVIOR
+#### TEXT EDITOR PHILOSOPHY & BEHAVIOR
 * **Plain Text Core with Markdown:** The editor's foundation is a simple text area with a monospaced font for clarity and portability. It natively supports Markdown syntax (e.g., # for headings, * for lists) for lightweight formatting. A toggle will allow users to switch between the raw text view and a rendered Preview Mode.  The preview matches what the editor would build for the print function.
 * **Modal & Universal:** The editor always opens as a modal window, ensuring the user can focus on the note. It is accessible from any item in the app that supports long-form text.
 * **Autosave & Reliability:** All changes are auto-saved locally every few seconds to prevent data loss. A simple version history will be accessible to restore previous states of the note.
@@ -434,10 +470,10 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 #### EDITOR LAYOUT
    
  The editor is organized into four primary sections: a header for context, a tabbed toolbar for actions, the main text area, and a status bar for metadata.
- Header:
-* **Contextual Title:** Displays the title of the parent item (e.g., "Task Note: Design the new logo"). The title is editable on double-click or double-tab directly from the header.
-* **Window Controls:** Standard buttons for Print, Export, and Save & Close, Close (x).
-* Toolbar (Tabbed Ribbon):
+* **Header**
+	* **Contextual Title:** Displays the title of the parent item (e.g., "Task Note: Design the new logo"). The title is editable on double-click or double-tab directly from the header.
+	* **Window Controls:** Standard buttons for Print, Export, and Save & Close, Close (x).
+* **Toolbar** (Tabbed Ribbon):
     * A tabbed interface organizes all tools. On narrow screens, less-used tools will responsively collapse into an ellipsis (...) menu.
     * Tabs Include: Format, Find & Replace (within the note), Search Notes, and Add Task.
 * **Text Area:**
@@ -465,16 +501,22 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   * Searches across all notes created by the current user and shows the list below the editor.
   * User can click on any of the notes in the list, the note opens, and the user can edit the note, go back to the note from which the search was launched.  This allows for a use case in which the user can trace back multiple instances of a topic to get in context quick.  
    ⠀
-#### IMPORT & EXPORT
+## IMPORT & EXPORT
 	* Export Options: Notes can be exported in multiple formats, including Plain Text (.txt), Markdown (.md), and PDF. The PDF export will use the rendered Markdown view.
 	* Print: A print-friendly view renders the note's Markdown for clean, readable hard copies. 
   
 ## TECHNICAL ARCHITECTURE
 
-**Database Schema V4 Core**
+**Database Schema Core**
 
 * users
-  user_id INT PK (future fields for auth/plans)
+  user_id INT PK
+  username VARCHAR(50) NOT NULL UNIQUE
+  email VARCHAR(255) NOT NULL UNIQUE
+  password_hash VARCHAR(255) NOT NULL
+  created_at DATETIME NOT NULL DEFAULT current_timestamp()
+  storage_quota_bytes BIGINT NOT NULL DEFAULT 52428800 -- 50 MB
+  storage_used_bytes BIGINT NOT NULL DEFAULT 0
 
 * columns
   column_id INT PK
@@ -489,7 +531,22 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   encrypted_data TEXT NOT NULL
   position INT NOT NULL
   classification ENUM('signal','support','noise','completed') NOT NULL
+  is_private BOOL NOT NULL DEFAULT 0
+  delegated_to INT NULL
   created_at, updated_at DATETIME NULL
+  
+  (The "classification" field now serves as the primary mechanism for sorting and visual grouping in the UI.)
+
+  
+* task_attachments
+  attachment_id INT PK
+  task_id INT NOT NULL (FK to tasks.task_id)
+  user_id INT NOT NULL (FK to users.user_id, for easy quota lookup)
+  filename_on_server VARCHAR(255) NOT NULL (e.g., user1_1661899731_a4e1b.jpg)
+  original_filename VARCHAR(255) NOT NULL
+  filesize_bytes INT NOT NULL
+  mime_type VARCHAR(50) NOT NULL
+  created_at DATETIME NOT NULL
 
 **Future Schema Extensions**
 
@@ -522,11 +579,43 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   * renameColumn 
   * reorderColumns 
   * HTTP codes: 200, 201, 400, 403, 404, etc.
+* New API actions for Beta 5:
+  * toggleClassification: cycles a task’s classification through Signal, Support, Noise, Completed
+  * togglePrivacy: sets per-task or per-column privacy
+  * shareTask and revokeShare: manage encrypted sharing and access
+  * Analytics endpoints: log CRUD/user navigation for quota status and feature improvement.
+  * All mutations require verifiable session ownership and CSRF validation.
+* File Uploads: Requests for uploadAttachment will use multipart/form-data, not application/json. The gateway must be adapted to handle this, extracting {module, action, data} from the form fields alongside the file data.
+* New Endpoints:
+  * getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
+  * uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. Requires task_id.
+  * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
+  
+### API Implementation tracking
+* Implemented API Actions:
+  * [RDY] register (in auth.php)
+  * [RDY] login (in auth.php)
+  * [RDY] getAll (in tasks.php)
+* Future API Actions:
+  * [FUT] createTask
+  * [FUT] moveTask
+  * [FUT] reorderColumn
+  * [FUT] toggleComplete
+  * [FUT] togglePriority
+  * [FUT] deleteTask
+  * [FUT] duplicateTask
+  * [FUT] renameTaskTitle
+  * [FUT] createColumn
+  * [FUT] deleteColumn
+  * [FUT] renameColumn
 
 ## FRONT END ARCHITECTURE
 
 * assets/js/app.js: bootstrap, tab/view switch, modal helpers, DEVMODE banner.
 * assets/js/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
+* assets/js/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
+  * SPA logic implements classification cycles, privacy toggles, offline notifications, and optimistic rollbacks.
+  * IndexedDB logic ensures full CRUD parity with network, respecting sort/group/crypto constraints.
 * assets/css/style.css: global responsive layout.
 * assets/css/views/tasks.css, /editor.css: feature-specific styling.
 
@@ -588,6 +677,12 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 │ 19.Aug.25, Tuesday             [F1] [F2] [F3] [F4]                 [alfa] │
 └───────────────────────────────────────────────────────────────────────────┘
 
+
+* In every task card representation, show a colored status band at the left for classification.
+* Add a clear visual switch for per-card and per-column privacy.
+* Status cycling and privacy actions are always reachable via quick controls.
+
+
 ### JOURNAL VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]                      │
@@ -595,7 +690,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
 │ 18.Aug.25, Mon      … │ │ 19.Aug.25, Tue      … │ │ 20.Aug.25, Wed      … │
 │───────────────────────│ │───────────────────────│ │───────────────────────│
-│  Meeting notes        │ │ Design ideas          │ │  Progress summary     │
+│  Meeting notes    VISUAL LANGUAGE NOTE          │ │  Progress summary     │
 │  Project kickoff      │ │ Milestone feedback    │ │                       │
 │  Daily reflection     │ │                       │ │                       │
 │                       │ │                       │ │                       │
@@ -694,6 +789,11 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 │ W: 231  Ch: 1664  L: 12   Last saved: Never │
 └─────────────────────────────────────────────┘
 
+
+### Visual Language Note
+The rendered wireframes and UI samples reinforce minimalism, clarity, and actionable feedback directly inspired by leading productivity and fintech apps. Accent colors, rounded shapes, and live counters are always paired with clear status bands and fluid mobile layouts, supporting every user on any device.
+
+
 ## APP ICONS
 
 ### MENU BAR
@@ -781,4 +881,4 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 
 
 
-// End of APP_SPEC v4.7.0 //
+// End of APP_SPEC Beta 5.0.0 //

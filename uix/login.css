@@ -1,0 +1,99 @@
+/* MyDayHub Beta 5 - Login/Auth Page Styles */
+
+/* Basic styles for a clean, centered layout */
+body {
+	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	background-color: #202124;
+	color: #e8eaed;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	margin: 0;
+}
+
+.auth-container {
+	background-color: #282a2d;
+	padding: 2rem 3rem;
+	border-radius: 12px;
+	border: 1px solid #3c4043;
+	width: 100%;
+	max-width: 400px;
+	box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+
+h1 {
+	text-align: center;
+	font-weight: 500;
+	margin-bottom: 1.5rem;
+}
+
+.form-group {
+	margin-bottom: 1rem;
+}
+
+label {
+	display: block;
+	margin-bottom: 0.5rem;
+	color: #bdc1c6;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"] {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: #3c4043;
+	border: 1px solid #5f6368;
+	border-radius: 6px;
+	color: #e8eaed;
+	font-size: 1rem;
+	box-sizing: border-box;
+}
+
+input:focus {
+	outline: none;
+	border-color: #8ab4f8;
+}
+
+.btn {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: #8ab4f8;
+	border: none;
+	border-radius: 6px;
+	color: #202124;
+	font-size: 1rem;
+	font-weight: 600;
+	cursor: pointer;
+	margin-top: 1rem;
+}
+
+.auth-link {
+	text-align: center;
+	margin-top: 1.5rem;
+}
+
+.auth-link a {
+	color: #8ab4f8;
+	text-decoration: none;
+}
+
+/* Style for messages we will add later with JS */
+#message-container {
+	margin-bottom: 1rem;
+	padding: 1rem;
+	border-radius: 6px;
+	text-align: center;
+	display: none; /* Hidden by default */
+}
+
+#message-container.success {
+	background-color: rgba(60, 140, 90, 0.3);
+	border: 1px solid #3c8c5a;
+}
+
+#message-container.error {
+	background-color: rgba(217, 79, 70, 0.3);
+	border: 1px solid #d94f46;
+}
