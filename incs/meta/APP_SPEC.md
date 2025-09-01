@@ -17,14 +17,14 @@ From Beta 5.0.0 on, the application scope is strictly focused on perfecting the 
 * Dev (v4): Localhost, Apache+PHP 8, mariaDB, XAMPP
 
 ## FILE LOCATIONS
-* \ 		only index.php here
-* \api\		all api files, no subdirectories.
-* \uix\		all js and css files, no subdirectories.
-* \media\	sounds, images, icons and all other app ui files, no subdirectories.
-* \imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
-* \incs\	any includes needed by the app, no subdirectories, except migrations if applicable.
-* \login\	all login, logout, register, etc. needed for registration, authentication, password management, etc.
-* \meta\	documents explaning the app scope, status, next steps, etc.
+* \ 			only index.php here
+* \api\			all api files, no subdirectories.
+* \uix\			all js and css files, no subdirectories.
+* \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
+* \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
+* \incs\		any includes needed by the app, no subdirectories, except \migrations and \meta
+* \login\		all login, logout, register, etc. needed for registration, authentication, password management, etc.
+* \meta\		documents explaining the app scope, status, next steps, etc.
 
 ## STATUS LEGENDS
 **Important**
@@ -613,13 +613,13 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 
 ## FRONT END ARCHITECTURE
 
-* assets/js/app.js: bootstrap, tab/view switch, modal helpers, DEVMODE banner.
-* assets/js/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
-* assets/js/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
+* uix/app.js: bootstrap, tab/view switch, modal helpers, DEVMODE banner.
+* uix/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
+* uix/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
   * SPA logic implements classification cycles, privacy toggles, offline notifications, and optimistic rollbacks.
   * IndexedDB logic ensures full CRUD parity with network, respecting sort/group/crypto constraints.
-* assets/css/style.css: global responsive layout.
-* assets/css/views/tasks.css, /editor.css: feature-specific styling.
+* uix/style.css: global responsive layout.
+* uix/tasks.css, uix/editor.css: feature-specific styling.
 
 ## MOBILE UX
 
@@ -639,9 +639,41 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 
 ## DEBUG AND TESTING PATTERNS
 
-* Set /includes/config.php DEVMODE=true for debug.log.
+* Set /incs/config.php DEVMODE=true for debug.log.
 * Test API via curl/REST with CSRF.
 * Dev test accounts: alfa, delta, omega.
+
+## ENVIRONMENT SETUP
+
+This application uses a `.env` file in the root directory to manage sensitive credentials and environment-specific settings. This file should **not** be committed to version control.
+
+### Required Variables
+Create a '.env' file in the project root with the following variables:
+
+	~~~ini
+	# --- General Settings ---
+	DEV_MODE=true # true for local, false for production
+	
+	# --- Database Credentials ---
+	DB_HOST="127.0.0.1"
+	DB_NAME="mydayhub"
+	DB_USER="root"
+	DB_PASS=""
+	
+	# --- SMTP Credentials ---
+	SMTP_HOST="smtp.hostinger.com"
+	SMTP_USER="your_email@example.com"
+	SMTP_PASS="your_password"
+	SMTP_PORT=587
+	~~~
+
+### Installation
+	This project uses Composer to manage PHP dependencies. To install the required libraries (like phpdotenv), run the following command in the project root (connect SSH):
+	~~~~
+	terminal> ssh u756585617@185.185.185.185 -p 65002
+	ssh> cd domains/breveasy.com/public_html
+	ssh> composer require vlucas/phpdotenv
+
 
 ## GLOSSARY
 
@@ -656,6 +688,11 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 * Support task = indirectly enables Signal
 * Noise task = does not advance the mission, candidate for delegation or drop
 * Completed task = finished item, archived at bottom
+* hostinger hosted environment = web-env
+* local hosted environment = loc-env
+* Drag-and-Drop = DnD
+* Toast Notification = Toast
+* Modal Window = Modal
 
 ## WIREFRAME MOCKUPS
 
@@ -692,7 +729,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 ┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
 │ 18.Aug.25, Mon      … │ │ 19.Aug.25, Tue      … │ │ 20.Aug.25, Wed      … │
 │───────────────────────│ │───────────────────────│ │───────────────────────│
-│  Meeting notes    VISUAL LANGUAGE NOTE          │ │  Progress summary     │
+│  Meeting notes        │ │ VISUAL LANGUAGE NOTE  │ │  Progress summary     │
 │  Project kickoff      │ │ Milestone feedback    │ │                       │
 │  Daily reflection     │ │                       │ │                       │
 │                       │ │                       │ │                       │

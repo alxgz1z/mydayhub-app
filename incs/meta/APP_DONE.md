@@ -408,3 +408,25 @@ The main tasks view is now highly interactive. Users can build out their board b
    * Updating the backend to handle a `toggleClassification` action.
    * Adding CSS to color-code the status bands according to the spec (Green, Blue, Orange).
 3.  **Build Column & Task Actions:** Implement the dropdown/context menus for columns (Rename, Delete) and tasks (Edit, Duplicate, Delete, etc.).
+
+---
+## 2025-08-31 21:00 — Environment Configuration & Stability
+
+**Focus**
+Resolve a critical 500 Internal Server Error on the remote (Hostinger) environment and implement a secure, portable method for managing credentials. The goal was to ensure the application runs consistently across both local and remote setups.
+
+**Key work**
+* **Debugging:** Diagnosed a 500 error on the remote server by creating temporary test scripts (`test_db.php`, `test_env.php`) to isolate the issue.
+* **Credential Management:** Refactored the application to use a `.env` file for storing sensitive credentials (database, SMTP). This removes all passwords from the version-controlled `config.php` file.
+* **Environment Portability:** Installed the `vlucas/phpdotenv` Composer package to reliably load environment variables on both local and remote servers.
+* **URL Pathing:** Implemented a dynamic `APP_URL` constant and updated all frontend API calls to use it, ensuring that the application can be deployed to any domain or subdirectory without code changes.
+* **File Cleanup:** Removed outdated and unnecessary rules from the `.htaccess` file.
+
+**Status**
+Both the local and remote environments are now fully functional and in sync. The application is more secure and portable, with a clear separation between code and configuration. The drag-and-drop functionality for tasks is the next feature in progress.
+
+**Recommended next steps (priority order)**
+1.  **Fix DnD Persistence:** Resume the implementation of drag-and-drop for tasks. The frontend JavaScript needs to be updated to correctly call the `reorderTasks` API, and the backend needs to be tested to ensure the new task order is persisted.
+2.  **Implement Task Classification:** Begin work on the "Signal/Support/Noise" feature, which is a core part of the application's value proposition.
+3.  **Build Column & Task Actions:** Implement the dropdown/context menus for columns and tasks (Rename, Delete, Duplicate, etc.).
+
