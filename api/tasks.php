@@ -40,7 +40,6 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
-		// Added for column reordering
 		case 'reorderColumns':
 			if ($method === 'POST') {
 				handle_reorder_columns($pdo, $userId, $data);
@@ -50,6 +49,13 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'createTask':
 			if ($method === 'POST') {
 				handle_create_task($pdo, $userId, $data);
+			}
+			break;
+		
+		// Added for task delete
+		case 'deleteTask':
+			if ($method === 'POST') {
+				handle_delete_task($pdo, $userId, $data);
 			}
 			break;
 
@@ -488,7 +494,6 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Updates the positions of all columns based on a provided order.
  */
-// Added for column reordering
 function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_ids']) || !is_array($data['column_ids'])) {
 		http_response_code(400);
@@ -525,5 +530,65 @@ function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while reordering columns.']);
+	}
+}
+
+/**
+ * Deletes a task and re-compacts the positions of remaining tasks in its column.
+ */
+// Added for task delete
+function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid Task ID.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Step 1: Find the task to get its column_id and verify ownership
+		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt_find->fetch();
+
+		if ($task === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to delete it.']);
+			return;
+		}
+		$columnId = $task['column_id'];
+
+		// Step 2: Delete the task
+		$stmt_delete = $pdo->prepare("DELETE FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_delete->execute([':taskId' => $taskId, ':userId' => $userId]);
+
+		// Step 3: Re-compact the positions of remaining tasks in the same column
+		$stmt_get_tasks = $pdo->prepare(
+			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId ORDER BY position ASC"
+		);
+		$stmt_get_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
+		$remaining_tasks = $stmt_get_tasks->fetchAll(PDO::FETCH_COLUMN);
+
+		$stmt_update_pos = $pdo->prepare("UPDATE tasks SET position = :position WHERE task_id = :taskId AND user_id = :userId");
+		foreach ($remaining_tasks as $index => $id) {
+			$stmt_update_pos->execute([':position' => $index, ':taskId' => $id, ':userId' => $userId]);
+		}
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => ['deleted_task_id' => $taskId]]);
+
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_delete_task(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the task.']);
 	}
 }

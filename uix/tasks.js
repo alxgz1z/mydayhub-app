@@ -8,7 +8,6 @@
  * @author Alex & Gemini
  */
 
-// Modified for drag-and-drop counter fix
 let dragSourceColumn = null;
 
 /**
@@ -23,7 +22,13 @@ function initTasksView() {
  * Sets up the main event listeners for the tasks view.
  */
 function initEventListeners() {
+	// Global click listener to close dynamic menus
 	document.addEventListener('click', (e) => {
+		// Added for task actions menu
+		// Close task menus if clicking outside
+		if (e.target.closest('.task-actions-menu') === null && e.target.closest('.btn-task-actions') === null) {
+			closeAllTaskActionMenus();
+		}
 		if (e.target && e.target.id === 'btn-add-column') {
 			showAddColumnForm();
 		}
@@ -58,7 +63,9 @@ function initEventListeners() {
 			}
 		});
 
+		// Combined listener for various clicks within the board
 		boardContainer.addEventListener('click', async (e) => {
+			// Handle cycling task classification
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
@@ -68,6 +75,7 @@ function initEventListeners() {
 				return;
 			}
 
+			// Handle deleting a column
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
 				const columnEl = deleteBtn.closest('.task-column');
@@ -86,7 +94,8 @@ function initEventListeners() {
 				}
 				return;
 			}
-
+			
+			// Handle moving a column
 			const moveBtn = e.target.closest('.btn-move-column');
 			if (moveBtn) {
 				const direction = moveBtn.dataset.direction;
@@ -115,7 +124,41 @@ function initEventListeners() {
 				}
 				return;
 			}
+			
+			// Added for task actions menu
+			// Handle opening the task actions menu
+			const actionsBtn = e.target.closest('.btn-task-actions');
+			if (actionsBtn) {
+				showTaskActionsMenu(actionsBtn);
+				return;
+			}
 		});
+		
+		// Listener for actions within a dynamically created menu (delegated from body)
+		// Added for task delete
+		document.body.addEventListener('click', async (e) => {
+			const deleteAction = e.target.closest('.task-action-btn[data-action="delete"]');
+			if (deleteAction) {
+				const menu = deleteAction.closest('.task-actions-menu');
+				const taskId = menu.dataset.taskId;
+				const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+				const columnEl = taskCard.closest('.task-column');
+
+				closeAllTaskActionMenus();
+
+				const confirmed = confirm('Are you sure you want to delete this task?');
+				if (confirmed && taskId) {
+					const success = await deleteTask(taskId);
+					if (success) {
+						taskCard.remove();
+						updateColumnTaskCount(columnEl);
+					} else {
+						alert('Error: Could not delete task.');
+					}
+				}
+			}
+		});
+
 
 		boardContainer.addEventListener('dblclick', (e) => {
 			if (e.target.matches('.column-title')) {
@@ -169,16 +212,13 @@ function initEventListeners() {
 			}
 		});
 
-		// Modified for drag-and-drop counter fix
 		boardContainer.addEventListener('dragstart', (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.add('dragging');
-				// Remember the column where the drag started
 				dragSourceColumn = e.target.closest('.task-column');
 			}
 		});
 
-		// Modified for drag-and-drop counter fix
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
@@ -194,9 +234,7 @@ function initEventListeners() {
 					const success = await reorderTasks(columnId, taskIds);
 					
 					if (success) {
-						// Update counter for the destination column
 						updateColumnTaskCount(destinationColumn);
-						// If the task moved from another column, update its counter too
 						if (dragSourceColumn && dragSourceColumn !== destinationColumn) {
 							updateColumnTaskCount(dragSourceColumn);
 						}
@@ -205,7 +243,6 @@ function initEventListeners() {
 					}
 				}
 			}
-			// Clean up for the next drag operation
 			dragSourceColumn = null;
 		});
 
@@ -268,10 +305,54 @@ function sortTasksInColumn(columnBodyEl) {
 }
 
 
-// --- Added for drag-and-drop counter fix ---
+// --- Added for task actions menu ---
+/**
+ * Closes any open task action menus.
+ */
+function closeAllTaskActionMenus() {
+	document.querySelectorAll('.task-actions-menu').forEach(menu => menu.remove());
+}
+
+/**
+ * Creates and displays the task actions menu.
+ * @param {HTMLElement} buttonEl - The '...' button that was clicked.
+ */
+function showTaskActionsMenu(buttonEl) {
+	closeAllTaskActionMenus(); // Close others before opening a new one
+	const taskCard = buttonEl.closest('.task-card');
+	if (!taskCard) return;
+
+	const menu = document.createElement('div');
+	menu.className = 'task-actions-menu';
+	menu.dataset.taskId = taskCard.dataset.taskId;
+
+	// For now, only the delete action is included.
+	menu.innerHTML = `
+		<button class="task-action-btn" data-action="delete">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+				<line x1="10" y1="11" x2="10" y2="17"/>
+				<line x1="14" y1="11" x2="14" y2="17"/>
+			</svg>
+			<span>Delete Task</span>
+		</button>
+	`;
+
+	document.body.appendChild(menu);
+
+	// Position the menu
+	const btnRect = buttonEl.getBoundingClientRect();
+	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
+	// Position menu to the right edge of the button
+	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
+
+	// Animate it in
+	setTimeout(() => menu.classList.add('visible'), 10);
+}
+
+
 /**
  * Updates the visual task count in a column's header.
- * @param {HTMLElement} columnEl - The .task-column element.
  */
 function updateColumnTaskCount(columnEl) {
 	if (!columnEl) return;
@@ -300,9 +381,33 @@ function updateMoveButtonVisibility() {
 	});
 }
 
+// Added for task delete
+/**
+ * Sends a request to delete a task.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+async function deleteTask(taskId) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'deleteTask',
+				data: { task_id: taskId }
+			})
+		});
+		const result = await response.json();
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Delete task error:', error);
+		return false;
+	}
+}
+
 /**
  * Sends a request to save the new order of all columns.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function reorderColumns(orderedColumnIds) {
 	try {
@@ -326,7 +431,6 @@ async function reorderColumns(orderedColumnIds) {
 
 /**
  * Sends a request to delete a column.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function deleteColumn(columnId) {
 	try {
@@ -350,7 +454,6 @@ async function deleteColumn(columnId) {
 
 /**
  * Sends a request to rename a column.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function renameColumn(columnId, newName) {
 	try {
@@ -378,7 +481,6 @@ async function renameColumn(columnId, newName) {
 
 /**
  * Sends the new order of tasks to the API.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function reorderTasks(columnId, tasks) {
 	try {
@@ -580,7 +682,7 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			const newTaskCardHTML = createTaskCard(result.data);
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
-			updateColumnTaskCount(columnEl); // Update count after adding a task
+			updateColumnTaskCount(columnEl);
 		} else {
 			alert(`Error: ${result.message}`);
 		}
@@ -697,6 +799,7 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
+// Modified for task actions menu
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	try {
@@ -712,11 +815,13 @@ function createTaskCard(taskData) {
 		classificationClass = `classification-${taskData.classification}`;
 	}
 
+	// The card is now a flex container to align the new actions button
 	return `
 		<div class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" data-task-id="${taskData.task_id}" draggable="true">
 			<div class="task-status-band"></div>
 			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
 			<span class="task-title">${taskTitle}</span>
+			<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 		</div>
 	`;
 }

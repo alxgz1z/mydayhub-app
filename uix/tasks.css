@@ -42,7 +42,6 @@
 	flex-grow: 1; /* Allows title to push count to the right */
 }
 
-/* --- Modified/Added for column reordering --- */
 .column-header-controls {
 	display: flex;
 	align-items: center;
@@ -79,7 +78,6 @@
 	padding: 2px;
 	cursor: pointer;
 	line-height: 0;
-	/* Opacity is now controlled by the parent container */
 }
 
 .btn-delete-column svg {
@@ -90,7 +88,6 @@
 .btn-delete-column:hover svg {
 	stroke: #e57373; /* A soft red for hover */
 }
-/* --- End of column reordering section --- */
 
 
 .task-count {
@@ -138,28 +135,37 @@
    3. TASK CARD STYLES
    ========================================================================== */
 
+/* Modified to fix status band height */
 .task-card {
 	display: flex;
-	align-items: stretch; /* Allows status band to stretch vertically */
+	align-items: center; /* Changed back to center */
 	background-color: var(--bg-color);
 	border: 1px solid var(--border-color);
 	padding: 0.75rem;
 	border-radius: 6px;
 	margin-bottom: 0.5rem;
+	gap: 0.75rem; /* Gap between band, checkbox, title, and button */
 }
 
+/* Modified to fix status band height */
 .task-status-band {
 	width: 12px;
+	height: 24px; /* Restored a fixed height */
 	background-color: var(--accent-color);
 	border-radius: 4px;
-	margin-right: 0.75rem;
+	/* Removed all margins */
 	cursor: pointer;
 	transition: background-color 0.2s ease-in-out, background 0.2s ease-in-out;
+	flex-shrink: 0; /* Prevent the band from shrinking */
 }
 
 .task-checkbox {
-	margin-right: 0.75rem;
-	align-self: center; /* Vertically center the checkbox */
+	align-self: center;
+}
+
+.task-title {
+	flex-grow: 1; /* Allow title to take up available space */
+	align-self: center;
 }
 
 .task-card.classification-signal .task-status-band {
@@ -171,7 +177,7 @@
 		45deg,
 		#007bff,
 		#007bff 3px,
-		rgba(0, 0, 0, 0.2) 3px,
+		rgba(0, 0, 0, 0.2) 3px, /* Darker, transparent stripe for texture */
 		rgba(0, 0, 0, 0.2) 4px
 	);
 }
@@ -249,4 +255,66 @@
 	.task-column {
 		width: 100%;
 	}
+}
+
+/* ==========================================================================
+   6. TASK ACTIONS MENU
+   ========================================================================== */
+
+.btn-task-actions {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 4px;
+	border-radius: 4px;
+	font-size: 1.2rem;
+	line-height: 1;
+	align-self: center;
+	transition: background-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.btn-task-actions:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+
+.task-actions-menu {
+	position: absolute;
+	background-color: var(--column-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 6px;
+	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+	z-index: 100;
+	padding: 5px;
+	min-width: 160px;
+	opacity: 0;
+	transform: scale(0.95) translateY(-5px);
+	transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+	transform-origin: top right;
+}
+
+.task-actions-menu.visible {
+	opacity: 1;
+	transform: scale(1) translateY(0);
+}
+
+.task-action-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	width: 100%;
+	background: none;
+	border: none;
+	color: var(--text-primary);
+	text-align: left;
+	padding: 8px 12px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.95rem;
+}
+
+.task-action-btn:hover {
+	background-color: var(--accent-color);
+	color: white;
 }
