@@ -227,7 +227,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
 * **Header:**
   * **Title:** Editable via double-click or an inline rename action.
   * **Task Count:** A live counter displaying the number of tasks in the column.
-  * **Actions:** Includes quick action buttons to delete the column (x) and shift it left/right (<, >), with < omitted in the leftmost column and > omitted in the rightmost.
+  * **Actions:** A set of controls (delete icon, <, >) appears on hover. These buttons allow deleting the column (with confirmation) and shifting it left/right. The directional buttons are hidden on the first and last columns respectively.
   * **Privacy:** A switch allows the user to mark the entire column as private. Private columns are visually distinguished by a subtle diagonal line pattern.
 * **Body:**
   * Displays all associated task cards.
@@ -260,7 +260,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Noise**: Orange — Activities that distract or have unclear value
   * **Completed**: Gray — finished tasks, archived at the bottom
 
-* **Actions Menu** (Ellipsis ... on hover)
+* **Actions Menu** (Vertical ellipsis ⋮ is always visible for mobile compatibility)
   * **Priority:** Flips priority normal -> high -> normal 
   * **Notes:** Opens notes editor, which are auto-saved.
   * **Due Date:** Opens a calendar picker to set or clear the due date.
@@ -591,25 +591,56 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   * uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. Requires task_id.
   * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
 
-### API Implementation tracking
-* Implemented API Actions:
-  * [RDY] register (in auth.php)
-  * [RDY] login (in auth.php)
-  * [RDY] getAll (in tasks.php)
-  * [RDY] createColumn (in tasks.php)
-  * [RDY] createTask (in tasks.php)
-  * [RDY] toggleComplete (in tasks.php)
-  * [RDY] reorderTasks (in tasks.php)
-* Future API Actions:
-  * [FUT] moveTask
-  * [FUT] reorderColumn
-  * [FUT] togglePriority
-  * [FUT] renateTask
-  * [FUT] deleteTask
-  * [FUT] duplicateTask
-  * [FUT] renameTaskTitle
-  * [FUT] deleteColumn
-  * [FUT] renameColumn
+### API IMPLEMENTATION TRACKING
+	Implemented API Actions:
+		[RDY] register (in auth.php)
+		[RDY] login (in auth.php)
+		[RDY] getAll (in tasks.php)
+		[RDY] createColumn (in tasks.php)
+		[RDY] createTask (in tasks.php)
+		[RDY] toggleComplete (in tasks.php)
+		[RDY] reorderTasks (in tasks.php)
+		[RDY] toggleClassification (in tasks.php)
+		[RDY] renameColumn (in tasks.php)
+		[RDY] deleteColumn (in tasks.php)
+		[RDY] reorderColumns (in tasks.php)
+		[RDY] deleteTask (in tasks.php)
+		[RDY] renameTaskTitle (in tasks.php)
+	Future API Actions:
+		[FUT] moveTask
+		[FUT] togglePriority
+		[FUT] duplicateTask
+		[FUT] shareTask / revokeShare
+		[FUT] getAttachments / uploadAttachment / deleteAttachment
+	
+### UI Implementation tracking
+	Implemented UI Features:
+		[RDY] User Registration page
+		[RDY] User Login page
+		[RDY] Responsive board layout (desktop/mobile)
+		[RDY] Board rendering from getAll API
+		[RDY] Create Column (inline form)
+		[RDY] Rename Column (double-click)
+		[RDY] Delete Column (hover button with confirmation)
+		[RDY] Reorder Columns (hover buttons)
+		[RDY] Create Task (footer input)
+		[RDY] Rename Task Title (double-click)
+		[RDY] Toggle Task Completion (checkbox)
+		[RDY] Task Drag-and-Drop (within and between columns)
+		[RDY] Task Classification (clicking status band)
+		[RDY] Enforced Task Sorting by classification
+		[RDY] Task Actions Menu (⋮ button)
+		[RDY] Delete Task (from actions menu with confirmation)
+	Future UI Features:
+		[FUT] Duplicate Task (from actions menu)
+		[FUT] Custom modals/toasts to replace native alerts
+		[FUT] Bottom toolbar with filters
+		[FUT] Settings slider panel
+		[FUT] Task Notes integration (Unified Editor)
+		[FUT] Due Date picker
+		[FUT] Sharing UI
+		[FUT] Privacy toggles
+		[FUT] Attachments UI (drop zone, gallery)
 
 ## FRONT END ARCHITECTURE
 

@@ -24,8 +24,6 @@ function initTasksView() {
 function initEventListeners() {
 	// Global click listener to close dynamic menus
 	document.addEventListener('click', (e) => {
-		// Added for task actions menu
-		// Close task menus if clicking outside
 		if (e.target.closest('.task-actions-menu') === null && e.target.closest('.btn-task-actions') === null) {
 			closeAllTaskActionMenus();
 		}
@@ -65,7 +63,6 @@ function initEventListeners() {
 
 		// Combined listener for various clicks within the board
 		boardContainer.addEventListener('click', async (e) => {
-			// Handle cycling task classification
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
@@ -75,7 +72,6 @@ function initEventListeners() {
 				return;
 			}
 
-			// Handle deleting a column
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
 				const columnEl = deleteBtn.closest('.task-column');
@@ -95,7 +91,6 @@ function initEventListeners() {
 				return;
 			}
 			
-			// Handle moving a column
 			const moveBtn = e.target.closest('.btn-move-column');
 			if (moveBtn) {
 				const direction = moveBtn.dataset.direction;
@@ -125,8 +120,6 @@ function initEventListeners() {
 				return;
 			}
 			
-			// Added for task actions menu
-			// Handle opening the task actions menu
 			const actionsBtn = e.target.closest('.btn-task-actions');
 			if (actionsBtn) {
 				showTaskActionsMenu(actionsBtn);
@@ -134,8 +127,6 @@ function initEventListeners() {
 			}
 		});
 		
-		// Listener for actions within a dynamically created menu (delegated from body)
-		// Added for task delete
 		document.body.addEventListener('click', async (e) => {
 			const deleteAction = e.target.closest('.task-action-btn[data-action="delete"]');
 			if (deleteAction) {
@@ -159,8 +150,9 @@ function initEventListeners() {
 			}
 		});
 
-
+		// Modified for task title rename
 		boardContainer.addEventListener('dblclick', (e) => {
+			// Handle column title rename
 			if (e.target.matches('.column-title')) {
 				const titleEl = e.target;
 				const columnEl = titleEl.closest('.task-column');
@@ -197,6 +189,56 @@ function initEventListeners() {
 					if (!success) {
 						titleEl.textContent = originalTitle;
 						alert('Error: Could not rename column.');
+					}
+				};
+
+				input.addEventListener('blur', commitChange);
+				input.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') {
+						commitChange();
+					} else if (e.key === 'Escape') {
+						finalized = true;
+						input.replaceWith(titleEl);
+					}
+				});
+			} 
+			// Handle task title rename
+			else if (e.target.matches('.task-title')) {
+				const titleEl = e.target;
+				const taskCard = titleEl.closest('.task-card');
+				const taskId = taskCard.dataset.taskId;
+				const originalTitle = titleEl.textContent;
+
+				const input = document.createElement('input');
+				input.type = 'text';
+				input.value = originalTitle;
+				input.className = 'inline-edit-input';
+
+				titleEl.replaceWith(input);
+				input.focus();
+				input.select();
+
+				let finalized = false;
+
+				const commitChange = async () => {
+					if (finalized) return;
+					finalized = true;
+					
+					const newTitle = input.value.trim();
+
+					if (newTitle === '' || newTitle === originalTitle) {
+						input.replaceWith(titleEl);
+						return;
+					}
+
+					titleEl.textContent = newTitle;
+					input.replaceWith(titleEl);
+
+					const success = await renameTaskTitle(taskId, newTitle);
+
+					if (!success) {
+						titleEl.textContent = originalTitle;
+						alert('Error: Could not rename task.');
 					}
 				};
 
@@ -305,7 +347,6 @@ function sortTasksInColumn(columnBodyEl) {
 }
 
 
-// --- Added for task actions menu ---
 /**
  * Closes any open task action menus.
  */
@@ -315,10 +356,9 @@ function closeAllTaskActionMenus() {
 
 /**
  * Creates and displays the task actions menu.
- * @param {HTMLElement} buttonEl - The '...' button that was clicked.
  */
 function showTaskActionsMenu(buttonEl) {
-	closeAllTaskActionMenus(); // Close others before opening a new one
+	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
 	if (!taskCard) return;
 
@@ -326,7 +366,6 @@ function showTaskActionsMenu(buttonEl) {
 	menu.className = 'task-actions-menu';
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
-	// For now, only the delete action is included.
 	menu.innerHTML = `
 		<button class="task-action-btn" data-action="delete">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -340,13 +379,10 @@ function showTaskActionsMenu(buttonEl) {
 
 	document.body.appendChild(menu);
 
-	// Position the menu
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
-	// Position menu to the right edge of the button
 	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
 
-	// Animate it in
 	setTimeout(() => menu.classList.add('visible'), 10);
 }
 
@@ -381,10 +417,8 @@ function updateMoveButtonVisibility() {
 	});
 }
 
-// Added for task delete
 /**
  * Sends a request to delete a task.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function deleteTask(taskId) {
 	try {
@@ -474,6 +508,34 @@ async function renameColumn(columnId, newName) {
 		return result.status === 'success';
 	} catch (error) {
 		console.error('Rename column error:', error);
+		return false;
+	}
+}
+
+// Added for task title rename
+/**
+ * Sends a request to rename a task's title.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+async function renameTaskTitle(taskId, newTitle) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'renameTaskTitle',
+				data: {
+					task_id: taskId,
+					new_title: newTitle
+				}
+			})
+		});
+		const result = await response.json();
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Rename task title error:', error);
 		return false;
 	}
 }
@@ -799,7 +861,6 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
-// Modified for task actions menu
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	try {
@@ -815,7 +876,6 @@ function createTaskCard(taskData) {
 		classificationClass = `classification-${taskData.classification}`;
 	}
 
-	// The card is now a flex container to align the new actions button
 	return `
 		<div class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" data-task-id="${taskData.task_id}" draggable="true">
 			<div class="task-status-band"></div>

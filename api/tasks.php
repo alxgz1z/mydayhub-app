@@ -52,10 +52,16 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 		
-		// Added for task delete
 		case 'deleteTask':
 			if ($method === 'POST') {
 				handle_delete_task($pdo, $userId, $data);
+			}
+			break;
+
+		// Added for task title rename
+		case 'renameTaskTitle':
+			if ($method === 'POST') {
+				handle_rename_task_title($pdo, $userId, $data);
 			}
 			break;
 
@@ -536,7 +542,6 @@ function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Deletes a task and re-compacts the positions of remaining tasks in its column.
  */
-// Added for task delete
 function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 
@@ -549,7 +554,6 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		// Step 1: Find the task to get its column_id and verify ownership
 		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$task = $stmt_find->fetch();
@@ -562,11 +566,9 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		$columnId = $task['column_id'];
 
-		// Step 2: Delete the task
 		$stmt_delete = $pdo->prepare("DELETE FROM tasks WHERE task_id = :taskId AND user_id = :userId");
 		$stmt_delete->execute([':taskId' => $taskId, ':userId' => $userId]);
 
-		// Step 3: Re-compact the positions of remaining tasks in the same column
 		$stmt_get_tasks = $pdo->prepare(
 			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId ORDER BY position ASC"
 		);
@@ -590,5 +592,69 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the task.']);
+	}
+}
+
+/**
+ * Renames a task's title by updating its encrypted_data JSON blob.
+ */
+// Added for task title rename
+function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$newTitle = isset($data['new_title']) ? trim($data['new_title']) : '';
+
+	if ($taskId <= 0 || $newTitle === '') {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Task ID and a non-empty new title are required.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		$stmt_find = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt_find->fetch();
+
+		if ($task === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.']);
+			return;
+		}
+
+		$currentData = json_decode($task['encrypted_data'], true);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			// If JSON is corrupted, start fresh but log the error.
+			if (defined('DEVMODE') && DEVMODE) {
+				error_log("Corrupted JSON found for task_id: {$taskId}. Data: " . $task['encrypted_data']);
+			}
+			$currentData = [];
+		}
+
+		$currentData['title'] = $newTitle;
+		$newDataJson = json_encode($currentData);
+
+		$stmt_update = $pdo->prepare(
+			"UPDATE tasks SET encrypted_data = :newDataJson WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt_update->execute([
+			':newDataJson' => $newDataJson,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success']);
+
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_rename_task_title(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while renaming the task.']);
 	}
 }

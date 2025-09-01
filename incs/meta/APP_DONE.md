@@ -430,3 +430,31 @@ Both the local and remote environments are now fully functional and in sync. The
 2.  **Implement Task Classification:** Begin work on the "Signal/Support/Noise" feature, which is a core part of the application's value proposition.
 3.  **Build Column & Task Actions:** Implement the dropdown/context menus for columns and tasks (Rename, Delete, Duplicate, etc.).
 
+---
+## 2025-09-01 01:00 — Task & Column Management Overhaul
+
+**Focus**
+To build out the core management features for the Tasks View, making both columns and tasks fully interactive and persistent, and to complete the Task Classification system with enforced sorting.
+
+**Key work**
+* **Task Classification System:** Implemented the full stack for Signal/Support/Noise classification, including the backend API, frontend click-to-cycle logic, and CSS for color-coding. An accessibility pattern (stripes) was added to the "Support" band.
+* **Enforced Sorting:** Integrated a robust sorting function into `tasks.js`. The `Signal > Support > Noise > Completed` hierarchy is now automatically enforced on page load, task creation, classification changes, and after every drag-and-drop operation.
+* **Column Management:**
+  * **Rename:** Column titles can now be edited in-line with a double-click.
+  * **Delete:** A hover-activated delete button with a confirmation prompt is now functional. The backend safely deletes the column and its tasks within a transaction.
+  * **Reorder:** Hover-activated `<` and `>` buttons allow for reordering columns, with logic to hide buttons at the edges of the board.
+* **Task Management:**
+  * **Actions Menu:** An always-visible "..." button now appears on each task card, which opens a contextual menu.
+  * **Delete Task:** The actions menu contains a functional "Delete" button with a confirmation prompt. The backend removes the task and re-compacts the positions of remaining tasks in the column.
+  * **Rename Task:** Task titles are now editable in-line with a double-click, using the same pattern as column renaming.
+* **Bug Fixes:**
+  * Fixed a critical bug where the task counter for the source column would not update after a cross-column drag-and-drop.
+  * Corrected several CSS bugs related to the task status band's height and appearance.
+
+**Status**
+The Tasks View is now highly functional and aligns closely with the core spec. All primary column and task management actions (Create, Read, Update, Delete) are implemented and persisted. The board is stable and interactive, providing a solid foundation for the remaining task-level features.
+
+**Recommended next steps (priority order)**
+1.  **Expand Task Actions Menu:** The menu foundation is built. The next logical step is to add the "Duplicate Task" action, which was a core feature in Beta 4.
+2.  **Enhance UI Feedback:** Replace the native browser `confirm()` and `alert()` pop-ups with custom, non-blocking modals and toast notifications as defined in the spec for a more polished user experience.
+3.  **Implement Task Details:** Add support for task notes and due dates, which are key features listed in the spec. This would involve extending the task actions menu and potentially integrating a more advanced editor or date picker.
