@@ -31,8 +31,9 @@ $username = $_SESSION['username'] ?? 'User';
 <html lang="en">
 <head>
 	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale-1.0">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>MyDayHub</title>
+	<link rel="icon" type="image/svg+xml" href="media/logo.svg">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 
@@ -50,9 +51,7 @@ $username = $_SESSION['username'] ?? 'User';
 		<header id="app-header">
 			<div class="header-left">
 				<h1 id="app-title">MyDayHub</h1>
-				<nav class="view-tabs">
-					<button class="view-tab active" data-view="tasks">Tasks</button>
-				</nav>
+				<img src="media/logo.svg" alt="MyDayHub Logo" id="header-logo">
 			</div>
 			<div class="header-right">
 				<div id="add-column-container">

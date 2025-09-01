@@ -127,16 +127,20 @@ function initEventListeners() {
 			}
 		});
 		
+		// Modified for task duplication
 		document.body.addEventListener('click', async (e) => {
-			const deleteAction = e.target.closest('.task-action-btn[data-action="delete"]');
-			if (deleteAction) {
-				const menu = deleteAction.closest('.task-actions-menu');
-				const taskId = menu.dataset.taskId;
-				const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-				const columnEl = taskCard.closest('.task-column');
+			const actionButton = e.target.closest('.task-action-btn');
+			if (!actionButton) return;
 
-				closeAllTaskActionMenus();
+			const menu = actionButton.closest('.task-actions-menu');
+			const taskId = menu.dataset.taskId;
+			const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+			const columnEl = taskCard.closest('.task-column');
+			const action = actionButton.dataset.action;
 
+			closeAllTaskActionMenus();
+
+			if (action === 'delete') {
 				const confirmed = confirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
 					const success = await deleteTask(taskId);
@@ -145,6 +149,19 @@ function initEventListeners() {
 						updateColumnTaskCount(columnEl);
 					} else {
 						alert('Error: Could not delete task.');
+					}
+				}
+			} else if (action === 'duplicate') {
+				if (taskId) {
+					const newTaskData = await duplicateTask(taskId);
+					if (newTaskData) {
+						const columnBody = columnEl.querySelector('.column-body');
+						const newTaskCardHTML = createTaskCard(newTaskData);
+						columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+						updateColumnTaskCount(columnEl);
+						sortTasksInColumn(columnBody);
+					} else {
+						alert('Error: Could not duplicate the task.');
 					}
 				}
 			}
@@ -357,6 +374,7 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
+// Modified for task duplication
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -367,6 +385,13 @@ function showTaskActionsMenu(buttonEl) {
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
 	menu.innerHTML = `
+		<button class="task-action-btn" data-action="duplicate">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+				<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+			</svg>
+			<span>Duplicate Task</span>
+		</button>
 		<button class="task-action-btn" data-action="delete">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -416,6 +441,35 @@ function updateMoveButtonVisibility() {
 		}
 	});
 }
+
+// Added for task duplication
+/**
+ * Sends a request to duplicate a task.
+ * @returns {Promise<Object|null>} - The new task data object if successful, null otherwise.
+ */
+async function duplicateTask(taskId) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'duplicateTask',
+				data: { task_id: taskId }
+			})
+		});
+		const result = await response.json();
+		if (result.status === 'success') {
+			return result.data;
+		}
+		return null;
+	} catch (error) {
+		console.error('Duplicate task error:', error);
+		return null;
+	}
+}
+
 
 /**
  * Sends a request to delete a task.

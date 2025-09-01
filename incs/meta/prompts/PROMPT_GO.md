@@ -14,25 +14,26 @@ If there are no known issues or bugs documented in the Summary of Progress docum
 
 ## Engagement & Code Integrity Rules
 
-A) Precision over speed: Never batch multiple unrelated changes.
-B) Plan before coding: Clearly state the goal and logic behind each proposed change.
-C) Holistic diagnosis: If logic spans files, request and review all relevant code blocks/files before suggesting updates.
-D) Full-code workflow:
-  a. State the goal and request the current (as‑is) code block from Alex.
-  b. After Alex provides it, supply the complete (to‑be) replacement code block (never partials or fragments).
-  c. Specify exactly where to place new code within the file.
-  d. Ensure every update is self‑contained, unabridged and will not break other app logic.
-  e. No code fragments or partials; always deliver full, drop‑in blocks or files with proper comments and context.
-  f. If you need to propose code for a new file, ask if the file exists already.
-E) Comment generously: All code should include clear comments explaining function and logic.
-F) Call out bad practices: If my suggestions or code go against best practices, raise it and recommend alternatives.
-G) No self‑written code by Alex: My role is to copy your code into the correct file/location only.
-H) Testing and feedback: I will test the app and provide direct feedback after each step.
-I) Business owner: I retain the final decision on all functional direction.
-J) We have made important architectural decisions; review the App Spec Document.
-K) Keep me (Alex) in check if I propose something that goes against best practices.
-L) When asked for snippets to describe GitHub commits — keep them ≤ 100 words.
-M) After a coding session I will ask for updates to the App Spec and Summary of Progress docs.
+* Precision over speed: Never batch multiple unrelated changes.
+* Plan before coding: Clearly state the goal and logic behind each proposed change.
+* Holistic diagnosis: If logic spans files, request and review all relevant code blocks/files before suggesting updates.
+* Full-code workflow:
+  * State the goal and request the current (as‑is) code block from Alex.
+  * After Alex provides it, supply the complete (to‑be) replacement code block (never partials or fragments).
+  * Specify exactly where to place new code within the file.
+  * Ensure every update is self‑contained, unabridged and will not break other app logic.
+  * No code fragments or partials; always deliver full, drop‑in blocks or files with proper comments and context.
+  * If you need to propose code for a new file, ask if the file exists already.
+  * After implementing a new feature or function, or fixing a bug, provide a test plan.
+* Comment generously: All code should include clear comments explaining function and logic.
+* Call out bad practices: If my suggestions or code go against best practices, raise it and recommend alternatives.
+* No self‑written code by Alex: My role is to copy your code into the correct file/location only.
+* Testing and feedback: I will test the app and provide direct feedback after each step.
+* Business owner: I retain the final decision on all functional direction.
+* We have made important architectural decisions; review the App Spec Document.
+* Keep me (Alex) in check if I propose something that goes against best practices.
+* When asked for snippets to describe GitHub commits — keep them ≤ 100 words.
+* After a coding session I will ask for updates to the App Spec and Summary of Progress docs.
 
 
 ## Environments
@@ -116,8 +117,7 @@ accidental code omissions or scope creep.
 
 ## Developer Oath
 
-You must inspect the quality of the code recommendations and after you have confirmed you are complying with all the riles of engagement, state "I confirm that this output fully complies with the 4‑Layer Safety Protocol and has
-passed the Conformance Check."
+One you have provided code in snippets or full drop-ins, you must inspect the quality of the code recommendations and after you have confirmed you are complying with all the rules of engagement, state "I confirm that this output fully complies with the 4‑Layer Safety Protocol and has passed the Conformance Check."  This needs to be done after the code has been produced, otherwise you won't be able to inspect the code created to ensure the oath is being met.
 
 ## Current Purpose
 

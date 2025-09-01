@@ -58,10 +58,16 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
-		// Added for task title rename
 		case 'renameTaskTitle':
 			if ($method === 'POST') {
 				handle_rename_task_title($pdo, $userId, $data);
+			}
+			break;
+
+		// Added for task duplication
+		case 'duplicateTask':
+			if ($method === 'POST') {
+				handle_duplicate_task($pdo, $userId, $data);
 			}
 			break;
 
@@ -598,7 +604,6 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Renames a task's title by updating its encrypted_data JSON blob.
  */
-// Added for task title rename
 function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	$newTitle = isset($data['new_title']) ? trim($data['new_title']) : '';
@@ -656,5 +661,84 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while renaming the task.']);
+	}
+}
+
+// Added for task duplication
+/**
+ * Duplicates a task, placing the copy at the bottom of the same column.
+ */
+function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid Task ID.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Step 1: Fetch the original task's data
+		$stmt_find = $pdo->prepare(
+			"SELECT column_id, encrypted_data, classification FROM tasks WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$originalTask = $stmt_find->fetch(PDO::FETCH_ASSOC);
+
+		if ($originalTask === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task to duplicate not found or you do not have permission.']);
+			return;
+		}
+		
+		$columnId = $originalTask['column_id'];
+		$encryptedData = $originalTask['encrypted_data'];
+		$classification = $originalTask['classification'];
+
+		// Step 2: Determine the new position (at the end of the column)
+		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_pos->execute([':columnId' => $columnId, ':userId' => $userId]);
+		$newPosition = (int)$stmt_pos->fetchColumn();
+
+		// Step 3: Insert the new (duplicated) task
+		$stmt_insert = $pdo->prepare(
+			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification) 
+			 VALUES (:userId, :columnId, :encryptedData, :position, :classification)"
+		);
+		$stmt_insert->execute([
+			':userId' => $userId,
+			':columnId' => $columnId,
+			':encryptedData' => $encryptedData,
+			':position' => $newPosition,
+			':classification' => $classification
+		]);
+
+		$newTaskId = (int)$pdo->lastInsertId();
+
+		$pdo->commit();
+
+		// Step 4: Respond with the complete new task object
+		http_response_code(201);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'task_id' => $newTaskId,
+				'column_id' => $columnId,
+				'encrypted_data' => $encryptedData,
+				'position' => $newPosition,
+				'classification' => $classification
+			]
+		]);
+
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_duplicate_task(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while duplicating the task.']);
 	}
 }

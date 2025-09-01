@@ -66,7 +66,14 @@ body {
 /* ==========================================================================
    3. HEADER & FOOTER COMPONENTS
    ========================================================================== */
-.header-left, .header-right, .footer-left, .footer-center, .footer-right {
+/* Modified for Logo Position */
+.header-left {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem; /* Adjusted gap for a tighter look */
+}
+
+.header-right, .footer-left, .footer-center, .footer-right {
 	display: flex;
 	align-items: center;
 	gap: 1rem;
@@ -76,7 +83,20 @@ body {
 	font-size: 1.5rem;
 	font-weight: 500;
 	margin: 0;
+	/* Modified for Logo Position */
+	order: 2; /* Renders the title after the logo */
 }
+
+/* Modified for Logo & Favicon */
+#header-logo {
+	height: 28px; /* Align with the visual height of the title */
+	width: auto;
+	vertical-align: middle;
+	/* Modified for Logo Position & Color */
+	order: 1; /* Renders the logo before the title */
+	color: var(--accent-color); /* Applies accent color to the SVG's 'currentColor' stroke */
+}
+
 
 .view-tabs {
 	display: flex;
