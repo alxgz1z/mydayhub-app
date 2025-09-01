@@ -57,7 +57,6 @@ function initEventListeners() {
 			}
 		});
 
-		// Added for Task Classification
 		// Listener for cycling task classification
 		boardContainer.addEventListener('click', (e) => {
 			if (e.target.matches('.task-status-band')) {
@@ -75,11 +74,15 @@ function initEventListeners() {
 			}
 		});
 
+		// Modified for enforced sorting
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
 				const columnEl = e.target.closest('.task-column');
 				if (columnEl) {
+					// Enforce sort order visually before sending to the backend
+					sortTasksInColumn(columnEl.querySelector('.column-body'));
+
 					const columnId = columnEl.dataset.columnId;
 					const tasks = Array.from(columnEl.querySelectorAll('.task-card'));
 					const taskIds = tasks.map(card => card.dataset.taskId);
@@ -91,6 +94,9 @@ function initEventListeners() {
 						if (countSpan) {
 							countSpan.textContent = tasks.length;
 						}
+					} else {
+						// If persistence fails, fetch the board again to revert to the last saved state
+						fetchAndRenderBoard();
 					}
 				}
 			}
@@ -128,6 +134,38 @@ function getDragAfterElement(container, y) {
 		}
 	}, { offset: Number.NEGATIVE_INFINITY }).element;
 }
+
+// --- Added for enforced sorting ---
+/**
+ * Gets the numerical rank of a task card based on its classification.
+ * Lower numbers are sorted higher.
+ * @param {HTMLElement} taskEl - The task card element.
+ * @returns {number} The sorting rank.
+ */
+const getTaskRank = (taskEl) => {
+	if (taskEl.classList.contains('completed')) return 3;
+	if (taskEl.classList.contains('classification-signal')) return 0;
+	if (taskEl.classList.contains('classification-support')) return 1;
+	if (taskEl.classList.contains('classification-noise')) return 2;
+	return 1; // Default to 'support' rank
+};
+
+/**
+ * Sorts the tasks within a column's body based on their classification rank.
+ * @param {HTMLElement} columnBodyEl - The .column-body element containing task cards.
+ */
+function sortTasksInColumn(columnBodyEl) {
+	if (!columnBodyEl) return;
+	const tasks = Array.from(columnBodyEl.querySelectorAll('.task-card'));
+	
+	tasks.sort((a, b) => {
+		const rankA = getTaskRank(a);
+		const rankB = getTaskRank(b);
+		return rankA - rankB;
+	}).forEach(task => columnBodyEl.appendChild(task));
+}
+// --- End of enforced sorting section ---
+
 
 /**
  * Sends the new order of tasks to the API.
@@ -185,13 +223,13 @@ async function toggleTaskComplete(taskId, isComplete) {
 
 		if (result.status === 'success') {
 			taskCard.classList.toggle('completed', isComplete);
-			// If a task is marked as complete, remove other classification styles
 			if (isComplete) {
 				taskCard.classList.remove('classification-signal', 'classification-support', 'classification-noise');
 			} else {
-				// If it's un-checked, it defaults back to support. Let's add the class back.
 				taskCard.classList.add('classification-support');
 			}
+			// Modified for enforced sorting
+			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
 			alert(`Error: ${result.message}`);
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
@@ -203,7 +241,6 @@ async function toggleTaskComplete(taskId, isComplete) {
 	}
 }
 
-// Added for Task Classification
 /**
  * Cycles a task's classification by calling the API and updating the UI.
  * @param {string} taskId - The ID of the task to update.
@@ -225,11 +262,10 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 		const result = await response.json();
 
 		if (result.status === 'success') {
-			// Remove all possible classification classes first to avoid conflicts
 			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-noise');
-			
-			// Add the new class based on the response from the server
 			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
+			// Modified for enforced sorting
+			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
 			alert(`Error: ${result.message}`);
 		}
@@ -337,6 +373,8 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			}
 			const newTaskCardHTML = createTaskCard(result.data);
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+			// Modified for enforced sorting
+			sortTasksInColumn(columnBody);
 		} else {
 			alert(`Error: ${result.message}`);
 		}
@@ -402,6 +440,9 @@ function renderBoard(boardData) {
 	boardData.forEach(columnData => {
 		const columnEl = createColumnElement(columnData);
 		container.appendChild(columnEl);
+		// Modified for enforced sorting
+		const columnBody = columnEl.querySelector('.column-body');
+		sortTasksInColumn(columnBody);
 	});
 }
 
@@ -438,7 +479,6 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
-// Modified for Task Classification
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	try {
