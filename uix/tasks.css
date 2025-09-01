@@ -86,9 +86,10 @@
    3. TASK CARD STYLES
    ========================================================================== */
 
+/* Modified for improved UI */
 .task-card {
 	display: flex;
-	align-items: center;
+	align-items: stretch; /* Allows status band to stretch vertically */
 	background-color: var(--bg-color);
 	border: 1px solid var(--border-color);
 	padding: 0.75rem;
@@ -96,19 +97,20 @@
 	margin-bottom: 0.5rem;
 }
 
-/* Modified for Task Classification */
+/* Modified for improved UI */
 .task-status-band {
-	width: 4px;
-	height: 24px;
+	width: 12px; /* Increased width for better clickability */
+	/* Removed fixed height to allow stretching */
 	background-color: var(--accent-color); /* Default color */
-	border-radius: 2px;
+	border-radius: 4px;
 	margin-right: 0.75rem;
 	cursor: pointer; /* Indicates the band is clickable */
-	transition: background-color 0.2s ease-in-out; /* Smooth color change */
+	transition: background-color 0.2s ease-in-out, background 0.2s ease-in-out; /* Smooth color change */
 }
 
 .task-checkbox {
 	margin-right: 0.75rem;
+	align-self: center; /* Vertically center the checkbox */
 }
 
 /* Added for Task Classification */
@@ -117,8 +119,16 @@
 	background-color: #28a745; /* Green */
 }
 
+/* Modified for accessibility */
 .task-card.classification-support .task-status-band {
-	background-color: #007bff; /* Blue */
+	/* A repeating gradient creates a subtle diagonal stripe pattern */
+	background: repeating-linear-gradient(
+		45deg,
+		#007bff,
+		#007bff 3px,
+		rgba(0, 0, 0, 0.2) 3px, /* Darker, transparent stripe for texture */
+		rgba(0, 0, 0, 0.2) 4px
+	);
 }
 
 .task-card.classification-noise .task-status-band {
