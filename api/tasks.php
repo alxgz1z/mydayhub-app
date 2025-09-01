@@ -55,8 +55,9 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 }
 
 /**
- * Reorders tasks within a column.
+ * Reorders tasks within a column and handles moving tasks between columns.
  */
+// Modified for cross-column DnD
 function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_id']) || !isset($data['tasks'])) {
 		http_response_code(400);
@@ -65,19 +66,32 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	}
 
 	$columnId = (int)$data['column_id'];
-	$tasks = $data['tasks'];
+	$taskIds = $data['tasks'];
+
+	// Ensure tasks is an array
+	if (!is_array($taskIds)) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Tasks must be an array.']);
+		return;
+	}
 
 	try {
 		$pdo->beginTransaction();
 
-		$stmt = $pdo->prepare("UPDATE tasks SET position = :position WHERE task_id = :taskId AND user_id = :userId AND column_id = :columnId");
+		// This new query updates the column_id as well as the position.
+		// It finds the task by its ID and user ID alone, allowing it to move columns.
+		$stmt = $pdo->prepare(
+			"UPDATE tasks 
+			 SET position = :position, column_id = :columnId 
+			 WHERE task_id = :taskId AND user_id = :userId"
+		);
 
-		foreach ($tasks as $position => $taskId) {
+		foreach ($taskIds as $position => $taskId) {
 			$stmt->execute([
-				':position' => $position,
-				':taskId' => (int)$taskId,
-				':userId' => $userId,
-				':columnId' => $columnId
+				':position'  => $position,
+				':columnId'  => $columnId,
+				':taskId'    => (int)$taskId,
+				':userId'    => $userId
 			]);
 		}
 

@@ -63,7 +63,6 @@ try {
 	switch ($module) {
 		case 'tasks':
 			require_once __DIR__ . '/tasks.php';
-			// Modified for better routing
 			// The handler will now route the specific action.
 			handle_tasks_action($action, $method, $pdo, $userId, $data);
 			break;

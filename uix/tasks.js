@@ -61,14 +61,27 @@ function initEventListeners() {
 			}
 		});
 
-		boardContainer.addEventListener('dragend', (e) => {
+		// Modified for DnD Persistence
+		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
 				const columnEl = e.target.closest('.task-column');
 				if (columnEl) {
 					const columnId = columnEl.dataset.columnId;
-					const tasks = Array.from(columnEl.querySelectorAll('.task-card')).map(card => card.dataset.taskId);
-					reorderTasks(columnId, tasks);
+					const tasks = Array.from(columnEl.querySelectorAll('.task-card'));
+					const taskIds = tasks.map(card => card.dataset.taskId);
+					
+					// Await the result of the API call
+					const success = await reorderTasks(columnId, taskIds);
+					
+					// Update the UI only on successful persistence
+					if (success) {
+						const countSpan = columnEl.querySelector('.task-count');
+						if (countSpan) {
+							countSpan.textContent = tasks.length;
+						}
+					}
+					// On failure, reorderTasks already shows an alert. A future improvement could be to revert the visual change.
 				}
 			}
 		});
@@ -108,7 +121,9 @@ function getDragAfterElement(container, y) {
 
 /**
  * Sends the new order of tasks to the API.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
+// Modified for DnD Persistence
 async function reorderTasks(columnId, tasks) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
@@ -120,7 +135,7 @@ async function reorderTasks(columnId, tasks) {
 				action: 'reorderTasks',
 				data: {
 					column_id: columnId,
-					tasks: tasks
+					tasks: tasks // This should be an array of task IDs
 				}
 			})
 		});
@@ -129,10 +144,13 @@ async function reorderTasks(columnId, tasks) {
 
 		if (result.status !== 'success') {
 			alert(`Error: ${result.message}`);
+			return false; // Indicate failure
 		}
+		return true; // Indicate success
 	} catch (error) {
 		alert('A network error occurred. Please try again.');
 		console.error('Reorder tasks error:', error);
+		return false; // Indicate failure
 	}
 }
 
