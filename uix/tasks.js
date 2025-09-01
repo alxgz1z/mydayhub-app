@@ -8,6 +8,9 @@
  * @author Alex & Gemini
  */
 
+// Modified for drag-and-drop counter fix
+let dragSourceColumn = null;
+
 /**
  * Initializes the Tasks view by fetching and rendering the board.
  */
@@ -28,7 +31,6 @@ function initEventListeners() {
 
 	const boardContainer = document.getElementById('task-board-container');
 	if (boardContainer) {
-		// Listener for creating a new task
 		boardContainer.addEventListener('keypress', async (e) => {
 			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
 				e.preventDefault();
@@ -44,7 +46,6 @@ function initEventListeners() {
 			}
 		});
 
-		// Listener for toggling task completion
 		boardContainer.addEventListener('change', async (e) => {
 			if (e.target.matches('.task-checkbox')) {
 				const checkbox = e.target;
@@ -57,10 +58,7 @@ function initEventListeners() {
 			}
 		});
 
-		// Combined listener for various clicks within the board
-		// Modified for column delete
 		boardContainer.addEventListener('click', async (e) => {
-			// Handle cycling task classification
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
@@ -70,7 +68,6 @@ function initEventListeners() {
 				return;
 			}
 
-			// Handle deleting a column
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
 				const columnEl = deleteBtn.closest('.task-column');
@@ -82,15 +79,44 @@ function initEventListeners() {
 					const success = await deleteColumn(columnId);
 					if (success) {
 						columnEl.remove();
+						updateMoveButtonVisibility();
 					} else {
 						alert('Error: Could not delete the column.');
 					}
 				}
 				return;
 			}
+
+			const moveBtn = e.target.closest('.btn-move-column');
+			if (moveBtn) {
+				const direction = moveBtn.dataset.direction;
+				const columnEl = moveBtn.closest('.task-column');
+				const container = columnEl.parentElement;
+
+				if (direction === 'left') {
+					const prevEl = columnEl.previousElementSibling;
+					if (prevEl) {
+						container.insertBefore(columnEl, prevEl);
+					}
+				} else if (direction === 'right') {
+					const nextEl = columnEl.nextElementSibling;
+					if (nextEl) {
+						container.insertBefore(nextEl, columnEl);
+					}
+				}
+
+				updateMoveButtonVisibility();
+
+				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
+				const success = await reorderColumns(orderedColumnIds);
+				if (!success) {
+					alert('Error: Could not save new column order.');
+					fetchAndRenderBoard();
+				}
+				return;
+			}
 		});
 
-		// Listener for in-line editing of column titles
 		boardContainer.addEventListener('dblclick', (e) => {
 			if (e.target.matches('.column-title')) {
 				const titleEl = e.target;
@@ -143,35 +169,44 @@ function initEventListeners() {
 			}
 		});
 
+		// Modified for drag-and-drop counter fix
 		boardContainer.addEventListener('dragstart', (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.add('dragging');
+				// Remember the column where the drag started
+				dragSourceColumn = e.target.closest('.task-column');
 			}
 		});
 
+		// Modified for drag-and-drop counter fix
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
-				const columnEl = e.target.closest('.task-column');
-				if (columnEl) {
-					sortTasksInColumn(columnEl.querySelector('.column-body'));
+				const destinationColumn = e.target.closest('.task-column');
 
-					const columnId = columnEl.dataset.columnId;
-					const tasks = Array.from(columnEl.querySelectorAll('.task-card'));
+				if (destinationColumn) {
+					sortTasksInColumn(destinationColumn.querySelector('.column-body'));
+
+					const columnId = destinationColumn.dataset.columnId;
+					const tasks = Array.from(destinationColumn.querySelectorAll('.task-card'));
 					const taskIds = tasks.map(card => card.dataset.taskId);
 					
 					const success = await reorderTasks(columnId, taskIds);
 					
 					if (success) {
-						const countSpan = columnEl.querySelector('.task-count');
-						if (countSpan) {
-							countSpan.textContent = tasks.length;
+						// Update counter for the destination column
+						updateColumnTaskCount(destinationColumn);
+						// If the task moved from another column, update its counter too
+						if (dragSourceColumn && dragSourceColumn !== destinationColumn) {
+							updateColumnTaskCount(dragSourceColumn);
 						}
 					} else {
 						fetchAndRenderBoard();
 					}
 				}
 			}
+			// Clean up for the next drag operation
+			dragSourceColumn = null;
 		});
 
 		boardContainer.addEventListener('dragover', (e) => {
@@ -232,11 +267,67 @@ function sortTasksInColumn(columnBodyEl) {
 	}).forEach(task => columnBodyEl.appendChild(task));
 }
 
+
+// --- Added for drag-and-drop counter fix ---
+/**
+ * Updates the visual task count in a column's header.
+ * @param {HTMLElement} columnEl - The .task-column element.
+ */
+function updateColumnTaskCount(columnEl) {
+	if (!columnEl) return;
+	const countSpan = columnEl.querySelector('.task-count');
+	const taskCount = columnEl.querySelectorAll('.task-card').length;
+	if (countSpan) {
+		countSpan.textContent = taskCount;
+	}
+}
+
+
+/**
+ * Hides/shows move buttons based on column position (first/last).
+ */
+function updateMoveButtonVisibility() {
+	const columns = document.querySelectorAll('.task-column');
+	columns.forEach((col, index) => {
+		const btnLeft = col.querySelector('.btn-move-column[data-direction="left"]');
+		const btnRight = col.querySelector('.btn-move-column[data-direction="right"]');
+		if (btnLeft) {
+			btnLeft.style.visibility = (index === 0) ? 'hidden' : 'visible';
+		}
+		if (btnRight) {
+			btnRight.style.visibility = (index === columns.length - 1) ? 'hidden' : 'visible';
+		}
+	});
+}
+
+/**
+ * Sends a request to save the new order of all columns.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+async function reorderColumns(orderedColumnIds) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'reorderColumns',
+				data: { column_ids: orderedColumnIds }
+			})
+		});
+		const result = await response.json();
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Reorder columns error:', error);
+		return false;
+	}
+}
+
 /**
  * Sends a request to delete a column.
  * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
-// Added for column delete
 async function deleteColumn(columnId) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
@@ -446,6 +537,7 @@ function showAddColumnForm() {
 
 					const newColumnEl = createColumnElement(result.data);
 					boardContainer.appendChild(newColumnEl);
+					updateMoveButtonVisibility(); 
 				} else {
 					alert(`Error: ${result.message}`);
 				}
@@ -488,6 +580,7 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			const newTaskCardHTML = createTaskCard(result.data);
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
+			updateColumnTaskCount(columnEl); // Update count after adding a task
 		} else {
 			alert(`Error: ${result.message}`);
 		}
@@ -556,12 +649,13 @@ function renderBoard(boardData) {
 		const columnBody = columnEl.querySelector('.column-body');
 		sortTasksInColumn(columnBody);
 	});
+
+	updateMoveButtonVisibility();
 }
 
 /**
  * Creates the HTML element for a single column and its tasks.
  */
-// Modified for column delete
 function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
 	columnEl.className = 'task-column';
@@ -576,13 +670,17 @@ function createColumnElement(columnData) {
 
 	columnEl.innerHTML = `
 		<div class="column-header">
-			<button class="btn-delete-column" title="Delete Column">
-				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-					<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-					<line x1="10" y1="11" x2="10" y2="17"/>
-					<line x1="14" y1="11" x2="14" y2="17"/>
-				</svg>
-			</button>
+			<div class="column-header-controls">
+				<button class="btn-move-column" data-direction="left" title="Move Left">&lt;</button>
+				<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
+				<button class="btn-delete-column" title="Delete Column">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+						<line x1="10" y1="11" x2="10" y2="17"/>
+						<line x1="14" y1="11" x2="14" y2="17"/>
+					</svg>
+				</button>
+			</div>
 			<h2 class="column-title">${columnData.column_name}</h2>
 			<span class="task-count">${columnData.tasks.length}</span>
 		</div>

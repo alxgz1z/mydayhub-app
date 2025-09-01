@@ -34,10 +34,16 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 		
-		// Added for column delete
 		case 'deleteColumn':
 			if ($method === 'POST') {
 				handle_delete_column($pdo, $userId, $data);
+			}
+			break;
+
+		// Added for column reordering
+		case 'reorderColumns':
+			if ($method === 'POST') {
+				handle_reorder_columns($pdo, $userId, $data);
 			}
 			break;
 
@@ -353,7 +359,6 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 			case 'noise':
 				$newClassification = 'signal';
 				break;
-			// If it's 'completed' or something else, it will cycle back to 'signal'
 		}
 
 		$stmtUpdate = $pdo->prepare(
@@ -431,7 +436,6 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Deletes a column and all its tasks for the authenticated user.
  */
-// Added for column delete
 function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
 
@@ -444,15 +448,12 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		// Step 1: Delete all tasks within the column belonging to the user
 		$stmt_delete_tasks = $pdo->prepare("DELETE FROM tasks WHERE column_id = :columnId AND user_id = :userId");
 		$stmt_delete_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
 
-		// Step 2: Delete the column itself
 		$stmt_delete_column = $pdo->prepare("DELETE FROM `columns` WHERE column_id = :columnId AND user_id = :userId");
 		$stmt_delete_column->execute([':columnId' => $columnId, ':userId' => $userId]);
 
-		// Check if the column was actually deleted (user owned it)
 		if ($stmt_delete_column->rowCount() === 0) {
 			$pdo->rollBack();
 			http_response_code(404);
@@ -460,7 +461,6 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 			return;
 		}
 
-		// Step 3: Re-compact the positions of the remaining columns
 		$stmt_get_columns = $pdo->prepare("SELECT column_id FROM `columns` WHERE user_id = :userId ORDER BY position ASC");
 		$stmt_get_columns->execute([':userId' => $userId]);
 		$remaining_columns = $stmt_get_columns->fetchAll(PDO::FETCH_COLUMN);
@@ -482,5 +482,48 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the column.']);
+	}
+}
+
+/**
+ * Updates the positions of all columns based on a provided order.
+ */
+// Added for column reordering
+function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
+	if (empty($data['column_ids']) || !is_array($data['column_ids'])) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'An ordered array of column_ids is required.']);
+		return;
+	}
+
+	$columnIds = $data['column_ids'];
+
+	try {
+		$pdo->beginTransaction();
+
+		$stmt = $pdo->prepare(
+			"UPDATE `columns` SET position = :position WHERE column_id = :columnId AND user_id = :userId"
+		);
+
+		foreach ($columnIds as $position => $columnId) {
+			$stmt->execute([
+				':position' => $position,
+				':columnId' => (int)$columnId,
+				':userId'   => $userId
+			]);
+		}
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success']);
+
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_reorder_columns(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while reordering columns.']);
 	}
 }

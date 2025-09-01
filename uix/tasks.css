@@ -29,11 +29,10 @@
 
 .column-header {
 	display: flex;
-	/* justify-content: space-between; <-- This is now handled by flex-grow on the title */
 	align-items: center;
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--border-color);
-	gap: 0.5rem; /* Add gap for spacing between elements */
+	gap: 0.75rem; /* Add gap for spacing between elements */
 }
 
 .column-title {
@@ -43,22 +42,44 @@
 	flex-grow: 1; /* Allows title to push count to the right */
 }
 
-/* Added for column delete UI */
-.btn-delete-column {
-	background: transparent;
-	border: none;
-	padding: 2px;
-	cursor: pointer;
-	line-height: 0; /* Prevents extra button height */
+/* --- Modified/Added for column reordering --- */
+.column-header-controls {
+	display: flex;
+	align-items: center;
+	gap: 4px;
 	opacity: 0; /* Hidden by default */
 	pointer-events: none;
 	transition: opacity 0.2s ease-in-out;
 }
 
-/* Show button when hovering over the header */
-.column-header:hover .btn-delete-column {
+.column-header:hover .column-header-controls {
 	opacity: 1;
 	pointer-events: auto;
+}
+
+.btn-move-column {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	font-weight: bold;
+	font-size: 1.2rem;
+	padding: 0 4px;
+	line-height: 1;
+	transition: color 0.2s ease-in-out;
+}
+
+.btn-move-column:hover {
+	color: var(--accent-color);
+}
+
+.btn-delete-column {
+	background: transparent;
+	border: none;
+	padding: 2px;
+	cursor: pointer;
+	line-height: 0;
+	/* Opacity is now controlled by the parent container */
 }
 
 .btn-delete-column svg {
@@ -69,6 +90,7 @@
 .btn-delete-column:hover svg {
 	stroke: #e57373; /* A soft red for hover */
 }
+/* --- End of column reordering section --- */
 
 
 .task-count {
@@ -116,7 +138,6 @@
    3. TASK CARD STYLES
    ========================================================================== */
 
-/* Modified for improved UI */
 .task-card {
 	display: flex;
 	align-items: stretch; /* Allows status band to stretch vertically */
@@ -127,15 +148,13 @@
 	margin-bottom: 0.5rem;
 }
 
-/* Modified for improved UI */
 .task-status-band {
-	width: 12px; /* Increased width for better clickability */
-	/* Removed fixed height to allow stretching */
-	background-color: var(--accent-color); /* Default color */
+	width: 12px;
+	background-color: var(--accent-color);
 	border-radius: 4px;
 	margin-right: 0.75rem;
-	cursor: pointer; /* Indicates the band is clickable */
-	transition: background-color 0.2s ease-in-out, background 0.2s ease-in-out; /* Smooth color change */
+	cursor: pointer;
+	transition: background-color 0.2s ease-in-out, background 0.2s ease-in-out;
 }
 
 .task-checkbox {
@@ -143,20 +162,16 @@
 	align-self: center; /* Vertically center the checkbox */
 }
 
-/* Added for Task Classification */
-/* Colors for each classification state */
 .task-card.classification-signal .task-status-band {
 	background-color: #28a745; /* Green */
 }
 
-/* Modified for accessibility */
 .task-card.classification-support .task-status-band {
-	/* A repeating gradient creates a subtle diagonal stripe pattern */
 	background: repeating-linear-gradient(
 		45deg,
 		#007bff,
 		#007bff 3px,
-		rgba(0, 0, 0, 0.2) 3px, /* Darker, transparent stripe for texture */
+		rgba(0, 0, 0, 0.2) 3px,
 		rgba(0, 0, 0, 0.2) 4px
 	);
 }
@@ -165,8 +180,6 @@
 	background-color: #fd7e14; /* Orange */
 }
 
-
-/* Styles for completed tasks */
 .task-card.completed {
 	opacity: 0.6;
 }
@@ -180,7 +193,6 @@
 	background-color: var(--text-secondary); /* Gray */
 }
 
-/* Styling for the task card being dragged */
 .task-card.dragging {
 	opacity: 0.5;
 	transform: rotate(2deg);
@@ -190,7 +202,6 @@
    4. HEADER CONTROLS
    ========================================================================== */
 
-/* Styling for the inline 'Add Column' form */
 #form-add-column {
 	display: inline-block;
 }
@@ -208,7 +219,6 @@
 	outline: none;
 }
 
-/* Styling for the header button */
 .btn-header {
 	background: none;
 	border: 1px solid transparent;
@@ -231,12 +241,12 @@
 
 @media (max-width: 768px) {
 	#task-board-container {
-		flex-direction: column; /* Stack columns vertically */
-		overflow-x: hidden; /* Hide horizontal scrollbar */
-		gap: 1.5rem; /* Space between vertical columns */
+		flex-direction: column;
+		overflow-x: hidden;
+		gap: 1.5rem;
 	}
 
 	.task-column {
-		width: 100%; /* Make columns take up the full width */
+		width: 100%;
 	}
 }
