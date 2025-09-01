@@ -40,10 +40,16 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
-		// Modified for drag and drop
 		case 'reorderTasks':
 			if ($method === 'POST') {
 				handle_reorder_tasks($pdo, $userId, $data);
+			}
+			break;
+
+		// Added for Task Classification
+		case 'toggleClassification':
+			if ($method === 'POST') {
+				handle_toggle_classification($pdo, $userId, $data);
 			}
 			break;
 
@@ -57,7 +63,6 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 /**
  * Reorders tasks within a column and handles moving tasks between columns.
  */
-// Modified for cross-column DnD
 function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_id']) || !isset($data['tasks'])) {
 		http_response_code(400);
@@ -302,5 +307,67 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating the task.']);
+	}
+}
+
+/**
+ * Cycles a task's classification through Signal, Support, and Noise.
+ */
+// Added for Task Classification
+function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void {
+	if (empty($data['task_id'])) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Task ID is required.']);
+		return;
+	}
+
+	$taskId = (int)$data['task_id'];
+
+	try {
+		$stmtGet = $pdo->prepare("SELECT classification FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmtGet->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$currentClassification = $stmtGet->fetchColumn();
+
+		if ($currentClassification === false) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			return;
+		}
+
+		$newClassification = 'signal'; // Default
+		switch ($currentClassification) {
+			case 'signal':
+				$newClassification = 'support';
+				break;
+			case 'support':
+				$newClassification = 'noise';
+				break;
+			case 'noise':
+				$newClassification = 'signal';
+				break;
+			// If it's 'completed' or something else, it will cycle back to 'signal'
+		}
+
+		$stmtUpdate = $pdo->prepare(
+			"UPDATE tasks SET classification = :newClassification WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmtUpdate->execute([
+			':newClassification' => $newClassification,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'data' => ['new_classification' => $newClassification]
+		]);
+
+	} catch (Exception $e) {
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_toggle_classification(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating the task classification.']);
 	}
 }

@@ -96,17 +96,35 @@
 	margin-bottom: 0.5rem;
 }
 
+/* Modified for Task Classification */
 .task-status-band {
 	width: 4px;
 	height: 24px;
-	background-color: var(--accent-color);
+	background-color: var(--accent-color); /* Default color */
 	border-radius: 2px;
 	margin-right: 0.75rem;
+	cursor: pointer; /* Indicates the band is clickable */
+	transition: background-color 0.2s ease-in-out; /* Smooth color change */
 }
 
 .task-checkbox {
 	margin-right: 0.75rem;
 }
+
+/* Added for Task Classification */
+/* Colors for each classification state */
+.task-card.classification-signal .task-status-band {
+	background-color: #28a745; /* Green */
+}
+
+.task-card.classification-support .task-status-band {
+	background-color: #007bff; /* Blue */
+}
+
+.task-card.classification-noise .task-status-band {
+	background-color: #fd7e14; /* Orange */
+}
+
 
 /* Styles for completed tasks */
 .task-card.completed {
@@ -119,7 +137,7 @@
 }
 
 .task-card.completed .task-status-band {
-	background-color: var(--text-secondary);
+	background-color: var(--text-secondary); /* Gray */
 }
 
 /* Styling for the task card being dragged */
@@ -182,4 +200,3 @@
 		width: 100%; /* Make columns take up the full width */
 	}
 }
-

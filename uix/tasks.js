@@ -28,6 +28,7 @@ function initEventListeners() {
 
 	const boardContainer = document.getElementById('task-board-container');
 	if (boardContainer) {
+		// Listener for creating a new task
 		boardContainer.addEventListener('keypress', async (e) => {
 			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
 				e.preventDefault();
@@ -43,6 +44,7 @@ function initEventListeners() {
 			}
 		});
 
+		// Listener for toggling task completion
 		boardContainer.addEventListener('change', async (e) => {
 			if (e.target.matches('.task-checkbox')) {
 				const checkbox = e.target;
@@ -55,13 +57,24 @@ function initEventListeners() {
 			}
 		});
 
+		// Added for Task Classification
+		// Listener for cycling task classification
+		boardContainer.addEventListener('click', (e) => {
+			if (e.target.matches('.task-status-band')) {
+				const taskCard = e.target.closest('.task-card');
+				const taskId = taskCard.dataset.taskId;
+				if (taskId) {
+					toggleTaskClassification(taskId, taskCard);
+				}
+			}
+		});
+
 		boardContainer.addEventListener('dragstart', (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.add('dragging');
 			}
 		});
 
-		// Modified for DnD Persistence
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
@@ -71,17 +84,14 @@ function initEventListeners() {
 					const tasks = Array.from(columnEl.querySelectorAll('.task-card'));
 					const taskIds = tasks.map(card => card.dataset.taskId);
 					
-					// Await the result of the API call
 					const success = await reorderTasks(columnId, taskIds);
 					
-					// Update the UI only on successful persistence
 					if (success) {
 						const countSpan = columnEl.querySelector('.task-count');
 						if (countSpan) {
 							countSpan.textContent = tasks.length;
 						}
 					}
-					// On failure, reorderTasks already shows an alert. A future improvement could be to revert the visual change.
 				}
 			}
 		});
@@ -123,7 +133,6 @@ function getDragAfterElement(container, y) {
  * Sends the new order of tasks to the API.
  * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
-// Modified for DnD Persistence
 async function reorderTasks(columnId, tasks) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
@@ -135,7 +144,7 @@ async function reorderTasks(columnId, tasks) {
 				action: 'reorderTasks',
 				data: {
 					column_id: columnId,
-					tasks: tasks // This should be an array of task IDs
+					tasks: tasks
 				}
 			})
 		});
@@ -144,13 +153,13 @@ async function reorderTasks(columnId, tasks) {
 
 		if (result.status !== 'success') {
 			alert(`Error: ${result.message}`);
-			return false; // Indicate failure
+			return false;
 		}
-		return true; // Indicate success
+		return true;
 	} catch (error) {
 		alert('A network error occurred. Please try again.');
 		console.error('Reorder tasks error:', error);
-		return false; // Indicate failure
+		return false;
 	}
 }
 
@@ -176,6 +185,13 @@ async function toggleTaskComplete(taskId, isComplete) {
 
 		if (result.status === 'success') {
 			taskCard.classList.toggle('completed', isComplete);
+			// If a task is marked as complete, remove other classification styles
+			if (isComplete) {
+				taskCard.classList.remove('classification-signal', 'classification-support', 'classification-noise');
+			} else {
+				// If it's un-checked, it defaults back to support. Let's add the class back.
+				taskCard.classList.add('classification-support');
+			}
 		} else {
 			alert(`Error: ${result.message}`);
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
@@ -184,6 +200,42 @@ async function toggleTaskComplete(taskId, isComplete) {
 		alert('A network error occurred. Please try again.');
 		taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		console.error('Toggle complete error:', error);
+	}
+}
+
+// Added for Task Classification
+/**
+ * Cycles a task's classification by calling the API and updating the UI.
+ * @param {string} taskId - The ID of the task to update.
+ * @param {HTMLElement} taskCardEl - The DOM element for the task card.
+ */
+async function toggleTaskClassification(taskId, taskCardEl) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'toggleClassification',
+				data: { task_id: taskId }
+			})
+		});
+
+		const result = await response.json();
+
+		if (result.status === 'success') {
+			// Remove all possible classification classes first to avoid conflicts
+			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-noise');
+			
+			// Add the new class based on the response from the server
+			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
+		} else {
+			alert(`Error: ${result.message}`);
+		}
+	} catch (error) {
+		alert('A network error occurred while updating classification.');
+		console.error('Toggle classification error:', error);
 	}
 }
 
@@ -306,7 +358,6 @@ async function fetchAndRenderBoard() {
 	}
 
 	try {
-		// Modified for robust API pathing
 		const appURL = window.MyDayHub_Config?.appURL || '';
 		const apiURL = `${appURL}/api/api.php?module=tasks&action=getAll`;
 
@@ -387,19 +438,24 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
+// Modified for Task Classification
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
 		taskTitle = data.title;
-	} catch(e) {
+	} catch (e) {
 		console.error("Could not parse task data:", taskData.encrypted_data);
 	}
 
 	const isCompleted = taskData.classification === 'completed';
+	let classificationClass = '';
+	if (!isCompleted) {
+		classificationClass = `classification-${taskData.classification}`;
+	}
 
 	return `
-		<div class="task-card ${isCompleted ? 'completed' : ''}" data-task-id="${taskData.task_id}" draggable="true">
+		<div class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" data-task-id="${taskData.task_id}" draggable="true">
 			<div class="task-status-band"></div>
 			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
 			<span class="task-title">${taskTitle}</span>
