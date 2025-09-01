@@ -458,3 +458,28 @@ The Tasks View is now highly functional and aligns closely with the core spec. A
 1.  **Expand Task Actions Menu:** The menu foundation is built. The next logical step is to add the "Duplicate Task" action, which was a core feature in Beta 4.
 2.  **Enhance UI Feedback:** Replace the native browser `confirm()` and `alert()` pop-ups with custom, non-blocking modals and toast notifications as defined in the spec for a more polished user experience.
 3.  **Implement Task Details:** Add support for task notes and due dates, which are key features listed in the spec. This would involve extending the task actions menu and potentially integrating a more advanced editor or date picker.
+
+---
+## 2025-09-01 15:52 — UI Polish, Task Duplication & Toast Notifications
+
+**Focus**
+Refine the application's core UI, expand task management capabilities with duplication, and replace jarring browser alerts with a modern toast notification system for improved user feedback.
+
+**Key work**
+* **Header & Branding:** The main header in `index.php` was updated to include the MyDayHub SVG logo and to use the same SVG as a browser favicon. The placeholder "Tasks" button was removed.
+* **Task Duplication (Full Stack):** The "Duplicate Task" feature was implemented end-to-end.
+	* **Backend:** A `duplicateTask` action was added to `/api/tasks.php`, which safely copies a task and places it at the end of its column.
+	* **Frontend:** The task actions menu in `tasks.js` now includes a "Duplicate" button that calls the new API and renders the new task card in real-time.
+* **Toast Notification System:** A global, non-blocking notification system was built to improve UI feedback.
+	* An HTML container was added to `index.php`.
+	* A full set of CSS styles and animations were created in `/uix/style.css`.
+	* A reusable `showToast()` function was added to `/uix/app.js`.
+* **UI Feedback Overhaul:** All native `alert()` calls throughout `tasks.js` were replaced with calls to the new `showToast(..., 'error')` function. A `showToast(..., 'success')` message was also added to the task duplication flow.
+
+**Status**
+The application's UI is more polished and branded. Task duplication is fully functional and tested. The new toast system provides non-blocking feedback for all errors and some success actions, significantly improving the user experience and aligning the app closer to the spec.
+
+**Recommended next steps (priority order)**
+1.  **Implement a Custom Confirmation Modal:** We've replaced `alert()`, but the app still uses native `confirm()` for deleting tasks and columns. The next step is to build a reusable, non-blocking confirmation modal. This will involve creating the HTML/CSS for the modal and writing a JavaScript function that returns a `Promise`, allowing us to use it cleanly with `async/await` (e.g., `if (await showConfirmModal(...))`).
+2.  **Add Success Toasts to More Actions:** To provide consistent feedback, we should add success toasts for other key actions like creating, renaming, and deleting tasks and columns.
+3.  **Implement Task Details (Notes & Due Dates):** With the core management features and UI feedback systems in place, we can now proceed with a major feature from the spec: adding support for detailed notes and due dates on tasks.

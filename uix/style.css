@@ -12,6 +12,9 @@
 	--accent-color: #8ab4f8;
 	--border-color: #3c4043;
 	--btn-hover-bg: rgba(255, 255, 255, 0.1);
+	/* Added for Toasts */
+	--toast-success-bg: #4CAF50;
+	--toast-error-bg: #d94f46; 
 }
 
 body {
@@ -125,6 +128,52 @@ body {
 }
 
 .footer-right a {
-	color: #d94f46; /* Red color for logout */
+	color: var(--toast-error-bg); /* Use consistent error color */
 	text-decoration: none;
+}
+
+/* ==========================================================================
+   4. TOAST NOTIFICATIONS
+   ========================================================================== */
+/* Added for Toast Notifications */
+#toast-container {
+	position: fixed;
+	bottom: 20px;
+	right: 20px;
+	z-index: 1050; /* High z-index to appear on top of other content */
+	display: flex;
+	flex-direction: column-reverse; /* New toasts appear at the bottom and push old ones up */
+	gap: 10px;
+	align-items: flex-end;
+}
+
+.toast {
+	padding: 12px 20px;
+	border-radius: 8px;
+	color: #ffffff;
+	font-size: 0.9rem;
+	font-weight: 500;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+	
+	/* Animation properties */
+	opacity: 0;
+	transform: translateX(100%); /* Start off-screen to the right */
+	transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1); /* Smooth transition for entry */
+}
+
+.toast.visible {
+	opacity: 1;
+	transform: translateX(0);
+}
+
+.toast.success {
+	background-color: var(--toast-success-bg);
+}
+
+.toast.error {
+	background-color: var(--toast-error-bg);
+}
+
+.toast.info {
+	background-color: var(--accent-color);
 }

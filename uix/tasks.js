@@ -85,7 +85,8 @@ function initEventListeners() {
 						columnEl.remove();
 						updateMoveButtonVisibility();
 					} else {
-						alert('Error: Could not delete the column.');
+						// Modified for Toast Notifications
+						showToast('Error: Could not delete the column.', 'error');
 					}
 				}
 				return;
@@ -114,7 +115,8 @@ function initEventListeners() {
 				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
 				const success = await reorderColumns(orderedColumnIds);
 				if (!success) {
-					alert('Error: Could not save new column order.');
+					// Modified for Toast Notifications
+					showToast('Error: Could not save new column order.', 'error');
 					fetchAndRenderBoard();
 				}
 				return;
@@ -127,7 +129,6 @@ function initEventListeners() {
 			}
 		});
 		
-		// Modified for task duplication
 		document.body.addEventListener('click', async (e) => {
 			const actionButton = e.target.closest('.task-action-btn');
 			if (!actionButton) return;
@@ -148,7 +149,8 @@ function initEventListeners() {
 						taskCard.remove();
 						updateColumnTaskCount(columnEl);
 					} else {
-						alert('Error: Could not delete task.');
+						// Modified for Toast Notifications
+						showToast('Error: Could not delete task.', 'error');
 					}
 				}
 			} else if (action === 'duplicate') {
@@ -160,14 +162,16 @@ function initEventListeners() {
 						columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 						updateColumnTaskCount(columnEl);
 						sortTasksInColumn(columnBody);
+						// Modified for Toast Notifications
+						showToast('Task duplicated successfully.', 'success');
 					} else {
-						alert('Error: Could not duplicate the task.');
+						// Modified for Toast Notifications
+						showToast('Error: Could not duplicate the task.', 'error');
 					}
 				}
 			}
 		});
 
-		// Modified for task title rename
 		boardContainer.addEventListener('dblclick', (e) => {
 			// Handle column title rename
 			if (e.target.matches('.column-title')) {
@@ -205,7 +209,8 @@ function initEventListeners() {
 
 					if (!success) {
 						titleEl.textContent = originalTitle;
-						alert('Error: Could not rename column.');
+						// Modified for Toast Notifications
+						showToast('Error: Could not rename column.', 'error');
 					}
 				};
 
@@ -255,7 +260,8 @@ function initEventListeners() {
 
 					if (!success) {
 						titleEl.textContent = originalTitle;
-						alert('Error: Could not rename task.');
+						// Modified for Toast Notifications
+						showToast('Error: Could not rename task.', 'error');
 					}
 				};
 
@@ -374,7 +380,6 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
-// Modified for task duplication
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -442,7 +447,6 @@ function updateMoveButtonVisibility() {
 	});
 }
 
-// Added for task duplication
 /**
  * Sends a request to duplicate a task.
  * @returns {Promise<Object|null>} - The new task data object if successful, null otherwise.
@@ -566,7 +570,6 @@ async function renameColumn(columnId, newName) {
 	}
 }
 
-// Added for task title rename
 /**
  * Sends a request to rename a task's title.
  * @returns {Promise<boolean>} - True if successful, false otherwise.
@@ -617,12 +620,14 @@ async function reorderTasks(columnId, tasks) {
 		const result = await response.json();
 
 		if (result.status !== 'success') {
-			alert(`Error: ${result.message}`);
+			// Modified for Toast Notifications
+			showToast(`Error: ${result.message}`, 'error');
 			return false;
 		}
 		return true;
 	} catch (error) {
-		alert('A network error occurred. Please try again.');
+		// Modified for Toast Notifications
+		showToast('A network error occurred. Please try again.', 'error');
 		console.error('Reorder tasks error:', error);
 		return false;
 	}
@@ -657,11 +662,13 @@ async function toggleTaskComplete(taskId, isComplete) {
 			}
 			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
-			alert(`Error: ${result.message}`);
+			// Modified for Toast Notifications
+			showToast(`Error: ${result.message}`, 'error');
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		}
 	} catch (error) {
-		alert('A network error occurred. Please try again.');
+		// Modified for Toast Notifications
+		showToast('A network error occurred. Please try again.', 'error');
 		taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		console.error('Toggle complete error:', error);
 	}
@@ -690,10 +697,12 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
-			alert(`Error: ${result.message}`);
+			// Modified for Toast Notifications
+			showToast(`Error: ${result.message}`, 'error');
 		}
 	} catch (error) {
-		alert('A network error occurred while updating classification.');
+		// Modified for Toast Notifications
+		showToast('A network error occurred while updating classification.', 'error');
 		console.error('Toggle classification error:', error);
 	}
 }
@@ -757,10 +766,12 @@ function showAddColumnForm() {
 					boardContainer.appendChild(newColumnEl);
 					updateMoveButtonVisibility(); 
 				} else {
-					alert(`Error: ${result.message}`);
+					// Modified for Toast Notifications
+					showToast(`Error: ${result.message}`, 'error');
 				}
 			} catch (error) {
-				alert('A network error occurred. Please try again.');
+				// Modified for Toast Notifications
+				showToast('A network error occurred. Please try again.', 'error');
 				console.error('Create column error:', error);
 			}
 		}
@@ -800,10 +811,12 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
 		} else {
-			alert(`Error: ${result.message}`);
+			// Modified for Toast Notifications
+			showToast(`Error: ${result.message}`, 'error');
 		}
 	} catch (error) {
-		alert('A network error occurred while creating the task.');
+		// Modified for Toast Notifications
+		showToast('A network error occurred while creating the task.', 'error');
 		console.error('Create task error:', error);
 	}
 }

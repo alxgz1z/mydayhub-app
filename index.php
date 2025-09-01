@@ -80,6 +80,8 @@ $username = $_SESSION['username'] ?? 'User';
 		</footer>
 
 	</div>
+	
+	<div id="toast-container"></div>
 
 	<script src="uix/app.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
