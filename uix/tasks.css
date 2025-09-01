@@ -29,17 +29,47 @@
 
 .column-header {
 	display: flex;
-	justify-content: space-between;
+	/* justify-content: space-between; <-- This is now handled by flex-grow on the title */
 	align-items: center;
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--border-color);
+	gap: 0.5rem; /* Add gap for spacing between elements */
 }
 
 .column-title {
 	font-size: 1.1rem;
 	font-weight: 500;
 	margin: 0;
+	flex-grow: 1; /* Allows title to push count to the right */
 }
+
+/* Added for column delete UI */
+.btn-delete-column {
+	background: transparent;
+	border: none;
+	padding: 2px;
+	cursor: pointer;
+	line-height: 0; /* Prevents extra button height */
+	opacity: 0; /* Hidden by default */
+	pointer-events: none;
+	transition: opacity 0.2s ease-in-out;
+}
+
+/* Show button when hovering over the header */
+.column-header:hover .btn-delete-column {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+.btn-delete-column svg {
+	stroke: var(--text-secondary);
+	transition: stroke 0.2s ease-in-out;
+}
+
+.btn-delete-column:hover svg {
+	stroke: #e57373; /* A soft red for hover */
+}
+
 
 .task-count {
 	font-size: 0.9rem;

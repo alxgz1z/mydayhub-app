@@ -27,6 +27,19 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_create_column($pdo, $userId, $data);
 			}
 			break;
+		
+		case 'renameColumn':
+			if ($method === 'POST') {
+				handle_rename_column($pdo, $userId, $data);
+			}
+			break;
+		
+		// Added for column delete
+		case 'deleteColumn':
+			if ($method === 'POST') {
+				handle_delete_column($pdo, $userId, $data);
+			}
+			break;
 
 		case 'createTask':
 			if ($method === 'POST') {
@@ -46,7 +59,6 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
-		// Added for Task Classification
 		case 'toggleClassification':
 			if ($method === 'POST') {
 				handle_toggle_classification($pdo, $userId, $data);
@@ -73,7 +85,6 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	$columnId = (int)$data['column_id'];
 	$taskIds = $data['tasks'];
 
-	// Ensure tasks is an array
 	if (!is_array($taskIds)) {
 		http_response_code(400);
 		echo json_encode(['status' => 'error', 'message' => 'Tasks must be an array.']);
@@ -83,8 +94,6 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		// This new query updates the column_id as well as the position.
-		// It finds the task by its ID and user ID alone, allowing it to move columns.
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
 			 SET position = :position, column_id = :columnId 
@@ -313,7 +322,6 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Cycles a task's classification through Signal, Support, and Noise.
  */
-// Added for Task Classification
 function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['task_id'])) {
 		http_response_code(400);
@@ -369,5 +377,110 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating the task classification.']);
+	}
+}
+
+/**
+ * Renames a column for the authenticated user.
+ */
+function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
+	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
+	$newName = isset($data['new_name']) ? trim($data['new_name']) : '';
+
+	if ($columnId <= 0 || $newName === '') {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Column ID and a non-empty new name are required.']);
+		return;
+	}
+
+	try {
+		$stmt = $pdo->prepare(
+			"UPDATE `columns` SET column_name = :newName WHERE column_id = :columnId AND user_id = :userId"
+		);
+		
+		$stmt->execute([
+			':newName' => $newName,
+			':columnId' => $columnId,
+			':userId' => $userId
+		]);
+
+		if ($stmt->rowCount() === 0) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Column not found or you do not have permission to edit it.']);
+			return;
+		}
+
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'column_id' => $columnId,
+				'new_name' => $newName
+			]
+		]);
+
+	} catch (Exception $e) {
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_rename_column(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while renaming the column.']);
+	}
+}
+
+/**
+ * Deletes a column and all its tasks for the authenticated user.
+ */
+// Added for column delete
+function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
+	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
+
+	if ($columnId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid Column ID.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Step 1: Delete all tasks within the column belonging to the user
+		$stmt_delete_tasks = $pdo->prepare("DELETE FROM tasks WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_delete_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
+
+		// Step 2: Delete the column itself
+		$stmt_delete_column = $pdo->prepare("DELETE FROM `columns` WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_delete_column->execute([':columnId' => $columnId, ':userId' => $userId]);
+
+		// Check if the column was actually deleted (user owned it)
+		if ($stmt_delete_column->rowCount() === 0) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Column not found or you do not have permission to delete it.']);
+			return;
+		}
+
+		// Step 3: Re-compact the positions of the remaining columns
+		$stmt_get_columns = $pdo->prepare("SELECT column_id FROM `columns` WHERE user_id = :userId ORDER BY position ASC");
+		$stmt_get_columns->execute([':userId' => $userId]);
+		$remaining_columns = $stmt_get_columns->fetchAll(PDO::FETCH_COLUMN);
+		
+		$stmt_update_pos = $pdo->prepare("UPDATE `columns` SET position = :position WHERE column_id = :columnId AND user_id = :userId");
+		foreach ($remaining_columns as $index => $id) {
+			$stmt_update_pos->execute([':position' => $index, ':columnId' => $id, ':userId' => $userId]);
+		}
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => ['deleted_column_id' => $columnId]]);
+
+	} catch (Exception $e) {
+		$pdo->rollBack();
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_delete_column(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the column.']);
 	}
 }

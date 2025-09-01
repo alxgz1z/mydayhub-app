@@ -57,14 +57,89 @@ function initEventListeners() {
 			}
 		});
 
-		// Listener for cycling task classification
-		boardContainer.addEventListener('click', (e) => {
+		// Combined listener for various clicks within the board
+		// Modified for column delete
+		boardContainer.addEventListener('click', async (e) => {
+			// Handle cycling task classification
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
 				if (taskId) {
 					toggleTaskClassification(taskId, taskCard);
 				}
+				return;
+			}
+
+			// Handle deleting a column
+			const deleteBtn = e.target.closest('.btn-delete-column');
+			if (deleteBtn) {
+				const columnEl = deleteBtn.closest('.task-column');
+				const columnId = columnEl.dataset.columnId;
+				
+				const confirmed = confirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
+
+				if (confirmed && columnId) {
+					const success = await deleteColumn(columnId);
+					if (success) {
+						columnEl.remove();
+					} else {
+						alert('Error: Could not delete the column.');
+					}
+				}
+				return;
+			}
+		});
+
+		// Listener for in-line editing of column titles
+		boardContainer.addEventListener('dblclick', (e) => {
+			if (e.target.matches('.column-title')) {
+				const titleEl = e.target;
+				const columnEl = titleEl.closest('.task-column');
+				const columnId = columnEl.dataset.columnId;
+				const originalTitle = titleEl.textContent;
+
+				const input = document.createElement('input');
+				input.type = 'text';
+				input.value = originalTitle;
+				input.className = 'inline-edit-input';
+
+				titleEl.replaceWith(input);
+				input.focus();
+				input.select();
+
+				let finalized = false;
+
+				const commitChange = async () => {
+					if (finalized) return;
+					finalized = true;
+					
+					const newTitle = input.value.trim();
+
+					if (newTitle === '' || newTitle === originalTitle) {
+						input.replaceWith(titleEl);
+						return;
+					}
+
+					titleEl.textContent = newTitle;
+					input.replaceWith(titleEl);
+
+					const success = await renameColumn(columnId, newTitle);
+
+					if (!success) {
+						titleEl.textContent = originalTitle;
+						alert('Error: Could not rename column.');
+					}
+				};
+
+				input.addEventListener('blur', commitChange);
+				input.addEventListener('keydown', (e) => {
+					if (e.key === 'Enter') {
+						commitChange();
+					} else if (e.key === 'Escape') {
+						finalized = true;
+						input.replaceWith(titleEl);
+					}
+				});
 			}
 		});
 
@@ -74,13 +149,11 @@ function initEventListeners() {
 			}
 		});
 
-		// Modified for enforced sorting
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
 				const columnEl = e.target.closest('.task-column');
 				if (columnEl) {
-					// Enforce sort order visually before sending to the backend
 					sortTasksInColumn(columnEl.querySelector('.column-body'));
 
 					const columnId = columnEl.dataset.columnId;
@@ -95,7 +168,6 @@ function initEventListeners() {
 							countSpan.textContent = tasks.length;
 						}
 					} else {
-						// If persistence fails, fetch the board again to revert to the last saved state
 						fetchAndRenderBoard();
 					}
 				}
@@ -135,12 +207,8 @@ function getDragAfterElement(container, y) {
 	}, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-// --- Added for enforced sorting ---
 /**
  * Gets the numerical rank of a task card based on its classification.
- * Lower numbers are sorted higher.
- * @param {HTMLElement} taskEl - The task card element.
- * @returns {number} The sorting rank.
  */
 const getTaskRank = (taskEl) => {
 	if (taskEl.classList.contains('completed')) return 3;
@@ -152,7 +220,6 @@ const getTaskRank = (taskEl) => {
 
 /**
  * Sorts the tasks within a column's body based on their classification rank.
- * @param {HTMLElement} columnBodyEl - The .column-body element containing task cards.
  */
 function sortTasksInColumn(columnBodyEl) {
 	if (!columnBodyEl) return;
@@ -164,7 +231,58 @@ function sortTasksInColumn(columnBodyEl) {
 		return rankA - rankB;
 	}).forEach(task => columnBodyEl.appendChild(task));
 }
-// --- End of enforced sorting section ---
+
+/**
+ * Sends a request to delete a column.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+// Added for column delete
+async function deleteColumn(columnId) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'deleteColumn',
+				data: { column_id: columnId }
+			})
+		});
+		const result = await response.json();
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Delete column error:', error);
+		return false;
+	}
+}
+
+/**
+ * Sends a request to rename a column.
+ * @returns {Promise<boolean>} - True if successful, false otherwise.
+ */
+async function renameColumn(columnId, newName) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'renameColumn',
+				data: {
+					column_id: columnId,
+					new_name: newName
+				}
+			})
+		});
+		const result = await response.json();
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Rename column error:', error);
+		return false;
+	}
+}
 
 
 /**
@@ -228,7 +346,6 @@ async function toggleTaskComplete(taskId, isComplete) {
 			} else {
 				taskCard.classList.add('classification-support');
 			}
-			// Modified for enforced sorting
 			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
 			alert(`Error: ${result.message}`);
@@ -243,8 +360,6 @@ async function toggleTaskComplete(taskId, isComplete) {
 
 /**
  * Cycles a task's classification by calling the API and updating the UI.
- * @param {string} taskId - The ID of the task to update.
- * @param {HTMLElement} taskCardEl - The DOM element for the task card.
  */
 async function toggleTaskClassification(taskId, taskCardEl) {
 	try {
@@ -264,7 +379,6 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 		if (result.status === 'success') {
 			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-noise');
 			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
-			// Modified for enforced sorting
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
 			alert(`Error: ${result.message}`);
@@ -373,7 +487,6 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			}
 			const newTaskCardHTML = createTaskCard(result.data);
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
-			// Modified for enforced sorting
 			sortTasksInColumn(columnBody);
 		} else {
 			alert(`Error: ${result.message}`);
@@ -440,7 +553,6 @@ function renderBoard(boardData) {
 	boardData.forEach(columnData => {
 		const columnEl = createColumnElement(columnData);
 		container.appendChild(columnEl);
-		// Modified for enforced sorting
 		const columnBody = columnEl.querySelector('.column-body');
 		sortTasksInColumn(columnBody);
 	});
@@ -449,6 +561,7 @@ function renderBoard(boardData) {
 /**
  * Creates the HTML element for a single column and its tasks.
  */
+// Modified for column delete
 function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
 	columnEl.className = 'task-column';
@@ -463,6 +576,13 @@ function createColumnElement(columnData) {
 
 	columnEl.innerHTML = `
 		<div class="column-header">
+			<button class="btn-delete-column" title="Delete Column">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+					<line x1="10" y1="11" x2="10" y2="17"/>
+					<line x1="14" y1="11" x2="14" y2="17"/>
+				</svg>
+			</button>
 			<h2 class="column-title">${columnData.column_name}</h2>
 			<span class="task-count">${columnData.tasks.length}</span>
 		</div>
