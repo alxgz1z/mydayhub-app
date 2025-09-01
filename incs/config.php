@@ -2,15 +2,29 @@
 /**
  * MyDayHub Beta 5 - Core Configuration
  *
- * This file defines essential constants for the application, including
- * database credentials, file paths, and operational modes. It now reads
- * sensitive credentials from environment variables for improved security.
- *
- * @version 5.0.0
- * @author Alex & Gemini
+ * Reads credentials from a .env file for security and portability.
  */
 
-// --- CORE CONSTANTS & ERROR REPORTING --- //
+// --- FILE PATHS ---
+define('INCS_PATH', __DIR__);
+define('ROOT_PATH', dirname(INCS_PATH));
+
+// --- LOAD ENVIRONMENT VARIABLES FROM .env FILE ---
+$envPath = ROOT_PATH . '/.env';
+if (file_exists($envPath)) {
+	$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+	foreach ($lines as $line) {
+		if (strpos(trim($line), '#') === 0) continue; // Skip comments
+		if (strpos($line, '=') !== false) {
+			list($name, $value) = explode('=', $line, 2);
+			$name = trim($name);
+			$value = trim($value, " \t\n\r\0\x0B\""); // Trim whitespace and quotes
+			putenv("$name=$value");
+		}
+	}
+}
+
+// --- CORE CONSTANTS & ERROR REPORTING ---
 define('DEVMODE', true);
 
 if (DEVMODE) {
@@ -23,26 +37,27 @@ if (DEVMODE) {
 	error_reporting(E_ALL);
 }
 
-// --- FILE PATHS --- //
-define('INCS_PATH', __DIR__);
-define('ROOT_PATH', dirname(INCS_PATH));
-
-// --- CUSTOM ERROR HANDLER (FOR DEVMODE) --- //
+// --- CUSTOM ERROR HANDLER (FOR DEVMODE) ---
 if (DEVMODE) {
-	// ... (Your existing error handler function remains here) ...
+	function mydayhub_error_handler($errno, $errstr, $errfile, $errline) {
+		if (!(error_reporting() & $errno)) {
+			return false;
+		}
+		$logMessage = "[" . date('Y-m-d H:i:s') . "] Error [$errno]: $errstr in $errfile on line $errline" . PHP_EOL;
+		file_put_contents(ROOT_PATH . '/debug.log', $logMessage, FILE_APPEND);
+		return true;
+	}
+	set_error_handler('mydayhub_error_handler');
 }
 
 // --- APPLICATION URL ---
-// Modified for robust API pathing
-// Dynamically determine the base URL of the application.
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
 $script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
 $base_url = rtrim(str_replace(DIRECTORY_SEPARATOR, '/', dirname($script_name)), '/');
 define('APP_URL', $protocol . '://' . $host . $base_url);
 
-
-// --- DATABASE CREDENTIALS (from Environment Variables) --- //
+// --- DATABASE CREDENTIALS (from Environment Variables) ---
 define('DB_HOST', getenv('DB_HOST') ?: '127.0.0.1');
 define('DB_NAME', getenv('DB_NAME') ?: 'mydayhub');
 define('DB_USER', getenv('DB_USER') ?: 'root');
