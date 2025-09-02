@@ -77,7 +77,8 @@ function initEventListeners() {
 				const columnEl = deleteBtn.closest('.task-column');
 				const columnId = columnEl.dataset.columnId;
 				
-				const confirmed = confirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
+				// Modified for Confirmation Modal
+				const confirmed = await showConfirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
 
 				if (confirmed && columnId) {
 					const success = await deleteColumn(columnId);
@@ -142,7 +143,8 @@ function initEventListeners() {
 			closeAllTaskActionMenus();
 
 			if (action === 'delete') {
-				const confirmed = confirm('Are you sure you want to delete this task?');
+				// Modified for Confirmation Modal
+				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
 					const success = await deleteTask(taskId);
 					if (success) {

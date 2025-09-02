@@ -606,10 +606,10 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] reorderColumns (in tasks.php)
 		[RDY] deleteTask (in tasks.php)
 		[RDY] renameTaskTitle (in tasks.php)
+		[RDY] duplicateTask (in tasks.php)
 	Future API Actions:
 		[FUT] moveTask
 		[FUT] togglePriority
-		[FUT] duplicateTask
 		[FUT] shareTask / revokeShare
 		[FUT] getAttachments / uploadAttachment / deleteAttachment
 	
@@ -632,8 +632,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] Task Actions Menu (⋮ button)
 		[RDY] Delete Task (from actions menu with confirmation)
 	Future UI Features:
-		[FUT] Duplicate Task (from actions menu)
-		[FUT] Custom modals/toasts to replace native alerts
+		[WIP] Custom modals/toasts to replace native alerts
 		[FUT] Bottom toolbar with filters
 		[FUT] Settings slider panel
 		[FUT] Task Notes integration (Unified Editor)
@@ -644,7 +643,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 
 ## FRONT END ARCHITECTURE
 
-* uix/app.js: bootstrap, tab/view switch, modal helpers, DEVMODE banner.
+* uix/app.js: bootstrap, tab/view switch, global toast notification system.
 * uix/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
 * uix/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
   * SPA logic implements classification cycles, privacy toggles, offline notifications, and optimistic rollbacks.

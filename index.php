@@ -83,6 +83,16 @@ $username = $_SESSION['username'] ?? 'User';
 	
 	<div id="toast-container"></div>
 
+	<div id="confirm-modal-overlay" class="hidden">
+		<div id="confirm-modal">
+			<p id="confirm-modal-message">Are you sure?</p>
+			<div id="confirm-modal-buttons">
+				<button id="btn-confirm-no" class="btn">Cancel</button>
+				<button id="btn-confirm-yes" class="btn btn-danger">Confirm</button>
+			</div>
+		</div>
+	</div>
+
 	<script src="uix/app.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
 

@@ -2,7 +2,7 @@
  * MyDayHub Beta 5 - Main Application Logic
  *
  * This script initializes the application, handles view switching,
- * and loads the necessary modules for the active view.
+ * and contains global UI functions like toasts and modals.
  *
  * @version 5.0.0
  * @author Alex & Gemini
@@ -22,7 +22,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==========================================================================
 // --- TOAST NOTIFICATION SYSTEM ---
-// Added for Toast Notifications
 // ==========================================================================
 
 /**
@@ -62,4 +61,55 @@ function showToast(message, type = 'info', duration = 3000) {
 		});
 
 	}, duration);
+}
+
+
+// ==========================================================================
+// --- CONFIRMATION MODAL SYSTEM ---
+// Added for Confirmation Modal
+// ==========================================================================
+
+/**
+ * Displays a confirmation modal and returns a Promise that resolves with the user's choice.
+ * @param {string} message The confirmation message to display.
+ * @returns {Promise<boolean>} A promise that resolves to `true` if confirmed, `false` otherwise.
+ */
+function showConfirm(message) {
+	const modalOverlay = document.getElementById('confirm-modal-overlay');
+	const messageEl = document.getElementById('confirm-modal-message');
+	const yesBtn = document.getElementById('btn-confirm-yes');
+	const noBtn = document.getElementById('btn-confirm-no');
+
+	if (!modalOverlay || !messageEl || !yesBtn || !noBtn) {
+		console.error('Confirmation modal elements not found!');
+		return Promise.resolve(false); // Fails safely
+	}
+
+	messageEl.textContent = message;
+	modalOverlay.classList.remove('hidden');
+
+	return new Promise(resolve => {
+		const handleYes = () => {
+			cleanup();
+			resolve(true);
+		};
+
+		const handleNo = () => {
+			cleanup();
+			resolve(false);
+		};
+
+		// Use { once: true } to automatically remove the listener after it fires once.
+		// This is a clean way to prevent memory leaks.
+		yesBtn.addEventListener('click', handleYes, { once: true });
+		noBtn.addEventListener('click', handleNo, { once: true });
+
+		// The cleanup function to hide the modal and remove listeners
+		function cleanup() {
+			modalOverlay.classList.add('hidden');
+			// Although { once: true } removes the listener that fired, we should ensure the other one is also removed.
+			yesBtn.removeEventListener('click', handleYes);
+			noBtn.removeEventListener('click', handleNo);
+		}
+	});
 }
