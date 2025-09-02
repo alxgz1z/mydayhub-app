@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.0.0
+ * @version 5.1.0
  * @author Alex & Gemini
  */
 
@@ -77,7 +77,6 @@ function initEventListeners() {
 				const columnEl = deleteBtn.closest('.task-column');
 				const columnId = columnEl.dataset.columnId;
 				
-				// Modified for Confirmation Modal
 				const confirmed = await showConfirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
 
 				if (confirmed && columnId) {
@@ -85,8 +84,8 @@ function initEventListeners() {
 					if (success) {
 						columnEl.remove();
 						updateMoveButtonVisibility();
+						showToast('Column deleted.', 'success');
 					} else {
-						// Modified for Toast Notifications
 						showToast('Error: Could not delete the column.', 'error');
 					}
 				}
@@ -116,7 +115,6 @@ function initEventListeners() {
 				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
 				const success = await reorderColumns(orderedColumnIds);
 				if (!success) {
-					// Modified for Toast Notifications
 					showToast('Error: Could not save new column order.', 'error');
 					fetchAndRenderBoard();
 				}
@@ -142,16 +140,29 @@ function initEventListeners() {
 
 			closeAllTaskActionMenus();
 
-			if (action === 'delete') {
-				// Modified for Confirmation Modal
+			// Modified for Editor Integration
+			if (action === 'edit-notes') {
+				if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
+					const notes = decodeURIComponent(taskCard.dataset.notes || '');
+					const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
+					UnifiedEditor.open({
+						id: taskId,
+						kind: 'task',
+						title: `Note: ${title}`,
+						content: notes
+					});
+				} else {
+					showToast('Editor component is not available.', 'error');
+				}
+			} else if (action === 'delete') {
 				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
 					const success = await deleteTask(taskId);
 					if (success) {
 						taskCard.remove();
 						updateColumnTaskCount(columnEl);
+						showToast('Task deleted.', 'success');
 					} else {
-						// Modified for Toast Notifications
 						showToast('Error: Could not delete task.', 'error');
 					}
 				}
@@ -164,10 +175,8 @@ function initEventListeners() {
 						columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 						updateColumnTaskCount(columnEl);
 						sortTasksInColumn(columnBody);
-						// Modified for Toast Notifications
 						showToast('Task duplicated successfully.', 'success');
 					} else {
-						// Modified for Toast Notifications
 						showToast('Error: Could not duplicate the task.', 'error');
 					}
 				}
@@ -209,9 +218,10 @@ function initEventListeners() {
 
 					const success = await renameColumn(columnId, newTitle);
 
-					if (!success) {
+					if (success) {
+						showToast('Column renamed.', 'success');
+					} else {
 						titleEl.textContent = originalTitle;
-						// Modified for Toast Notifications
 						showToast('Error: Could not rename column.', 'error');
 					}
 				};
@@ -260,9 +270,10 @@ function initEventListeners() {
 
 					const success = await renameTaskTitle(taskId, newTitle);
 
-					if (!success) {
+					if (success) {
+						showToast('Task renamed.', 'success');
+					} else {
 						titleEl.textContent = originalTitle;
-						// Modified for Toast Notifications
 						showToast('Error: Could not rename task.', 'error');
 					}
 				};
@@ -391,7 +402,12 @@ function showTaskActionsMenu(buttonEl) {
 	menu.className = 'task-actions-menu';
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
+	// Modified for Editor Integration
 	menu.innerHTML = `
+		<button class="task-action-btn" data-action="edit-notes">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+			<span>Edit Notes</span>
+		</button>
 		<button class="task-action-btn" data-action="duplicate">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
@@ -622,13 +638,11 @@ async function reorderTasks(columnId, tasks) {
 		const result = await response.json();
 
 		if (result.status !== 'success') {
-			// Modified for Toast Notifications
 			showToast(`Error: ${result.message}`, 'error');
 			return false;
 		}
 		return true;
 	} catch (error) {
-		// Modified for Toast Notifications
 		showToast('A network error occurred. Please try again.', 'error');
 		console.error('Reorder tasks error:', error);
 		return false;
@@ -664,12 +678,10 @@ async function toggleTaskComplete(taskId, isComplete) {
 			}
 			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
-			// Modified for Toast Notifications
 			showToast(`Error: ${result.message}`, 'error');
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		}
 	} catch (error) {
-		// Modified for Toast Notifications
 		showToast('A network error occurred. Please try again.', 'error');
 		taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		console.error('Toggle complete error:', error);
@@ -699,11 +711,9 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
-			// Modified for Toast Notifications
 			showToast(`Error: ${result.message}`, 'error');
 		}
 	} catch (error) {
-		// Modified for Toast Notifications
 		showToast('A network error occurred while updating classification.', 'error');
 		console.error('Toggle classification error:', error);
 	}
@@ -767,12 +777,11 @@ function showAddColumnForm() {
 					const newColumnEl = createColumnElement(result.data);
 					boardContainer.appendChild(newColumnEl);
 					updateMoveButtonVisibility(); 
+					showToast('Column created.', 'success');
 				} else {
-					// Modified for Toast Notifications
 					showToast(`Error: ${result.message}`, 'error');
 				}
 			} catch (error) {
-				// Modified for Toast Notifications
 				showToast('A network error occurred. Please try again.', 'error');
 				console.error('Create column error:', error);
 			}
@@ -812,12 +821,11 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
+			showToast('Task created.', 'success');
 		} else {
-			// Modified for Toast Notifications
 			showToast(`Error: ${result.message}`, 'error');
 		}
 	} catch (error) {
-		// Modified for Toast Notifications
 		showToast('A network error occurred while creating the task.', 'error');
 		console.error('Create task error:', error);
 	}
@@ -932,9 +940,12 @@ function createColumnElement(columnData) {
  */
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
+	let taskNotes = ''; // Default to empty notes
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
 		taskTitle = data.title;
+		// Modified for Editor Integration
+		taskNotes = data.notes || ''; // Extract notes if they exist
 	} catch (e) {
 		console.error("Could not parse task data:", taskData.encrypted_data);
 	}
@@ -945,8 +956,14 @@ function createTaskCard(taskData) {
 		classificationClass = `classification-${taskData.classification}`;
 	}
 
+	// Modified for Editor Integration
 	return `
-		<div class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" data-task-id="${taskData.task_id}" draggable="true">
+		<div 
+			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" 
+			data-task-id="${taskData.task_id}" 
+			data-title="${encodeURIComponent(taskTitle)}"
+			data-notes="${encodeURIComponent(taskNotes)}"
+			draggable="true">
 			<div class="task-status-band"></div>
 			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
 			<span class="task-title">${taskTitle}</span>

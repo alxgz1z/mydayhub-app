@@ -483,3 +483,32 @@ The application's UI is more polished and branded. Task duplication is fully fun
 1.  **Implement a Custom Confirmation Modal:** We've replaced `alert()`, but the app still uses native `confirm()` for deleting tasks and columns. The next step is to build a reusable, non-blocking confirmation modal. This will involve creating the HTML/CSS for the modal and writing a JavaScript function that returns a `Promise`, allowing us to use it cleanly with `async/await` (e.g., `if (await showConfirmModal(...))`).
 2.  **Add Success Toasts to More Actions:** To provide consistent feedback, we should add success toasts for other key actions like creating, renaming, and deleting tasks and columns.
 3.  **Implement Task Details (Notes & Due Dates):** With the core management features and UI feedback systems in place, we can now proceed with a major feature from the spec: adding support for detailed notes and due dates on tasks.
+
+---
+## 2025-09-01 22:27 — Major Feature: Unified Editor & UI Polish
+
+**Focus**
+To complete the UI feedback loop by replacing native pop-ups, and to integrate the full-featured Unified Note Editor with backend persistence for task notes.
+
+**Key work**
+* **Custom Confirmation Modal:** Replaced all native `confirm()` dialogs with a custom, non-blocking modal in `app.js`. The new `showConfirm()` function returns a Promise, allowing for a clean `async/await` implementation in `tasks.js`.
+* **Success Toast Notifications:** Added `showToast(..., 'success')` calls to all create, rename, and delete actions for tasks and columns, providing consistent and positive user feedback.
+* **Unified Note Editor (Full Stack):**
+	* Successfully ported the HTML, CSS, and JS for the editor from the Beta 4 codebase into the Beta 5 structure (`index.php`, `uix/editor.css`, `uix/editor.js`).
+	* **Backend:** Created the `saveTaskDetails` API action in `/api/tasks.php` to securely receive and persist notes content in the `encrypted_data` field.
+	* **Frontend:** The editor's "Save & Close" and "X" buttons now trigger an API call to save any changes. On success, the task card's `data-notes` attribute is updated to keep the UI in sync.
+* **Editor Enhancements:**
+	* Implemented client-side logic for the **Font Size (A-/A+)** buttons.
+	* Implemented **Tab and Shift+Tab** key handling for indentation and outdentation.
+* **Bug Fixes & Versioning:**
+	* Resolved a critical bug where `editor.js` was not being loaded in `index.php`.
+	* Corrected syntax errors in the `tasks.php` handler.
+	* Began updating file headers to application version **5.1.0**.
+
+**Status**
+The application is now at version 5.1.0. The user experience is significantly improved with non-blocking modals and toasts. The Unified Note Editor is fully integrated and can successfully persist notes for tasks, marking a major feature milestone.
+
+**Recommended next steps (priority order)**
+1.  **Implement Editor Autosave:** The spec calls for notes to be auto-saved. We should implement a timer-based or on-idle save mechanism in `editor.js` that calls the `save()` function automatically.
+2.  **Implement Task Due Dates:** This is the second half of the "Task Details" feature. It will involve adding a "Due Date" button to the task actions menu, integrating a simple date picker, and extending the `saveTaskDetails` API to handle the `dueDate` field.
+3.  **Persist Editor Font Size:** Implement the backend functionality to save the user's preferred editor font size as a user preference, as we discussed.

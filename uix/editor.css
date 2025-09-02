@@ -1,0 +1,206 @@
+/* ==========================================================================
+   MyDayHub Beta 5 - Unified Note Editor Styles
+   (Adapted from Beta 4)
+   ========================================================================== */
+
+/* ==========================================================================
+   1. EDITOR OVERLAY & CONTAINER
+   ========================================================================== */
+#unified-editor-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.6);
+	backdrop-filter: blur(5px);
+	-webkit-backdrop-filter: blur(5px);
+	z-index: 1080; /* Above toasts, below other potential system modals */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+#unified-editor-overlay.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#unified-editor-container {
+	background-color: var(--toolbar-bg); /* Use a variable from style.css */
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+	width: 90vw;
+	max-width: 800px;
+	height: 80vh;
+	max-height: 900px;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	transform: scale(1);
+	transition: transform 0.2s ease-in-out, width 0.3s ease, height 0.3s ease;
+}
+
+#unified-editor-overlay.hidden #unified-editor-container {
+	transform: scale(0.95);
+}
+
+/* Maximized State */
+#unified-editor-container.is-maximized {
+	width: 100%;
+	height: 100%;
+	max-width: 100vw;
+	max-height: 100vh;
+	border-radius: 0;
+}
+
+/* ==========================================================================
+   2. EDITOR LAYOUT (HEADER, RIBBON, BODY, FOOTER)
+   ========================================================================== */
+.editor-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid var(--border-color);
+	flex-shrink: 0;
+}
+
+#editor-title {
+	font-size: 1.2rem;
+	font-weight: 500;
+	margin: 0;
+}
+
+.editor-controls {
+	display: flex;
+	gap: 4px;
+}
+
+.editor-controls .btn-icon {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	border-radius: 6px;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	font-size: 1.5rem;
+	line-height: 1;
+}
+.editor-controls .btn-icon:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+.editor-controls .btn-icon svg {
+	width: 20px;
+	height: 20px;
+}
+
+
+#editor-ribbon {
+	display: flex;
+	flex-direction: column;
+	border-bottom: 1px solid var(--border-color);
+	background-color: #282a2d; /* Slightly different from toolbar for depth */
+	flex-shrink: 0;
+}
+
+#editor-ribbon-tabs {
+	display: flex;
+	padding: 4px 4px 0 4px;
+	gap: 4px;
+}
+
+.ribbon-tab {
+	padding: 8px 12px;
+	border: 1px solid transparent;
+	border-top: 3px solid transparent;
+	border-bottom: none;
+	border-top-left-radius: 6px;
+	border-top-right-radius: 6px;
+	background: transparent;
+	color: var(--text-secondary);
+	cursor: pointer;
+	transition: all 0.2s ease-out;
+}
+.ribbon-tab.active {
+	background: var(--toolbar-bg);
+	border-color: var(--border-color);
+	border-top-color: var(--accent-color);
+	color: var(--text-primary);
+}
+
+#editor-ribbon-panels {
+	background: var(--toolbar-bg);
+	border-top: 1px solid var(--border-color);
+}
+
+.ribbon-panel {
+	display: none;
+	padding: 4px;
+}
+.ribbon-panel.active {
+	display: flex;
+}
+
+.ribbon-button-group {
+	display: flex;
+	gap: 4px;
+}
+.ribbon-button-group .btn-icon {
+	background-color: var(--border-color);
+	width: 32px;
+	height: 32px;
+}
+.ribbon-button-group .btn-icon:hover {
+	background-color: var(--accent-color);
+	border-color: var(--accent-color);
+	color: white;
+}
+
+
+.editor-body {
+	flex-grow: 1;
+	display: flex;
+	overflow: hidden;
+}
+
+#editor-textarea {
+	flex-grow: 1;
+	width: 100%;
+	resize: none;
+	border: none;
+	background: var(--bg-color);
+	color: var(--text-primary);
+	padding: 1rem;
+	font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, Courier, monospace;
+	font-size: 1rem;
+	line-height: 1.6;
+	box-sizing: border-box;
+}
+#editor-textarea:focus {
+	outline: none;
+}
+
+.editor-footer {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: 0.8rem;
+	color: var(--text-secondary);
+	padding: 0.5rem 1rem;
+	border-top: 1px solid var(--border-color);
+	flex-shrink: 0;
+}
+
+#editor-doc-stats {
+	display: flex;
+	gap: 1rem;
+}

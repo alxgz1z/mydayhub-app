@@ -5,7 +5,7 @@
 * Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
 * Because I'm curious and this is a way to channel my creativity and passion for development. 
 
-## APPLICATION SPECIFICATION (Beta 5.0.0)
+## APPLICATION SPECIFICATION (Beta 5.1.0)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
 
@@ -464,7 +464,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 #### TEXT EDITOR PHILOSOPHY & BEHAVIOR
 * **Plain Text Core with Markdown:** The editor's foundation is a simple text area with a monospaced font for clarity and portability. It natively supports Markdown syntax (e.g., # for headings, * for lists) for lightweight formatting. A toggle will allow users to switch between the raw text view and a rendered Preview Mode.  The preview matches what the editor would build for the print function.
 * **Modal & Universal:** The editor always opens as a modal window, ensuring the user can focus on the note. It is accessible from any item in the app that supports long-form text.
-* **Autosave & Reliability:** All changes are auto-saved locally every few seconds to prevent data loss. A simple version history will be accessible to restore previous states of the note.
+* [WIP] **Autosave & Reliability:** Notes are saved when the editor is closed. A full autosave feature is planned.
 * **Keyboard Navigation:** The ESC key serves as a universal shortcut to close the editor and return to the previous view.
 ⠀
 #### EDITOR LAYOUT
@@ -607,6 +607,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] deleteTask (in tasks.php)
 		[RDY] renameTaskTitle (in tasks.php)
 		[RDY] duplicateTask (in tasks.php)
+		[RDY] saveTaskDetails (in tasks.php)
 	Future API Actions:
 		[FUT] moveTask
 		[FUT] togglePriority
@@ -631,8 +632,8 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] Enforced Task Sorting by classification
 		[RDY] Task Actions Menu (⋮ button)
 		[RDY] Delete Task (from actions menu with confirmation)
+		[RDY] Custom modals/toasts to replace native alerts
 	Future UI Features:
-		[WIP] Custom modals/toasts to replace native alerts
 		[FUT] Bottom toolbar with filters
 		[FUT] Settings slider panel
 		[FUT] Task Notes integration (Unified Editor)

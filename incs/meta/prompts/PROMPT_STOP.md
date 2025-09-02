@@ -1,13 +1,17 @@
-# Context
-I need to stop for now and need your help to document how far along we are.
-You will find bellow three deliverables that will be used to resume coding.
-The next session may not have context of what we have been doing.
-So what you will provide is critical to inform that session properly.
+You are tasked with generating clear and actionable documentation to record the current state of development at the end of this coding session. Future sessions may begin without recent context, so your output must enable seamless project resumption.
 
-# Deliverables required
-A) A brief note of 100 words or less to describe what we have done with the code that will be used as a comment in the commit to github at session end.
+# Deliverables
+1 Commit Note
+	* Write a concise summary (≤100 words) of key code changes or progress, suitable for use as a GitHub commit message.
+2 Development Summary & Next Steps
+	* Summarize work completed during this session.
+	* List recommended next steps for development continuation.
+	* Structure and style the summary using the guidelines and formatting conventions in APP_DONE.md.
+3 Specification Review
+	* Identify specific sections in APP_SPEC.md that may require updates or additions based on today’s progress.
+	* If changes are needed, provide a point-by-point update guide following the format and style found in APP_SPEC.md.
 
-B) Summary of what we have done since we started this session and what would be the recommended next steps. Since the plan is to to use this to resume programming in another session, please be generous in creating a good 
-description that your future self can use to pickup where we left and continue collaborating with me in this project. Use the content of APP_DONE.md (attached) as a guide to structure and style this summary.  (App Development Status document attached)  Please use the same styling present in the file for the add in text.
-
-C) A recommendation of APP_SPEC.md (Attached) contents that may require updates or additions based on how we have evolved with the development of the app in this session.  For this end you will provide a 1 by 1 guided update process if applicable. (App Spec document attached)  Please observe the styling choices present in the document for the possible updates to be added.
+# Instructions
+* Use markdown lists, clear headings, and bold for key actions.
+* Be generous in context to empower effective session pickup.
+* Maintain consistency and style with our project documentation standards (APP_DONE.md and APP_SPEC.md).

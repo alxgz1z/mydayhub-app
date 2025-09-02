@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.0.0
+ * @version 5.1.0
  * @author Alex & Gemini
  */
 
@@ -63,8 +63,13 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_rename_task_title($pdo, $userId, $data);
 			}
 			break;
+		
+		case 'saveTaskDetails':
+			if ($method === 'POST') {
+				handle_save_task_details($pdo, $userId, $data);
+			}
+			break;
 
-		// Added for task duplication
 		case 'duplicateTask':
 			if ($method === 'POST') {
 				handle_duplicate_task($pdo, $userId, $data);
@@ -97,6 +102,71 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 }
 
 /**
+ * Saves details (e.g., notes) to a task's encrypted_data JSON blob.
+ */
+function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$notes = isset($data['notes']) ? (string)$data['notes'] : null;
+
+	if ($taskId <= 0 || $notes === null) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Task ID and notes are required.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		$stmt_find = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt_find->fetch();
+
+		if ($task === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.']);
+			return;
+		}
+
+		$currentData = json_decode($task['encrypted_data'], true);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			if (defined('DEVMODE') && DEVMODE) {
+				error_log("Corrupted JSON found for task_id: {$taskId}. Data: " . $task['encrypted_data']);
+			}
+			$currentData = []; // Recover by creating a new object
+		}
+
+		$currentData['notes'] = $notes; // Add or update the notes
+		$newDataJson = json_encode($currentData);
+
+		$stmt_update = $pdo->prepare(
+			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt_update->execute([
+			':newDataJson' => $newDataJson,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success']);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in tasks.php handle_save_task_details(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while saving the task details.']);
+	}
+}
+
+
+/**
  * Reorders tasks within a column and handles moving tasks between columns.
  */
 function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
@@ -120,7 +190,7 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
-			 SET position = :position, column_id = :columnId 
+			 SET position = :position, column_id = :columnId, updated_at = NOW()
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
 
@@ -211,7 +281,7 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 		$position = (int)$stmtPos->fetchColumn();
 
 		$stmt = $pdo->prepare(
-			"INSERT INTO `columns` (user_id, column_name, position) VALUES (:userId, :columnName, :position)"
+			"INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, :columnName, :position, NOW(), NOW())"
 		);
 		$stmt->execute([
 			':userId' => $userId,
@@ -259,10 +329,10 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		$stmtPos->execute([':userId' => $userId, ':columnId' => $columnId]);
 		$position = (int)$stmtPos->fetchColumn();
 
-		$encryptedData = json_encode(['title' => $taskTitle]);
+		$encryptedData = json_encode(['title' => $taskTitle, 'notes' => '']);
 
 		$stmt = $pdo->prepare(
-			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position) VALUES (:userId, :columnId, :encryptedData, :position)"
+			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, NOW(), NOW())"
 		);
 		$stmt->execute([
 			':userId' => $userId,
@@ -320,7 +390,7 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 		$newClassification = ($currentClassification === 'completed') ? 'support' : 'completed';
 
 		$stmtUpdate = $pdo->prepare(
-			"UPDATE tasks SET classification = :newClassification WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET classification = :newClassification, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmtUpdate->execute([
 			':newClassification' => $newClassification,
@@ -380,7 +450,7 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 		}
 
 		$stmtUpdate = $pdo->prepare(
-			"UPDATE tasks SET classification = :newClassification WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET classification = :newClassification, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmtUpdate->execute([
 			':newClassification' => $newClassification,
@@ -418,7 +488,7 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 
 	try {
 		$stmt = $pdo->prepare(
-			"UPDATE `columns` SET column_name = :newName WHERE column_id = :columnId AND user_id = :userId"
+			"UPDATE `columns` SET column_name = :newName, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId"
 		);
 		
 		$stmt->execute([
@@ -483,7 +553,7 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		$stmt_get_columns->execute([':userId' => $userId]);
 		$remaining_columns = $stmt_get_columns->fetchAll(PDO::FETCH_COLUMN);
 		
-		$stmt_update_pos = $pdo->prepare("UPDATE `columns` SET position = :position WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_update_pos = $pdo->prepare("UPDATE `columns` SET position = :position, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId");
 		foreach ($remaining_columns as $index => $id) {
 			$stmt_update_pos->execute([':position' => $index, ':columnId' => $id, ':userId' => $userId]);
 		}
@@ -519,7 +589,7 @@ function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 		$pdo->beginTransaction();
 
 		$stmt = $pdo->prepare(
-			"UPDATE `columns` SET position = :position WHERE column_id = :columnId AND user_id = :userId"
+			"UPDATE `columns` SET position = :position, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId"
 		);
 
 		foreach ($columnIds as $position => $columnId) {
@@ -581,7 +651,7 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		$stmt_get_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
 		$remaining_tasks = $stmt_get_tasks->fetchAll(PDO::FETCH_COLUMN);
 
-		$stmt_update_pos = $pdo->prepare("UPDATE tasks SET position = :position WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_update_pos = $pdo->prepare("UPDATE tasks SET position = :position, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId");
 		foreach ($remaining_tasks as $index => $id) {
 			$stmt_update_pos->execute([':position' => $index, ':taskId' => $id, ':userId' => $userId]);
 		}
@@ -641,7 +711,7 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 		$newDataJson = json_encode($currentData);
 
 		$stmt_update = $pdo->prepare(
-			"UPDATE tasks SET encrypted_data = :newDataJson WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_update->execute([
 			':newDataJson' => $newDataJson,
@@ -705,8 +775,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 
 		// Step 3: Insert the new (duplicated) task
 		$stmt_insert = $pdo->prepare(
-			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification) 
-			 VALUES (:userId, :columnId, :encryptedData, :position, :classification)"
+			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, created_at, updated_at) 
+			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, NOW(), NOW())"
 		);
 		$stmt_insert->execute([
 			':userId' => $userId,

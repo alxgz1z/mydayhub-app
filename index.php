@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.0.0
+ * @version 5.1.0
  * @author Alex & Gemini
  */
 
@@ -36,6 +36,7 @@ $username = $_SESSION['username'] ?? 'User';
 	<link rel="icon" type="image/svg+xml" href="media/logo.svg">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
+	<link rel="stylesheet" href="uix/editor.css">
 
 	<script>
 		// Expose server-side configuration to client-side JavaScript.
@@ -43,6 +44,7 @@ $username = $_SESSION['username'] ?? 'User';
 			appURL: "<?php echo APP_URL; ?>"
 		};
 	</script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
 </head>
 <body>
 
@@ -69,7 +71,7 @@ $username = $_SESSION['username'] ?? 'User';
 
 		<footer id="app-footer">
 			<div class="footer-left">
-				<span id="footer-date">August 31, 2025</span>
+				<span id="footer-date">September 01, 2025</span>
 			</div>
 			<div class="footer-center">
 				</div>
@@ -93,7 +95,62 @@ $username = $_SESSION['username'] ?? 'User';
 		</div>
 	</div>
 
+	<div id="unified-editor-overlay" class="hidden">
+		<div id="unified-editor-container">
+			<div class="editor-header">
+				<h3 id="editor-title">Edit Note</h3>
+				<div class="editor-controls">
+					<button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
+					</button>
+					<button id="editor-btn-maximize" class="btn-icon" title="Maximize">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="6 15 12 21 18 15"></polyline><polyline points="18 9 12 3 6 9"></polyline></g></svg>
+					</button>
+					<button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline></g></svg>
+					</button>
+					<button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>
+				</div>
+			</div>
+
+			<div id="editor-ribbon">
+				<nav id="editor-ribbon-tabs">
+					<button class="ribbon-tab active" data-panel="format">Format</button>
+					<button class="ribbon-tab" data-panel="find-replace">Find & Replace</button>
+				</nav>
+				<div id="editor-ribbon-panels">
+					<div class="ribbon-panel active" id="editor-panel-format">
+						<div class="ribbon-button-group">
+								<button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
+								<button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
+								<button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
+								<button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
+								<button class="btn-icon" title="Frame Selection" data-action="frame">[]</button>
+								<button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
+								<button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
+								<button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
+						</div>
+					</div>
+					<div class="ribbon-panel" id="editor-panel-find-replace"></div>
+				</div>
+			</div>
+
+			<div class="editor-body">
+				<textarea id="editor-textarea" placeholder="Start writing..."></textarea>
+			</div>
+
+			<div class="editor-footer" id="editor-status-bar">
+				<div id="editor-doc-stats">
+					<span>Words: 0</span>
+					<span>Chars: 0</span>
+				</div>
+				<div id="editor-save-status">Last saved: Never</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="uix/app.js" defer></script>
+	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
 
 </body>
