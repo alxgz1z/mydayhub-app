@@ -544,10 +544,10 @@ $username = $_SESSION['username'];
 define('BASE_PATH', dirname(__DIR__) . '/');
 
 // -- DATABASE CREDENTIALS --
-define('DB_HOST', 'localhost');
-define('DB_NAME', 'u258668246_mdh');
-define('DB_USER', 'u258668246_dba');
-define('DB_PASS', 'F1123581321i');    
+define('DB_HOST', '');
+define('DB_NAME', '');
+define('DB_USER', '');
+define('DB_PASS', '');    
 
 // -- ENVIRONMENT & VERSION --
 // Set DEV_MODE to 'true' to show the "MAINTENANCE IN PROGRESS" banner.
@@ -557,12 +557,12 @@ define('DEBUG_MODE', false);
 define('APP_VERSION', 'Version 3.2.4 Beta DEV'); 
 
 // -- SMTP EMAIL SETTINGS --
-define('SMTP_HOST', 'smtp.hostinger.com');
-define('SMTP_USERNAME', 'support@mydayhub.com');
-define('SMTP_PASSWORD', 'F1123581321i@');
+define('SMTP_HOST', '');
+define('SMTP_USERNAME', '');
+define('SMTP_PASSWORD', '');
 define('SMTP_PORT', 587);
-define('SMTP_FROM_EMAIL', 'support@mydayhub.com');
-define('SMTP_FROM_NAME', 'MyDayHub');
+define('SMTP_FROM_EMAIL', '');
+define('SMTP_FROM_NAME', '');
 
 // -- APPLICATION SETTINGS --
 // MODIFIED: Added /dev to the URL for the development environment.

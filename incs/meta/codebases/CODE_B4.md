@@ -236,10 +236,10 @@ if (DEVMODE) {
 
 
 // --- DATABASE CREDENTIALS (UPDATED FOR LOCAL MAMP) --- //
-define('DB_HOST', 'localhost');
-define('DB_USER', 'root');
+define('DB_HOST', '');
+define('DB_USER', '');
 define('DB_PASS', '');
-define('DB_NAME', 'mydayhub');
+define('DB_NAME', '');
 
 
 // --- SESSION & SECURITY --- //
@@ -247,12 +247,12 @@ define('SESSION_TIMEOUT_SECONDS', 28800); // 8 hours
 
 
 // --- SMTP (MAIL) SERVICE --- //
-define('SMTP_HOST', 'smtp.hostinger.com');
-define('SMTP_USER', 'app@mytsks.com');
-define('SMTP_PASS', 'F1123581321i@');
+define('SMTP_HOST', '');
+define('SMTP_USER', '');
+define('SMTP_PASS', '');
 define('SMTP_PORT', 587);
-define('SMTP_FROM_EMAIL', 'app@mytsks.com');
-define('SMTP_FROM_NAME', 'MyTsks App');
+define('SMTP_FROM_EMAIL', '');
+define('SMTP_FROM_NAME', '');
 
 
 // --- FILE PATHS --- //
