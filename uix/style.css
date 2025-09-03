@@ -69,6 +69,7 @@ body {
 	padding: 0.5rem 1.5rem;
 	background-color: var(--toolbar-bg);
 	border-top: 1px solid var(--border-color);
+	transition: background-color 0.3s, border-top-color 0.3s; /* Smooth transition */
 }
 
 /* ==========================================================================
@@ -132,6 +133,21 @@ body {
 	color: var(--toast-error-bg);
 	text-decoration: none;
 }
+
+/* Modified for App Version feature: Add dev mode indicator style */
+#app-footer.dev-mode {
+	background-color: #442c2e; /* Dark red */
+	border-top-color: var(--toast-error-bg);
+}
+
+/* Modified for App Version feature: Add separators for footer items */
+.footer-left span + span::before,
+.footer-right span + a::before {
+	content: '|';
+	margin: 0 0.25rem 0 -0.25rem;
+	color: var(--border-color);
+}
+
 
 /* ==========================================================================
    4. TOAST NOTIFICATIONS

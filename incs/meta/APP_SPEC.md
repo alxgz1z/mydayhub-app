@@ -200,11 +200,11 @@ and prevents getting lost in busywork.
 Full-width, one-row control bar
 (Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
   **Toolbar Controls**
-	* **Left:** Current date, Theme switch (dark/light), Show/Hide private items switch, Global App Font Size (A-/A+ buttons)
+	* **Left:** Current Username within square parenthesis (example: [alfa]), Current Date (formatted as dd mmm yy).
 	* **Center:** Context aware buttons
-		* **Tasks View Filters:** Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
+		* **Tasks View Filters:** STasks View Filters: Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
 		(Future: * ** Journal View:** Buttons with "1","3" and "5" to determine how many columns are displayed. Button "Wrap-Up" to create a new Entry that aggregates all the entries in the focus date.  This new Entry is added on top.)
-	* **Right:** Current Username within square parethensis (example: "[alfa]"), Logout ("⏻ Logout" in red)
+	* **Right:** Application Version Number, Logout link.
  
 ### SETTINGS
 Slider accessible from title bar

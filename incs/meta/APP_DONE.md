@@ -539,3 +539,24 @@ The editor is now significantly more robust with autosave and preference persist
 1. **Implement Task Priority:** The actions menu has several items pending. The next logical one is to wire up the "Priority" toggle, which will involve a new API action and UI updates.
 2. **Build Bottom Toolbar & Filters:** Implement the bottom toolbar specified in the spec, including the initial filters for showing/hiding shared or completed tasks.
 3. **Implement Task Attachments:** Begin the next major feature: allowing users to attach images to tasks, including the UI for a drop zone, the gallery modal, and the backend logic for file uploads and storage quotas.
+
+---
+## 2025-09-03 08:30 — App Version & Dev Mode Indicator
+
+**Focus**
+Enhance application awareness and safety by adding a version display and a visual indicator for the development environment.
+
+**Key work**
+* **Configuration:** Defined a new `APP_VER` constant in `config.php` to track the application version.
+* **Security Hardening:** Removed hardcoded fallback credentials from `config.php` to make the `.env` file the single source of truth for all environments.
+* **UI Implementation:**
+	* Updated the footer in `index.php` to display the version number and to conditionally add a `.dev-mode` class if `DEV_MODE` is true.
+	* Rearranged footer items for better logical grouping (User/Date on left, Version/Logout on right).
+	* Added CSS in `style.css` to give the `.dev-mode` footer a distinct dark red background, providing an unmistakable visual cue when not in production.
+	* Implemented a function in `app.js` to make the footer date dynamic and format it to `dd mmm yy`.
+
+**Status**
+The feature is complete and functional. The application now clearly displays its version and provides a visual warning when running in development mode. The footer layout and date format now match the new requirements.
+
+**Recommended next steps (priority order)**
+1.  **Implement Task Priority:** Begin the next feature from the spec. This will involve adding a `priority` field or modifying the `classification` enum in the `tasks` table, creating a `togglePriority` API action, and wiring it up to the task actions menu.

@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.1.0
+ * @version 5.1.1
  * @author Alex & Gemini
  */
 
@@ -69,13 +69,14 @@ $username = $_SESSION['username'] ?? 'User';
 			<div class="mobile-bottom-spacer"></div>
 		</main>
 
-		<footer id="app-footer">
+		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>">
 			<div class="footer-left">
-				<span id="footer-date">September 01, 2025</span>
+				<span>[<?php echo htmlspecialchars($username); ?>]</span>
+				<span id="footer-date"></span>
 			</div>
 			<div class="footer-center"></div>
 			<div class="footer-right">
-				<span>[<?php echo htmlspecialchars($username); ?>]</span>
+				<span><?php echo APP_VER; ?></span>
 				<a href="login/logout.php">Logout</a>
 			</div>
 		</footer>
@@ -146,7 +147,9 @@ $username = $_SESSION['username'] ?? 'User';
 				<div id="editor-save-status">Last saved: Never</div>
 			</div>
 		</div>
-	</div> <div id="date-modal-overlay" class="hidden">
+	</div>
+
+	<div id="date-modal-overlay" class="hidden">
 		<div id="date-modal-container">
 			<h4>Set Due Date</h4>
 			<div id="date-modal-content">

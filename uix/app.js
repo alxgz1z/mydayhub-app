@@ -4,11 +4,14 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.1.0
+ * @version 5.1.1
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
+
+	// Modified for dynamic date: Update the footer date on load
+	updateFooterDate();
 
 	// For now, we only have the Tasks view.
 	// We check if the function to initialize it exists before calling it.
@@ -18,6 +21,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// Future logic for view tabs and other global UI will go here.
 });
+
+// ==========================================================================
+// --- UI HELPERS ---
+// Added for dynamic date
+// ==========================================================================
+
+/**
+ * Updates the date in the footer to the current date in "dd mmm yy" format.
+ */
+function updateFooterDate() {
+	const dateEl = document.getElementById('footer-date');
+	if (!dateEl) return;
+
+	const now = new Date();
+	const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+	
+	const day = String(now.getDate()).padStart(2, '0');
+	const month = months[now.getMonth()];
+	const year = String(now.getFullYear()).slice(-2);
+
+	dateEl.textContent = `${day} ${month} ${year}`;
+}
 
 
 // ==========================================================================
@@ -106,7 +131,6 @@ function showConfirm(message) {
 
 // ==========================================================================
 // --- DATE PICKER MODAL SYSTEM ---
-// Added for Due Date feature
 // ==========================================================================
 
 /**
