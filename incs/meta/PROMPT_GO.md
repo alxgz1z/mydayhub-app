@@ -34,8 +34,8 @@ I’m Alex, an amateur developer building a productivity tool. This project brin
 
 ### Environments
 * Production: ~[https://mydayhub.com](https://mydayhub.com/)~ (Beta 3)
-* Hostinger development mirror: ~[https://breaveasy.com](https://breaveasy.com/)~ (Beta 5)
-* Development: localhost (Beta 5)
+* Development: ~[http://localhost](localhost)~ (Beta 5)
+* online test: ~[https://breaveasy.com](https://breaveasy.com/)~ (Beta 5)
 * Environments are fully isolated: user data, databases, files do not overlap.
 * Backend add-on: composer-runtime-api (SMTP service, prod only).
 * Debugging: If /includes/config.php DEVMODE = true, backend logs to debug.log in the root.

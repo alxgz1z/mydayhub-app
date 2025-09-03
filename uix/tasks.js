@@ -11,6 +11,19 @@
 let dragSourceColumn = null;
 
 /**
+ * Helper to format YYYY-MM-DD to MM/DD.
+ * @param {string} dateString - The date string in YYYY-MM-DD format.
+ * @returns {string} - The formatted date string or an empty string.
+ */
+function formatDueDate(dateString) {
+	if (!dateString || typeof dateString !== 'string') return '';
+	const parts = dateString.split('-');
+	if (parts.length !== 3) return '';
+	return `${parts[1]}/${parts[2]}`;
+}
+
+
+/**
  * Initializes the Tasks view by fetching and rendering the board.
  */
 function initTasksView() {
@@ -22,7 +35,7 @@ function initTasksView() {
  * Sets up the main event listeners for the tasks view.
  */
 function initEventListeners() {
-	// Global click listener to close dynamic menus
+	// Global click listener to close dynamic menus and other popups
 	document.addEventListener('click', (e) => {
 		if (e.target.closest('.task-actions-menu') === null && e.target.closest('.btn-task-actions') === null) {
 			closeAllTaskActionMenus();
@@ -140,21 +153,42 @@ function initEventListeners() {
 
 			closeAllTaskActionMenus();
 
-			// Modified for Editor Integration
 			if (action === 'edit-notes') {
 				if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
 					const notes = decodeURIComponent(taskCard.dataset.notes || '');
 					const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
+					const updatedAt = taskCard.dataset.updatedAt;
+
+					const boardContainer = document.getElementById('task-board-container');
+					const savedFontSize = boardContainer.dataset.editorFontSize || 16;
+
 					UnifiedEditor.open({
 						id: taskId,
 						kind: 'task',
 						title: `Note: ${title}`,
-						content: notes
+						content: notes,
+						updatedAt: updatedAt,
+						fontSize: parseInt(savedFontSize, 10)
 					});
 				} else {
 					showToast('Editor component is not available.', 'error');
 				}
-			} else if (action === 'delete') {
+			} 
+			// Modified for Due Date feature: Call the new modal
+			else if (action === 'set-due-date') {
+				const currentDate = taskCard.dataset.dueDate;
+				const newDate = await showDueDateModal(currentDate);
+
+				// newDate is null if cancelled, '' if removed, or a date string if saved
+				if (newDate !== null && newDate !== currentDate) {
+					const success = await saveTaskDueDate(taskId, newDate);
+					if (success) {
+						taskCard.dataset.dueDate = newDate;
+						updateDueDateBadge(taskCard, newDate);
+					}
+				}
+			}
+			else if (action === 'delete') {
 				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
 					const success = await deleteTask(taskId);
@@ -184,7 +218,6 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('dblclick', (e) => {
-			// Handle column title rename
 			if (e.target.matches('.column-title')) {
 				const titleEl = e.target;
 				const columnEl = titleEl.closest('.task-column');
@@ -236,7 +269,6 @@ function initEventListeners() {
 					}
 				});
 			} 
-			// Handle task title rename
 			else if (e.target.matches('.task-title')) {
 				const titleEl = e.target;
 				const taskCard = titleEl.closest('.task-card');
@@ -341,6 +373,59 @@ function initEventListeners() {
 }
 
 /**
+ * Modified for Due Date feature: Update the due date badge on a task card.
+ */
+function updateDueDateBadge(taskCard, newDate) {
+	let badge = taskCard.querySelector('.task-due-date');
+	if (newDate) {
+		if (!badge) {
+			badge = document.createElement('span');
+			badge.className = 'task-due-date';
+			const actionsButton = taskCard.querySelector('.btn-task-actions');
+			taskCard.insertBefore(badge, actionsButton);
+		}
+		badge.textContent = `!${formatDueDate(newDate)}`;
+	} else {
+		if (badge) {
+			badge.remove();
+		}
+	}
+}
+
+
+/**
+ * Modified for Due Date feature: Save the due date via API.
+ */
+async function saveTaskDueDate(taskId, newDate) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'saveTaskDetails',
+				data: {
+					task_id: taskId,
+					dueDate: newDate
+				}
+			})
+		});
+		const result = await response.json();
+		if (result.status === 'success') {
+			showToast('Due date updated.', 'success');
+			return true;
+		} else {
+			throw new Error(result.message || 'Failed to update due date.');
+		}
+	} catch (error) {
+		showToast(error.message, 'error');
+		console.error('Save due date error:', error);
+		return false;
+	}
+}
+
+/**
  * Gets the element to drop a dragged element after.
  */
 function getDragAfterElement(container, y) {
@@ -402,11 +487,19 @@ function showTaskActionsMenu(buttonEl) {
 	menu.className = 'task-actions-menu';
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
-	// Modified for Editor Integration
 	menu.innerHTML = `
 		<button class="task-action-btn" data-action="edit-notes">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 			<span>Edit Notes</span>
+		</button>
+		<button class="task-action-btn" data-action="set-due-date">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+				<line x1="16" y1="2" x2="16" y2="6"></line>
+				<line x1="8" y1="2" x2="8" y2="6"></line>
+				<line x1="3" y1="10" x2="21" y2="10"></line>
+			</svg>
+			<span>Set Due Date</span>
 		</button>
 		<button class="task-action-btn" data-action="duplicate">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -859,7 +952,14 @@ async function fetchAndRenderBoard() {
 		const result = await response.json();
 
 		if (result.status === 'success') {
-			renderBoard(result.data);
+			const boardData = result.data.board;
+			const userPrefs = result.data.user_prefs;
+
+			if (userPrefs && userPrefs.editor_font_size) {
+				container.dataset.editorFontSize = userPrefs.editor_font_size;
+			}
+
+			renderBoard(boardData);
 		} else {
 			throw new Error(result.message || 'Failed to fetch board data.');
 		}
@@ -940,12 +1040,11 @@ function createColumnElement(columnData) {
  */
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
-	let taskNotes = ''; // Default to empty notes
+	let taskNotes = '';
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
 		taskTitle = data.title;
-		// Modified for Editor Integration
-		taskNotes = data.notes || ''; // Extract notes if they exist
+		taskNotes = data.notes || '';
 	} catch (e) {
 		console.error("Could not parse task data:", taskData.encrypted_data);
 	}
@@ -956,17 +1055,20 @@ function createTaskCard(taskData) {
 		classificationClass = `classification-${taskData.classification}`;
 	}
 
-	// Modified for Editor Integration
+	// Modified for Due Date feature: Add due date data attribute and badge
 	return `
 		<div 
 			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" 
 			data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
+			data-updated-at="${taskData.updated_at || ''}"
+			data-due-date="${taskData.due_date || ''}"
 			draggable="true">
 			<div class="task-status-band"></div>
 			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
 			<span class="task-title">${taskTitle}</span>
+			${taskData.due_date ? `<span class="task-due-date">!${formatDueDate(taskData.due_date)}</span>` : ''}
 			<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 		</div>
 	`;

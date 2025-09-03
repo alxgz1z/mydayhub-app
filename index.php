@@ -73,8 +73,7 @@ $username = $_SESSION['username'] ?? 'User';
 			<div class="footer-left">
 				<span id="footer-date">September 01, 2025</span>
 			</div>
-			<div class="footer-center">
-				</div>
+			<div class="footer-center"></div>
 			<div class="footer-right">
 				<span>[<?php echo htmlspecialchars($username); ?>]</span>
 				<a href="login/logout.php">Logout</a>
@@ -145,6 +144,20 @@ $username = $_SESSION['username'] ?? 'User';
 					<span>Chars: 0</span>
 				</div>
 				<div id="editor-save-status">Last saved: Never</div>
+			</div>
+		</div>
+	</div> <div id="date-modal-overlay" class="hidden">
+		<div id="date-modal-container">
+			<h4>Set Due Date</h4>
+			<div id="date-modal-content">
+				<input type="date" id="date-modal-input">
+			</div>
+			<div id="date-modal-buttons">
+				<button id="btn-date-remove" class="btn btn-danger">Remove Due Date</button>
+				<div class="button-group-right">
+					<button id="btn-date-cancel" class="btn">Cancel</button>
+					<button id="btn-date-save" class="btn btn-primary">Save</button>
+				</div>
 			</div>
 		</div>
 	</div>

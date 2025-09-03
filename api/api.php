@@ -63,8 +63,13 @@ try {
 	switch ($module) {
 		case 'tasks':
 			require_once __DIR__ . '/tasks.php';
-			// The handler will now route the specific action.
 			handle_tasks_action($action, $method, $pdo, $userId, $data);
+			break;
+
+		// Modified for User Preferences feature
+		case 'users':
+			require_once __DIR__ . '/users.php';
+			handle_users_action($action, $method, $pdo, $userId, $data);
 			break;
 
 		default:

@@ -12,6 +12,9 @@
 	--accent-color: #8ab4f8;
 	--border-color: #3c4043;
 	--btn-hover-bg: rgba(255, 255, 255, 0.1);
+	/* Modified to fix menu transparency */
+	--column-bg: var(--toolbar-bg); /* Use the same solid background as the footer/toolbar */
+	--card-border: var(--border-color); /* Use the same standard border color */
 	/* Added for Toasts & Modals */
 	--toast-success-bg: #4CAF50;
 	--toast-error-bg: #d94f46; 
@@ -71,11 +74,10 @@ body {
 /* ==========================================================================
    3. HEADER & FOOTER COMPONENTS
    ========================================================================== */
-/* Modified for Logo Position */
 .header-left {
 	display: flex;
 	align-items: center;
-	gap: 0.75rem; /* Adjusted gap for a tighter look */
+	gap: 0.75rem;
 }
 
 .header-right, .footer-left, .footer-center, .footer-right {
@@ -88,18 +90,15 @@ body {
 	font-size: 1.5rem;
 	font-weight: 500;
 	margin: 0;
-	/* Modified for Logo Position */
-	order: 2; /* Renders the title after the logo */
+	order: 2;
 }
 
-/* Modified for Logo & Favicon */
 #header-logo {
-	height: 28px; /* Align with the visual height of the title */
+	height: 28px;
 	width: auto;
 	vertical-align: middle;
-	/* Modified for Logo Position & Color */
-	order: 1; /* Renders the logo before the title */
-	color: var(--accent-color); /* Applies accent color to the SVG's 'currentColor' stroke */
+	order: 1;
+	color: var(--accent-color);
 }
 
 
@@ -130,21 +129,20 @@ body {
 }
 
 .footer-right a {
-	color: var(--toast-error-bg); /* Use consistent error color */
+	color: var(--toast-error-bg);
 	text-decoration: none;
 }
 
 /* ==========================================================================
    4. TOAST NOTIFICATIONS
    ========================================================================== */
-/* Added for Toast Notifications */
 #toast-container {
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
-	z-index: 1050; /* High z-index to appear on top of other content */
+	z-index: 1050;
 	display: flex;
-	flex-direction: column-reverse; /* New toasts appear at the bottom and push old ones up */
+	flex-direction: column-reverse;
 	gap: 10px;
 	align-items: flex-end;
 }
@@ -156,11 +154,9 @@ body {
 	font-size: 0.9rem;
 	font-weight: 500;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-	
-	/* Animation properties */
 	opacity: 0;
-	transform: translateX(100%); /* Start off-screen to the right */
-	transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1); /* Smooth transition for entry */
+	transform: translateX(100%);
+	transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
 }
 
 .toast.visible {
@@ -183,7 +179,6 @@ body {
 /* ==========================================================================
    5. CONFIRMATION MODAL
    ========================================================================== */
-/* Added for Confirmation Modal */
 #confirm-modal-overlay {
 	position: fixed;
 	top: 0;
@@ -191,7 +186,7 @@ body {
 	width: 100%;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.7);
-	z-index: 1100; /* Higher than toasts */
+	z-index: 1100;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -255,4 +250,86 @@ body {
 
 .btn.btn-danger:hover {
 	background-color: var(--btn-danger-hover-bg);
+}
+
+/* ==========================================================================
+   6. DATE PICKER MODAL
+   ========================================================================== */
+/* Modified for Due Date feature: Added styles for the date modal */
+#date-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 1100; /* Same as confirm modal */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+#date-modal-overlay.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#date-modal-container {
+	background-color: var(--toolbar-bg);
+	padding: 1.5rem 2rem;
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	border: 1px solid var(--border-color);
+	width: 100%;
+	max-width: 380px;
+	transform: scale(1);
+	transition: transform 0.2s ease-in-out;
+}
+
+#date-modal-overlay.hidden #date-modal-container {
+	transform: scale(0.95);
+}
+
+#date-modal-container h4 {
+	margin: 0 0 1.5rem 0;
+	font-size: 1.2rem;
+	font-weight: 500;
+	text-align: center;
+}
+
+#date-modal-input {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	color: var(--text-primary);
+	border-radius: 6px;
+	font-size: 1rem;
+	box-sizing: border-box;
+}
+
+/* Style the calendar icon for dark mode */
+#date-modal-input::-webkit-calendar-picker-indicator {
+	filter: invert(0.8);
+	cursor: pointer;
+}
+
+#date-modal-buttons {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 1.5rem;
+}
+
+.button-group-right {
+	display: flex;
+	gap: 0.75rem;
+}
+
+/* Re-using .btn from confirm modal, but adding a primary style */
+.btn.btn-primary {
+	background-color: var(--accent-color);
+	color: var(--bg-color);
 }

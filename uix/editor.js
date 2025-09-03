@@ -7,7 +7,7 @@
  * @author Alex & Gemini
  *
  * Public API:
- * window.UnifiedEditor.open({ id, kind, title, content })
+ * window.UnifiedEditor.open({ id, kind, title, content, updatedAt, fontSize })
  * window.UnifiedEditor.close()
  *
  * This module is self-contained and handles its own visibility.
@@ -15,6 +15,13 @@
 
 (function() {
 	"use strict";
+
+	let autosaveTimer = null;
+	const AUTOSAVE_DELAY = 2000;
+	
+	// Modified for User Preferences feature: Add a timer for saving font size.
+	let fontSizeSaveTimer = null;
+	const FONT_SAVE_DELAY = 1500; // 1.5 seconds
 
 	let elements = {};
 	const state = {
@@ -33,7 +40,7 @@
 		elements.title = document.getElementById('editor-title');
 		elements.textarea = document.getElementById('editor-textarea');
 		elements.btnClose = document.getElementById('editor-btn-close');
-		elements.btnSaveClose = document.getElementById('btn-editor-save-close'); // Added for persistence
+		elements.btnSaveClose = document.getElementById('btn-editor-save-close');
 		elements.btnMaximize = document.getElementById('editor-btn-maximize');
 		elements.btnRestore = document.getElementById('editor-btn-restore');
 		elements.tabs = document.querySelectorAll('#editor-ribbon-tabs .ribbon-tab');
@@ -55,7 +62,7 @@
 
 	function attachEventListeners() {
 		elements.btnClose.addEventListener('click', close);
-		elements.btnSaveClose.addEventListener('click', close); // Modified for persistence
+		elements.btnSaveClose.addEventListener('click', close);
 		elements.btnMaximize.addEventListener('click', maximize);
 		elements.btnRestore.addEventListener('click', restore);
 
@@ -77,16 +84,60 @@
 			state.isDirty = true;
 			updateStats();
 			elements.saveStatus.textContent = 'Unsaved changes...';
+			clearTimeout(autosaveTimer);
+			autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
 		});
 
 		elements.textarea.addEventListener('keydown', handleTabKey);
 	}
 
+	/**
+	 * Modified for User Preferences feature: Saves the new font size to the backend.
+	 */
+	async function saveFontSizePreference(size) {
+		try {
+			const appURL = window.MyDayHub_Config?.appURL || '';
+			const response = await fetch(`${appURL}/api/api.php`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					module: 'users',
+					action: 'saveUserPreference',
+					data: {
+						key: 'editor_font_size',
+						value: size
+					}
+				})
+			});
+			const result = await response.json();
+			if (result.status !== 'success') {
+				throw new Error(result.message || 'Failed to save font size.');
+			}
+			// Update the data attribute on the board so it's remembered if the editor is closed and reopened without a page refresh.
+			const boardContainer = document.getElementById('task-board-container');
+			if(boardContainer) {
+				boardContainer.dataset.editorFontSize = size;
+			}
+		} catch (error) {
+			console.error('Save font size error:', error);
+			showToast('Could not save font size preference.', 'error');
+		}
+	}
+
+	/**
+	 * Modified for User Preferences feature: Calls the save function after a delay.
+	 */
 	function changeFontSize(amount) {
 		const newSize = state.fontSize + amount;
 		if (newSize >= state.minFontSize && newSize <= state.maxFontSize) {
 			state.fontSize = newSize;
 			elements.textarea.style.fontSize = `${state.fontSize}px`;
+
+			// Debounce the save operation
+			clearTimeout(fontSizeSaveTimer);
+			fontSizeSaveTimer = setTimeout(() => {
+				saveFontSizePreference(state.fontSize);
+			}, FONT_SAVE_DELAY);
 		}
 	}
 	
@@ -129,7 +180,7 @@
 			case 'calculate':
 				if (!selectedText) return;
 				try {
-					newText = `${selectedText} = ${math.evaluate(selectedText)}`;
+					newText = `${selectedText} = ${eval(selectedText)}`;
 				} catch (err) {
 					newText = selectedText;
 				}
@@ -139,6 +190,8 @@
 		elements.textarea.setRangeText(newText, start, end, 'select');
 		elements.textarea.focus();
 		state.isDirty = true;
+		clearTimeout(autosaveTimer);
+		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
 	}
 
 	function handleTabKey(e) {
@@ -159,16 +212,15 @@
 			textarea.setRangeText('\t', start, end, 'end');
 		}
 		state.isDirty = true;
+		clearTimeout(autosaveTimer);
+		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
 	}
 
-	// Modified for persistence: New async save function
-	/**
-	 * Saves the current note content to the backend if changes have been made.
-	 * @returns {Promise<boolean>} - True if save was successful or not needed, false on error.
-	 */
 	async function save() {
+		clearTimeout(autosaveTimer);
+
 		if (!state.isDirty || !state.currentTaskId) {
-			return true; // No changes to save, so it's a "success"
+			return true;
 		}
 
 		elements.saveStatus.textContent = 'Saving...';
@@ -193,14 +245,14 @@
 				throw new Error(result.message || 'Failed to save notes.');
 			}
 			
-			// Update the DOM element to keep the UI in sync
 			const taskCard = document.querySelector(`.task-card[data-task-id="${state.currentTaskId}"]`);
 			if (taskCard) {
 				taskCard.dataset.notes = encodeURIComponent(elements.textarea.value);
+				taskCard.dataset.updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
 			}
 
 			state.isDirty = false;
-			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleTimeString()}`;
+			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleString()}`;
 			return true;
 
 		} catch (error) {
@@ -211,10 +263,15 @@
 		}
 	}
 
+	/**
+	 * Modified for User Preferences feature: Accepts and applies the user's font size.
+	 */
 	function open(options = {}) {
-		const { id, kind = 'task', title = 'Edit Note', content = '' } = options;
+		const { id, kind = 'task', title = 'Edit Note', content = '', updatedAt, fontSize } = options;
 		
 		state.currentTaskId = id;
+		state.fontSize = fontSize || 16; // Use saved font size or default to 16
+
 		elements.title.textContent = title;
 		elements.textarea.value = content;
 		elements.textarea.style.fontSize = `${state.fontSize}px`;
@@ -225,14 +282,20 @@
 		updateStats();
 		state.isOpen = true;
 		state.isDirty = false;
-		elements.saveStatus.textContent = 'Last saved: Never';
+		
+		if (updatedAt) {
+			const savedDate = new Date(updatedAt.replace(' ', 'T') + 'Z'); 
+			elements.saveStatus.textContent = `Last saved: ${savedDate.toLocaleString()}`;
+		} else {
+			elements.saveStatus.textContent = 'Ready';
+		}
 	}
 
-	// Modified for persistence: Close function is now async to await saving
 	async function close() {
+		clearTimeout(autosaveTimer);
+
 		const success = await save();
 		if (!success) {
-			// Optionally ask user if they want to close anyway
 			const confirmed = await showConfirm("Could not save changes. Close anyway?");
 			if (!confirmed) return;
 		}

@@ -5,7 +5,7 @@
 * Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
 * Because I'm curious and this is a way to channel my creativity and passion for development. 
 
-## APPLICATION SPECIFICATION (Beta 5.1.0)
+## APPLICATION SPECIFICATION (Beta 5.1.1)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
 
@@ -18,7 +18,7 @@ From Beta 5.0.0 on, the application scope is strictly focused on perfecting the 
 
 ## FILE LOCATIONS
 * \ 			only index.php here
-* \api\			all api files, no subdirectories.
+* \api\			API module handlers (e.g., tasks.php, users.php), no subdirectories.
 * \uix\			all js and css files, no subdirectories.
 * \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
 * \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
@@ -464,7 +464,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 #### TEXT EDITOR PHILOSOPHY & BEHAVIOR
 * **Plain Text Core with Markdown:** The editor's foundation is a simple text area with a monospaced font for clarity and portability. It natively supports Markdown syntax (e.g., # for headings, * for lists) for lightweight formatting. A toggle will allow users to switch between the raw text view and a rendered Preview Mode.  The preview matches what the editor would build for the print function.
 * **Modal & Universal:** The editor always opens as a modal window, ensuring the user can focus on the note. It is accessible from any item in the app that supports long-form text.
-* [WIP] **Autosave & Reliability:** Notes are saved when the editor is closed. A full autosave feature is planned.
+* [RDY] **Autosave & Reliability:** Notes are automatically saved after a user pauses typing. Changes are also saved when the editor is closed.
 * **Keyboard Navigation:** The ESC key serves as a universal shortcut to close the editor and return to the previous view.
 ⠀
 #### EDITOR LAYOUT
@@ -507,6 +507,10 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   
 ## TECHNICAL ARCHITECTURE
 
+**Timestamp Policy**
+
+All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stored in the database in **UTC (Coordinated Universal Time)**. The backend uses the `UTC_TIMESTAMP()` function for all writes. The frontend is responsible for converting these UTC timestamps to the user's local timezone for display. This ensures data consistency regardless of user location or server configuration.
+
 **Database Schema Core**
 
 * users
@@ -514,8 +518,8 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
   username VARCHAR(50) NOT NULL UNIQUE
   email VARCHAR(255) NOT NULL UNIQUE
   password_hash VARCHAR(255) NOT NULL
+  preferences JSON NOT NULL
   created_at DATETIME NOT NULL DEFAULT current_timestamp()
-  storage_quota_bytes BIGINT NOT NULL DEFAULT 52428800 -- 50 MB
   storage_used_bytes BIGINT NOT NULL DEFAULT 0
 
 * columns
@@ -608,6 +612,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] renameTaskTitle (in tasks.php)
 		[RDY] duplicateTask (in tasks.php)
 		[RDY] saveTaskDetails (in tasks.php)
+		[RDY] saveUserPreference (in users.php)
 	Future API Actions:
 		[FUT] moveTask
 		[FUT] togglePriority
@@ -633,11 +638,11 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 		[RDY] Task Actions Menu (⋮ button)
 		[RDY] Delete Task (from actions menu with confirmation)
 		[RDY] Custom modals/toasts to replace native alerts
+		[RDY] Due Date picker (custom modal)
 	Future UI Features:
 		[FUT] Bottom toolbar with filters
 		[FUT] Settings slider panel
 		[FUT] Task Notes integration (Unified Editor)
-		[FUT] Due Date picker
 		[FUT] Sharing UI
 		[FUT] Privacy toggles
 		[FUT] Attachments UI (drop zone, gallery)

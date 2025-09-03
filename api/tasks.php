@@ -102,16 +102,33 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 }
 
 /**
- * Saves details (e.g., notes) to a task's encrypted_data JSON blob.
+ * Saves details (notes and/or due date) to a task.
  */
 function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	
+	// Modified for Due Date feature: Check if notes or dueDate are present
 	$notes = isset($data['notes']) ? (string)$data['notes'] : null;
+	$dueDate = isset($data['dueDate']) ? $data['dueDate'] : null;
 
-	if ($taskId <= 0 || $notes === null) {
+	if ($taskId <= 0 || ($notes === null && !array_key_exists('dueDate', $data))) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID and notes are required.']);
+		echo json_encode(['status' => 'error', 'message' => 'Task ID and at least one field to update (notes or dueDate) are required.']);
 		return;
+	}
+
+	// Modified for Due Date feature: Validate the due date format
+	$dueDateForDb = null;
+	if (array_key_exists('dueDate', $data)) {
+		if (empty($data['dueDate'])) {
+			$dueDateForDb = null;
+		} elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['dueDate'])) {
+			$dueDateForDb = $data['dueDate'];
+		} else {
+			http_response_code(400);
+			echo json_encode(['status' => 'error', 'message' => 'Invalid dueDate format. Please use YYYY-MM-DD.']);
+			return;
+		}
 	}
 
 	try {
@@ -130,23 +147,34 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 
 		$currentData = json_decode($task['encrypted_data'], true);
 		if (json_last_error() !== JSON_ERROR_NONE) {
-			if (defined('DEVMODE') && DEVMODE) {
-				error_log("Corrupted JSON found for task_id: {$taskId}. Data: " . $task['encrypted_data']);
-			}
-			$currentData = []; // Recover by creating a new object
+			$currentData = [];
 		}
 
-		$currentData['notes'] = $notes; // Add or update the notes
+		// Only update notes in the JSON if they were passed in the request
+		if ($notes !== null) {
+			$currentData['notes'] = $notes;
+		}
 		$newDataJson = json_encode($currentData);
 
-		$stmt_update = $pdo->prepare(
-			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
-		);
-		$stmt_update->execute([
-			':newDataJson' => $newDataJson,
-			':taskId' => $taskId,
-			':userId' => $userId
-		]);
+		// Modified for Due Date feature: Build the query parts dynamically
+		$sql_parts = [];
+		$params = [':taskId' => $taskId, ':userId' => $userId];
+
+		if ($notes !== null) {
+			$sql_parts[] = "encrypted_data = :newDataJson";
+			$params[':newDataJson'] = $newDataJson;
+		}
+
+		if (array_key_exists('dueDate', $data)) {
+			$sql_parts[] = "due_date = :dueDate";
+			$params[':dueDate'] = $dueDateForDb;
+		}
+		
+		if (!empty($sql_parts)) {
+			$sql = "UPDATE tasks SET " . implode(', ', $sql_parts) . ", updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId";
+			$stmt_update = $pdo->prepare($sql);
+			$stmt_update->execute($params);
+		}
 
 		$pdo->commit();
 
@@ -190,7 +218,7 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
-			 SET position = :position, column_id = :columnId, updated_at = NOW()
+			 SET position = :position, column_id = :columnId, updated_at = UTC_TIMESTAMP()
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
 
@@ -220,10 +248,15 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 
 
 /**
- * Fetches all columns and their associated tasks for a given user.
+ * Fetches all columns, tasks, and user preferences.
  */
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
+		$stmtPrefs = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId");
+		$stmtPrefs->execute([':userId' => $userId]);
+		$prefsJson = $stmtPrefs->fetchColumn();
+		$userPrefs = json_decode($prefsJson ?: '{}', true);
+
 		$stmtColumns = $pdo->prepare(
 			"SELECT column_id, column_name, position FROM `columns` WHERE user_id = :userId ORDER BY position ASC"
 		);
@@ -239,8 +272,9 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
+		// Modified for Due Date feature: Select the due_date column
 		$stmtTasks = $pdo->prepare(
-			"SELECT task_id, column_id, encrypted_data, position, classification FROM tasks WHERE user_id = :userId ORDER BY position ASC"
+			"SELECT task_id, column_id, encrypted_data, position, classification, updated_at, due_date FROM tasks WHERE user_id = :userId ORDER BY position ASC"
 		);
 		$stmtTasks->execute([':userId' => $userId]);
 
@@ -252,7 +286,13 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		}
 
 		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => $boardData]);
+		echo json_encode([
+			'status' => 'success', 
+			'data' => [
+				'board' => $boardData,
+				'user_prefs' => $userPrefs
+			]
+		]);
 
 	} catch (Exception $e) {
 		if (defined('DEVMODE') && DEVMODE) {
@@ -281,7 +321,7 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 		$position = (int)$stmtPos->fetchColumn();
 
 		$stmt = $pdo->prepare(
-			"INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, :columnName, :position, NOW(), NOW())"
+			"INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, :columnName, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
 		$stmt->execute([
 			':userId' => $userId,
@@ -332,7 +372,7 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		$encryptedData = json_encode(['title' => $taskTitle, 'notes' => '']);
 
 		$stmt = $pdo->prepare(
-			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, NOW(), NOW())"
+			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
 		$stmt->execute([
 			':userId' => $userId,
@@ -351,7 +391,8 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 				'column_id' => $columnId,
 				'encrypted_data' => $encryptedData,
 				'position' => $position,
-				'classification' => 'support'
+				'classification' => 'support',
+				'due_date' => null // Modified for Due Date feature
 			]
 		]);
 
@@ -390,7 +431,7 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 		$newClassification = ($currentClassification === 'completed') ? 'support' : 'completed';
 
 		$stmtUpdate = $pdo->prepare(
-			"UPDATE tasks SET classification = :newClassification, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET classification = :newClassification, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmtUpdate->execute([
 			':newClassification' => $newClassification,
@@ -450,7 +491,7 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 		}
 
 		$stmtUpdate = $pdo->prepare(
-			"UPDATE tasks SET classification = :newClassification, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET classification = :newClassification, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmtUpdate->execute([
 			':newClassification' => $newClassification,
@@ -488,7 +529,7 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 
 	try {
 		$stmt = $pdo->prepare(
-			"UPDATE `columns` SET column_name = :newName, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId"
+			"UPDATE `columns` SET column_name = :newName, updated_at = UTC_TIMESTAMP() WHERE column_id = :columnId AND user_id = :userId"
 		);
 		
 		$stmt->execute([
@@ -553,7 +594,7 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		$stmt_get_columns->execute([':userId' => $userId]);
 		$remaining_columns = $stmt_get_columns->fetchAll(PDO::FETCH_COLUMN);
 		
-		$stmt_update_pos = $pdo->prepare("UPDATE `columns` SET position = :position, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_update_pos = $pdo->prepare("UPDATE `columns` SET position = :position, updated_at = UTC_TIMESTAMP() WHERE column_id = :columnId AND user_id = :userId");
 		foreach ($remaining_columns as $index => $id) {
 			$stmt_update_pos->execute([':position' => $index, ':columnId' => $id, ':userId' => $userId]);
 		}
@@ -589,7 +630,7 @@ function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 		$pdo->beginTransaction();
 
 		$stmt = $pdo->prepare(
-			"UPDATE `columns` SET position = :position, updated_at = NOW() WHERE column_id = :columnId AND user_id = :userId"
+			"UPDATE `columns` SET position = :position, updated_at = UTC_TIMESTAMP() WHERE column_id = :columnId AND user_id = :userId"
 		);
 
 		foreach ($columnIds as $position => $columnId) {
@@ -651,7 +692,7 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		$stmt_get_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
 		$remaining_tasks = $stmt_get_tasks->fetchAll(PDO::FETCH_COLUMN);
 
-		$stmt_update_pos = $pdo->prepare("UPDATE tasks SET position = :position, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_update_pos = $pdo->prepare("UPDATE tasks SET position = :position, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId");
 		foreach ($remaining_tasks as $index => $id) {
 			$stmt_update_pos->execute([':position' => $index, ':taskId' => $id, ':userId' => $userId]);
 		}
@@ -700,7 +741,6 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 
 		$currentData = json_decode($task['encrypted_data'], true);
 		if (json_last_error() !== JSON_ERROR_NONE) {
-			// If JSON is corrupted, start fresh but log the error.
 			if (defined('DEVMODE') && DEVMODE) {
 				error_log("Corrupted JSON found for task_id: {$taskId}. Data: " . $task['encrypted_data']);
 			}
@@ -711,7 +751,7 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 		$newDataJson = json_encode($currentData);
 
 		$stmt_update = $pdo->prepare(
-			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = NOW() WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_update->execute([
 			':newDataJson' => $newDataJson,
@@ -734,7 +774,6 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 	}
 }
 
-// Added for task duplication
 /**
  * Duplicates a task, placing the copy at the bottom of the same column.
  */
@@ -776,7 +815,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 		// Step 3: Insert the new (duplicated) task
 		$stmt_insert = $pdo->prepare(
 			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, created_at, updated_at) 
-			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, NOW(), NOW())"
+			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
 		$stmt_insert->execute([
 			':userId' => $userId,
@@ -799,7 +838,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'column_id' => $columnId,
 				'encrypted_data' => $encryptedData,
 				'position' => $newPosition,
-				'classification' => $classification
+				'classification' => $classification,
+				'due_date' => null // Modified for Due Date feature
 			]
 		]);
 

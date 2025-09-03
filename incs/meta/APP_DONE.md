@@ -512,3 +512,30 @@ The application is now at version 5.1.0. The user experience is significantly im
 1.  **Implement Editor Autosave:** The spec calls for notes to be auto-saved. We should implement a timer-based or on-idle save mechanism in `editor.js` that calls the `save()` function automatically.
 2.  **Implement Task Due Dates:** This is the second half of the "Task Details" feature. It will involve adding a "Due Date" button to the task actions menu, integrating a simple date picker, and extending the `saveTaskDetails` API to handle the `dueDate` field.
 3.  **Persist Editor Font Size:** Implement the backend functionality to save the user's preferred editor font size as a user preference, as we discussed.
+
+---
+## 2025-09-02 22:29 — Editor Enhancements, Due Dates & Major Bug Fixes
+
+**Focus**
+To enhance the Unified Note Editor with autosave and preference persistence, to implement the full-stack "Due Date" feature, and to resolve several critical bugs related to timezones and UI rendering.
+
+**Key work**
+* **Editor Autosave:** Implemented a debounced autosave feature in `editor.js` to automatically persist note changes after a user stops typing.
+* **Font Size Persistence (Full Stack):**
+  * **Architecture:** Implemented a scalable `preferences` JSON column in the `users` table and created a new, dedicated `/api/users.php` handler for user-specific settings.
+  * **Functionality:** The user's preferred editor font size is now loaded with the board and saved automatically when changed.
+* **Task Due Dates (Full Stack):**
+  * Added `due_date` column to the `tasks` table.
+  * Updated the backend to save and retrieve due dates.
+  * Replaced the simple pop-up with a polished, reusable **modal window** for setting or clearing dates, improving the UX significantly.
+* **Critical Bug Fixes:**
+  * **Timezone:** Standardized all database timestamps to **UTC** by replacing `NOW()` with `UTC_TIMESTAMP()` throughout the backend, fixing a 3-hour discrepancy bug.
+  * **UI Rendering:** Diagnosed and fixed multiple critical UI bugs, including a corrupted `editor.css` file, a missing `</div>` in `index.php`, and missing CSS variables that caused transparency issues with the actions menu.
+
+**Status**
+The editor is now significantly more robust with autosave and preference persistence. The application's data integrity is improved with standardized UTC timestamps. The **due date feature is fully implemented** and functional. All known UI rendering bugs have been resolved, and the application is stable.
+
+**Recommended next steps (priority order)**
+1. **Implement Task Priority:** The actions menu has several items pending. The next logical one is to wire up the "Priority" toggle, which will involve a new API action and UI updates.
+2. **Build Bottom Toolbar & Filters:** Implement the bottom toolbar specified in the spec, including the initial filters for showing/hiding shared or completed tasks.
+3. **Implement Task Attachments:** Begin the next major feature: allowing users to attach images to tasks, including the UI for a drop zone, the gallery modal, and the backend logic for file uploads and storage quotas.

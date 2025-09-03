@@ -4,7 +4,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.0.0
+ * @version 5.1.0
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -37,25 +37,19 @@ function showToast(message, type = 'info', duration = 3000) {
 		return;
 	}
 
-	// Create the toast element
 	const toast = document.createElement('div');
-	toast.className = `toast ${type}`; // e.g., 'toast success'
+	toast.className = `toast ${type}`;
 	toast.textContent = message;
 
-	// Add to the DOM
 	container.appendChild(toast);
 
-	// Animate it in
-	// We use a short timeout to allow the browser to render the initial state before transitioning
 	setTimeout(() => {
 		toast.classList.add('visible');
 	}, 10);
 
-	// Set a timeout to remove the toast
 	setTimeout(() => {
 		toast.classList.remove('visible');
 		
-		// Remove the element from the DOM after the fade-out animation has completed
 		toast.addEventListener('transitionend', () => {
 			toast.remove();
 		});
@@ -66,7 +60,6 @@ function showToast(message, type = 'info', duration = 3000) {
 
 // ==========================================================================
 // --- CONFIRMATION MODAL SYSTEM ---
-// Added for Confirmation Modal
 // ==========================================================================
 
 /**
@@ -99,17 +92,85 @@ function showConfirm(message) {
 			resolve(false);
 		};
 
-		// Use { once: true } to automatically remove the listener after it fires once.
-		// This is a clean way to prevent memory leaks.
 		yesBtn.addEventListener('click', handleYes, { once: true });
 		noBtn.addEventListener('click', handleNo, { once: true });
 
-		// The cleanup function to hide the modal and remove listeners
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
-			// Although { once: true } removes the listener that fired, we should ensure the other one is also removed.
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
+		}
+	});
+}
+
+
+// ==========================================================================
+// --- DATE PICKER MODAL SYSTEM ---
+// Added for Due Date feature
+// ==========================================================================
+
+/**
+ * Displays a date picker modal.
+ * @param {string} [currentDate=''] The current date in YYYY-MM-DD format.
+ * @returns {Promise<string|null>} A promise that resolves to the new date string (YYYY-MM-DD),
+ * an empty string if cleared, or null if canceled.
+ */
+function showDueDateModal(currentDate = '') {
+	const modalOverlay = document.getElementById('date-modal-overlay');
+	const input = document.getElementById('date-modal-input');
+	const saveBtn = document.getElementById('btn-date-save');
+	const removeBtn = document.getElementById('btn-date-remove');
+	const cancelBtn = document.getElementById('btn-date-cancel');
+
+	if (!modalOverlay || !input || !saveBtn || !removeBtn || !cancelBtn) {
+		console.error('Date modal elements not found!');
+		return Promise.resolve(null); // Fails safely
+	}
+
+	input.value = currentDate;
+	modalOverlay.classList.remove('hidden');
+
+	return new Promise(resolve => {
+		const handleSave = () => {
+			cleanup();
+			resolve(input.value);
+		};
+
+		const handleRemove = () => {
+			cleanup();
+			resolve(''); // Resolve with empty string to signify removal
+		};
+
+		const handleCancel = () => {
+			cleanup();
+			resolve(null); // Resolve with null to signify no change
+		};
+		
+		const handleOverlayClick = (e) => {
+			if (e.target === modalOverlay) {
+				handleCancel();
+			}
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape') {
+				handleCancel();
+			}
+		};
+
+		saveBtn.addEventListener('click', handleSave);
+		removeBtn.addEventListener('click', handleRemove);
+		cancelBtn.addEventListener('click', handleCancel);
+		modalOverlay.addEventListener('click', handleOverlayClick);
+		document.addEventListener('keydown', handleEscKey);
+
+		function cleanup() {
+			modalOverlay.classList.add('hidden');
+			saveBtn.removeEventListener('click', handleSave);
+			removeBtn.removeEventListener('click', handleRemove);
+			cancelBtn.removeEventListener('click', handleCancel);
+			modalOverlay.removeEventListener('click', handleOverlayClick);
+			document.removeEventListener('keydown', handleEscKey);
 		}
 	});
 }
