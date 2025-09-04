@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.1.1
+ * @version 5.1.2
  * @author Alex & Gemini
  */
 
@@ -129,7 +129,8 @@ $username = $_SESSION['username'] ?? 'User';
 								<button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
 								<button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
 								<button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
-						</div>
+								<button class="btn-icon btn-text-danger" title="Clear Note" data-action="clear-note">[clear note]</button>
+								</div>
 					</div>
 					<div class="ribbon-panel" id="editor-panel-find-replace"></div>
 				</div>

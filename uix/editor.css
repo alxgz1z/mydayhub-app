@@ -94,6 +94,21 @@
 	color: var(--text-primary);
 }
 
+/* Modified for "Clear Note" feature styling */
+.btn-text-danger {
+	color: #ff6b6b; /* A clear, but not too harsh, red */
+	font-weight: 500;
+	font-size: 0.9rem;
+	border-radius: 4px; /* Override 50% for text buttons */
+	padding: 5px 8px;
+}
+
+.btn-text-danger:hover {
+	color: #ff4d4d; /* Brighter red on hover */
+	background-color: var(--btn-hover-bg);
+}
+/* End of modification */
+
 #editor-btn-close {
 	font-size: 1.5rem;
 	font-weight: 300;

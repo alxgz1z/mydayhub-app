@@ -3,7 +3,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 5.1.0
+ * @version 5.1.2
  * @author Alex & Gemini
  *
  * Public API:
@@ -19,9 +19,8 @@
 	let autosaveTimer = null;
 	const AUTOSAVE_DELAY = 2000;
 	
-	// Modified for User Preferences feature: Add a timer for saving font size.
 	let fontSizeSaveTimer = null;
-	const FONT_SAVE_DELAY = 1500; // 1.5 seconds
+	const FONT_SAVE_DELAY = 1500;
 
 	let elements = {};
 	const state = {
@@ -60,6 +59,14 @@
 		elements.charCount.textContent = `Chars: ${chars}`;
 	}
 
+	function markAsDirtyAndQueueSave() {
+		state.isDirty = true;
+		updateStats();
+		elements.saveStatus.textContent = 'Unsaved changes...';
+		clearTimeout(autosaveTimer);
+		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
+	}
+
 	function attachEventListeners() {
 		elements.btnClose.addEventListener('click', close);
 		elements.btnSaveClose.addEventListener('click', close);
@@ -80,20 +87,10 @@
 			button.addEventListener('click', handleFormatAction);
 		});
 
-		elements.textarea.addEventListener('input', () => {
-			state.isDirty = true;
-			updateStats();
-			elements.saveStatus.textContent = 'Unsaved changes...';
-			clearTimeout(autosaveTimer);
-			autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
-		});
-
+		elements.textarea.addEventListener('input', markAsDirtyAndQueueSave);
 		elements.textarea.addEventListener('keydown', handleTabKey);
 	}
 
-	/**
-	 * Modified for User Preferences feature: Saves the new font size to the backend.
-	 */
 	async function saveFontSizePreference(size) {
 		try {
 			const appURL = window.MyDayHub_Config?.appURL || '';
@@ -113,7 +110,6 @@
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save font size.');
 			}
-			// Update the data attribute on the board so it's remembered if the editor is closed and reopened without a page refresh.
 			const boardContainer = document.getElementById('task-board-container');
 			if(boardContainer) {
 				boardContainer.dataset.editorFontSize = size;
@@ -124,16 +120,11 @@
 		}
 	}
 
-	/**
-	 * Modified for User Preferences feature: Calls the save function after a delay.
-	 */
 	function changeFontSize(amount) {
 		const newSize = state.fontSize + amount;
 		if (newSize >= state.minFontSize && newSize <= state.maxFontSize) {
 			state.fontSize = newSize;
 			elements.textarea.style.fontSize = `${state.fontSize}px`;
-
-			// Debounce the save operation
 			clearTimeout(fontSizeSaveTimer);
 			fontSizeSaveTimer = setTimeout(() => {
 				saveFontSizePreference(state.fontSize);
@@ -141,10 +132,21 @@
 		}
 	}
 	
-	function handleFormatAction(e) {
+	// Modified for "Clear Note" feature: Added async and confirmation dialog.
+	async function handleFormatAction(e) {
 		const button = e.currentTarget;
 		const action = button.dataset.action;
 		
+		if (action === 'clear-note') {
+			const confirmed = await showConfirm('Are you sure you want to clear the entire note? This cannot be undone.');
+			if (confirmed) {
+				elements.textarea.value = '';
+				elements.textarea.focus();
+				markAsDirtyAndQueueSave();
+			}
+			return;
+		}
+
 		if (action === 'font-size') {
 			const change = parseInt(button.dataset.change, 10);
 			changeFontSize(change);
@@ -180,7 +182,8 @@
 			case 'calculate':
 				if (!selectedText) return;
 				try {
-					newText = `${selectedText} = ${eval(selectedText)}`;
+					// Use math.js for safer evaluation
+					newText = `${selectedText} = ${math.evaluate(selectedText)}`;
 				} catch (err) {
 					newText = selectedText;
 				}
@@ -189,9 +192,7 @@
 
 		elements.textarea.setRangeText(newText, start, end, 'select');
 		elements.textarea.focus();
-		state.isDirty = true;
-		clearTimeout(autosaveTimer);
-		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
+		markAsDirtyAndQueueSave();
 	}
 
 	function handleTabKey(e) {
@@ -211,9 +212,7 @@
 		} else {
 			textarea.setRangeText('\t', start, end, 'end');
 		}
-		state.isDirty = true;
-		clearTimeout(autosaveTimer);
-		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
+		markAsDirtyAndQueueSave();
 	}
 
 	async function save() {
@@ -253,6 +252,16 @@
 
 			state.isDirty = false;
 			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleString()}`;
+			
+			const hasNotes = elements.textarea.value.trim() !== '';
+			const event = new CustomEvent('noteSaved', {
+				detail: {
+					taskId: state.currentTaskId,
+					hasNotes: hasNotes
+				}
+			});
+			document.dispatchEvent(event);
+
 			return true;
 
 		} catch (error) {
@@ -263,14 +272,11 @@
 		}
 	}
 
-	/**
-	 * Modified for User Preferences feature: Accepts and applies the user's font size.
-	 */
 	function open(options = {}) {
 		const { id, kind = 'task', title = 'Edit Note', content = '', updatedAt, fontSize } = options;
 		
 		state.currentTaskId = id;
-		state.fontSize = fontSize || 16; // Use saved font size or default to 16
+		state.fontSize = fontSize || 16;
 
 		elements.title.textContent = title;
 		elements.textarea.value = content;
@@ -325,7 +331,6 @@
 	function init() {
 		bindElements();
 		attachEventListeners();
-		console.log("Unified Editor Initialized");
 	}
 
 	document.addEventListener('DOMContentLoaded', init);

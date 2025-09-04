@@ -5,7 +5,7 @@
 * Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
 * Because I'm curious and this is a way to channel my creativity and passion for development. 
 
-## APPLICATION SPECIFICATION (Beta 5.1.1)
+## APPLICATION SPECIFICATION (Beta 5.1.2)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
 

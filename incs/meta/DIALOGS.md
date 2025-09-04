@@ -954,3 +954,74 @@ Answers to Your Architectural Questions
 3) Telemetry Tracking: We will start this after the core features are built. Once you can create columns, tasks, and notes, we'll have meaningful actions to track. We will create a simple, dedicated API endpoint for logging events.
 
 4) Offline Support: You're right to think about this early. However, building for offline support from the very beginning adds a tremendous amount of complexity (Service Workers, IndexedDB, sync logic). The professional standard is to build the core online application first and ensure it's stable. Then, we will layer on offline capabilities. This phased approach is much faster and less prone to bugs.
+
+********************************************************************************
+## ON SHOWING WHEN TASKS HAVE NOTES AND/OR DUE DATES, AND SIGNAL/NOISE DONUTS
+*ALEX ASKED TO GEMINI*
+I have two features for which I'd like to get your thoughts.
+1. Signal to noise rings (or bars, or horizontal bars): This feature plots something that shows the proportion of activities classified as signal, support and noise. it's a visual indicator of how time is being used. the user can choose to include or exclude closed tasks.
+2. we need to show an indicator when a task has notes. I noticed that the indicator when a task has a due date takes quite some horizontal space. If starts with !, which considering the distinct color may not be needed as the color clearly separates it from the task title. 
+
+I was thinking that such as location will force title wrapping to the next line, even for short titles. Not ideal. What if tasks with notes and/or due dates show the due date as a much smaller text at the bottom of the task card, and when there is a note, it can show something similar, not necessarily a pencil, but maybe some text indicating that there is a note.
+*GEMINI RESPONDED* 
+Of course, Alex. These are both excellent ideas that touch upon key aspects of the application: high-level data visualization and detailed UI/UX refinement. Let's break them down.
+
+## Feature 1: Signal-to-Noise Visualization
+This is a fantastic feature for a productivity app. Giving users a clear, visual summary of how their efforts are categorized provides powerful feedback and can help them adjust their focus.
+
+* My Assessment: This is a high-value "dashboard" feature. Donut charts or stacked horizontal bars are perfect for this kind of proportional data. I lean slightly towards donut charts as they are very effective at showing parts of a whole at a glance. We could place this at the top of the "Today" view or in a dedicated "Dashboard" or "Stats" area later on.
+
+* Implementation Complexity: This will require a new backend endpoint to aggregate the task data (counting tasks by signal_type for the user) and new front-end logic, likely using a charting library or custom SVG/CSS, to render the visual.
+
+* Recommendation: I suggest we add this to our feature roadmap. It's a brilliant idea, but let's prioritize polishing the core task interaction first. The second feature you mentioned is a perfect example of that.
+## Feature 2: Task Card Indicators (Due Date & Notes)
+I completely agree with your analysis. The current due date indicator (!09/03) is too prominent and inflexible. It disrupts the visual flow of the task title and doesn't scale well if we want to add more indicators, like one for notes.
+
+Your proposal to move this metadata to a less intrusive area at the bottom of the card is a standard and highly effective UX pattern. It creates a clear visual hierarchy:
+2. Primary Info: Task Title
+3. Secondary Info / Metadata: Due Date, Notes Indicator, etc.
+
+This approach makes the UI cleaner, more scannable, and more robust for future additions.
+
+Proposed Plan:
+1. We'll create a new "footer" area within each task list item.
+2. If a task has a due date, we'll display a small calendar icon and the date in this footer. We'll keep the color-coding logic (e.g., orange for upcoming).
+3. If a task has notes, we'll display a small note or document icon in the footer.
+4. This frees up the main row, allowing task titles more room and preventing awkward wrapping.
+
+Next Step: This is a high-impact UI improvement that we should tackle right away. It directly enhances the core user experience.
+
+To get started, please provide me with the latest versions of the following files:
+1. view-today.js (to modify the renderTasks function)
+2. styles.css (to add styling for the new footer and icons)
+3. api/fetch_tasks.php (we'll need to modify it to also return whether a task has notes)
+
+Once I have these, I'll propose the necessary changes step-by-step, starting with the backend.
+
+"I confirm that this output fully complies with the 4‑Layer Safety Protocol and has passed the Conformance Check."
+
+********************************************************************************
+## ON TASK CARD FOOTER APPROACH TO SHOW META INFO ABOUT THE TASK
+*ALEX ASKED TO GEMINI*
+we already have two icons designed for notes and due date. we can use those same icons as the indicators of the task having either or not. and for due date, we can use a color to denote if it is overdue, vs showing them in white when it isn't. I imagine this as a smaller icon, maybe about 60% of the size shown in the contextual menu. and if we can put those icons right next to the contextual menu ellipsis, it won't take too much space. I am attaching a mockup showing various tasks. One has only notes, no due date. Another once has only due date, no notes. And there is another without either. finally, another has both. this would be a different implementation. alternatively, we could use the same icons, as a dedicated footer in teh task card. thoughts?
+*GEMINI RESPONDED*
+Thank you for the detailed proposal and the mockup, Alex. This is exactly the kind of collaboration that leads to a great final product. You've raised some excellent points.
+
+Using the existing icons is smart for consistency, and your idea to use color to signal an overdue task is a fantastic UX improvement we should definitely implement.
+
+After carefully considering both options (inline next to the ellipsis vs. a dedicated footer), I strongly recommend we proceed with the dedicated footer approach.
+
+Here is my reasoning from a UI/UX and scalability perspective:
+
+1. Superior Mobile Experience & Touch Targets
+This is the most critical reason. Placing several small icons (notes, due date, ellipsis) right next to each other creates very small, cramped tap targets. On a mobile device, it would be extremely easy for a user's thumb to miss the intended icon, leading to frustration. A footer allows us to give each icon adequate spacing, making them easy and reliable to tap.
+
+2. Scalability and Future-Proofing
+The application spec calls for future features like attachments and sharing. In the inline model, adding even one more icon would make the right side of the task card incredibly crowded and would almost certainly force even short titles to wrap. A footer is a flexible container that can easily accommodate 2, 3, or even 4 status icons in the future without compromising the design.
+
+3. Improved Scannability & Visual Hierarchy
+Your primary goal was to prevent the due date from interfering with the task title. While the inline approach helps, the footer model perfects it. It creates a clean, distinct separation between the primary content (the title) and the secondary metadata (the indicators). This makes it much easier for a user to scan down a list of tasks and read the titles without their eyes being distracted by icons on the same line.
+
+Let's combine the best of both our ideas: we will create a dedicated footer in the task card, and within that footer, we will use the icons you've selected and implement your color-coding idea for the due dates.
+
+The plan I outlined previously remains the most logical path forward, now with this clear UI direction. We'll start with the backend to ensure the frontend has all the data it needs.

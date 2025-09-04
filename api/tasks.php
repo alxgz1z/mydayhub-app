@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.1.0
+ * @version 5.1.1
  * @author Alex & Gemini
  */
 
@@ -272,7 +272,6 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
-		// Modified for Due Date feature: Select the due_date column
 		$stmtTasks = $pdo->prepare(
 			"SELECT task_id, column_id, encrypted_data, position, classification, updated_at, due_date FROM tasks WHERE user_id = :userId ORDER BY position ASC"
 		);
@@ -281,6 +280,16 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		while ($task = $stmtTasks->fetch()) {
 			$columnId = $task['column_id'];
 			if (isset($columnMap[$columnId])) {
+				// Modified for Task Card Indicators
+				// Decode the JSON to check if notes exist and add a flag.
+				$encryptedData = json_decode($task['encrypted_data'], true);
+				$hasNotes = false;
+				if (json_last_error() === JSON_ERROR_NONE && !empty($encryptedData['notes'])) {
+					$hasNotes = true;
+				}
+				$task['has_notes'] = $hasNotes;
+				// End of modification
+
 				$columnMap[$columnId]['tasks'][] = $task;
 			}
 		}
@@ -392,7 +401,8 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 				'encrypted_data' => $encryptedData,
 				'position' => $position,
 				'classification' => 'support',
-				'due_date' => null // Modified for Due Date feature
+				'due_date' => null, // Modified for Due Date feature
+				'has_notes' => false // Modified for Task Card Indicators
 			]
 		]);
 
@@ -791,7 +801,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 
 		// Step 1: Fetch the original task's data
 		$stmt_find = $pdo->prepare(
-			"SELECT column_id, encrypted_data, classification FROM tasks WHERE task_id = :taskId AND user_id = :userId"
+			"SELECT column_id, encrypted_data, classification, due_date FROM tasks WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$originalTask = $stmt_find->fetch(PDO::FETCH_ASSOC);
@@ -806,6 +816,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 		$columnId = $originalTask['column_id'];
 		$encryptedData = $originalTask['encrypted_data'];
 		$classification = $originalTask['classification'];
+		$dueDate = $originalTask['due_date'];
 
 		// Step 2: Determine the new position (at the end of the column)
 		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId");
@@ -814,20 +825,24 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 
 		// Step 3: Insert the new (duplicated) task
 		$stmt_insert = $pdo->prepare(
-			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, created_at, updated_at) 
-			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
+			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, due_date, created_at, updated_at) 
+			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, :dueDate, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
 		$stmt_insert->execute([
 			':userId' => $userId,
 			':columnId' => $columnId,
 			':encryptedData' => $encryptedData,
 			':position' => $newPosition,
-			':classification' => $classification
+			':classification' => $classification,
+			':dueDate' => $dueDate
 		]);
 
 		$newTaskId = (int)$pdo->lastInsertId();
 
 		$pdo->commit();
+		
+		$encryptedDataDecoded = json_decode($encryptedData, true);
+		$hasNotes = !empty($encryptedDataDecoded['notes']);
 
 		// Step 4: Respond with the complete new task object
 		http_response_code(201);
@@ -839,7 +854,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'encrypted_data' => $encryptedData,
 				'position' => $newPosition,
 				'classification' => $classification,
-				'due_date' => null // Modified for Due Date feature
+				'due_date' => $dueDate,
+				'has_notes' => $hasNotes // Modified for Task Card Indicators
 			]
 		]);
 

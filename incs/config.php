@@ -53,7 +53,7 @@ if (DEVMODE) {
 }
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Beta 5.1.1');
+define('APP_VER', 'Beta 5.1.2');
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
 $script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);

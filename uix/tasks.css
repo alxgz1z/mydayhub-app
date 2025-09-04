@@ -137,14 +137,20 @@
 
 .task-card {
 	display: flex;
-	align-items: center;
+	flex-direction: column;
 	background-color: var(--bg-color);
 	border: 1px solid var(--border-color);
 	padding: 0.75rem;
 	border-radius: 6px;
 	margin-bottom: 0.5rem;
+}
+
+.task-card-main {
+	display: flex;
+	align-items: center;
 	gap: 0.75rem;
 }
+
 
 .task-status-band {
 	width: 12px;
@@ -165,19 +171,50 @@
 	align-self: center;
 }
 
-/**
- * Modified for Due Date feature: Styles for the due date badge.
- */
-.task-due-date {
-	font-size: 0.8rem;
-	font-weight: 500;
-	color: #ffab40; /* Amber color for visibility */
-	background-color: rgba(255, 171, 64, 0.15);
-	padding: 2px 6px;
-	border-radius: 10px;
-	margin-left: 0.5rem;
-	white-space: nowrap;
+
+/* --- Task Card Footer & Indicators --- */
+
+/* Modified for UI Polish: Reduced spacing and added padding for alignment */
+.task-card-footer {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding-top: 0.4rem;
+	margin-top: 0.4rem;
+	border-top: 1px solid var(--border-color-light);
+	/* Aligns footer content with the task title above it */
+	padding-left: calc(12px + 0.75rem + 13px + 0.75rem); /* band + gap + checkbox + gap */
 }
+
+.task-indicator {
+	display: flex;
+	align-items: center;
+	gap: 0.25rem;
+	font-size: 0.75rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+/* Modified for UI Polish: Add pointer and hover effect for clickable icons */
+.indicator-shortcut {
+	cursor: pointer;
+	transition: color 0.2s ease-in-out;
+}
+
+.indicator-shortcut:hover {
+	color: var(--text-primary);
+}
+
+
+.task-indicator svg {
+	stroke: currentColor;
+}
+
+.task-indicator.overdue {
+	color: #ff6b6b; /* A clear, but not too harsh, red */
+}
+/* End of modification */
+
 
 .task-card.classification-signal .task-status-band {
 	background-color: #28a745; /* Green */

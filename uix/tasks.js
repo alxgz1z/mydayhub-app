@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.1.0
+ * @version 5.1.2
  * @author Alex & Gemini
  */
 
@@ -32,6 +32,108 @@ function initTasksView() {
 }
 
 /**
+ * Helper function to reconstruct a task data object from a DOM element.
+ * This is useful for re-rendering a card after an update.
+ * @param {HTMLElement} taskCardEl - The task card DOM element.
+ * @returns {Object} A task data object.
+ */
+function getTaskDataFromElement(taskCardEl) {
+	return {
+		task_id: taskCardEl.dataset.taskId,
+		encrypted_data: JSON.stringify({
+			title: decodeURIComponent(taskCardEl.dataset.title),
+			notes: decodeURIComponent(taskCardEl.dataset.notes)
+		}),
+		classification: taskCardEl.dataset.classification,
+		due_date: taskCardEl.dataset.dueDate || null,
+		has_notes: taskCardEl.dataset.hasNotes === 'true',
+		updated_at: taskCardEl.dataset.updatedAt
+	};
+}
+
+// Modified for note sync bug and clickable icons
+/**
+ * Re-renders a single task card in place. Preserves scroll position.
+ * @param {HTMLElement} taskCard - The task card element to re-render.
+ */
+function rerenderTaskCard(taskCard) {
+	if (!taskCard) return;
+	const columnBody = taskCard.closest('.column-body');
+	const oldScroll = { top: columnBody ? columnBody.scrollTop : 0, left: document.documentElement.scrollLeft };
+
+	const taskData = getTaskDataFromElement(taskCard);
+	const newCardHTML = createTaskCard(taskData);
+	const newCardEl = document.createElement('div');
+	newCardEl.innerHTML = newCardHTML;
+	const finalCard = newCardEl.firstElementChild;
+	taskCard.replaceWith(finalCard);
+	
+	if (columnBody) {
+		columnBody.scrollTop = oldScroll.top;
+	}
+	document.documentElement.scrollLeft = oldScroll.left;
+}
+
+/**
+ * Handles the custom event dispatched from the editor when a note is saved.
+ * @param {CustomEvent} e - The 'noteSaved' event.
+ */
+function handleNoteSaved(e) {
+	const { taskId, hasNotes } = e.detail;
+	const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+	if (taskCard) {
+		taskCard.dataset.hasNotes = hasNotes;
+		rerenderTaskCard(taskCard);
+	}
+}
+
+/**
+ * Opens the Unified Editor for a given task card.
+ * @param {HTMLElement} taskCard - The task card element.
+ */
+function openNotesEditorForTask(taskCard) {
+	if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
+		const taskId = taskCard.dataset.taskId;
+		const notes = decodeURIComponent(taskCard.dataset.notes || '');
+		const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
+		const updatedAt = taskCard.dataset.updatedAt;
+
+		const boardContainer = document.getElementById('task-board-container');
+		const savedFontSize = boardContainer.dataset.editorFontSize || 16;
+
+		UnifiedEditor.open({
+			id: taskId,
+			kind: 'task',
+			title: `Note: ${title}`,
+			content: notes,
+			updatedAt: updatedAt,
+			fontSize: parseInt(savedFontSize, 10)
+		});
+	} else {
+		showToast('Editor component is not available.', 'error');
+	}
+}
+
+/**
+ * Opens the Due Date modal for a given task card and handles the result.
+ * @param {HTMLElement} taskCard - The task card element.
+ */
+async function openDueDateModalForTask(taskCard) {
+	const taskId = taskCard.dataset.taskId;
+	const currentDate = taskCard.dataset.dueDate;
+	const newDate = await showDueDateModal(currentDate);
+
+	if (newDate !== null && newDate !== currentDate) {
+		const success = await saveTaskDueDate(taskId, newDate);
+		if (success) {
+			taskCard.dataset.dueDate = newDate;
+			rerenderTaskCard(taskCard);
+		}
+	}
+}
+// End of modification
+
+/**
  * Sets up the main event listeners for the tasks view.
  */
 function initEventListeners() {
@@ -44,6 +146,9 @@ function initEventListeners() {
 			showAddColumnForm();
 		}
 	});
+
+	// Modified for note sync bug: Add listener for editor events
+	document.addEventListener('noteSaved', handleNoteSaved);
 
 	const boardContainer = document.getElementById('task-board-container');
 	if (boardContainer) {
@@ -76,6 +181,20 @@ function initEventListeners() {
 
 		// Combined listener for various clicks within the board
 		boardContainer.addEventListener('click', async (e) => {
+			// Modified for clickable icons
+			const shortcut = e.target.closest('.indicator-shortcut');
+			if (shortcut) {
+				const taskCard = shortcut.closest('.task-card');
+				const action = shortcut.dataset.action;
+				if (action === 'open-notes') {
+					openNotesEditorForTask(taskCard);
+				} else if (action === 'open-due-date') {
+					await openDueDateModalForTask(taskCard);
+				}
+				return;
+			}
+			// End of modification
+
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
@@ -144,50 +263,22 @@ function initEventListeners() {
 		document.body.addEventListener('click', async (e) => {
 			const actionButton = e.target.closest('.task-action-btn');
 			if (!actionButton) return;
-
+		
 			const menu = actionButton.closest('.task-actions-menu');
 			const taskId = menu.dataset.taskId;
 			const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
 			const columnEl = taskCard.closest('.task-column');
 			const action = actionButton.dataset.action;
-
+		
 			closeAllTaskActionMenus();
-
+		
+			// Modified for clickable icons: Refactored logic into helper functions
 			if (action === 'edit-notes') {
-				if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
-					const notes = decodeURIComponent(taskCard.dataset.notes || '');
-					const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
-					const updatedAt = taskCard.dataset.updatedAt;
-
-					const boardContainer = document.getElementById('task-board-container');
-					const savedFontSize = boardContainer.dataset.editorFontSize || 16;
-
-					UnifiedEditor.open({
-						id: taskId,
-						kind: 'task',
-						title: `Note: ${title}`,
-						content: notes,
-						updatedAt: updatedAt,
-						fontSize: parseInt(savedFontSize, 10)
-					});
-				} else {
-					showToast('Editor component is not available.', 'error');
-				}
+				openNotesEditorForTask(taskCard);
+			} else if (action === 'set-due-date') {
+				await openDueDateModalForTask(taskCard);
 			} 
-			// Modified for Due Date feature: Call the new modal
-			else if (action === 'set-due-date') {
-				const currentDate = taskCard.dataset.dueDate;
-				const newDate = await showDueDateModal(currentDate);
-
-				// newDate is null if cancelled, '' if removed, or a date string if saved
-				if (newDate !== null && newDate !== currentDate) {
-					const success = await saveTaskDueDate(taskId, newDate);
-					if (success) {
-						taskCard.dataset.dueDate = newDate;
-						updateDueDateBadge(taskCard, newDate);
-					}
-				}
-			}
+			// End of modification
 			else if (action === 'delete') {
 				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
@@ -373,28 +464,7 @@ function initEventListeners() {
 }
 
 /**
- * Modified for Due Date feature: Update the due date badge on a task card.
- */
-function updateDueDateBadge(taskCard, newDate) {
-	let badge = taskCard.querySelector('.task-due-date');
-	if (newDate) {
-		if (!badge) {
-			badge = document.createElement('span');
-			badge.className = 'task-due-date';
-			const actionsButton = taskCard.querySelector('.btn-task-actions');
-			taskCard.insertBefore(badge, actionsButton);
-		}
-		badge.textContent = `!${formatDueDate(newDate)}`;
-	} else {
-		if (badge) {
-			badge.remove();
-		}
-	}
-}
-
-
-/**
- * Modified for Due Date feature: Save the due date via API.
+ * Saves the due date via API.
  */
 async function saveTaskDueDate(taskId, newDate) {
 	try {
@@ -764,12 +834,16 @@ async function toggleTaskComplete(taskId, isComplete) {
 
 		if (result.status === 'success') {
 			taskCard.classList.toggle('completed', isComplete);
+			taskCard.dataset.classification = result.data.new_classification;
+			
 			if (isComplete) {
 				taskCard.classList.remove('classification-signal', 'classification-support', 'classification-noise');
 			} else {
-				taskCard.classList.add('classification-support');
+				taskCard.classList.add(`classification-${result.data.new_classification}`);
 			}
 			sortTasksInColumn(taskCard.closest('.column-body'));
+			rerenderTaskCard(taskCard);
+
 		} else {
 			showToast(`Error: ${result.message}`, 'error');
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
@@ -800,8 +874,10 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 		const result = await response.json();
 
 		if (result.status === 'success') {
+			const newClassification = result.data.new_classification;
+			taskCardEl.dataset.classification = newClassification;
 			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-noise');
-			taskCardEl.classList.add(`classification-${result.data.new_classification}`);
+			taskCardEl.classList.add(`classification-${newClassification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
 			showToast(`Error: ${result.message}`, 'error');
@@ -1023,7 +1099,7 @@ function createColumnElement(columnData) {
 				</button>
 			</div>
 			<h2 class="column-title">${columnData.column_name}</h2>
-			<span class="task-count">${columnData.tasks.length}</span>
+			<span class="task-count">${columnData.tasks ? columnData.tasks.length : 0}</span>
 		</div>
 		<div class="column-body">
 			${tasksHTML}
@@ -1054,22 +1130,66 @@ function createTaskCard(taskData) {
 	if (!isCompleted) {
 		classificationClass = `classification-${taskData.classification}`;
 	}
+	
+	let footerHTML = '';
+	if (taskData.has_notes || taskData.due_date) {
+		let notesIndicator = '';
+		if (taskData.has_notes) {
+			// Modified for clickable icons feature
+			notesIndicator = `
+				<span class="task-indicator indicator-shortcut" data-action="open-notes" title="This task has notes">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+				</span>
+			`;
+		}
 
-	// Modified for Due Date feature: Add due date data attribute and badge
+		let dueDateIndicator = '';
+		if (taskData.due_date) {
+			let isOverdue = false;
+			if (!isCompleted) {
+				const today = new Date();
+				today.setHours(0, 0, 0, 0);
+				const dueDate = new Date(taskData.due_date + 'T00:00:00');
+				if (dueDate < today) {
+					isOverdue = true;
+				}
+			}
+			// Modified for clickable icons feature
+			dueDateIndicator = `
+				<span class="task-indicator indicator-shortcut ${isOverdue ? 'overdue' : ''}" data-action="open-due-date" title="Due: ${taskData.due_date}">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+					<span class="due-date-text">${formatDueDate(taskData.due_date)}</span>
+				</span>
+			`;
+		}
+		
+		footerHTML = `
+			<div class="task-card-footer">
+				${notesIndicator}
+				${dueDateIndicator}
+			</div>
+		`;
+	}
+
 	return `
 		<div 
 			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" 
 			data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
+			data-classification="${taskData.classification}"
+			data-has-notes="${taskData.has_notes}"
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"
 			draggable="true">
-			<div class="task-status-band"></div>
-			<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
-			<span class="task-title">${taskTitle}</span>
-			${taskData.due_date ? `<span class="task-due-date">!${formatDueDate(taskData.due_date)}</span>` : ''}
-			<button class="btn-task-actions" title="Task Actions">&vellip;</button>
+			
+			<div class="task-card-main">
+				<div class="task-status-band"></div>
+				<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
+				<span class="task-title">${taskTitle}</span>
+				<button class="btn-task-actions" title="Task Actions">&vellip;</button>
+			</div>
+			${footerHTML}
 		</div>
 	`;
 }

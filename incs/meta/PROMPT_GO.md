@@ -10,7 +10,7 @@ I’m Alex, an amateur developer building a productivity tool. This project brin
 1 App Specification (APP_SPEC.md)
 2 Development Progress Summary (APP_PROG.md): Tracks completed work and recommends next steps.
 
-⠀Engagement & Code Integrity Rules
+### Engagement & Code Integrity Rules
 * Precision over speed: Never batch unrelated changes.
 * Plan before coding: Clearly state the goal and rationale behind each proposed change.
 * Holistic diagnosis: If logic spans files, request and review all relevant code blocks before updating.
