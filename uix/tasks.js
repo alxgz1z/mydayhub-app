@@ -4,16 +4,18 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.1.2
+ * @version 5.1.3
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
 
+let filterState = {
+	showCompleted: false
+};
+
 /**
- * Helper to format YYYY-MM-DD to MM/DD.
- * @param {string} dateString - The date string in YYYY-MM-DD format.
- * @returns {string} - The formatted date string or an empty string.
+ * Helper to format YYY-MM-DD to MM/DD.
  */
 function formatDueDate(dateString) {
 	if (!dateString || typeof dateString !== 'string') return '';
@@ -33,9 +35,6 @@ function initTasksView() {
 
 /**
  * Helper function to reconstruct a task data object from a DOM element.
- * This is useful for re-rendering a card after an update.
- * @param {HTMLElement} taskCardEl - The task card DOM element.
- * @returns {Object} A task data object.
  */
 function getTaskDataFromElement(taskCardEl) {
 	return {
@@ -51,10 +50,8 @@ function getTaskDataFromElement(taskCardEl) {
 	};
 }
 
-// Modified for note sync bug and clickable icons
 /**
  * Re-renders a single task card in place. Preserves scroll position.
- * @param {HTMLElement} taskCard - The task card element to re-render.
  */
 function rerenderTaskCard(taskCard) {
 	if (!taskCard) return;
@@ -76,7 +73,6 @@ function rerenderTaskCard(taskCard) {
 
 /**
  * Handles the custom event dispatched from the editor when a note is saved.
- * @param {CustomEvent} e - The 'noteSaved' event.
  */
 function handleNoteSaved(e) {
 	const { taskId, hasNotes } = e.detail;
@@ -89,7 +85,6 @@ function handleNoteSaved(e) {
 
 /**
  * Opens the Unified Editor for a given task card.
- * @param {HTMLElement} taskCard - The task card element.
  */
 function openNotesEditorForTask(taskCard) {
 	if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
@@ -116,7 +111,6 @@ function openNotesEditorForTask(taskCard) {
 
 /**
  * Opens the Due Date modal for a given task card and handles the result.
- * @param {HTMLElement} taskCard - The task card element.
  */
 async function openDueDateModalForTask(taskCard) {
 	const taskId = taskCard.dataset.taskId;
@@ -131,24 +125,29 @@ async function openDueDateModalForTask(taskCard) {
 		}
 	}
 }
-// End of modification
 
 /**
  * Sets up the main event listeners for the tasks view.
  */
 function initEventListeners() {
-	// Global click listener to close dynamic menus and other popups
 	document.addEventListener('click', (e) => {
 		if (e.target.closest('.task-actions-menu') === null && e.target.closest('.btn-task-actions') === null) {
 			closeAllTaskActionMenus();
+		}
+		if (e.target.closest('#filter-menu') === null && e.target.closest('#btn-filters') === null) {
+			closeFilterMenu();
 		}
 		if (e.target && e.target.id === 'btn-add-column') {
 			showAddColumnForm();
 		}
 	});
 
-	// Modified for note sync bug: Add listener for editor events
 	document.addEventListener('noteSaved', handleNoteSaved);
+
+	const btnFilters = document.getElementById('btn-filters');
+	if (btnFilters) {
+		btnFilters.addEventListener('click', showFilterMenu);
+	}
 
 	const boardContainer = document.getElementById('task-board-container');
 	if (boardContainer) {
@@ -179,9 +178,7 @@ function initEventListeners() {
 			}
 		});
 
-		// Combined listener for various clicks within the board
 		boardContainer.addEventListener('click', async (e) => {
-			// Modified for clickable icons
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
 				const taskCard = shortcut.closest('.task-card');
@@ -193,8 +190,7 @@ function initEventListeners() {
 				}
 				return;
 			}
-			// End of modification
-
+			
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
@@ -272,13 +268,11 @@ function initEventListeners() {
 		
 			closeAllTaskActionMenus();
 		
-			// Modified for clickable icons: Refactored logic into helper functions
 			if (action === 'edit-notes') {
 				openNotesEditorForTask(taskCard);
 			} else if (action === 'set-due-date') {
 				await openDueDateModalForTask(taskCard);
 			} 
-			// End of modification
 			else if (action === 'delete') {
 				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
@@ -463,6 +457,114 @@ function initEventListeners() {
 	}
 }
 
+
+/**
+ * Closes the filter menu if it's open.
+ */
+function closeFilterMenu() {
+	const menu = document.getElementById('filter-menu');
+	if (menu) {
+		menu.remove();
+	}
+}
+
+// Modified for Filter Persistence
+/**
+ * Saves a filter preference to the backend. Fire-and-forget.
+ * @param {string} key - The preference key (e.g., 'filter_show_completed').
+ * @param {boolean} value - The value to save.
+ */
+async function saveFilterPreference(key, value) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'users',
+				action: 'saveUserPreference',
+				data: { key: key, value: value }
+			})
+		});
+		const result = await response.json();
+		if (result.status !== 'success') {
+			console.error('Failed to save filter preference:', result.message);
+		}
+	} catch (error) {
+		console.error('Error saving filter preference:', error);
+	}
+}
+// End of modification
+
+/**
+ * Creates and displays the filter menu.
+ */
+function showFilterMenu() {
+	closeFilterMenu(); 
+	const btnFilters = document.getElementById('btn-filters');
+	if (!btnFilters) return;
+
+	const menu = document.createElement('div');
+	menu.id = 'filter-menu';
+	
+	const showCompletedChecked = filterState.showCompleted ? 'checked' : '';
+
+	menu.innerHTML = `
+		<div class="filter-item">
+			<span class="filter-label">Show Completed Tasks</span>
+			<label class="switch">
+				<input type="checkbox" data-filter="showCompleted" ${showCompletedChecked}>
+				<span class="slider round"></span>
+			</label>
+		</div>
+	`;
+
+	document.body.appendChild(menu);
+
+	const btnRect = btnFilters.getBoundingClientRect();
+	menu.style.bottom = `${window.innerHeight - btnRect.top + 10}px`;
+	menu.style.left = `${btnRect.left + (btnRect.width / 2) - (menu.offsetWidth / 2)}px`;
+
+	setTimeout(() => menu.classList.add('visible'), 10);
+
+	// Modified for Filter Persistence
+	menu.addEventListener('change', (e) => {
+		if (e.target.matches('input[type="checkbox"]')) {
+			const filter = e.target.dataset.filter;
+			const value = e.target.checked;
+			filterState[filter] = value;
+			applyAllFilters();
+			// Save the preference to the backend. Key must match the one loaded in fetchAndRenderBoard.
+			saveFilterPreference('filter_show_completed', value);
+		}
+	});
+	// End of modification
+}
+
+/**
+ * Applies all active filters to the task cards on the board.
+ */
+function applyAllFilters() {
+	const taskCards = document.querySelectorAll('.task-card');
+	taskCards.forEach(card => {
+		const isCompleted = card.classList.contains('completed');
+		
+		let shouldBeVisible = true;
+
+		if (isCompleted && !filterState.showCompleted) {
+			shouldBeVisible = false;
+		}
+
+		card.style.display = shouldBeVisible ? 'flex' : 'none';
+	});
+
+	const allColumns = document.querySelectorAll('.task-column');
+	allColumns.forEach(column => {
+		updateColumnTaskCount(column);
+	});
+}
+
+
 /**
  * Saves the due date via API.
  */
@@ -604,7 +706,7 @@ function showTaskActionsMenu(buttonEl) {
 function updateColumnTaskCount(columnEl) {
 	if (!columnEl) return;
 	const countSpan = columnEl.querySelector('.task-count');
-	const taskCount = columnEl.querySelectorAll('.task-card').length;
+	const taskCount = columnEl.querySelectorAll('.task-card:not([style*="display: none"])').length;
 	if (countSpan) {
 		countSpan.textContent = taskCount;
 	}
@@ -843,7 +945,7 @@ async function toggleTaskComplete(taskId, isComplete) {
 			}
 			sortTasksInColumn(taskCard.closest('.column-body'));
 			rerenderTaskCard(taskCard);
-
+			applyAllFilters();
 		} else {
 			showToast(`Error: ${result.message}`, 'error');
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
@@ -1034,6 +1136,12 @@ async function fetchAndRenderBoard() {
 			if (userPrefs && userPrefs.editor_font_size) {
 				container.dataset.editorFontSize = userPrefs.editor_font_size;
 			}
+			
+			// Modified for Filter Persistence
+			if (userPrefs && typeof userPrefs.filter_show_completed !== 'undefined') {
+				filterState.showCompleted = userPrefs.filter_show_completed;
+			}
+			// End of modification
 
 			renderBoard(boardData);
 		} else {
@@ -1068,6 +1176,7 @@ function renderBoard(boardData) {
 	});
 
 	updateMoveButtonVisibility();
+	applyAllFilters();
 }
 
 /**
@@ -1135,7 +1244,6 @@ function createTaskCard(taskData) {
 	if (taskData.has_notes || taskData.due_date) {
 		let notesIndicator = '';
 		if (taskData.has_notes) {
-			// Modified for clickable icons feature
 			notesIndicator = `
 				<span class="task-indicator indicator-shortcut" data-action="open-notes" title="This task has notes">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1154,7 +1262,6 @@ function createTaskCard(taskData) {
 					isOverdue = true;
 				}
 			}
-			// Modified for clickable icons feature
 			dueDateIndicator = `
 				<span class="task-indicator indicator-shortcut ${isOverdue ? 'overdue' : ''}" data-action="open-due-date" title="Due: ${taskData.due_date}">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>

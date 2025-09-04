@@ -201,9 +201,8 @@ Full-width, one-row control bar
 (Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
   **Toolbar Controls**
 	* **Left:** Current Username within square parenthesis (example: [alfa]), Current Date (formatted as dd mmm yy).
-	* **Center:** Context aware buttons
-		* **Tasks View Filters:** STasks View Filters: Show/Hide Shared, Show/Hide Mine, Show/Hide Completed (default hide), Show/Hide High Priority
-		(Future: * ** Journal View:** Buttons with "1","3" and "5" to determine how many columns are displayed. Button "Wrap-Up" to create a new Entry that aggregates all the entries in the focus date.  This new Entry is added on top.)
+	* **Center:** A central filter icon button opens a contextual menu containing filter toggles for the current view.
+	* **Tasks View Filters:** The menu contains an on/off slider for "Show/Hide Completed" (default hide). Future filters will be added here.
 	* **Right:** Application Version Number, Logout link.
  
 ### SETTINGS
@@ -240,12 +239,12 @@ Columns are user-created, re-orderable via header controls, and their positions 
 * **Display & Interaction:**
   * **Title:** The primary text of the task, editable via double-click.
   * **Drag & Drop:** Tasks can be fluidly dragged within their current column or dropped into a different column.
-  * **Due Date:** An optional due date badge is displayed as a suffix (e.g., !08/18).
+  * **Metadata Footer:** A dedicated footer area appears at the bottom of the card if the task has notes or a due date. This area contains clickable icons that serve as indicators and shortcuts to their respective features (e.g., opening the note editor or the due date modal).
   * **Delegation & Sharing:** Shared tasks have distinct styling. A share icon (@user) appears, showing recipients on hover.
   * Task card status bands are a minimum of 6px wide, running edge-to-edge vertically, and display clear, distinct colors for Signal (green), Support (blue), Noise (orange), and Completed (gray).
   * Privacy, attachment, and sharing icons are always visible on both card and column headers, featuring subtle animations (opacity and blur transitions) on hover/tap.
   * Card borders and backgrounds utilize a “soft shadow ring” and backdrop blur for depth without clutter, consistent from mobile to desktop layouts.
-  * All drag-and-drop gestures trigger animated “lift” and “drop” UI cues, scalable for touch and pointer events.
+  * All drag-and-drop gestures trigger animated “lift” and “drop” UI cues, scalable for touch and pointer events.ß
 
 * **Attachments Display:**
   * An attachment icon (e.g., 📎) with a count badge will appear on cards with attachments.
@@ -639,8 +638,8 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 		[RDY] Delete Task (from actions menu with confirmation)
 		[RDY] Custom modals/toasts to replace native alerts
 		[RDY] Due Date picker (custom modal)
+		[RDY] Bottom toolbar with filters
 	Future UI Features:
-		[FUT] Bottom toolbar with filters
 		[FUT] Settings slider panel
 		[FUT] Task Notes integration (Unified Editor)
 		[FUT] Sharing UI
@@ -898,8 +897,16 @@ The rendered wireframes and UI samples reinforce minimalism, clarity, and action
     <polyline points="18 9 12 3 6 9"></polyline>
   </svg>
 
-* Edit Note and Due Date  
+* Edit Note  
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+  
+* Edit Due Date
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+	  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+	  <line x1="16" y1="2" x2="16" y2="6"></line>
+	  <line x1="8" y1="2" x2="8" y2="6"></line>
+	  <line x1="3" y1="10" x2="21" y2="10"></line>
+  </svg>
   
 * Change Column
   <svg xmlns="http://www.w3.org/2000/svg"

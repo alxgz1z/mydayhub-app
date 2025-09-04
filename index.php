@@ -74,7 +74,13 @@ $username = $_SESSION['username'] ?? 'User';
 				<span>[<?php echo htmlspecialchars($username); ?>]</span>
 				<span id="footer-date"></span>
 			</div>
-			<div class="footer-center"></div>
+			<div class="footer-center">
+				<button id="btn-filters" class="btn-footer-icon" title="Show Filters">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
+					</svg>
+				</button>
+				</div>
 			<div class="footer-right">
 				<span><?php echo APP_VER; ?></span>
 				<a href="login/logout.php">Logout</a>

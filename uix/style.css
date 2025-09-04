@@ -135,19 +135,37 @@ body {
 	text-decoration: none;
 }
 
-/* Modified for App Version feature: Add dev mode indicator style */
 #app-footer.dev-mode {
 	background-color: #442c2e; /* Dark red */
 	border-top-color: var(--toast-error-bg);
 }
 
-/* Modified for App Version feature: Add separators for footer items */
 .footer-left span + span::before,
 .footer-right span + a::before {
 	content: '|';
 	margin: 0 0.25rem 0 -0.25rem;
 	color: var(--border-color);
 }
+
+/* Modified for Toolbar Filters feature: Styles for the new filter button */
+.btn-footer-icon {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	cursor: pointer;
+	padding: 5px;
+	border-radius: 6px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-footer-icon:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
+}
+/* End of modification */
 
 
 /* ==========================================================================
@@ -203,9 +221,7 @@ body {
 	width: 100%;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.7);
-	/* Modified to fix z-index bug: Increased to appear above editor modal */
 	z-index: 1300; 
-	/* End of modification */
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -328,7 +344,6 @@ body {
 	box-sizing: border-box;
 }
 
-/* Style the calendar icon for dark mode */
 #date-modal-input::-webkit-calendar-picker-indicator {
 	filter: invert(0.8);
 	cursor: pointer;
@@ -346,8 +361,102 @@ body {
 	gap: 0.75rem;
 }
 
-/* Re-using .btn from confirm modal, but adding a primary style */
 .btn.btn-primary {
 	background-color: var(--accent-color);
 	color: var(--bg-color);
+}
+
+/* ==========================================================================
+   7. FILTER MENU
+   ========================================================================== */
+
+#filter-menu {
+	position: absolute;
+	background-color: var(--column-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 8px;
+	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+	z-index: 1000;
+	padding: 0.75rem;
+	min-width: 250px;
+	opacity: 0;
+	transform: scale(0.95) translateY(10px);
+	transition: transform 0.1s ease-out, opacity 0.1s ease-out;
+	transform-origin: bottom center;
+}
+
+#filter-menu.visible {
+	opacity: 1;
+	transform: scale(1) translateY(0);
+}
+
+.filter-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.5rem 0;
+}
+
+.filter-label {
+	font-size: 0.95rem;
+	color: var(--text-primary);
+}
+
+/* The switch - a box around the slider */
+.switch {
+	position: relative;
+	display: inline-block;
+	width: 44px;
+	height: 24px;
+}
+
+/* Hide default HTML checkbox */
+.switch input {
+	opacity: 0;
+	width: 0;
+	height: 0;
+}
+
+/* The slider */
+.slider {
+	position: absolute;
+	cursor: pointer;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background-color: var(--border-color);
+	transition: .4s;
+}
+
+.slider:before {
+	position: absolute;
+	content: "";
+	height: 18px;
+	width: 18px;
+	left: 3px;
+	bottom: 3px;
+	background-color: white;
+	transition: .4s;
+}
+
+input:checked + .slider {
+	background-color: var(--accent-color);
+}
+
+input:focus + .slider {
+	box-shadow: 0 0 1px var(--accent-color);
+}
+
+input:checked + .slider:before {
+	transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+	border-radius: 24px;
+}
+
+.slider.round:before {
+	border-radius: 50%;
 }

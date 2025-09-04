@@ -207,3 +207,29 @@
 	display: flex;
 	gap: 1rem;
 }
+
+/* ==========================================================================
+   5. RESPONSIVE STYLES
+   ========================================================================== */
+
+/* Modified for Mobile Clear Button */
+@media (max-width: 768px) {
+	.btn-text-danger {
+		font-size: 0.8rem;
+		padding: 4px 6px;
+		white-space: nowrap; /* Prevents the text from wrapping */
+	}
+
+	.ribbon-button-group {
+		flex-wrap: wrap; /* Allow buttons to wrap if necessary */
+	}
+
+	#editor-ribbon-panels {
+		padding: 0.5rem;
+	}
+
+	.editor-header {
+		padding: 0.5rem 1rem;
+	}
+}
+/* End of modification */

@@ -560,3 +560,32 @@ The feature is complete and functional. The application now clearly displays its
 
 **Recommended next steps (priority order)**
 1.  **Implement Task Priority:** Begin the next feature from the spec. This will involve adding a `priority` field or modifying the `classification` enum in the `tasks` table, creating a `togglePriority` API action, and wiring it up to the task actions menu.
+
+---
+## 2025-09-03 23:14 — Bottom Toolbar & Persistent Filters
+
+**Focus**
+
+Implement the bottom toolbar and the 'Show/Hide Completed' filter with persistence, based on a mobile-first contextual menu approach.
+
+**Key work**
+
+* HTML (index.php): Added the new filter button with a custom SVG icon to the footer's center.
+* CSS (style.css): Created styles for the new filter menu and a custom on/off slider toggle for filter options.
+* JS (tasks.js):
+	* Implemented logic to show/hide the filter menu when the footer icon is clicked.
+	* Added filterState management to track the "Show Completed" status.
+	* The applyAllFilters function now correctly toggles the visibility of completed tasks and triggers an update of the column task counts.
+* Persistence: The filter's state is now loaded from user preferences on startup and saved to the database automatically on change, ensuring the setting is remembered across sessions.
+
+**Status**
+The filter feature is complete and functional. The 'Show Completed' setting is now persistent across sessions.
+
+**Recommended next steps (priority order)**
+
+1. Implement Task Attachments: Begin the next major feature from the spec. This will involve:
+	* Updating the database schema with a task_attachments table.
+	* Creating a new backend API action to handle file uploads, quota checks, and pruning.
+	*Building the frontend UI, including a drop zone on task cards and a gallery modal to view attachments.
+2. Refine UI Feedback with "Undo": Replace the permanent delete actions for tasks and columns with a temporary "Undo" option (via a toast notification), which requires a soft-delete implementation on the backend.
+3. Expand Filters: Add the next filters from the spec (e.g., "Show/Hide Shared") to the new filter menu, pending implementation of the sharing feature.
