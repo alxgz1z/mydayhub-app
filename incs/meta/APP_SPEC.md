@@ -538,9 +538,6 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
   delegated_to INT NULL
   created_at, updated_at DATETIME NULL
   
-  (The "classification" field now serves as the primary mechanism for sorting and visual grouping in the UI.)
-
-  
 * task_attachments
   attachment_id INT PK
   task_id INT NOT NULL (FK to tasks.task_id)
@@ -582,6 +579,9 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
   * renameColumn 
   * reorderColumns 
   * HTTP codes: 200, 201, 400, 403, 404, etc.
+  * getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
+  uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. * Requires task_id.
+  * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
 * New API actions for Beta 5:
   * toggleClassification: cycles a task’s classification through Signal, Support, Noise, Completed
   * togglePrivacy: sets per-task or per-column privacy
@@ -616,7 +616,7 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 		[FUT] moveTask
 		[FUT] togglePriority
 		[FUT] shareTask / revokeShare
-		[FUT] getAttachments / uploadAttachment / deleteAttachment
+		[WIP] getAttachments / uploadAttachment / deleteAttachment
 	
 ### UI Implementation tracking
 	Implemented UI Features:
@@ -644,7 +644,7 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 		[FUT] Task Notes integration (Unified Editor)
 		[FUT] Sharing UI
 		[FUT] Privacy toggles
-		[FUT] Attachments UI (drop zone, gallery)
+		[WIP] Attachments UI (drop zone, gallery)
 
 ## FRONT END ARCHITECTURE
 

@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.1.2
+ * @version 5.1.5
  * @author Alex & Gemini
  */
 
@@ -37,6 +37,7 @@ $username = $_SESSION['username'] ?? 'User';
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css">
+	<link rel="stylesheet" href="uix/attachments.css">
 
 	<script>
 		// Expose server-side configuration to client-side JavaScript.
@@ -79,7 +80,7 @@ $username = $_SESSION['username'] ?? 'User';
 					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
 					</svg>
-				</button>
+					</button>
 				</div>
 			<div class="footer-right">
 				<span><?php echo APP_VER; ?></span>
@@ -172,6 +173,31 @@ $username = $_SESSION['username'] ?? 'User';
 		</div>
 	</div>
 
+	<div id="attachments-modal-overlay" class="hidden">
+		<div id="attachments-modal-container">
+			<div class="attachments-modal-header">
+				<h4 id="attachments-modal-title">Attachments</h4>
+				<button id="attachments-modal-close-btn" class="btn-icon">&times;</button>
+			</div>
+			<div id="attachments-modal-body">
+				<div id="attachment-drop-zone">
+					<p>Drop files here to upload</p>
+				</div>
+				<div id="attachment-list">
+					<p class="no-attachments-message">No attachments yet.</p>
+				</div>
+			</div>
+			<div class="attachments-modal-footer">
+				<div class="attachment-quota-info">
+					<span>Storage: </span>
+					<progress id="attachment-quota-bar" value="0" max="100"></progress>
+					<span id="attachment-quota-text">0 / 50 MB</span>
+				</div>
+				<button id="btn-add-attachment" class="btn btn-primary">Add Attachment</button>
+				<input type="file" id="attachment-file-input" multiple hidden>
+			</div>
+		</div>
+	</div>
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>

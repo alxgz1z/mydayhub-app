@@ -589,3 +589,38 @@ The filter feature is complete and functional. The 'Show Completed' setting is n
 	*Building the frontend UI, including a drop zone on task cards and a gallery modal to view attachments.
 2. Refine UI Feedback with "Undo": Replace the permanent delete actions for tasks and columns with a temporary "Undo" option (via a toast notification), which requires a soft-delete implementation on the backend.
 3. Expand Filters: Add the next filters from the spec (e.g., "Show/Hide Shared") to the new filter menu, pending implementation of the sharing feature.
+
+---
+## Timestamp: 2025-09-04 22:28 - File attachments to tasks
+Version: Beta 5.2.0 (feature start)
+
+**Focus**
+
+Begin the implementation of the Task Attachments feature by building its complete foundation, from the database to a visible, interactive frontend modal.
+
+**Key work**
+
+* Database: Created the task_attachments table with all necessary fields to store file metadata and link to users and tasks.
+* Backend API (api.php, tasks.php):
+	* The main API gateway (api.php) was updated to handle multipart/form-data requests, a requirement for file uploads.
+	* The tasks.php handler was significantly updated with new actions:
+		* uploadAttachment: A robust endpoint to handle file validation, storage quota checks, our "pruning" policy (deleting the oldest file to make space), secure file saving, and database record creation.
+		* getAttachments: An endpoint to securely retrieve a list of attachments for a specific task.
+	* The getAll action was updated to include an attachments_count for each task, allowing the UI to display indicators efficiently.
+* Frontend UI (index.php, attachments.css, tasks.js):
+	* Added the HTML shell for the attachments gallery modal to index.php.
+	* Created a dedicated stylesheet, /uix/attachments.css, for all modal-related styling.
+	* Updated tasks.js to allow the modal to be opened from the task actions menu ("...").
+	* The JavaScript now successfully calls the getAttachments API and renders the list of attachments (or an empty state message) inside the modal.
+
+**Status**
+The foundation for Task Attachments is complete. The database is ready, the backend API endpoints are built and tested, and the frontend modal is fully styled and functional for viewing attachments. We successfully debugged and resolved several critical UI bugs related to CSS and JavaScript loading that were preventing interactivity. The application is now stable and ready for the final implementation phase of this feature.
+
+**Recommended next steps (priority order)** 
+* Wire Up Upload Logic: The modal is visible but the upload buttons are not yet active. The immediate next step is to update /uix/tasks.js to:
+	* Make the "Add Attachment" button trigger the file input.
+	* Implement the drag-and-drop event listeners (dragover, drop) for the drop zone to prevent the default browser action and handle the dropped files.
+	* Create the client-side uploadAttachment function that uses FormData to post the file to the backend.
+	* Ensure the modal and task card UI refresh automatically after a successful upload.
+* Implement Delete Functionality: Add a deleteAttachment action to the backend API and wire it to the delete button (✕) on each item in the modal's attachment list.
+* Implement Paste-to-Upload: As a final enhancement, add a paste event listener to the modal to handle uploading images directly from the clipboard.

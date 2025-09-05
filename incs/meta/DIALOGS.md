@@ -1019,7 +1019,7 @@ This is the most critical reason. Placing several small icons (notes, due date, 
 2. Scalability and Future-Proofing
 The application spec calls for future features like attachments and sharing. In the inline model, adding even one more icon would make the right side of the task card incredibly crowded and would almost certainly force even short titles to wrap. A footer is a flexible container that can easily accommodate 2, 3, or even 4 status icons in the future without compromising the design.
 
-3. Improved Scannability & Visual Hierarchy
+3. Improved Scalnability & Visual Hierarchy
 Your primary goal was to prevent the due date from interfering with the task title. While the inline approach helps, the footer model perfects it. It creates a clean, distinct separation between the primary content (the title) and the secondary metadata (the indicators). This makes it much easier for a user to scan down a list of tasks and read the titles without their eyes being distracted by icons on the same line.
 
 Let's combine the best of both our ideas: we will create a dedicated footer in the task card, and within that footer, we will use the icons you've selected and implement your color-coding idea for the due dates.

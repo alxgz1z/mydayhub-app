@@ -5,11 +5,22 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.1.1
+ * @version 5.1.5
  * @author Alex & Gemini
  */
 
 declare(strict_types=1);
+
+// Define constants for the attachment feature
+define('ATTACHMENT_UPLOAD_DIR', __DIR__ . '/../media/imgs/');
+define('MAX_FILE_SIZE_BYTES', 5 * 1024 * 1024); // 5 MB
+define('USER_STORAGE_QUOTA_BYTES', 50 * 1024 * 1024); // 50 MB
+define('ALLOWED_MIME_TYPES', [
+	'image/jpeg',
+	'image/png',
+	'image/gif',
+	'image/webp'
+]);
 
 /**
  * Main router for all actions within the 'tasks' module.
@@ -19,6 +30,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'getAll':
 			if ($method === 'GET') {
 				handle_get_all_board_data($pdo, $userId);
+			}
+			break;
+
+		case 'getAttachments':
+			if ($method === 'GET') {
+				handle_get_attachments($pdo, $userId);
 			}
 			break;
 		
@@ -94,6 +111,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
+		case 'uploadAttachment':
+			if ($method === 'POST') {
+				handle_upload_attachment($pdo, $userId, $data);
+			}
+			break;
+
 		default:
 			http_response_code(404);
 			echo json_encode(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."]);
@@ -107,7 +130,6 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	
-	// Modified for Due Date feature: Check if notes or dueDate are present
 	$notes = isset($data['notes']) ? (string)$data['notes'] : null;
 	$dueDate = isset($data['dueDate']) ? $data['dueDate'] : null;
 
@@ -117,7 +139,6 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 		return;
 	}
 
-	// Modified for Due Date feature: Validate the due date format
 	$dueDateForDb = null;
 	if (array_key_exists('dueDate', $data)) {
 		if (empty($data['dueDate'])) {
@@ -150,13 +171,11 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			$currentData = [];
 		}
 
-		// Only update notes in the JSON if they were passed in the request
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
 		}
 		$newDataJson = json_encode($currentData);
 
-		// Modified for Due Date feature: Build the query parts dynamically
 		$sql_parts = [];
 		$params = [':taskId' => $taskId, ':userId' => $userId];
 
@@ -273,22 +292,32 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		}
 
 		$stmtTasks = $pdo->prepare(
-			"SELECT task_id, column_id, encrypted_data, position, classification, updated_at, due_date FROM tasks WHERE user_id = :userId ORDER BY position ASC"
+			"SELECT 
+				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, 
+				t.updated_at, t.due_date, COUNT(ta.attachment_id) as attachments_count
+			 FROM 
+				tasks t
+			 LEFT JOIN 
+				task_attachments ta ON t.task_id = ta.task_id
+			 WHERE 
+				t.user_id = :userId
+			 GROUP BY 
+				t.task_id
+			 ORDER BY 
+				t.position ASC"
 		);
+
 		$stmtTasks->execute([':userId' => $userId]);
 
 		while ($task = $stmtTasks->fetch()) {
 			$columnId = $task['column_id'];
 			if (isset($columnMap[$columnId])) {
-				// Modified for Task Card Indicators
-				// Decode the JSON to check if notes exist and add a flag.
 				$encryptedData = json_decode($task['encrypted_data'], true);
 				$hasNotes = false;
 				if (json_last_error() === JSON_ERROR_NONE && !empty($encryptedData['notes'])) {
 					$hasNotes = true;
 				}
 				$task['has_notes'] = $hasNotes;
-				// End of modification
 
 				$columnMap[$columnId]['tasks'][] = $task;
 			}
@@ -401,8 +430,9 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 				'encrypted_data' => $encryptedData,
 				'position' => $position,
 				'classification' => 'support',
-				'due_date' => null, // Modified for Due Date feature
-				'has_notes' => false // Modified for Task Card Indicators
+				'due_date' => null,
+				'has_notes' => false,
+				'attachments_count' => 0
 			]
 		]);
 
@@ -855,7 +885,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'position' => $newPosition,
 				'classification' => $classification,
 				'due_date' => $dueDate,
-				'has_notes' => $hasNotes // Modified for Task Card Indicators
+				'has_notes' => $hasNotes,
+				'attachments_count' => 0
 			]
 		]);
 
@@ -866,5 +897,180 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while duplicating the task.']);
+	}
+}
+
+/**
+ * Handles the upload of a file attachment for a specific task.
+ */
+function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
+	// 1. --- VALIDATION ---
+	$taskId = isset($_POST['task_id']) ? (int)$_POST['task_id'] : 0;
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'A valid Task ID is required.']);
+		return;
+	}
+
+	if (empty($_FILES['attachment']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'File upload error or no file provided.']);
+		return;
+	}
+
+	$file = $_FILES['attachment'];
+	$fileSize = $file['size'];
+	$fileMimeType = mime_content_type($file['tmp_name']);
+
+	if ($fileSize > MAX_FILE_SIZE_BYTES) {
+		http_response_code(413); // Payload Too Large
+		echo json_encode(['status' => 'error', 'message' => 'File is too large. Max size is ' . (MAX_FILE_SIZE_BYTES / 1024 / 1024) . 'MB.']);
+		return;
+	}
+
+	if (!in_array($fileMimeType, ALLOWED_MIME_TYPES)) {
+		http_response_code(415); // Unsupported Media Type
+		echo json_encode(['status' => 'error', 'message' => 'Invalid file type. Allowed types are JPG, PNG, GIF, WebP.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// 2. --- PERMISSIONS & QUOTA CHECK ---
+		$stmt = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		if ($stmt->fetch() === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found or permission denied.']);
+			return;
+		}
+
+		$stmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$storageUsed = (int)$stmt->fetchColumn();
+
+		// 3. --- PRUNING LOGIC ---
+		if (($storageUsed + $fileSize) > USER_STORAGE_QUOTA_BYTES) {
+			$stmt = $pdo->prepare(
+				"SELECT attachment_id, filename_on_server, filesize_bytes FROM task_attachments 
+				 WHERE user_id = :userId ORDER BY created_at ASC LIMIT 1"
+			);
+			$stmt->execute([':userId' => $userId]);
+			$oldestAttachment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+			if ($oldestAttachment) {
+				$oldFilePath = ATTACHMENT_UPLOAD_DIR . $oldestAttachment['filename_on_server'];
+				if (file_exists($oldFilePath)) {
+					unlink($oldFilePath);
+				}
+				$stmt = $pdo->prepare("DELETE FROM task_attachments WHERE attachment_id = :id");
+				$stmt->execute([':id' => $oldestAttachment['attachment_id']]);
+				
+				$storageUsed -= (int)$oldestAttachment['filesize_bytes'];
+			}
+		}
+
+		// 4. --- FILE PROCESSING ---
+		$originalFilename = basename($file['name']);
+		$fileExtension = pathinfo($originalFilename, PATHINFO_EXTENSION);
+		$newFilename = "user{$userId}_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $fileExtension;
+		$destinationPath = ATTACHMENT_UPLOAD_DIR . $newFilename;
+
+		if (!move_uploaded_file($file['tmp_name'], $destinationPath)) {
+			$pdo->rollBack();
+			throw new Exception("Failed to move uploaded file.");
+		}
+
+		// 5. --- DATABASE UPDATES ---
+		$stmt = $pdo->prepare(
+			"INSERT INTO task_attachments (task_id, user_id, filename_on_server, original_filename, filesize_bytes, mime_type)
+			 VALUES (:taskId, :userId, :filename_on_server, :original_filename, :filesize_bytes, :mime_type)"
+		);
+		$stmt->execute([
+			':taskId' => $taskId,
+			':userId' => $userId,
+			':filename_on_server' => $newFilename,
+			':original_filename' => $originalFilename,
+			':filesize_bytes' => $fileSize,
+			':mime_type' => $fileMimeType
+		]);
+		$newAttachmentId = (int)$pdo->lastInsertId();
+
+		$newStorageUsed = $storageUsed + $fileSize;
+		$stmt = $pdo->prepare("UPDATE users SET storage_used_bytes = :storage WHERE user_id = :userId");
+		$stmt->execute([':storage' => $newStorageUsed, ':userId' => $userId]);
+
+		$pdo->commit();
+
+		// 6. --- RESPOND ---
+		http_response_code(201);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'attachment_id' => $newAttachmentId,
+				'task_id' => $taskId,
+				'filename_on_server' => $newFilename,
+				'original_filename' => $originalFilename,
+				'filesize_bytes' => $fileSize,
+				'user_storage_used' => $newStorageUsed,
+				'user_storage_quota' => USER_STORAGE_QUOTA_BYTES
+			]
+		]);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEV_MODE') && DEV_MODE) {
+			error_log('Error in handle_upload_attachment: ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred during file upload.']);
+	}
+}
+
+/**
+ * Fetches all attachments for a specific task.
+ */
+function handle_get_attachments(PDO $pdo, int $userId): void {
+	$taskId = isset($_GET['task_id']) ? (int)$_GET['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'A valid Task ID is required.']);
+		return;
+	}
+
+	try {
+		// Security Check: Ensure the user owns the task they are requesting attachments for.
+		$stmt = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		if ($stmt->fetch() === false) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found or permission denied.']);
+			return;
+		}
+
+		// Fetch the attachments
+		$stmt = $pdo->prepare(
+			"SELECT attachment_id, task_id, filename_on_server, original_filename, filesize_bytes, created_at 
+			 FROM task_attachments 
+			 WHERE task_id = :taskId AND user_id = :userId 
+			 ORDER BY created_at DESC"
+		);
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$attachments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => $attachments]);
+
+	} catch (Exception $e) {
+		if (defined('DEV_MODE') && DEV_MODE) {
+			error_log('Error in handle_get_attachments: ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred while fetching attachments.']);
 	}
 }

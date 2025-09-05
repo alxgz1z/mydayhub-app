@@ -1,10 +1,10 @@
 /**
- * MyDayHub Beta 5 - Tasks View Module
+ * MyDayHub Beta 5 - Tasks View Module (Diagnostic Version)
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.1.3
+ * @version 5.1.5-debug
  * @author Alex & Gemini
  */
 
@@ -46,6 +46,7 @@ function getTaskDataFromElement(taskCardEl) {
 		classification: taskCardEl.dataset.classification,
 		due_date: taskCardEl.dataset.dueDate || null,
 		has_notes: taskCardEl.dataset.hasNotes === 'true',
+		attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
 		updated_at: taskCardEl.dataset.updatedAt
 	};
 }
@@ -179,6 +180,10 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
+			// Modified for Debugging
+			console.log("Board click detected. Target element:", e.target);
+			// End of modification
+
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
 				const taskCard = shortcut.closest('.task-card');
@@ -187,6 +192,10 @@ function initEventListeners() {
 					openNotesEditorForTask(taskCard);
 				} else if (action === 'open-due-date') {
 					await openDueDateModalForTask(taskCard);
+				} else if (action === 'open-attachments') {
+					const taskId = taskCard.dataset.taskId;
+					const taskTitle = decodeURIComponent(taskCard.dataset.title);
+					await openAttachmentsModal(taskId, taskTitle);
 				}
 				return;
 			}
@@ -251,6 +260,9 @@ function initEventListeners() {
 			
 			const actionsBtn = e.target.closest('.btn-task-actions');
 			if (actionsBtn) {
+				// Modified for Debugging
+				console.log("Action menu button ('...') was clicked or was a parent of the click.");
+				// End of modification
 				showTaskActionsMenu(actionsBtn);
 				return;
 			}
@@ -272,8 +284,10 @@ function initEventListeners() {
 				openNotesEditorForTask(taskCard);
 			} else if (action === 'set-due-date') {
 				await openDueDateModalForTask(taskCard);
-			} 
-			else if (action === 'delete') {
+			} else if (action === 'attachments') {
+				const taskTitle = decodeURIComponent(taskCard.dataset.title);
+				await openAttachmentsModal(taskId, taskTitle);
+			} else if (action === 'delete') {
 				const confirmed = await showConfirm('Are you sure you want to delete this task?');
 				if (confirmed && taskId) {
 					const success = await deleteTask(taskId);
@@ -468,11 +482,8 @@ function closeFilterMenu() {
 	}
 }
 
-// Modified for Filter Persistence
 /**
  * Saves a filter preference to the backend. Fire-and-forget.
- * @param {string} key - The preference key (e.g., 'filter_show_completed').
- * @param {boolean} value - The value to save.
  */
 async function saveFilterPreference(key, value) {
 	try {
@@ -494,7 +505,6 @@ async function saveFilterPreference(key, value) {
 		console.error('Error saving filter preference:', error);
 	}
 }
-// End of modification
 
 /**
  * Creates and displays the filter menu.
@@ -527,18 +537,15 @@ function showFilterMenu() {
 
 	setTimeout(() => menu.classList.add('visible'), 10);
 
-	// Modified for Filter Persistence
 	menu.addEventListener('change', (e) => {
 		if (e.target.matches('input[type="checkbox"]')) {
 			const filter = e.target.dataset.filter;
 			const value = e.target.checked;
 			filterState[filter] = value;
 			applyAllFilters();
-			// Save the preference to the backend. Key must match the one loaded in fetchAndRenderBoard.
 			saveFilterPreference('filter_show_completed', value);
 		}
 	});
-	// End of modification
 }
 
 /**
@@ -651,9 +658,20 @@ function closeAllTaskActionMenus() {
  * Creates and displays the task actions menu.
  */
 function showTaskActionsMenu(buttonEl) {
+	// Modified for Debugging
+	console.log("showTaskActionsMenu function has been called.");
+	// End of modification
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
-	if (!taskCard) return;
+	if (!taskCard) {
+		// Modified for Debugging
+		console.error("DEBUG: Could not find a parent .task-card for the clicked button.");
+		// End of modification
+		return;
+	}
+	// Modified for Debugging
+	console.log("DEBUG: Found task card with ID:", taskCard.dataset.taskId);
+	// End of modification
 
 	const menu = document.createElement('div');
 	menu.className = 'task-actions-menu';
@@ -673,6 +691,10 @@ function showTaskActionsMenu(buttonEl) {
 			</svg>
 			<span>Set Due Date</span>
 		</button>
+		<button class="task-action-btn" data-action="attachments">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+			<span>Attachments</span>
+		</button>
 		<button class="task-action-btn" data-action="duplicate">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
@@ -691,6 +713,9 @@ function showTaskActionsMenu(buttonEl) {
 	`;
 
 	document.body.appendChild(menu);
+	// Modified for Debugging
+	console.log("DEBUG: Action menu element was created and appended to the document body.");
+	// End of modification
 
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
@@ -732,7 +757,6 @@ function updateMoveButtonVisibility() {
 
 /**
  * Sends a request to duplicate a task.
- * @returns {Promise<Object|null>} - The new task data object if successful, null otherwise.
  */
 async function duplicateTask(taskId) {
 	try {
@@ -855,7 +879,6 @@ async function renameColumn(columnId, newName) {
 
 /**
  * Sends a request to rename a task's title.
- * @returns {Promise<boolean>} - True if successful, false otherwise.
  */
 async function renameTaskTitle(taskId, newTitle) {
 	try {
@@ -1137,11 +1160,9 @@ async function fetchAndRenderBoard() {
 				container.dataset.editorFontSize = userPrefs.editor_font_size;
 			}
 			
-			// Modified for Filter Persistence
 			if (userPrefs && typeof userPrefs.filter_show_completed !== 'undefined') {
 				filterState.showCompleted = userPrefs.filter_show_completed;
 			}
-			// End of modification
 
 			renderBoard(boardData);
 		} else {
@@ -1241,7 +1262,9 @@ function createTaskCard(taskData) {
 	}
 	
 	let footerHTML = '';
-	if (taskData.has_notes || taskData.due_date) {
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0);
+
+	if (hasIndicators) {
 		let notesIndicator = '';
 		if (taskData.has_notes) {
 			notesIndicator = `
@@ -1270,8 +1293,19 @@ function createTaskCard(taskData) {
 			`;
 		}
 		
+		let attachmentsIndicator = '';
+		if (taskData.attachments_count && taskData.attachments_count > 0) {
+			attachmentsIndicator = `
+				<span class="task-indicator indicator-shortcut" data-action="open-attachments" title="${taskData.attachments_count} attachment(s)">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+					<span class="attachment-count">${taskData.attachments_count}</span>
+				</span>
+			`;
+		}
+
 		footerHTML = `
 			<div class="task-card-footer">
+				${attachmentsIndicator}
 				${notesIndicator}
 				${dueDateIndicator}
 			</div>
@@ -1288,6 +1322,7 @@ function createTaskCard(taskData) {
 			data-has-notes="${taskData.has_notes}"
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"
+			data-attachments-count="${taskData.attachments_count || 0}"
 			draggable="true">
 			
 			<div class="task-card-main">
@@ -1299,4 +1334,103 @@ function createTaskCard(taskData) {
 			${footerHTML}
 		</div>
 	`;
+}
+
+/**
+ * Fetches the list of attachments for a given task from the API.
+ */
+async function getAttachments(taskId) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`);
+		const result = await response.json();
+		if (result.status === 'success') {
+			return result.data;
+		}
+		throw new Error(result.message || 'Failed to fetch attachments.');
+	} catch (error) {
+		showToast(error.message, 'error');
+		console.error('Get attachments error:', error);
+		return null;
+	}
+}
+
+/**
+ * Opens the attachments modal and populates it with data for a given task.
+ */
+async function openAttachmentsModal(taskId, taskTitle) {
+	const modalOverlay = document.getElementById('attachments-modal-overlay');
+	const modalTitle = document.getElementById('attachments-modal-title');
+	const listContainer = document.getElementById('attachment-list');
+
+	if (!modalOverlay || !modalTitle || !listContainer) {
+		console.error('Attachment modal elements not found.');
+		return;
+	}
+
+	modalTitle.textContent = `Attachments for: ${taskTitle}`;
+	listContainer.innerHTML = '<p>Loading...</p>';
+	modalOverlay.classList.remove('hidden');
+
+	const attachments = await getAttachments(taskId);
+	
+	if (attachments) {
+		renderAttachmentList(attachments, listContainer);
+	} else {
+		listContainer.innerHTML = '<p class="no-attachments-message">Could not load attachments.</p>';
+	}
+	
+	const closeBtn = document.getElementById('attachments-modal-close-btn');
+
+	const closeModalHandler = (e) => {
+		if (e.target === modalOverlay || e.target === closeBtn || e.target.closest('#attachments-modal-close-btn')) {
+			closeAttachmentsModal();
+			modalOverlay.removeEventListener('click', closeModalHandler);
+		}
+	};
+	
+	modalOverlay.addEventListener('click', closeModalHandler);
+}
+
+/**
+ * Closes the attachments modal and cleans up.
+ */
+function closeAttachmentsModal() {
+	const modalOverlay = document.getElementById('attachments-modal-overlay');
+	if (modalOverlay) {
+		modalOverlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Renders the list of attachments inside the modal.
+ */
+function renderAttachmentList(attachments, container) {
+	container.innerHTML = '';
+	if (attachments.length === 0) {
+		container.innerHTML = '<p class="no-attachments-message">No attachments yet.</p>';
+		return;
+	}
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+	attachments.forEach(att => {
+		const itemEl = document.createElement('div');
+		itemEl.className = 'attachment-item';
+		itemEl.dataset.attachmentId = att.attachment_id;
+		
+		const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+		const thumbUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+
+		itemEl.innerHTML = `
+			<a href="${thumbUrl}" target="_blank" title="Open in new tab">
+				<img src="${thumbUrl}" class="thumbnail" alt="${att.original_filename}" />
+			</a>
+			<div class="attachment-file-info">
+				<span class="filename">${att.original_filename}</span>
+				<span class="filesize">${fileSizeKB} KB</span>
+			</div>
+			<button class="btn-delete-attachment" title="Delete Attachment">&times;</button>
+		`;
+		container.appendChild(itemEl);
+	});
 }

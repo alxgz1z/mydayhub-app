@@ -5,7 +5,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
  *
- * @version 5.1.0
+ * @version 5.1.2
  * @author Alex & Gemini
  */
 
@@ -39,11 +39,38 @@ if ($method === 'GET') {
 	$module = $_GET['module'] ?? null;
 	$action = $_GET['action'] ?? null;
 } elseif ($method === 'POST') {
-	$json_data = file_get_contents('php://input');
-	$input = json_decode($json_data, true);
-	$module = $input['module'] ?? null;
-	$action = $input['action'] ?? null;
-	$data = $input['data'] ?? [];
+	// Modified for Task Attachments feature
+	// Check content type to handle both JSON and multipart/form-data
+	$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+
+	if (strpos($contentType, 'application/json') !== false) {
+		// Standard JSON request
+		$json_data = file_get_contents('php://input');
+		$input = json_decode($json_data, true);
+		$module = $input['module'] ?? null;
+		$action = $input['action'] ?? null;
+		$data = $input['data'] ?? [];
+	} elseif (strpos($contentType, 'multipart/form-data') !== false) {
+		// File upload request
+		$module = $_POST['module'] ?? null;
+		$action = $_POST['action'] ?? null;
+		// The handler will access the actual file data from $_FILES.
+		// Other non-file data can be passed in the 'data' field.
+		$data = $_POST['data'] ?? [];
+		// If 'data' is sent as a JSON string (a common practice), decode it.
+		if (is_string($data)) {
+			$decodedData = json_decode($data, true);
+			if (json_last_error() === JSON_ERROR_NONE) {
+				$data = $decodedData;
+			}
+		}
+	} else {
+		// Unsupported content type for POST requests
+		http_response_code(415); // Unsupported Media Type
+		echo json_encode(['status' => 'error', 'message' => 'Unsupported content type for POST requests.']);
+		exit();
+	}
+	// End of modification
 } else {
 	http_response_code(405); // Method Not Allowed
 	echo json_encode(['status' => 'error', 'message' => 'Method not allowed.']);
@@ -66,7 +93,6 @@ try {
 			handle_tasks_action($action, $method, $pdo, $userId, $data);
 			break;
 
-		// Modified for User Preferences feature
 		case 'users':
 			require_once __DIR__ . '/users.php';
 			handle_users_action($action, $method, $pdo, $userId, $data);
@@ -78,7 +104,7 @@ try {
 			break;
 	}
 } catch (Exception $e) {
-	if (defined('DEVMODE') && DEVMODE) {
+	if (defined('DEV_MODE') && DEV_MODE) {
 		error_log("API Gateway Error: " . $e->getMessage());
 	}
 	http_response_code(500);
