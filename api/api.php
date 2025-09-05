@@ -5,7 +5,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
  *
- * @version 5.1.2
+ * @version 5.1.3
  * @author Alex & Gemini
  */
 
@@ -39,18 +39,17 @@ if ($method === 'GET') {
 	$module = $_GET['module'] ?? null;
 	$action = $_GET['action'] ?? null;
 } elseif ($method === 'POST') {
-	// Modified for Task Attachments feature
-	// Check content type to handle both JSON and multipart/form-data
+	// Modified for Case-Insensitive Header Check
 	$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
-	if (strpos($contentType, 'application/json') !== false) {
+	if (stripos($contentType, 'application/json') !== false) {
 		// Standard JSON request
 		$json_data = file_get_contents('php://input');
 		$input = json_decode($json_data, true);
 		$module = $input['module'] ?? null;
 		$action = $input['action'] ?? null;
 		$data = $input['data'] ?? [];
-	} elseif (strpos($contentType, 'multipart/form-data') !== false) {
+	} elseif (stripos($contentType, 'multipart/form-data') !== false) {
 		// File upload request
 		$module = $_POST['module'] ?? null;
 		$action = $_POST['action'] ?? null;

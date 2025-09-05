@@ -303,7 +303,10 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * Storage Quota:
   	* Each user has a defined storage quota (e.g., 50 MB).
   	* Before an upload, the system checks if the new file will exceed the user's quota.
-  	* Pruning Policy: If the quota is exceeded, the user will be presented with a confirmation modal: "Uploading this file will exceed your storage limit. The oldest attachment, [oldest_image_filename.jpg], will be deleted to make space. Continue?".
+  	* FIX] Pruning Policy: If the quota is exceeded, the user will be presented with a confirmation modal: "Uploading this file will exceed your storage limit. The oldest attachment, [oldest_image_filename.jpg], will be deleted to make space. Continue?". Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
+	  
+	  *Implementation Note: The current backend logic automatically deletes the oldest file without a user prompt. This needs to be updated to include the confirmation modal flow.*
+	  
   	* Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
 
 
@@ -681,6 +684,22 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 ## ENVIRONMENT SETUP
 
 This application uses a `.env` file in the root directory to manage sensitive credentials and environment-specific settings. This file should **not** be committed to version control.
+
+### PHP & File System Prerequisites (for Local Dev)
+
+For all features to work correctly, the local development environment (XAMPP) must be configured as follows:
+
+1.  **Enable `fileinfo` Extension:** The `fileinfo` PHP extension is required for validating file uploads. In your `php.ini` file, ensure the following line is present and not commented out (no semicolon at the beginning):
+	```ini
+	extension=fileinfo
+	```
+
+2.  **Set Upload Directory Ownership:** The directory for attachments (`/media/imgs/`) must be owned by the user that the Apache web server runs as. On macOS XAMPP, this is typically the `daemon` user. To grant the correct ownership, run the following command in your terminal from the project's root directory:
+	```bash
+	sudo chown -R daemon:daemon media/imgs
+	```
+
+After making any changes to `php.ini` or file ownership, remember to restart the Apache server.
 
 ### Required Variables
 Create a '.env' file in the project root with the following variables:

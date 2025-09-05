@@ -1,10 +1,10 @@
 /**
- * MyDayHub Beta 5 - Tasks View Module (Diagnostic Version)
+ * MyDayHub Beta 5 - Tasks View Module
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.1.5-debug
+ * @version 5.2.0
  * @author Alex & Gemini
  */
 
@@ -180,10 +180,6 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
-			// Modified for Debugging
-			console.log("Board click detected. Target element:", e.target);
-			// End of modification
-
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
 				const taskCard = shortcut.closest('.task-card');
@@ -260,9 +256,6 @@ function initEventListeners() {
 			
 			const actionsBtn = e.target.closest('.btn-task-actions');
 			if (actionsBtn) {
-				// Modified for Debugging
-				console.log("Action menu button ('...') was clicked or was a parent of the click.");
-				// End of modification
 				showTaskActionsMenu(actionsBtn);
 				return;
 			}
@@ -658,20 +651,11 @@ function closeAllTaskActionMenus() {
  * Creates and displays the task actions menu.
  */
 function showTaskActionsMenu(buttonEl) {
-	// Modified for Debugging
-	console.log("showTaskActionsMenu function has been called.");
-	// End of modification
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
 	if (!taskCard) {
-		// Modified for Debugging
-		console.error("DEBUG: Could not find a parent .task-card for the clicked button.");
-		// End of modification
 		return;
 	}
-	// Modified for Debugging
-	console.log("DEBUG: Found task card with ID:", taskCard.dataset.taskId);
-	// End of modification
 
 	const menu = document.createElement('div');
 	menu.className = 'task-actions-menu';
@@ -713,9 +697,6 @@ function showTaskActionsMenu(buttonEl) {
 	`;
 
 	document.body.appendChild(menu);
-	// Modified for Debugging
-	console.log("DEBUG: Action menu element was created and appended to the document body.");
-	// End of modification
 
 	const btnRect = buttonEl.getBoundingClientRect();
 	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
@@ -1336,6 +1317,7 @@ function createTaskCard(taskData) {
 	`;
 }
 
+// Modified for Task Attachments
 /**
  * Fetches the list of attachments for a given task from the API.
  */
@@ -1356,18 +1338,78 @@ async function getAttachments(taskId) {
 }
 
 /**
+ * Uploads a single file attachment for a task.
+ */
+async function uploadAttachment(taskId, file) {
+	const formData = new FormData();
+	formData.append('module', 'tasks');
+	formData.append('action', 'uploadAttachment');
+	formData.append('task_id', taskId);
+	formData.append('attachment', file);
+
+	// Optional: Add a visual indicator that an upload is in progress
+	const listContainer = document.getElementById('attachment-list');
+	const placeholder = document.createElement('div');
+	placeholder.className = 'attachment-item-placeholder';
+	placeholder.textContent = `Uploading ${file.name}...`;
+	listContainer.appendChild(placeholder);
+
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			body: formData
+		});
+		const result = await response.json();
+		
+		if (result.status === 'success') {
+			showToast('Attachment uploaded successfully.', 'success');
+			return true;
+		} else {
+			showToast(result.message || 'Upload failed.', 'error');
+			return false;
+		}
+	} catch (error) {
+		showToast('A network error occurred during upload.', 'error');
+		console.error('Upload attachment error:', error);
+		return false;
+	} finally {
+		// Clean up the placeholder
+		placeholder.remove();
+	}
+}
+
+/**
+ * Updates the attachment count on the main task card after an upload/delete.
+ * @param {string} taskId - The ID of the task.
+ * @param {number} newCount - The new attachment count.
+ */
+function updateTaskCardAttachmentCount(taskId, newCount) {
+	const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+	if (taskCard) {
+		taskCard.dataset.attachmentsCount = newCount;
+		rerenderTaskCard(taskCard);
+	}
+}
+
+
+/**
  * Opens the attachments modal and populates it with data for a given task.
  */
 async function openAttachmentsModal(taskId, taskTitle) {
 	const modalOverlay = document.getElementById('attachments-modal-overlay');
 	const modalTitle = document.getElementById('attachments-modal-title');
 	const listContainer = document.getElementById('attachment-list');
-
-	if (!modalOverlay || !modalTitle || !listContainer) {
+	const dropZone = document.getElementById('attachment-drop-zone');
+	const btnAdd = document.getElementById('btn-add-attachment');
+	const fileInput = document.getElementById('attachment-file-input');
+	
+	if (!modalOverlay || !modalTitle || !listContainer || !dropZone || !btnAdd || !fileInput) {
 		console.error('Attachment modal elements not found.');
 		return;
 	}
 
+	modalOverlay.dataset.currentTaskId = taskId; // Store task ID for handlers
 	modalTitle.textContent = `Attachments for: ${taskTitle}`;
 	listContainer.innerHTML = '<p>Loading...</p>';
 	modalOverlay.classList.remove('hidden');
@@ -1380,14 +1422,67 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		listContainer.innerHTML = '<p class="no-attachments-message">Could not load attachments.</p>';
 	}
 	
-	const closeBtn = document.getElementById('attachments-modal-close-btn');
+	// --- Event Handlers ---
+	// These are defined within the scope of this function to be added and removed correctly.
+	const handleFiles = async (files) => {
+		for (const file of files) {
+			await uploadAttachment(taskId, file);
+		}
+		// Refresh the entire list and task card after all uploads are processed
+		const freshAttachments = await getAttachments(taskId);
+		if (freshAttachments) {
+			renderAttachmentList(freshAttachments, listContainer);
+			updateTaskCardAttachmentCount(taskId, freshAttachments.length);
+		}
+	};
+
+	const handleAddClick = () => fileInput.click();
+	const handleFileChange = (e) => handleFiles(e.target.files);
+	
+	const preventDefaults = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+	};
+
+	const handleDragEnter = () => dropZone.classList.add('drag-over');
+	const handleDragLeave = () => dropZone.classList.remove('drag-over');
+	
+	const handleDrop = (e) => {
+		dropZone.classList.remove('drag-over');
+		const dt = e.dataTransfer;
+		const files = dt.files;
+		handleFiles(files);
+	};
 
 	const closeModalHandler = (e) => {
-		if (e.target === modalOverlay || e.target === closeBtn || e.target.closest('#attachments-modal-close-btn')) {
+		if (e.target === modalOverlay || e.target.closest('#attachments-modal-close-btn')) {
+			// Clean up all event listeners to prevent memory leaks
+			btnAdd.removeEventListener('click', handleAddClick);
+			fileInput.removeEventListener('change', handleFileChange);
+			['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+				dropZone.removeEventListener(eventName, preventDefaults);
+			});
+			dropZone.removeEventListener('dragenter', handleDragEnter);
+			dropZone.removeEventListener('dragleave', handleDragLeave);
+			dropZone.removeEventListener('drop', handleDrop);
+
 			closeAttachmentsModal();
 			modalOverlay.removeEventListener('click', closeModalHandler);
 		}
 	};
+
+	// --- Add Event Listeners ---
+	btnAdd.addEventListener('click', handleAddClick);
+	fileInput.addEventListener('change', handleFileChange);
+
+	// Setup drag and drop listeners
+	['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+		dropZone.addEventListener(eventName, preventDefaults, false);
+		document.body.addEventListener(eventName, preventDefaults, false);
+	});
+	dropZone.addEventListener('dragenter', handleDragEnter, false);
+	dropZone.addEventListener('dragleave', handleDragLeave, false);
+	dropZone.addEventListener('drop', handleDrop, false);
 	
 	modalOverlay.addEventListener('click', closeModalHandler);
 }
@@ -1399,6 +1494,7 @@ function closeAttachmentsModal() {
 	const modalOverlay = document.getElementById('attachments-modal-overlay');
 	if (modalOverlay) {
 		modalOverlay.classList.add('hidden');
+		modalOverlay.removeAttribute('data-current-task-id'); // Clear stored task ID
 	}
 }
 
@@ -1434,3 +1530,4 @@ function renderAttachmentList(attachments, container) {
 		container.appendChild(itemEl);
 	});
 }
+// End of modification

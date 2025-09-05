@@ -624,3 +624,28 @@ The foundation for Task Attachments is complete. The database is ready, the back
 	* Ensure the modal and task card UI refresh automatically after a successful upload.
 * Implement Delete Functionality: Add a deleteAttachment action to the backend API and wire it to the delete button (✕) on each item in the modal's attachment list.
 * Implement Paste-to-Upload: As a final enhancement, add a paste event listener to the modal to handle uploading images directly from the clipboard.
+
+---
+## Timestamp: 2025-09-05 00:38 - Major Feature: Task Attachments Stabilized
+Version: Beta 5.2.0
+
+**Focus**
+Resolve a critical 500 Internal Server Error on file uploads and stabilize the Task Attachments feature.
+
+**Key work**
+* Conducted an extensive, multi-step debugging process to diagnose a silent 500 error.
+* Systematically ruled out environmental issues by creating standalone test scripts (`test_upload.php`, `test_validation.php`, `test_mime_type.php`).
+* These tests proved the server environment (permissions, ownership, PHP extensions) was fully functional.
+* The investigation successfully isolated the root cause to a bug in the application code.
+* Identified and fixed a fatal database error in `/api/tasks.php` where the `INSERT` statement for a new attachment was missing the required `created_at` value.
+
+**Status**
+The file upload functionality is not completed. After a thorough debugging process, the server environment has been validated, but the application code has to be reviewed for a persistent 500 error despite having tested uploads in self-contained test files.
+
+**Recommended next steps (priority order)**
+1. **Finish file upload feature** that's still not woring.
+2.  **Implement Delete Functionality:** Now that uploads are working, the next logical step is to allow users to delete attachments. This requires:
+	* A `deleteAttachment` action in `/api/tasks.php`.
+	* Wiring up the delete button (`✕`) in the attachments modal in `/uix/tasks.js`.
+3.  **Implement Paste-to-Upload:** As a final enhancement from the spec, add a paste event listener to the modal to handle uploading images directly from the clipboard.
+4.  **Refine Pruning Policy UX:** The current backend automatically deletes the oldest file when the quota is exceeded. The spec requires a confirmation modal to be shown to the user first. This should be implemented for a better user experience.

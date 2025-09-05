@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.1.5
+ * @version 5.2.0
  * @author Alex & Gemini
  */
 
@@ -903,6 +903,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Handles the upload of a file attachment for a specific task.
  */
+// Modified for Final Bug Fix
 function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 	// 1. --- VALIDATION ---
 	$taskId = isset($_POST['task_id']) ? (int)$_POST['task_id'] : 0;
@@ -985,8 +986,8 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 
 		// 5. --- DATABASE UPDATES ---
 		$stmt = $pdo->prepare(
-			"INSERT INTO task_attachments (task_id, user_id, filename_on_server, original_filename, filesize_bytes, mime_type)
-			 VALUES (:taskId, :userId, :filename_on_server, :original_filename, :filesize_bytes, :mime_type)"
+			"INSERT INTO task_attachments (task_id, user_id, filename_on_server, original_filename, filesize_bytes, mime_type, created_at)
+			 VALUES (:taskId, :userId, :filename_on_server, :original_filename, :filesize_bytes, :mime_type, UTC_TIMESTAMP())"
 		);
 		$stmt->execute([
 			':taskId' => $taskId,
@@ -1023,7 +1024,7 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
 		}
-		if (defined('DEV_MODE') && DEV_MODE) {
+		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in handle_upload_attachment: ' . $e->getMessage());
 		}
 		http_response_code(500);
@@ -1067,7 +1068,7 @@ function handle_get_attachments(PDO $pdo, int $userId): void {
 		echo json_encode(['status' => 'success', 'data' => $attachments]);
 
 	} catch (Exception $e) {
-		if (defined('DEV_MODE') && DEV_MODE) {
+		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in handle_get_attachments: ' . $e->getMessage());
 		}
 		http_response_code(500);
