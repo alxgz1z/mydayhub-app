@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.2.0
+ * @version 5.2.3
  * @author Alex & Gemini
  */
 
@@ -15,11 +15,13 @@ declare(strict_types=1);
 define('ATTACHMENT_UPLOAD_DIR', __DIR__ . '/../media/imgs/');
 define('MAX_FILE_SIZE_BYTES', 5 * 1024 * 1024); // 5 MB
 define('USER_STORAGE_QUOTA_BYTES', 50 * 1024 * 1024); // 50 MB
+// Modified for PDF Support
 define('ALLOWED_MIME_TYPES', [
 	'image/jpeg',
 	'image/png',
 	'image/gif',
-	'image/webp'
+	'image/webp',
+	'application/pdf'
 ]);
 
 /**

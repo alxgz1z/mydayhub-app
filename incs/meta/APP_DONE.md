@@ -649,3 +649,28 @@ The file upload functionality is not completed. After a thorough debugging proce
 	* Wiring up the delete button (`✕`) in the attachments modal in `/uix/tasks.js`.
 3.  **Implement Paste-to-Upload:** As a final enhancement from the spec, add a paste event listener to the modal to handle uploading images directly from the clipboard.
 4.  **Refine Pruning Policy UX:** The current backend automatically deletes the oldest file when the quota is exceeded. The spec requires a confirmation modal to be shown to the user first. This should be implemented for a better user experience.
+
+---
+## # Timestamp: 2025-09-05 23:25 - Major Feature: Task Attachments Viewer & PDF Support
+
+Version: Beta 5.2.5
+**Focus** Finalize the user experience for viewing task attachments, resolve critical bugs, and add support for PDF files.
+**Key work**
+* **Viewer UX Pivot:** Based on reliability issues with embedding, the viewing logic was changed.
+  * **Images:** Now open in a polished, in-app modal viewer.
+  * **PDFs:** Now open directly in a new browser tab, ensuring robust functionality.
+* **Full-Stack PDF Support:**
+  * **Backend (**api/tasks.php**):** The list of allowed MIME types was updated to include application/pdf, enabling PDF uploads.
+  * **Frontend (**uix/tasks.js **&** uix/attachments.css**):** The UI now intelligently distinguishes between file types, showing image thumbnails for images and a generic file icon for PDFs.
+* **UX Enhancement:** Added a "close on Escape key" feature to both the attachments list and the image viewer modals for improved keyboard accessibility.
+* **Critical Bug Fixes:**
+  * Resolved a bug that caused files to upload twice on drag-and-drop by ensuring all event listeners are properly removed when the modal closes.
+  * Fixed a JavaScript error that prevented the viewer modal from opening due to an ID mismatch between the HTML and the script.
+
+⠀**Status** The Task Attachments feature is now functionally complete for adding and viewing images and PDFs. All related bugs identified during this session have been resolved. The user experience is stable and aligns with our revised plan. The "delete attachment" functionality remains as the final pending piece of this feature set.
+**Recommended next steps (priority order)**
+**1** **Implement Delete Functionality:** This is the final core component of the attachments feature. It requires:
+	* A deleteAttachment action in /api/tasks.php that securely deletes the file and database record while updating the user's storage quota.
+	* Wiring up the delete button (✕) in the attachments modal in /uix/tasks.js to call the new API after a confirmation prompt.
+**2** **Refine Pruning Policy UX:** The current backend automatically deletes the oldest file when the storage quota is exceeded. The spec requires a confirmation modal to be shown to the user first. This should be implemented for a better user experience.
+**3** **Implement Task Priority:** With attachments stable, we can move to the next task-level feature from the spec.

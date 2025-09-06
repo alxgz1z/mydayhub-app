@@ -249,7 +249,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
 * **Attachments Display:**
   * An attachment icon (e.g., 📎) with a count badge will appear on cards with attachments.
   * On hover, a tooltip will list the image filenames.
-  * Clicking the icon opens a simple gallery modal displaying thumbnails of the attached images. Clicking a thumbnail shows the full-size image.
+  * Clicking the icon opens a gallery modal. From the gallery, clicking an image thumbnail opens a full-screen modal viewer within the app. Clicking a PDF thumbnail opens the document in a new browser tab for maximum compatibility.
   * The entire task card will act as a drop zone, highlighted visually when a file is dragged over it.
 
 * **Status Indicators:**
@@ -615,11 +615,13 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 		[RDY] duplicateTask (in tasks.php)
 		[RDY] saveTaskDetails (in tasks.php)
 		[RDY] saveUserPreference (in users.php)
+		[RDY] getAttachments (in tasks.php)
+		[RDY] uploadAttachment (in tasks.php)
+		[WIP] deleteAttachment (in tasks.php)
 	Future API Actions:
 		[FUT] moveTask
 		[FUT] togglePriority
 		[FUT] shareTask / revokeShare
-		[WIP] getAttachments / uploadAttachment / deleteAttachment
 	
 ### UI Implementation tracking
 	Implemented UI Features:

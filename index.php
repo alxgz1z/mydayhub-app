@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.1.5
+ * @version 5.2.3
  * @author Alex & Gemini
  */
 
@@ -108,7 +108,7 @@ $username = $_SESSION['username'] ?? 'User';
 				<h3 id="editor-title">Edit Note</h3>
 				<div class="editor-controls">
 					<button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
+						<svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
 					</button>
 					<button id="editor-btn-maximize" class="btn-icon" title="Maximize">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="6 15 12 21 18 15"></polyline><polyline points="18 9 12 3 6 9"></polyline></g></svg>
@@ -182,6 +182,7 @@ $username = $_SESSION['username'] ?? 'User';
 			<div id="attachments-modal-body">
 				<div id="attachment-drop-zone">
 					<p>Drop files here to upload</p>
+					<p class="drop-zone-note">Allowed: JPG, PNG, GIF, WebP, PDF (Max 5MB)</p>
 				</div>
 				<div id="attachment-list">
 					<p class="no-attachments-message">No attachments yet.</p>
@@ -198,6 +199,12 @@ $username = $_SESSION['username'] ?? 'User';
 			</div>
 		</div>
 	</div>
+
+	<div id="attachment-viewer-modal-overlay" class="hidden">
+		<button id="attachment-viewer-close-btn" class="btn-icon">&times;</button>
+		<div id="attachment-viewer-content"></div>
+	</div>
+
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
