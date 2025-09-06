@@ -904,6 +904,10 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
  * Handles the upload of a file attachment for a specific task.
  */
 // Modified for Final Bug Fix
+/**
+ * Handles the upload of a file attachment for a specific task.
+ */
+// Modified for Final Bug Fix
 function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 	// 1. --- VALIDATION ---
 	$taskId = isset($_POST['task_id']) ? (int)$_POST['task_id'] : 0;

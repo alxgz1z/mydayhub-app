@@ -1,6 +1,9 @@
 # Composer vendor directory
 /vendor/
 
+# User-uploaded content
+/media/imgs/
+
 # Log files
 debug.log
 
