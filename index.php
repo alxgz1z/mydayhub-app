@@ -194,7 +194,10 @@ $username = $_SESSION['username'] ?? 'User';
 					<progress id="attachment-quota-bar" value="0" max="100"></progress>
 					<span id="attachment-quota-text">0 / 50 MB</span>
 				</div>
-				<button id="btn-add-attachment" class="btn btn-primary">Add Attachment</button>
+				<div class="footer-button-group">
+					<button id="btn-browse-files" class="btn">Browse Files...</button>
+					<button id="btn-upload-staged" class="btn btn-success" style="display: none;">Upload</button>
+				</div>
 				<input type="file" id="attachment-file-input" multiple hidden>
 			</div>
 		</div>

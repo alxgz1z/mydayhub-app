@@ -3,7 +3,7 @@
  *
  * Styles for the task attachments gallery modal and its components.
  *
- * @version 5.3.0
+ * @version 5.4.1
  * @author Alex & Gemini
  */
 
@@ -60,21 +60,20 @@
 	font-weight: 600;
 }
 
+.attachments-modal-header .btn-icon {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	font-size: 1.75rem;
+	line-height: 1;
+	padding: 0 .5rem;
+	cursor: pointer;
+}
+
 #attachments-modal-body {
 	padding: 1.5rem;
 	overflow-y: auto;
 	flex-grow: 1; /* Allows the body to take up available space */
-}
-
-.attachments-modal-footer {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 1rem 1.5rem;
-	border-top: 1px solid rgba(255, 255, 255, 0.1);
-	background-color: rgba(0, 0, 0, 0.2);
-	border-bottom-left-radius: 12px;
-	border-bottom-right-radius: 12px;
 }
 
 /* --- Drop Zone & Staging Area --- */
@@ -183,12 +182,17 @@
 
 .attachment-file-info {
 	flex-grow: 1;
+	min-width: 0; /* Modified for filename overflow - Prevents flex item from overflowing */
 }
 
 .attachment-file-info .filename {
 	display: block;
 	font-weight: 500;
 	color: #f2f2f7;
+	/* Modified for filename overflow - Truncates long text with an ellipsis */
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 .attachment-file-info .filesize {
@@ -222,7 +226,14 @@
 
 /* --- Footer Quota Bar & Buttons --- */
 .attachments-modal-footer {
-	gap: 1rem; /* Add space between footer items */
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	background-color: rgba(0, 0, 0, 0.2);
+	border-bottom-left-radius: 12px;
+	border-bottom-right-radius: 12px;
 }
 
 .attachment-quota-info {
@@ -231,13 +242,15 @@
 	font-size: 0.8rem;
 	color: #8e8e93;
 	flex-shrink: 0;
+	margin-right: 1rem; /* Added margin for spacing */
 }
 
-#btn-upload-staged {
-	margin-left: auto; /* Push the upload button to the right */
-	display: none; /* Hidden by default */
+/* Modified for Button UI Overhaul */
+.footer-button-group {
+	margin-left: auto; /* Pushes the button group to the right */
+	display: flex;
+	gap: 0.75rem;
 }
-
 
 #attachment-quota-bar {
 	width: 100px;

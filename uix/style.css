@@ -18,6 +18,9 @@
 	--toast-error-bg: #d94f46; 
 	--btn-danger-bg: #d94f46;
 	--btn-danger-hover-bg: #c53b32;
+	/* Modified for Button UI Overhaul */
+	--btn-success-bg: #34a853;
+	--btn-success-hover-bg: #2c9f47;
 	--border-color-light: #4a4d50;
 }
 
@@ -277,6 +280,16 @@ body {
 .btn.btn-danger:hover {
 	background-color: var(--btn-danger-hover-bg);
 }
+
+/* Modified for Button UI Overhaul */
+.btn.btn-success {
+	background-color: var(--btn-success-bg);
+	color: #fff;
+}
+.btn.btn-success:hover {
+	background-color: var(--btn-success-hover-bg);
+}
+
 
 /* ==========================================================================
    6. DATE PICKER MODAL
