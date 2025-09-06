@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.2.4
+ * @version 5.3.2
  * @author Alex & Gemini
  */
 
@@ -13,6 +13,12 @@ let dragSourceColumn = null;
 let filterState = {
 	showCompleted: false
 };
+
+let userStorage = { used: 0, quota: 50 * 1024 * 1024 }; 
+
+let isImageViewerOpen = false;
+
+let isModalOpening = false; 
 
 /**
  * Helper to format YYY-MM-DD to MM/DD.
@@ -114,16 +120,23 @@ function openNotesEditorForTask(taskCard) {
  * Opens the Due Date modal for a given task card and handles the result.
  */
 async function openDueDateModalForTask(taskCard) {
-	const taskId = taskCard.dataset.taskId;
-	const currentDate = taskCard.dataset.dueDate;
-	const newDate = await showDueDateModal(currentDate);
+	if (isModalOpening) return;
+	isModalOpening = true;
 
-	if (newDate !== null && newDate !== currentDate) {
-		const success = await saveTaskDueDate(taskId, newDate);
-		if (success) {
-			taskCard.dataset.dueDate = newDate;
-			rerenderTaskCard(taskCard);
+	try {
+		const taskId = taskCard.dataset.taskId;
+		const currentDate = taskCard.dataset.dueDate;
+		const newDate = await showDueDateModal(currentDate);
+
+		if (newDate !== null && newDate !== currentDate) {
+			const success = await saveTaskDueDate(taskId, newDate);
+			if (success) {
+				taskCard.dataset.dueDate = newDate;
+				rerenderTaskCard(taskCard);
+			}
 		}
+	} finally {
+		isModalOpening = false;
 	}
 }
 
@@ -265,6 +278,8 @@ function initEventListeners() {
 			const actionButton = e.target.closest('.task-action-btn');
 			if (!actionButton) return;
 		
+			e.stopPropagation(); 
+		
 			const menu = actionButton.closest('.task-actions-menu');
 			const taskId = menu.dataset.taskId;
 			const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
@@ -273,7 +288,12 @@ function initEventListeners() {
 		
 			closeAllTaskActionMenus();
 		
-			if (action === 'edit-notes') {
+			// Modified for Cycle Classification
+			if (action === 'cycle-classification') {
+				if (taskId && taskCard) {
+					toggleTaskClassification(taskId, taskCard);
+				}
+			} else if (action === 'edit-notes') {
 				openNotesEditorForTask(taskCard);
 			} else if (action === 'set-due-date') {
 				await openDueDateModalForTask(taskCard);
@@ -650,6 +670,7 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
+// Modified for Cycle Classification
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -662,6 +683,13 @@ function showTaskActionsMenu(buttonEl) {
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
 	menu.innerHTML = `
+		<button class="task-action-btn" data-action="cycle-classification">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="6 15 12 21 18 15"></polyline>
+				<polyline points="18 9 12 3 6 9"></polyline>
+			</svg>
+			<span>Cycle Classification</span>
+		</button>
 		<button class="task-action-btn" data-action="edit-notes">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 			<span>Edit Notes</span>
@@ -1136,6 +1164,10 @@ async function fetchAndRenderBoard() {
 		if (result.status === 'success') {
 			const boardData = result.data.board;
 			const userPrefs = result.data.user_prefs;
+			
+			if (result.data.user_storage) {
+				userStorage = result.data.user_storage;
+			}
 
 			if (userPrefs && userPrefs.editor_font_size) {
 				container.dataset.editorFontSize = userPrefs.editor_font_size;
@@ -1320,6 +1352,49 @@ function createTaskCard(taskData) {
 // --- Attachment Functions ---
 
 /**
+ * Deletes a single attachment by its ID.
+ */
+// Modified for Storage Bar
+async function deleteAttachment(attachmentId) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'deleteAttachment',
+				data: { attachment_id: attachmentId }
+			})
+		});
+
+		if (!response.ok) {
+			const errorText = await response.text();
+			let errorJson;
+			try {
+				errorJson = JSON.parse(errorText);
+			} catch (e) {
+				throw new Error(`Server returned status ${response.status}`);
+			}
+			throw new Error(errorJson.message || `Server returned status ${response.status}`);
+		}
+
+		const result = await response.json();
+		if (result.status === 'success') {
+			showToast('Attachment deleted.', 'success');
+			return result.data; // Return data on success
+		} else {
+			throw new Error(result.message || 'Failed to delete attachment.');
+		}
+	} catch (error) {
+		showToast(error.message, 'error');
+		console.error('Delete attachment error:', error);
+		return null; // Return null on failure
+	}
+}
+
+
+/**
  * Fetches the list of attachments for a given task from the API.
  */
 async function getAttachments(taskId) {
@@ -1341,19 +1416,13 @@ async function getAttachments(taskId) {
 /**
  * Uploads a single file attachment for a task.
  */
+// Modified for Storage Bar
 async function uploadAttachment(taskId, file) {
 	const formData = new FormData();
 	formData.append('module', 'tasks');
 	formData.append('action', 'uploadAttachment');
 	formData.append('task_id', taskId);
 	formData.append('attachment', file);
-
-	// Optional: Add a visual indicator that an upload is in progress
-	const listContainer = document.getElementById('attachment-list');
-	const placeholder = document.createElement('div');
-	placeholder.className = 'attachment-item-placeholder';
-	placeholder.textContent = `Uploading ${file.name}...`;
-	listContainer.appendChild(placeholder);
 
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
@@ -1364,19 +1433,15 @@ async function uploadAttachment(taskId, file) {
 		const result = await response.json();
 		
 		if (result.status === 'success') {
-			showToast('Attachment uploaded successfully.', 'success');
-			return true;
+			return result.data; // Return data on success
 		} else {
-			showToast(result.message || 'Upload failed.', 'error');
-			return false;
+			showToast(`Upload failed for ${file.name}: ${result.message}`, 'error');
+			return null;
 		}
 	} catch (error) {
-		showToast('A network error occurred during upload.', 'error');
+		showToast(`A network error occurred uploading ${file.name}.`, 'error');
 		console.error('Upload attachment error:', error);
-		return false;
-	} finally {
-		// Clean up the placeholder
-		placeholder.remove();
+		return null;
 	}
 }
 
@@ -1391,118 +1456,233 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
 	}
 }
 
+// Modified for Storage Bar
+/**
+ * Updates the UI for the storage quota bar and text.
+ * @param {number} usedBytes - The number of bytes used.
+ * @param {number} quotaBytes - The total quota in bytes.
+ */
+function updateStorageBar(usedBytes, quotaBytes) {
+	const progressBar = document.getElementById('attachment-quota-bar');
+	const quotaText = document.getElementById('attachment-quota-text');
+	if (!progressBar || !quotaText) return;
+
+	const usedMB = (usedBytes / 1024 / 1024).toFixed(1);
+	const quotaMB = (quotaBytes / 1024 / 1024).toFixed(1);
+
+	progressBar.max = quotaBytes;
+	progressBar.value = usedBytes;
+	quotaText.textContent = `${usedMB} / ${quotaMB} MB`;
+}
+
 
 /**
  * Opens the attachments modal and populates it with data for a given task.
  */
-// Modified for ESC Key support and Bug Fixes
+// Modified for UI Polish (All 3 issues)
 async function openAttachmentsModal(taskId, taskTitle) {
-	const modalOverlay = document.getElementById('attachments-modal-overlay');
-	const modalTitle = document.getElementById('attachments-modal-title');
-	const listContainer = document.getElementById('attachment-list');
-	const dropZone = document.getElementById('attachment-drop-zone');
-	const btnAdd = document.getElementById('btn-add-attachment');
-	const fileInput = document.getElementById('attachment-file-input');
-	
-	if (!modalOverlay || !modalTitle || !listContainer || !dropZone || !btnAdd || !fileInput) {
-		console.error('Attachment modal elements not found.');
-		return;
-	}
+	if (isModalOpening) return;
+	isModalOpening = true;
 
-	modalOverlay.dataset.currentTaskId = taskId; // Store task ID for handlers
-	modalTitle.textContent = `Attachments for: ${taskTitle}`;
-	listContainer.innerHTML = '<p>Loading...</p>';
-	modalOverlay.classList.remove('hidden');
+	try {
+		const modalOverlay = document.getElementById('attachments-modal-overlay');
+		const modalTitle = document.getElementById('attachments-modal-title');
+		const listContainer = document.getElementById('attachment-list');
+		const dropZone = document.getElementById('attachment-drop-zone');
+		const btnAdd = document.getElementById('btn-add-attachment');
+		const fileInput = document.getElementById('attachment-file-input');
+		
+		if (!modalOverlay || !btnAdd) return;
+		
+		btnAdd.textContent = 'Browse Files...';
 
-	const attachments = await getAttachments(taskId);
-	
-	if (attachments) {
-		renderAttachmentList(attachments, listContainer);
-	} else {
-		listContainer.innerHTML = '<p class="no-attachments-message">Could not load attachments.</p>';
-	}
-	
-	const closeButton = document.getElementById('attachments-modal-close-btn');
-
-	const handleFiles = async (files) => {
-		for (const file of files) {
-			await uploadAttachment(taskId, file);
+		let stagedListContainer = document.getElementById('staged-attachment-list');
+		if (!stagedListContainer) {
+			stagedListContainer = document.createElement('div');
+			stagedListContainer.id = 'staged-attachment-list';
+			dropZone.insertAdjacentElement('afterend', stagedListContainer);
 		}
-		const freshAttachments = await getAttachments(taskId);
-		if (freshAttachments) {
-			renderAttachmentList(freshAttachments, listContainer);
-			updateTaskCardAttachmentCount(taskId, freshAttachments.length);
-		}
-	};
 
-	const handleAddClick = () => fileInput.click();
-	const handleFileChange = (e) => handleFiles(e.target.files);
-	const preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); };
-	const handleDragEnter = () => dropZone.classList.add('drag-over');
-	const handleDragLeave = () => dropZone.classList.remove('drag-over');
-	const handleDrop = (e) => {
-		dropZone.classList.remove('drag-over');
-		handleFiles(e.dataTransfer.files);
-	};
-
-	const handlePaste = (e) => {
-		const items = (e.clipboardData || e.originalEvent.clipboardData).items;
-		let filesToUpload = [];
-		for (const item of items) {
-			if (item.type.indexOf('image') === 0) {
-				const file = item.getAsFile();
-				if (file) { filesToUpload.push(file); }
+		let btnUploadStaged = document.getElementById('btn-upload-staged');
+		if (!btnUploadStaged) {
+			btnUploadStaged = document.createElement('button');
+			btnUploadStaged.id = 'btn-upload-staged';
+			btnUploadStaged.className = 'btn-primary';
+			const modalFooter = modalOverlay.querySelector('.attachments-modal-footer');
+			if (modalFooter) {
+				modalFooter.prepend(btnUploadStaged);
+			} else {
+				console.error('Could not find attachments modal footer to append upload button.');
+				return; 
 			}
 		}
-		if (filesToUpload.length > 0) {
-			e.preventDefault();
-			handleFiles(filesToUpload);
-		}
-	};
+		
+		let stagedFiles = [];
+		
+		modalOverlay.dataset.currentTaskId = taskId;
+		modalTitle.textContent = `Attachments for: ${taskTitle}`;
+		listContainer.innerHTML = '<p>Loading...</p>';
+		updateStorageBar(userStorage.used, userStorage.quota);
+		modalOverlay.classList.remove('hidden');
 
-	const closeModalHandler = () => {
-		btnAdd.removeEventListener('click', handleAddClick);
-		fileInput.removeEventListener('change', handleFileChange);
-		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-			dropZone.removeEventListener(eventName, preventDefaults);
-			document.body.removeEventListener(eventName, preventDefaults);
+		const refreshAttachmentList = async () => {
+			const attachments = await getAttachments(taskId);
+			if (attachments) {
+				renderAttachmentList(attachments, listContainer);
+				updateTaskCardAttachmentCount(taskId, attachments.length);
+			} else {
+				listContainer.innerHTML = '<p class="no-attachments-message">Could not load attachments.</p>';
+			}
+		};
+		
+		await refreshAttachmentList();
+		
+		const closeButton = document.getElementById('attachments-modal-close-btn');
+
+		const renderStagedFiles = () => {
+			stagedListContainer.innerHTML = '';
+			if (stagedFiles.length > 0) {
+				const fileCount = stagedFiles.length;
+				btnUploadStaged.textContent = `Upload ${fileCount} File${fileCount > 1 ? 's' : ''}`;
+				stagedFiles.forEach((file, index) => {
+					const fileSizeKB = (file.size / 1024).toFixed(1);
+					const itemEl = document.createElement('div');
+					itemEl.className = 'staged-attachment-item';
+					itemEl.innerHTML = `
+						<span class="filename">${file.name}</span>
+						<span class="filesize">${fileSizeKB} KB</span>
+						<button class="btn-remove-staged" data-index="${index}" title="Remove">&times;</button>
+					`;
+					stagedListContainer.appendChild(itemEl);
+				});
+				btnUploadStaged.style.display = 'block';
+			} else {
+				btnUploadStaged.style.display = 'none';
+			}
+		};
+		
+		stagedListContainer.addEventListener('click', (e) => {
+			if (e.target.matches('.btn-remove-staged')) {
+				const indexToRemove = parseInt(e.target.dataset.index, 10);
+				stagedFiles.splice(indexToRemove, 1);
+				renderStagedFiles();
+			}
 		});
-		dropZone.removeEventListener('dragenter', handleDragEnter);
-		dropZone.removeEventListener('dragleave', handleDragLeave);
-		dropZone.removeEventListener('drop', handleDrop);
-		document.removeEventListener('paste', handlePaste);
-		document.removeEventListener('keydown', handleEscKey);
-		modalOverlay.removeEventListener('click', clickOutsideHandler);
-		closeButton.removeEventListener('click', closeModalHandler);
-		closeAttachmentsModal();
-	};
 
-	const handleEscKey = (e) => {
-		if (e.key === 'Escape') {
-			closeModalHandler();
-		}
-	};
-	
-	const clickOutsideHandler = (e) => {
-		if (e.target === modalOverlay) {
-			closeModalHandler();
-		}
-	};
-	
-	btnAdd.addEventListener('click', handleAddClick);
-	fileInput.addEventListener('change', handleFileChange);
-	['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-		dropZone.addEventListener(eventName, preventDefaults, false);
-		document.body.addEventListener(eventName, preventDefaults, false);
-	});
-	dropZone.addEventListener('dragenter', handleDragEnter, false);
-	dropZone.addEventListener('dragleave', handleDragLeave, false);
-	dropZone.addEventListener('drop', handleDrop, false);
-	document.addEventListener('paste', handlePaste, false);
-	document.addEventListener('keydown', handleEscKey, false);
-	modalOverlay.addEventListener('click', clickOutsideHandler);
-	closeButton.addEventListener('click', closeModalHandler);
+		const handleFiles = (files) => {
+			stagedFiles.push(...Array.from(files));
+			renderStagedFiles();
+		};
+
+		const handleUploadStaged = async () => {
+			if (stagedFiles.length === 0) return;
+
+			btnUploadStaged.disabled = true;
+			btnUploadStaged.textContent = 'Uploading...';
+
+			const uploadPromises = stagedFiles.map(file => uploadAttachment(taskId, file));
+			const results = await Promise.all(uploadPromises);
+			
+			const lastSuccessfulResult = results.filter(r => r !== null).pop();
+			if (lastSuccessfulResult) {
+				userStorage.used = lastSuccessfulResult.user_storage_used;
+				updateStorageBar(userStorage.used, userStorage.quota);
+			}
+
+			stagedFiles = [];
+			renderStagedFiles();
+			await refreshAttachmentList();
+
+			btnUploadStaged.disabled = false;
+			showToast('Uploads complete.', 'success');
+		};
+
+		const handleDeleteAttachmentClick = async (e) => {
+			const deleteBtn = e.target.closest('.btn-delete-attachment');
+			if (deleteBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const attachmentId = deleteBtn.dataset.attachmentId;
+				const confirmed = await showConfirm('Are you sure you want to permanently delete this attachment?');
+				if (confirmed) {
+					const result = await deleteAttachment(attachmentId);
+					if (result) {
+						userStorage.used = result.user_storage_used;
+						updateStorageBar(userStorage.used, userStorage.quota);
+						await refreshAttachmentList();
+					}
+				}
+			}
+		};
+
+		const handleAddClick = () => fileInput.click();
+		const handleFileChange = (e) => handleFiles(e.target.files);
+		const preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); };
+		const handleDragEnter = () => dropZone.classList.add('drag-over');
+		const handleDragLeave = () => dropZone.classList.remove('drag-over');
+		const handleDrop = (e) => {
+			dropZone.classList.remove('drag-over');
+			handleFiles(e.dataTransfer.files);
+		};
+
+		const handlePaste = (e) => {
+			const filesToUpload = Array.from(e.clipboardData.items)
+				.filter(item => item.type.startsWith('image/'))
+				.map(item => item.getAsFile());
+
+			if (filesToUpload.length > 0) {
+				e.preventDefault();
+				handleFiles(filesToUpload);
+			}
+		};
+
+		const closeModalHandler = () => {
+			btnAdd.removeEventListener('click', handleAddClick);
+			fileInput.removeEventListener('change', handleFileChange);
+			btnUploadStaged.removeEventListener('click', handleUploadStaged);
+			listContainer.removeEventListener('click', handleDeleteAttachmentClick);
+			['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+				dropZone.removeEventListener(eventName, preventDefaults);
+				document.body.removeEventListener(eventName, preventDefaults);
+			});
+			dropZone.removeEventListener('dragenter', handleDragEnter);
+			dropZone.removeEventListener('dragleave', handleDragLeave);
+			dropZone.removeEventListener('drop', handleDrop);
+			document.removeEventListener('paste', handlePaste);
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+			closeButton.removeEventListener('click', closeModalHandler);
+			closeAttachmentsModal();
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
+		};
+		
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+		
+		btnAdd.addEventListener('click', handleAddClick);
+		fileInput.addEventListener('change', handleFileChange);
+		btnUploadStaged.addEventListener('click', handleUploadStaged);
+		listContainer.addEventListener('click', handleDeleteAttachmentClick);
+		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+			dropZone.addEventListener(eventName, preventDefaults, false);
+			document.body.addEventListener(eventName, preventDefaults, false);
+		});
+		dropZone.addEventListener('dragenter', handleDragEnter, false);
+		dropZone.addEventListener('dragleave', handleDragLeave, false);
+		dropZone.addEventListener('drop', handleDrop, false);
+		document.addEventListener('paste', handlePaste, false);
+		document.addEventListener('keydown', handleEscKey, false);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+		closeButton.addEventListener('click', closeModalHandler);
+	} finally {
+		isModalOpening = false;
+	}
 }
+
 
 /**
  * Closes the attachments modal and cleans up.
@@ -1512,13 +1692,18 @@ function closeAttachmentsModal() {
 	if (modalOverlay) {
 		modalOverlay.classList.add('hidden');
 		modalOverlay.removeAttribute('data-current-task-id');
+		
+		const stagedList = document.getElementById('staged-attachment-list');
+		if (stagedList) stagedList.innerHTML = '';
+
+		const btnUpload = document.getElementById('btn-upload-staged');
+		if (btnUpload) btnUpload.style.display = 'none';
 	}
 }
 
 /**
  * Renders the list of attachments inside the modal.
  */
-// Modified for PDF Support
 function renderAttachmentList(attachments, container) {
 	container.innerHTML = '';
 	if (attachments.length === 0) {
@@ -1527,6 +1712,7 @@ function renderAttachmentList(attachments, container) {
 	}
 
 	const appURL = window.MyDayHub_Config?.appURL || '';
+
 	attachments.forEach(att => {
 		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
 		const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
@@ -1561,7 +1747,7 @@ function renderAttachmentList(attachments, container) {
 				<span class="filename">${att.original_filename}</span>
 				<span class="filesize">${fileSizeKB} KB</span>
 			</div>
-			<button class="btn-delete-attachment" title="Delete Attachment">&times;</button>
+			<button class="btn-delete-attachment" title="Delete Attachment" data-attachment-id="${att.attachment_id}">&times;</button>
 		`;
 
 		if (!isPdf) {
@@ -1573,37 +1759,29 @@ function renderAttachmentList(attachments, container) {
 			});
 		}
 		
-		const deleteBtn = itemEl.querySelector('.btn-delete-attachment');
-		if(deleteBtn) {
-			deleteBtn.addEventListener('click', (e) => {
-				e.preventDefault();
-				e.stopPropagation();
-				// Future delete logic will go here
-				showToast('Delete functionality is not yet implemented.', 'info');
-			});
-		}
-
 		container.appendChild(itemEl);
 	});
 }
 
+
 /**
  * Opens the full-screen attachment viewer modal with the specified content.
  */
-// Modified for Bug Fix
+// Modified for Escape Key Bug
 function openAttachmentViewer(fileUrl, filename) {
+	isImageViewerOpen = true; // Set the flag
 	const viewerOverlay = document.getElementById('attachment-viewer-modal-overlay');
 	const contentContainer = document.getElementById('attachment-viewer-content');
 	const viewerCloseBtn = document.getElementById('attachment-viewer-close-btn');
 
 	if (!viewerOverlay || !contentContainer || !viewerCloseBtn) {
 		console.error('Attachment viewer elements not found.');
+		isImageViewerOpen = false; // Reset flag on error
 		return;
 	}
 
 	contentContainer.innerHTML = '';
 
-	// This function will now only be called for images.
 	const img = document.createElement('img');
 	img.src = fileUrl;
 	img.alt = filename;
@@ -1618,13 +1796,11 @@ function openAttachmentViewer(fileUrl, filename) {
 	};
 
 	const closeHandler = (e) => {
-		// Only close if clicking the overlay itself or the close button
 		if (e.target === viewerOverlay || e.target === viewerCloseBtn) {
 			closeAttachmentViewer();
 		}
 	};
 	
-	// Use { once: true } to auto-cleanup listeners after they fire
 	viewerOverlay.addEventListener('click', closeHandler, { once: true });
 	viewerCloseBtn.addEventListener('click', closeHandler, { once: true });
 	document.addEventListener('keydown', handleEscKey, { once: true });
@@ -1633,7 +1809,7 @@ function openAttachmentViewer(fileUrl, filename) {
 /**
  * Closes the attachment viewer modal.
  */
-// Modified for Bug Fix
+// Modified for Escape Key Bug
 function closeAttachmentViewer() {
 	const viewerOverlay = document.getElementById('attachment-viewer-modal-overlay');
 	if (viewerOverlay) {
@@ -1642,8 +1818,8 @@ function closeAttachmentViewer() {
 		if (contentContainer) {
 			contentContainer.innerHTML = '';
 		}
-		// Because we used { once: true }, we don't need to manually remove listeners here.
 	}
+	isImageViewerOpen = false; // Reset the flag
 }
 
 

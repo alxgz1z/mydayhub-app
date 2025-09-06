@@ -15,3 +15,4 @@ You are tasked with generating clear and actionable documentation to record the 
 * Use markdown lists, clear headings, and bold for key actions.
 * Be generous in context to empower effective session pickup.
 * Maintain consistency and style with our project documentation standards (APP_DONE.md and APP_SPEC.md).
+* in APP_DONE.md, provide the append text block starting with the --- divider

@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.2.3
+ * @version 5.3.0
  * @author Alex & Gemini
  */
 
@@ -116,6 +116,11 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'uploadAttachment':
 			if ($method === 'POST') {
 				handle_upload_attachment($pdo, $userId, $data);
+			}
+			break;
+		case 'deleteAttachment':
+			if ($method === 'POST') {
+				handle_delete_attachment($pdo, $userId, $data);
 			}
 			break;
 
@@ -271,12 +276,17 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Fetches all columns, tasks, and user preferences.
  */
+// Modified for Storage Bar
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
-		$stmtPrefs = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId");
-		$stmtPrefs->execute([':userId' => $userId]);
-		$prefsJson = $stmtPrefs->fetchColumn();
-		$userPrefs = json_decode($prefsJson ?: '{}', true);
+		// Fetch user preferences and storage usage in one query
+		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes FROM users WHERE user_id = :userId");
+		$stmtUser->execute([':userId' => $userId]);
+		$userData = $stmtUser->fetch(PDO::FETCH_ASSOC);
+
+		$prefsJson = $userData['preferences'] ?? '{}';
+		$userPrefs = json_decode($prefsJson, true);
+		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 
 		$stmtColumns = $pdo->prepare(
 			"SELECT column_id, column_name, position FROM `columns` WHERE user_id = :userId ORDER BY position ASC"
@@ -330,7 +340,11 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			'status' => 'success', 
 			'data' => [
 				'board' => $boardData,
-				'user_prefs' => $userPrefs
+				'user_prefs' => $userPrefs,
+				'user_storage' => [
+					'used' => $storageUsed,
+					'quota' => USER_STORAGE_QUOTA_BYTES
+				]
 			]
 		]);
 
@@ -906,10 +920,6 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
  * Handles the upload of a file attachment for a specific task.
  */
 // Modified for Final Bug Fix
-/**
- * Handles the upload of a file attachment for a specific task.
- */
-// Modified for Final Bug Fix
 function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 	// 1. --- VALIDATION ---
 	$taskId = isset($_POST['task_id']) ? (int)$_POST['task_id'] : 0;
@@ -1037,6 +1047,80 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred during file upload.']);
 	}
 }
+
+// Modified for deleteAttachment
+/**
+ * Deletes an attachment, removes the file, and updates user storage quota.
+ */
+function handle_delete_attachment(PDO $pdo, int $userId, ?array $data): void {
+	$attachmentId = isset($data['attachment_id']) ? (int)$data['attachment_id'] : 0;
+
+	if ($attachmentId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'A valid Attachment ID is required.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// 1. --- OWNERSHIP CHECK & DATA RETRIEVAL ---
+		$stmt = $pdo->prepare(
+			"SELECT filename_on_server, filesize_bytes 
+			 FROM task_attachments 
+			 WHERE attachment_id = :attachmentId AND user_id = :userId"
+		);
+		$stmt->execute([':attachmentId' => $attachmentId, ':userId' => $userId]);
+		$attachment = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if ($attachment === false) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Attachment not found or permission denied.']);
+			return;
+		}
+
+		$filename = $attachment['filename_on_server'];
+		$filesize = (int)$attachment['filesize_bytes'];
+		$filePath = ATTACHMENT_UPLOAD_DIR . $filename;
+
+		// 2. --- FILE & DATABASE DELETION ---
+		if (file_exists($filePath)) {
+			unlink($filePath);
+		}
+
+		$stmt = $pdo->prepare("DELETE FROM task_attachments WHERE attachment_id = :attachmentId");
+		$stmt->execute([':attachmentId' => $attachmentId]);
+
+		// 3. --- UPDATE USER QUOTA ---
+		$stmt = $pdo->prepare(
+			"UPDATE users SET storage_used_bytes = storage_used_bytes - :filesize WHERE user_id = :userId"
+		);
+		$stmt->execute([':filesize' => $filesize, ':userId' => $userId]);
+
+		$pdo->commit();
+
+		// 4. --- RESPOND ---
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'deleted_attachment_id' => $attachmentId
+			]
+		]);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in handle_delete_attachment: ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred while deleting the attachment.']);
+	}
+}
+
 
 /**
  * Fetches all attachments for a specific task.

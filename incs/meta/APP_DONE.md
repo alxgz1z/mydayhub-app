@@ -674,3 +674,32 @@ Version: Beta 5.2.5
 	* Wiring up the delete button (✕) in the attachments modal in /uix/tasks.js to call the new API after a confirmation prompt.
 **2** **Refine Pruning Policy UX:** The current backend automatically deletes the oldest file when the storage quota is exceeded. The spec requires a confirmation modal to be shown to the user first. This should be implemented for a better user experience.
 **3** **Implement Task Priority:** With attachments stable, we can move to the next task-level feature from the spec.
+
+---
+## Timestamp: 2025-09-06 01:28 - Feature Polish: Attachments & Classification UX
+
+Version: Beta 5.4.0
+
+**Focus**
+Finalize the Task Attachments feature with major UI/UX improvements and stability fixes, and replace the legacy 'Priority' concept with a more accessible 'Cycle Classification' control in the task actions menu.
+
+**Key work**
+* **Attachments UI Overhaul:**
+	* Clarified button labels in the modal to "Browse Files..." and a dynamic "Upload X Files" for better user guidance.
+	* Implemented a fully functional, real-time storage quota bar that accurately reflects usage after uploads and deletions.
+	* Fixed the Escape key behavior to ensure it only closes the top-most modal (image viewer) instead of all open modals.
+	* Corrected image sizing in the viewer to display images at their natural size unless they exceed the viewport, in which case they scale down while maintaining aspect ratio.
+* **Cycle Classification Feature:**
+	* Removed the redundant "Priority" feature from the development plan.
+	* Added a "Cycle Classification" button with a clear icon to the task actions menu, providing a second, accessible way to change a task's status.
+* **Critical Bug Fix:**
+	* Resolved a persistent bug that caused modals to open and actions to fire twice for a single click (e.g., the "double toast" issue) by implementing a debounce guard on modal-opening functions.
+
+**Status**
+The Task Attachments feature is now feature-complete, polished, and stable for the local development environment. The task classification workflow is enhanced, and a critical stability issue has been resolved. The Tasks View is robust and meets all initial design goals.
+
+**Recommended next steps (priority order)**
+1.  **Troubleshoot Production Environment:** Investigate and resolve the issues preventing the attachments feature from working on the Hostinger test environment (likely related to server configuration or file permissions).
+2.  **Implement "Undo" for Deletes:** Enhance the user experience by replacing the permanent delete actions for tasks and columns with a temporary "Undo" option, which will require implementing a soft-delete pattern on the backend.
+3.  **Begin Privacy Foundation:** Add the `is_private` flag to tasks and columns and implement the `togglePrivacy` API action. This will serve as the foundation for the larger sharing feature set.
+4.  **Implement Settings Slider Panel:** Build the UI shell for the global settings panel, accessible from the main header, to house future application-wide preferences.

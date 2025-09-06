@@ -4,7 +4,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.1.1
+ * @version 5.1.2
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -116,12 +116,15 @@ function showConfirm(message) {
 			cleanup();
 			resolve(false);
 		};
-
+		
+		// Use { once: true } to automatically remove listeners after they fire once.
 		yesBtn.addEventListener('click', handleYes, { once: true });
 		noBtn.addEventListener('click', handleNo, { once: true });
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
+			// Although {once: true} handles the fired event, we still remove the other one
+			// in case the modal is closed via other means in the future.
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
 		}
@@ -139,6 +142,7 @@ function showConfirm(message) {
  * @returns {Promise<string|null>} A promise that resolves to the new date string (YYYY-MM-DD),
  * an empty string if cleared, or null if canceled.
  */
+// Modified for Double Toast Bug
 function showDueDateModal(currentDate = '') {
 	const modalOverlay = document.getElementById('date-modal-overlay');
 	const input = document.getElementById('date-modal-input');
@@ -155,33 +159,28 @@ function showDueDateModal(currentDate = '') {
 	modalOverlay.classList.remove('hidden');
 
 	return new Promise(resolve => {
-		const handleSave = () => {
+		let isResolved = false;
+
+		const resolveOnce = (value) => {
+			if (isResolved) return;
+			isResolved = true;
 			cleanup();
-			resolve(input.value);
+			resolve(value);
 		};
 
-		const handleRemove = () => {
-			cleanup();
-			resolve(''); // Resolve with empty string to signify removal
-		};
-
-		const handleCancel = () => {
-			cleanup();
-			resolve(null); // Resolve with null to signify no change
-		};
+		const handleSave = () => resolveOnce(input.value);
+		const handleRemove = () => resolveOnce('');
+		const handleCancel = () => resolveOnce(null);
 		
 		const handleOverlayClick = (e) => {
-			if (e.target === modalOverlay) {
-				handleCancel();
-			}
+			if (e.target === modalOverlay) handleCancel();
 		};
 
 		const handleEscKey = (e) => {
-			if (e.key === 'Escape') {
-				handleCancel();
-			}
+			if (e.key === 'Escape') handleCancel();
 		};
 
+		// Add listeners
 		saveBtn.addEventListener('click', handleSave);
 		removeBtn.addEventListener('click', handleRemove);
 		cancelBtn.addEventListener('click', handleCancel);
@@ -190,6 +189,7 @@ function showDueDateModal(currentDate = '') {
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
+			// Remove all listeners to prevent duplicates on next open
 			saveBtn.removeEventListener('click', handleSave);
 			removeBtn.removeEventListener('click', handleRemove);
 			cancelBtn.removeEventListener('click', handleCancel);

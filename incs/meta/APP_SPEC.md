@@ -5,7 +5,7 @@
 * Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
 * Because I'm curious and this is a way to channel my creativity and passion for development. 
 
-## APPLICATION SPECIFICATION (Beta 5.1.2)
+## APPLICATION SPECIFICATION (Beta 5.4.0)
 * Audience: Internal Development & PM Use Only
 * This spec is a resource for contributors, testers, and future "Alex”
 
@@ -258,9 +258,10 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Support**: Blue — Enablers and indirect progress
   * **Noise**: Orange — Activities that distract or have unclear value
   * **Completed**: Gray — finished tasks, archived at the bottom
+  * The classification can be changed by clicking directly on the status band or by using the "Cycle Classification" option in the task's actions menu.
 
 * **Actions Menu** (Vertical ellipsis ⋮ is always visible for mobile compatibility)
-  * **Priority:** Flips priority normal -> high -> normal 
+  * **Cycle Classification** Rotates the task's classification through Signal, Support, and Noise.
   * **Notes:** Opens notes editor, which are auto-saved.
   * **Due Date:** Opens a calendar picker to set or clear the due date.
   * **Duplicate:** Creates an identical copy of the task card in the same column.
@@ -291,7 +292,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
   This feature allows users to attach images to tasks for visual reference, mockups, or context. Attachments are managed within a storage quota to control server space.
 
   * Upload Methods:
-  	* File Picker: Clicking an "Add Attachment" button in the gallery modal opens the native file dialog.
+  	* File Picker: Clicking a "Browse Files..." button in the gallery modal opens the native file dialog.
   	* Drag and Drop: Dropping image files directly onto a task card initiates an upload for that task.
   	* Paste: Pasting image data from the clipboard (e.g., a screenshot) while a task card or its attachment gallery is in focus initiates an upload.
   
@@ -617,10 +618,9 @@ All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stor
 		[RDY] saveUserPreference (in users.php)
 		[RDY] getAttachments (in tasks.php)
 		[RDY] uploadAttachment (in tasks.php)
-		[WIP] deleteAttachment (in tasks.php)
+		[RDY] deleteAttachment (in tasks.php)
 	Future API Actions:
 		[FUT] moveTask
-		[FUT] togglePriority
 		[FUT] shareTask / revokeShare
 	
 ### UI Implementation tracking
@@ -909,7 +909,7 @@ The rendered wireframes and UI samples reinforce minimalism, clarity, and action
  </svg>
 
 ### CONTEXTUAL MENU
-* Change priority
+* Cycle Classification
   <svg xmlns="http://www.w3.org/2000/svg"
      width="24" height="24" viewBox="0 0 24 24"
      fill="none" stroke="currentColor"
