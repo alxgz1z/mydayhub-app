@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.3.2
+ * @version 5.4.1
  * @author Alex & Gemini
  */
 
@@ -1489,12 +1489,17 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		const modalTitle = document.getElementById('attachments-modal-title');
 		const listContainer = document.getElementById('attachment-list');
 		const dropZone = document.getElementById('attachment-drop-zone');
-		const btnAdd = document.getElementById('btn-add-attachment');
+		// Modified for listener fix: Use new button ID
+		const btnBrowse = document.getElementById('btn-browse-files');
 		const fileInput = document.getElementById('attachment-file-input');
+		// Modified for listener fix: Get reference to the static upload button
+		const btnUploadStaged = document.getElementById('btn-upload-staged');
 		
-		if (!modalOverlay || !btnAdd) return;
-		
-		btnAdd.textContent = 'Browse Files...';
+		// Modified for listener fix: Check for the new button ID
+		if (!modalOverlay || !btnBrowse || !btnUploadStaged) {
+			console.error('Attachments modal components are missing!');
+			return;
+		}
 
 		let stagedListContainer = document.getElementById('staged-attachment-list');
 		if (!stagedListContainer) {
@@ -1502,21 +1507,8 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			stagedListContainer.id = 'staged-attachment-list';
 			dropZone.insertAdjacentElement('afterend', stagedListContainer);
 		}
-
-		let btnUploadStaged = document.getElementById('btn-upload-staged');
-		if (!btnUploadStaged) {
-			btnUploadStaged = document.createElement('button');
-			btnUploadStaged.id = 'btn-upload-staged';
-			btnUploadStaged.className = 'btn-primary';
-			const modalFooter = modalOverlay.querySelector('.attachments-modal-footer');
-			if (modalFooter) {
-				modalFooter.prepend(btnUploadStaged);
-			} else {
-				console.error('Could not find attachments modal footer to append upload button.');
-				return; 
-			}
-		}
 		
+		// Modified for listener fix: Remove dynamic button creation logic as it's now in index.php
 		let stagedFiles = [];
 		
 		modalOverlay.dataset.currentTaskId = taskId;
@@ -1543,6 +1535,7 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			stagedListContainer.innerHTML = '';
 			if (stagedFiles.length > 0) {
 				const fileCount = stagedFiles.length;
+				// Modified for listener fix: Update text content of the button
 				btnUploadStaged.textContent = `Upload ${fileCount} File${fileCount > 1 ? 's' : ''}`;
 				stagedFiles.forEach((file, index) => {
 					const fileSizeKB = (file.size / 1024).toFixed(1);
@@ -1555,7 +1548,7 @@ async function openAttachmentsModal(taskId, taskTitle) {
 					`;
 					stagedListContainer.appendChild(itemEl);
 				});
-				btnUploadStaged.style.display = 'block';
+				btnUploadStaged.style.display = 'inline-block';
 			} else {
 				btnUploadStaged.style.display = 'none';
 			}
@@ -1615,7 +1608,7 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			}
 		};
 
-		const handleAddClick = () => fileInput.click();
+		const handleBrowseClick = () => fileInput.click();
 		const handleFileChange = (e) => handleFiles(e.target.files);
 		const preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); };
 		const handleDragEnter = () => dropZone.classList.add('drag-over');
@@ -1637,7 +1630,8 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		};
 
 		const closeModalHandler = () => {
-			btnAdd.removeEventListener('click', handleAddClick);
+			// Modified for listener fix: Use new button ID for removing listener
+			btnBrowse.removeEventListener('click', handleBrowseClick);
 			fileInput.removeEventListener('change', handleFileChange);
 			btnUploadStaged.removeEventListener('click', handleUploadStaged);
 			listContainer.removeEventListener('click', handleDeleteAttachmentClick);
@@ -1663,7 +1657,8 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			if (e.target === modalOverlay) closeModalHandler();
 		};
 		
-		btnAdd.addEventListener('click', handleAddClick);
+		// Modified for listener fix: Use new button ID for adding listener
+		btnBrowse.addEventListener('click', handleBrowseClick);
 		fileInput.addEventListener('change', handleFileChange);
 		btnUploadStaged.addEventListener('click', handleUploadStaged);
 		listContainer.addEventListener('click', handleDeleteAttachmentClick);
