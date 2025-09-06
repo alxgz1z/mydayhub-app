@@ -2,7 +2,10 @@
 /vendor/
 
 # User-uploaded content
-/media/imgs/
+# Ignore all files inside the imgs directory...
+/media/imgs/*
+# ...but DO NOT ignore the .gitkeep file, so the directory is tracked.
+!/media/imgs/.gitkeep
 
 # Log files
 debug.log
@@ -11,5 +14,5 @@ debug.log
 .DS_Store
 Thumbs.db
 
+# Environment credentials
 .env
-debug.log
