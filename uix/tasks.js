@@ -1463,6 +1463,12 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
  * @param {number} quotaBytes - The total quota in bytes.
  */
 function updateStorageBar(usedBytes, quotaBytes) {
+	// Modified for delete attachment bug fix
+	// Add a defensive check to prevent crashes if the API returns a non-numeric value.
+	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
+		usedBytes = 0;
+	}
+
 	const progressBar = document.getElementById('attachment-quota-bar');
 	const quotaText = document.getElementById('attachment-quota-text');
 	if (!progressBar || !quotaText) return;
