@@ -118,10 +118,10 @@ You are tasked with producing clear, actionable documentation to capture the exa
 		* Provide the append block starting with --- exactly as it would be inserted in done.md.
 	3. Specification Review
 		* Identify sections in spec.md that may need updates or additions based on today’s progress.
-		* If updates are needed, provide a point-by-point update guide written in the same format and tone as APP_SPEC.md.
+		* If updates are needed, provide a point-by-point update guide written in the same format and tone as spec.md.
 
 ### Instructions
 	* Use markdown lists, clear headings, and bold text for emphasis.
 	* Be generous in context so that future sessions have enough detail to continue confidently.
-	* Ensure style consistency with both APP_DONE.md and APP_SPEC.md.
+	* Ensure style consistency with both done.md and spec.md.
 	* End with a Conformance Statement: “I confirm this documentation fully complies with MyDayHub’s end-of-session standards and has passed the Conformance Check.”

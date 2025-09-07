@@ -752,3 +752,31 @@ Version: Beta 5.5.2
 **1** **Troubleshoot Mobile Safari:** Investigate and resolve the bug preventing the Settings Panel from opening on mobile Safari.
 **2** **Implement "Undo" for Deletes:** Revisit this high-priority UX improvement. Replace permanent deletes with a temporary "Undo" option via a toast notification, which requires implementing a soft-delete pattern on the backend.
 **3** **Build Out Settings Panel:** Add the first functional setting to the new panel, such as the "High-Contrast Mode" toggle specified in the spec.
+
+---
+## Timestamp: 2025-09-07 15:50 - Major Feature: Undo for Deletes & Bug Fixes
+
+Version: Beta 5.7.2
+
+**Focus**
+Implement a full-stack soft-delete and "Undo" system for tasks and columns to improve user experience and prevent accidental data loss. This session also focused on resolving several critical UI bugs.
+
+**Key work**
+* **Undo Feature (Full Stack):**
+	* **Database:** Added a `deleted_at` nullable timestamp column to both the `tasks` and `columns` tables to enable soft deletes.
+	* **Backend API (`/api/tasks.php`):** Replaced permanent `DELETE` statements with `UPDATE` statements to set the `deleted_at` timestamp. A new `restoreItem` action was created to undo the deletion. The `getAll` action was updated to exclude soft-deleted items from being sent to the client.
+	* **Frontend UI (`/uix/tasks.js`):** Replaced all blocking `confirm()` modals for deletions with a non-blocking `showToast` notification that includes an "Undo" button and a 7-second timeout for permanent DOM removal.
+* **Enhanced Toast System:**
+	* Overhauled the global `showToast()` function in `/uix/app.js`. It now accepts a flexible `options` object, features a longer default duration (5s), includes a close button on all toasts, and supports a custom action button with a callback.
+	* Added corresponding styles in `/uix/style.css` for the new toast components.
+* **Critical Bug Fixes:**
+	* Resolved a bug preventing the Settings Panel from opening on mobile Safari by adding `cursor: pointer` in `style.css`.
+	* Fixed a regression bug that caused new tasks to be created twice by applying the `isActionRunning` debounce guard to the `keypress` event listener.
+	* Corrected a `ReferenceError` that prevented the Undo action from working by reordering the `restoreItem` function definition in `tasks.js` to resolve a scope issue.
+
+**Status**
+The Undo feature is now feature-complete, stable, and fully tested. Two long-standing bugs and one new regression have been resolved. The application is in a robust and polished state.
+
+**Recommended next steps (priority order)**
+1.  **Build Out Settings Panel:** Add the first functional setting, "High-Contrast Mode," as specified in the spec. This will involve updating the UI based on a persistent user preference.
+2.  **Column Reordering (Drag & Drop):** Implement drag-and-drop for reordering entire columns, which is a key missing piece of board management.

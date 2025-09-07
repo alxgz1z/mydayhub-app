@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.5.4
+ * @version 5.7.2
  * @author Alex & Gemini
  */
 
@@ -117,7 +117,7 @@ function openNotesEditorForTask(taskCard) {
 			fontSize: parseInt(savedFontSize, 10)
 		});
 	} else {
-		showToast('Editor component is not available.', 'error');
+		showToast({ message: 'Editor component is not available.', type: 'error' });
 	}
 }
 
@@ -142,6 +142,65 @@ async function openDueDateModalForTask(taskCard) {
 		}
 	} finally {
 		isModalOpening = false;
+	}
+}
+
+// Modified for Soft Deletes Bug Fix
+/**
+ * Sends a request to restore a soft-deleted item.
+ */
+async function restoreItem(type, id) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'restoreItem',
+				data: { type, id }
+			})
+		});
+		const result = await response.json();
+		if (result.status === 'success') {
+			if (type === 'task') {
+				const restoredTask = result.data;
+				const columnEl = document.querySelector(`.task-column[data-column-id="${restoredTask.column_id}"]`);
+				if (columnEl) {
+					// Un-hide the original element if it's still in the DOM
+					const hiddenCard = document.querySelector(`.task-card[data-task-id="${id}"][style*="display: none"]`);
+					if (hiddenCard) {
+						hiddenCard.style.display = '';
+					} else { // Or create it if it was removed
+						const taskCardHTML = createTaskCard(restoredTask);
+						const columnBody = columnEl.querySelector('.column-body');
+						columnBody.insertAdjacentHTML('beforeend', taskCardHTML);
+					}
+					const columnBody = columnEl.querySelector('.column-body');
+					sortTasksInColumn(columnBody);
+					updateColumnTaskCount(columnEl);
+				}
+			} else if (type === 'column') {
+				const restoredColumn = result.data;
+				const hiddenColumn = document.querySelector(`.task-column[data-column-id="${id}"][style*="display: none"]`);
+				if (hiddenColumn) {
+					hiddenColumn.style.display = '';
+				} else {
+					const boardContainer = document.getElementById('task-board-container');
+					const columnEl = createColumnElement(restoredColumn);
+					boardContainer.appendChild(columnEl);
+				}
+				updateMoveButtonVisibility();
+			}
+			showToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} restored.`, type: 'success' });
+		} else {
+			throw new Error(result.message);
+		}
+	} catch (error) {
+		showToast({ message: `Error restoring item: ${error.message}`, type: 'error' });
+		console.error('Restore item error:', error);
+		// If restore fails, we should probably just reload the board to get a consistent state
+		fetchAndRenderBoard();
 	}
 }
 
@@ -173,14 +232,21 @@ function initEventListeners() {
 		boardContainer.addEventListener('keypress', async (e) => {
 			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
 				e.preventDefault();
-				const input = e.target;
-				const taskTitle = input.value.trim();
-				const columnEl = input.closest('.task-column');
-				const columnId = columnEl.dataset.columnId;
-
-				if (taskTitle && columnId) {
-					await createNewTask(columnId, taskTitle, columnEl);
-					input.value = '';
+				// Modified for Double-Fire Bug Fix
+				if (isActionRunning) return;
+				isActionRunning = true;
+				try {
+					const input = e.target;
+					const taskTitle = input.value.trim();
+					const columnEl = input.closest('.task-column');
+					const columnId = columnEl.dataset.columnId;
+	
+					if (taskTitle && columnId) {
+						await createNewTask(columnId, taskTitle, columnEl);
+						input.value = '';
+					}
+				} finally {
+					isActionRunning = false;
 				}
 			}
 		});
@@ -240,6 +306,7 @@ function initEventListeners() {
 				return;
 			}
 
+			// Modified for Soft Deletes
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
 				if (isActionRunning) return;
@@ -247,18 +314,32 @@ function initEventListeners() {
 				try {
 					const columnEl = deleteBtn.closest('.task-column');
 					const columnId = columnEl.dataset.columnId;
-					
-					const confirmed = await showConfirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
-
-					if (confirmed && columnId) {
-						const success = await deleteColumn(columnId);
-						if (success) {
+			
+					const success = await deleteColumn(columnId);
+					if (success) {
+						// Hide the element temporarily
+						columnEl.style.display = 'none';
+						updateMoveButtonVisibility();
+			
+						const removalTimeout = setTimeout(() => {
 							columnEl.remove();
-							updateMoveButtonVisibility();
-							showToast('Column deleted.', 'success');
-						} else {
-							showToast('Error: Could not delete the column.', 'error');
-						}
+							updateMoveButtonVisibility(); // Re-run after permanent removal
+						}, 7000);
+			
+						showToast({
+							message: 'Column deleted.',
+							type: 'success',
+							duration: 7000,
+							action: {
+								text: 'Undo',
+								callback: () => {
+									clearTimeout(removalTimeout);
+									restoreItem('column', columnId);
+								}
+							}
+						});
+					} else {
+						showToast({ message: 'Error: Could not delete the column.', type: 'error' });
 					}
 				} finally {
 					isActionRunning = false;
@@ -289,7 +370,7 @@ function initEventListeners() {
 				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
 				const success = await reorderColumns(orderedColumnIds);
 				if (!success) {
-					showToast('Error: Could not save new column order.', 'error');
+					showToast({ message: 'Error: Could not save new column order.', type: 'error' });
 					fetchAndRenderBoard();
 				}
 				return;
@@ -335,17 +416,30 @@ function initEventListeners() {
 				} else if (action === 'attachments') {
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
 					await openAttachmentsModal(taskId, taskTitle);
-				} else if (action === 'delete') {
-					const confirmed = await showConfirm('Are you sure you want to delete this task?');
-					if (confirmed && taskId) {
-						const success = await deleteTask(taskId);
-						if (success) {
+				} else if (action === 'delete') { // Modified for Soft Deletes
+					const success = await deleteTask(taskId);
+					if (success) {
+						taskCard.style.display = 'none';
+						updateColumnTaskCount(columnEl);
+
+						const removalTimeout = setTimeout(() => {
 							taskCard.remove();
-							updateColumnTaskCount(columnEl);
-							showToast('Task deleted.', 'success');
-						} else {
-							showToast('Error: Could not delete task.', 'error');
-						}
+						}, 7000);
+
+						showToast({
+							message: 'Task deleted.',
+							type: 'success',
+							duration: 7000,
+							action: {
+								text: 'Undo',
+								callback: () => {
+									clearTimeout(removalTimeout);
+									restoreItem('task', taskId);
+								}
+							}
+						});
+					} else {
+						showToast({ message: 'Error: Could not delete task.', type: 'error' });
 					}
 				} else if (action === 'duplicate') {
 					if (taskId) {
@@ -356,9 +450,9 @@ function initEventListeners() {
 							columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 							updateColumnTaskCount(columnEl);
 							sortTasksInColumn(columnBody);
-							showToast('Task duplicated successfully.', 'success');
+							showToast({ message: 'Task duplicated successfully.', type: 'success' });
 						} else {
-							showToast('Error: Could not duplicate the task.', 'error');
+							showToast({ message: 'Error: Could not duplicate the task.', type: 'error' });
 						}
 					}
 				}
@@ -402,10 +496,10 @@ function initEventListeners() {
 					const success = await renameColumn(columnId, newTitle);
 
 					if (success) {
-						showToast('Column renamed.', 'success');
+						showToast({ message: 'Column renamed.', type: 'success' });
 					} else {
 						titleEl.textContent = originalTitle;
-						showToast('Error: Could not rename column.', 'error');
+						showToast({ message: 'Error: Could not rename column.', type: 'error' });
 					}
 				};
 
@@ -453,10 +547,10 @@ function initEventListeners() {
 					const success = await renameTaskTitle(taskId, newTitle);
 
 					if (success) {
-						showToast('Task renamed.', 'success');
+						showToast({ message: 'Task renamed.', type: 'success' });
 					} else {
 						titleEl.textContent = originalTitle;
-						showToast('Error: Could not rename task.', 'error');
+						showToast({ message: 'Error: Could not rename task.', type: 'error' });
 					}
 				};
 
@@ -663,13 +757,13 @@ async function saveTaskDueDate(taskId, newDate) {
 		});
 		const result = await response.json();
 		if (result.status === 'success') {
-			showToast('Due date updated.', 'success');
+			showToast({ message: 'Due date updated.', type: 'success' });
 			return true;
 		} else {
 			throw new Error(result.message || 'Failed to update due date.');
 		}
 	} catch (error) {
-		showToast(error.message, 'error');
+		showToast({ message: error.message, type: 'error' });
 		console.error('Save due date error:', error);
 		return false;
 	}
@@ -1002,12 +1096,12 @@ async function reorderTasks(columnId, tasks) {
 		const result = await response.json();
 
 		if (result.status !== 'success') {
-			showToast(`Error: ${result.message}`, 'error');
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
 			return false;
 		}
 		return true;
 	} catch (error) {
-		showToast('A network error occurred. Please try again.', 'error');
+		showToast({ message: 'A network error occurred. Please try again.', type: 'error' });
 		console.error('Reorder tasks error:', error);
 		return false;
 	}
@@ -1040,7 +1134,7 @@ async function togglePrivacy(type, id) {
 				element.dataset.isPrivate = is_private;
 
 				const privacyBtnText = is_private ? 'Make Public' : 'Make Private';
-				showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} set to ${is_private ? 'private' : 'public'}.`, 'success');
+				showToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} set to ${is_private ? 'private' : 'public'}.`, type: 'success' });
 
 				if (type === 'column') {
 					const btn = element.querySelector('.btn-toggle-column-privacy');
@@ -1053,7 +1147,7 @@ async function togglePrivacy(type, id) {
 			throw new Error(result.message || `Failed to toggle privacy for ${type}.`);
 		}
 	} catch (error) {
-		showToast(error.message, 'error');
+		showToast({ message: error.message, type: 'error' });
 		console.error('Toggle privacy error:', error);
 	}
 }
@@ -1091,11 +1185,11 @@ async function toggleTaskComplete(taskId, isComplete) {
 			rerenderTaskCard(taskCard);
 			applyAllFilters();
 		} else {
-			showToast(`Error: ${result.message}`, 'error');
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
 			taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		}
 	} catch (error) {
-		showToast('A network error occurred. Please try again.', 'error');
+		showToast({ message: 'A network error occurred. Please try again.', type: 'error' });
 		taskCard.querySelector('.task-checkbox').checked = !isComplete;
 		console.error('Toggle complete error:', error);
 	}
@@ -1126,10 +1220,10 @@ async function toggleTaskClassification(taskId, taskCardEl) {
 			taskCardEl.classList.add(`classification-${newClassification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
-			showToast(`Error: ${result.message}`, 'error');
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
 	} catch (error) {
-		showToast('A network error occurred while updating classification.', 'error');
+		showToast({ message: 'A network error occurred while updating classification.', type: 'error' });
 		console.error('Toggle classification error:', error);
 	}
 }
@@ -1192,12 +1286,12 @@ function showAddColumnForm() {
 					const newColumnEl = createColumnElement(result.data);
 					boardContainer.appendChild(newColumnEl);
 					updateMoveButtonVisibility(); 
-					showToast('Column created.', 'success');
+					showToast({ message: 'Column created.', type: 'success' });
 				} else {
-					showToast(`Error: ${result.message}`, 'error');
+					showToast({ message: `Error: ${result.message}`, type: 'error' });
 				}
 			} catch (error) {
-				showToast('A network error occurred. Please try again.', 'error');
+				showToast({ message: 'A network error occurred. Please try again.', type: 'error' });
 				console.error('Create column error:', error);
 			}
 		}
@@ -1236,12 +1330,12 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
-			showToast('Task created.', 'success');
+			showToast({ message: 'Task created.', type: 'success' });
 		} else {
-			showToast(`Error: ${result.message}`, 'error');
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
 	} catch (error) {
-		showToast('A network error occurred while creating the task.', 'error');
+		showToast({ message: 'A network error occurred while creating the task.', type: 'error' });
 		console.error('Create task error:', error);
 	}
 }
@@ -1348,7 +1442,7 @@ function createColumnElement(columnData) {
 	}
 	
 	const privacyBtnTitle = isPrivate ? 'Make Public' : 'Make Private';
-	const privacyIcon = isPrivate
+	const privacyIcon = isPrivate 
 		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
@@ -1508,13 +1602,13 @@ async function deleteAttachment(attachmentId) {
 
 		const result = await response.json();
 		if (result.status === 'success') {
-			showToast('Attachment deleted.', 'success');
+			showToast({ message: 'Attachment deleted.', type: 'success' });
 			return result.data; // Return data on success
 		} else {
 			throw new Error(result.message || 'Failed to delete attachment.');
 		}
 	} catch (error) {
-		showToast(error.message, 'error');
+		showToast({ message: error.message, type: 'error' });
 		console.error('Delete attachment error:', error);
 		return null; // Return null on failure
 	}
@@ -1534,7 +1628,7 @@ async function getAttachments(taskId) {
 		}
 		throw new Error(result.message || 'Failed to fetch attachments.');
 	} catch (error) {
-		showToast(error.message, 'error');
+		showToast({ message: error.message, type: 'error' });
 		console.error('Get attachments error:', error);
 		return null;
 	}
@@ -1562,11 +1656,11 @@ async function uploadAttachment(taskId, file) {
 		if (result.status === 'success') {
 			return result.data; // Return data on success
 		} else {
-			showToast(`Upload failed for ${file.name}: ${result.message}`, 'error');
+			showToast({ message: `Upload failed for ${file.name}: ${result.message}`, type: 'error' });
 			return null;
 		}
 	} catch (error) {
-		showToast(`A network error occurred uploading ${file.name}.`, 'error');
+		showToast({ message: `A network error occurred uploading ${file.name}.`, type: 'error' });
 		console.error('Upload attachment error:', error);
 		return null;
 	}
@@ -1720,7 +1814,7 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			await refreshAttachmentList();
 
 			btnUploadStaged.disabled = false;
-			showToast('Uploads complete.', 'success');
+			showToast({ message: 'Uploads complete.', type: 'success' });
 		};
 
 		const handleDeleteAttachmentClick = async (e) => {

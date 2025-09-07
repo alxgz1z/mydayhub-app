@@ -186,8 +186,15 @@ body {
 	align-items: flex-end;
 }
 
+/* Modified for Soft Deletes */
 .toast {
-	padding: 12px 20px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 15px;
+	min-width: 250px;
+	max-width: 400px;
+	padding: 12px 15px 12px 20px;
 	border-radius: 8px;
 	color: #ffffff;
 	font-size: 0.9rem;
@@ -196,6 +203,51 @@ body {
 	opacity: 0;
 	transform: translateX(100%);
 	transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
+}
+
+/* Modified for Soft Deletes */
+.toast-content {
+	display: flex;
+	align-items: center;
+	gap: 15px;
+	flex-grow: 1;
+}
+
+/* Modified for Soft Deletes */
+.toast-action-btn {
+	background-color: rgba(0, 0, 0, 0.2);
+	border: 1px solid rgba(255, 255, 255, 0.3);
+	color: #fff;
+	padding: 5px 10px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: bold;
+	white-space: nowrap;
+	transition: background-color 0.2s;
+}
+
+/* Modified for Soft Deletes */
+.toast-action-btn:hover {
+	background-color: rgba(0, 0, 0, 0.4);
+}
+
+/* Modified for Soft Deletes */
+.toast-close-btn {
+	background: none;
+	border: none;
+	color: #fff;
+	font-size: 1.5rem;
+	font-weight: 300;
+	line-height: 1;
+	cursor: pointer;
+	padding: 0 0 0 10px;
+	opacity: 0.7;
+	transition: opacity 0.2s;
+}
+
+/* Modified for Soft Deletes */
+.toast-close-btn:hover {
+	opacity: 1;
 }
 
 .toast.visible {

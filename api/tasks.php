@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.4.5
+ * @version 5.6.4
  * @author Alex & Gemini
  */
 
@@ -56,6 +56,13 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'deleteColumn':
 			if ($method === 'POST') {
 				handle_delete_column($pdo, $userId, $data);
+			}
+			break;
+		
+		// Modified for Soft Deletes
+		case 'restoreItem':
+			if ($method === 'POST') {
+				handle_restore_item($pdo, $userId, $data);
 			}
 			break;
 
@@ -135,6 +142,105 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			http_response_code(404);
 			echo json_encode(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."]);
 			break;
+	}
+}
+
+// Modified for Soft Deletes
+/**
+ * Restores a soft-deleted item (task or column) by setting its deleted_at to NULL.
+ */
+function handle_restore_item(PDO $pdo, int $userId, ?array $data): void {
+	$type = $data['type'] ?? null;
+	$id = isset($data['id']) ? (int)$data['id'] : 0;
+
+	if (empty($type) || !in_array($type, ['task', 'column']) || $id <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.']);
+		return;
+	}
+
+	$table = ($type === 'task') ? 'tasks' : 'columns';
+	$idColumn = ($type === 'task') ? 'task_id' : 'column_id';
+
+	try {
+		$pdo->beginTransaction();
+
+		// Restore the primary item and move it to the end of the list
+		if ($type === 'task') {
+			// Find column_id before restoring
+			$stmtFind = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :id AND user_id = :userId");
+			$stmtFind->execute([':id' => $id, ':userId' => $userId]);
+			$task = $stmtFind->fetch();
+			if (!$task) { throw new Exception(ucfirst($type) . ' not found or permission denied.'); }
+			$columnId = $task['column_id'];
+
+			// Get new position
+			$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL");
+			$stmtPos->execute([':columnId' => $columnId, ':userId' => $userId]);
+			$newPosition = (int)$stmtPos->fetchColumn();
+			
+			// Restore
+			$stmtRestore = $pdo->prepare(
+				"UPDATE tasks SET deleted_at = NULL, position = :pos, updated_at = UTC_TIMESTAMP() WHERE task_id = :id AND user_id = :userId"
+			);
+			$stmtRestore->execute([':pos' => $newPosition, ':id' => $id, ':userId' => $userId]);
+			
+		} else { // type is 'column'
+			// Get new position
+			$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+			$stmtPos->execute([':userId' => $userId]);
+			$newPosition = (int)$stmtPos->fetchColumn();
+
+			// Restore column
+			$stmtRestore = $pdo->prepare(
+				"UPDATE `columns` SET deleted_at = NULL, position = :pos, updated_at = UTC_TIMESTAMP() WHERE column_id = :id AND user_id = :userId"
+			);
+			$stmtRestore->execute([':pos' => $newPosition, ':id' => $id, ':userId' => $userId]);
+
+			// Also restore all tasks that were in that column
+			$stmtRestoreTasks = $pdo->prepare(
+				"UPDATE tasks SET deleted_at = NULL, updated_at = UTC_TIMESTAMP() WHERE column_id = :id AND user_id = :userId"
+			);
+			$stmtRestoreTasks->execute([':id' => $id, ':userId' => $userId]);
+		}
+		
+		if ($stmtRestore->rowCount() === 0) {
+			throw new Exception(ucfirst($type) . ' not found or permission denied.');
+		}
+
+		// Fetch the newly restored data to send back to the client
+		if ($type === 'task') {
+			$stmtSelect = $pdo->prepare("SELECT * FROM tasks WHERE task_id = :id"); // Simplified for brevity
+			$stmtSelect->execute([':id' => $id]);
+			$restoredItem = $stmtSelect->fetch(PDO::FETCH_ASSOC);
+		} else { // 'column'
+			$stmtSelectCol = $pdo->prepare("SELECT * FROM `columns` WHERE column_id = :id");
+			$stmtSelectCol->execute([':id' => $id]);
+			$restoredItem = $stmtSelectCol->fetch(PDO::FETCH_ASSOC);
+			
+			$stmtSelectTasks = $pdo->prepare("SELECT * FROM tasks WHERE column_id = :id AND deleted_at IS NULL ORDER BY position ASC");
+			$stmtSelectTasks->execute([':id' => $id]);
+			$restoredItem['tasks'] = $stmtSelectTasks->fetchAll(PDO::FETCH_ASSOC);
+		}
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'message' => ucfirst($type) . ' restored successfully.',
+			'data' => $restoredItem
+		]);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log("Error in handle_restore_item: " . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while restoring the item.']);
 	}
 }
 
@@ -344,7 +450,7 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Fetches all columns, tasks, and user preferences.
  */
-// Modified for Storage Bar
+// Modified for Soft Deletes
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
 		// Fetch user preferences and storage usage in one query
@@ -356,8 +462,12 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$userPrefs = json_decode($prefsJson, true);
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 
+		// Modified for Soft Deletes
 		$stmtColumns = $pdo->prepare(
-			"SELECT column_id, column_name, position, is_private FROM `columns` WHERE user_id = :userId ORDER BY position ASC"
+			"SELECT column_id, column_name, position, is_private 
+			 FROM `columns` 
+			 WHERE user_id = :userId AND deleted_at IS NULL 
+			 ORDER BY position ASC"
 		);
 		$stmtColumns->execute([':userId' => $userId]);
 		$columns = $stmtColumns->fetchAll();
@@ -371,6 +481,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
+		// Modified for Soft Deletes
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
@@ -380,7 +491,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 LEFT JOIN 
 				task_attachments ta ON t.task_id = ta.task_id
 			 WHERE 
-				t.user_id = :userId
+				t.user_id = :userId AND t.deleted_at IS NULL
 			 GROUP BY 
 				t.task_id
 			 ORDER BY 
@@ -438,7 +549,8 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 	$columnName = trim($data['column_name']);
 
 	try {
-		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId");
+		// Modified for Soft Deletes
+		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
 		$stmtPos->execute([':userId' => $userId]);
 		$position = (int)$stmtPos->fetchColumn();
 
@@ -488,7 +600,8 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 	$taskTitle = trim($data['task_title']);
 
 	try {
-		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `tasks` WHERE user_id = :userId AND column_id = :columnId");
+		// Modified for Soft Deletes
+		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `tasks` WHERE user_id = :userId AND column_id = :columnId AND deleted_at IS NULL");
 		$stmtPos->execute([':userId' => $userId, ':columnId' => $columnId]);
 		$position = (int)$stmtPos->fetchColumn();
 
@@ -689,8 +802,9 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 }
 
 /**
- * Deletes a column and all its tasks for the authenticated user.
+ * Soft-deletes a column and all its tasks for the authenticated user.
  */
+// Modified for Soft Deletes
 function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
 
@@ -703,10 +817,18 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		$stmt_delete_tasks = $pdo->prepare("DELETE FROM tasks WHERE column_id = :columnId AND user_id = :userId");
+		// Soft-delete all tasks within the column first
+		$stmt_delete_tasks = $pdo->prepare(
+			"UPDATE tasks SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
+			 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL"
+		);
 		$stmt_delete_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
 
-		$stmt_delete_column = $pdo->prepare("DELETE FROM `columns` WHERE column_id = :columnId AND user_id = :userId");
+		// Soft-delete the column itself
+		$stmt_delete_column = $pdo->prepare(
+			"UPDATE `columns` SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
+			 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL"
+		);
 		$stmt_delete_column->execute([':columnId' => $columnId, ':userId' => $userId]);
 
 		if ($stmt_delete_column->rowCount() === 0) {
@@ -716,7 +838,10 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 			return;
 		}
 
-		$stmt_get_columns = $pdo->prepare("SELECT column_id FROM `columns` WHERE user_id = :userId ORDER BY position ASC");
+		// Re-compact positions of remaining ACTIVE columns
+		$stmt_get_columns = $pdo->prepare(
+			"SELECT column_id FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
+		);
 		$stmt_get_columns->execute([':userId' => $userId]);
 		$remaining_columns = $stmt_get_columns->fetchAll(PDO::FETCH_COLUMN);
 		
@@ -731,7 +856,9 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		echo json_encode(['status' => 'success', 'data' => ['deleted_column_id' => $columnId]]);
 
 	} catch (Exception $e) {
-		$pdo->rollBack();
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
 		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in tasks.php handle_delete_column(): ' . $e->getMessage());
 		}
@@ -739,6 +866,7 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the column.']);
 	}
 }
+
 
 /**
  * Updates the positions of all columns based on a provided order.
@@ -783,8 +911,9 @@ function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 }
 
 /**
- * Deletes a task and re-compacts the positions of remaining tasks in its column.
+ * Soft-deletes a task and re-compacts the positions of remaining tasks in its column.
  */
+// Modified for Soft Deletes
 function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 
@@ -797,7 +926,8 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		// Find the task to ensure it exists and get its column_id
+		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId AND deleted_at IS NULL");
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$task = $stmt_find->fetch();
 
@@ -809,11 +939,16 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		$columnId = $task['column_id'];
 
-		$stmt_delete = $pdo->prepare("DELETE FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		// Soft-delete the task
+		$stmt_delete = $pdo->prepare(
+			"UPDATE tasks SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
+			 WHERE task_id = :taskId AND user_id = :userId"
+		);
 		$stmt_delete->execute([':taskId' => $taskId, ':userId' => $userId]);
 
+		// Re-compact positions of remaining ACTIVE tasks in the same column
 		$stmt_get_tasks = $pdo->prepare(
-			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId ORDER BY position ASC"
+			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
 		);
 		$stmt_get_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
 		$remaining_tasks = $stmt_get_tasks->fetchAll(PDO::FETCH_COLUMN);
@@ -829,7 +964,9 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		echo json_encode(['status' => 'success', 'data' => ['deleted_task_id' => $taskId]]);
 
 	} catch (Exception $e) {
-		$pdo->rollBack();
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
 		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in tasks.php handle_delete_task(): ' . $e->getMessage());
 		}
@@ -837,6 +974,7 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the task.']);
 	}
 }
+
 
 /**
  * Renames a task's title by updating its encrypted_data JSON blob.
@@ -935,7 +1073,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 		$dueDate = $originalTask['due_date'];
 
 		// Step 2: Determine the new position (at the end of the column)
-		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId");
+		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL");
 		$stmt_pos->execute([':columnId' => $columnId, ':userId' => $userId]);
 		$newPosition = (int)$stmt_pos->fetchColumn();
 

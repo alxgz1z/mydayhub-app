@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 5.5.3  
+**Version:** Beta 5.6.2  
 **Audience:** Internal Development & Project Management  
 
 ---
@@ -75,9 +75,12 @@
   [RDY] getAttachments (in tasks.php)
   [RDY] uploadAttachment (in tasks.php)
   [RDY] deleteAttachment (in tasks.php)
-  [RDY] togglePrivacy (in tasks.php)	  
+  [RDY] togglePrivacy (in tasks.php)
+  [RDY] restoreItem (in tasks.php)	  
   [FUT] moveTask
   [FUT] shareTask / revokeShare
+  
+  *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
 		  
 ### UI Implementation tracking
   [RDY] User Registration page
@@ -206,10 +209,13 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * Notes  
 * Due Date  
 * Duplicate  
-* Delete  
+* Delete (with Undo)
 * Move  
 * Share
 * Toggle Private  
+
+The 'Delete' action for both tasks and columns now triggers a non-blocking toast notification with a temporary 'Undo' option, allowing for immediate action reversal. This replaces the previous blocking confirmation modal.
+
 
 ---
 

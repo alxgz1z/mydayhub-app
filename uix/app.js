@@ -4,7 +4,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.6.1
+ * @version 5.6.5
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -106,35 +106,69 @@ function updateFooterDate() {
 
 /**
  * Displays a toast notification message.
- * @param {string} message The message to display.
- * @param {string} [type='info'] The type of toast ('info', 'success', 'error').
- * @param {number} [duration=3000] The duration in milliseconds for the toast to be visible.
+ * @param {object} options - The options for the toast.
+ * @param {string} options.message - The message to display.
+ * @param {string} [options.type='info'] - The type of toast ('info', 'success', 'error').
+ * @param {number} [options.duration=5000] - The duration in ms for the toast to be visible.
+ * @param {object|null} [options.action=null] - An object for an action button.
+ * @param {string} options.action.text - The text for the action button (e.g., 'Undo').
+ * @param {function} options.action.callback - The function to execute on button click.
  */
-function showToast(message, type = 'info', duration = 3000) {
+// Modified for Soft Deletes and UI Polish
+function showToast(options) {
+	const { message, type = 'info', duration = 5000, action = null } = options;
+
 	const container = document.getElementById('toast-container');
 	if (!container) {
 		console.error('Toast container not found!');
 		return;
 	}
 
+	// Create toast element and its main content wrapper
 	const toast = document.createElement('div');
 	toast.className = `toast ${type}`;
-	toast.textContent = message;
+	
+	const toastContent = document.createElement('div');
+	toastContent.className = 'toast-content';
 
+	// Message
+	const messageEl = document.createElement('span');
+	messageEl.textContent = message;
+	toastContent.appendChild(messageEl);
+
+	// Action Button (if provided)
+	if (action && typeof action.callback === 'function') {
+		const actionBtn = document.createElement('button');
+		actionBtn.className = 'toast-action-btn';
+		actionBtn.textContent = action.text || 'Action';
+		actionBtn.addEventListener('click', () => {
+			action.callback();
+			removeToast(); // Close toast immediately on action
+		}, { once: true });
+		toastContent.appendChild(actionBtn);
+	}
+	
+	toast.appendChild(toastContent);
+
+	// Close Button
+	const closeBtn = document.createElement('button');
+	closeBtn.className = 'toast-close-btn';
+	closeBtn.innerHTML = '&times;';
+	closeBtn.addEventListener('click', () => removeToast(), { once: true });
+	toast.appendChild(closeBtn);
+
+	// Add to DOM and animate in
 	container.appendChild(toast);
+	setTimeout(() => toast.classList.add('visible'), 10);
 
-	setTimeout(() => {
-		toast.classList.add('visible');
-	}, 10);
+	// Set up removal logic
+	const timeoutId = setTimeout(() => removeToast(), duration);
 
-	setTimeout(() => {
+	function removeToast() {
+		clearTimeout(timeoutId); // Prevent multiple removals
 		toast.classList.remove('visible');
-		
-		toast.addEventListener('transitionend', () => {
-			toast.remove();
-		});
-
-	}, duration);
+		toast.addEventListener('transitionend', () => toast.remove());
+	}
 }
 
 
