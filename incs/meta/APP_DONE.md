@@ -708,7 +708,7 @@ The Task Attachments feature is now feature-complete, polished, and stable for t
 ---
 ## Timestamp: 2025-09-06 22:03 - Stability Fixes: Attachments & UI Integrity
 
-Version: Beta 5.4.2
+Version: Beta 5.5.0
 
 **Focus**
 Resolve a critical bug preventing the UI from updating after an attachment was deleted, and to harden the frontend against unexpected API responses.
@@ -725,3 +725,30 @@ The Task Attachments feature is now fully stable and robust across all core acti
 1.  **Implement "Undo" for Deletes:** Now that the core task functionality is stable, enhance the user experience by replacing permanent delete actions for tasks and columns with a temporary "Undo" option. This will require implementing a soft-delete pattern on the backend.
 2.  **Begin Privacy Foundation:** Add the `is_private` flag to tasks and columns and implement the `togglePrivacy` API action. This will serve as the foundation for the larger sharing and privacy features.
 3.  **Implement Settings Slider Panel:** Build the UI shell for the global settings panel, accessible from the main header, to house future application-wide preferences.
+
+---
+# Timestamp: 2025-09-07 01:03 - Major Feature: Privacy & Filtering System
+Version: Beta 5.5.2
+
+**Focus** To implement a full-stack privacy system allowing users to mark tasks and columns as private, and to build a persistent frontend filter to control their visibility.
+**Key work**
+* **Database:** Added an is_private boolean column to the columns table to support column-level privacy.
+* **Backend API (**/api/tasks.php**):**
+  * Created a new togglePrivacy action that securely handles state changes for both tasks and columns, including ownership checks.
+  * Updated the getAll action to return the is_private status for all tasks and columns.
+* **Frontend UI (**/uix/tasks.js**,** /uix/tasks.css**):**
+  * Added privacy toggle controls with icons to the column headers and task action menus.
+  * Implemented a prominent diagonal-line pattern via CSS to visually distinguish private items.
+* **Filtering System (**/uix/tasks.js**):**
+  * Added a "Show Private Items" toggle to the footer filter menu.
+  * The filter's on/off state is now saved to and loaded from user preferences, making the choice persistent across sessions.
+  * The applyAllFilters() logic was expanded to hide/show private items based on the filter's state.
+* **Critical Bug Fixes:**
+  * Diagnosed and fixed a recurring "double-fire" event bug on both the task actions menu and column header controls by implementing a robust isActionRunning debounce guard.
+  * Resolved a CSS specificity conflict that initially prevented the new Settings Panel from appearing.
+
+⠀**Status** The privacy and filtering systems are feature-complete, stable, and persistent. Users can now control the privacy of individual items and filter them from view. The application is significantly more robust after resolving several elusive UI bugs. The basic shell for the Settings Panel is also in place, though a mobile Safari bug has been noted for future investigation.
+**Recommended next steps (priority order)**
+**1** **Troubleshoot Mobile Safari:** Investigate and resolve the bug preventing the Settings Panel from opening on mobile Safari.
+**2** **Implement "Undo" for Deletes:** Revisit this high-priority UX improvement. Replace permanent deletes with a temporary "Undo" option via a toast notification, which requires implementing a soft-delete pattern on the backend.
+**3** **Build Out Settings Panel:** Add the first functional setting to the new panel, such as the "High-Contrast Mode" toggle specified in the spec.

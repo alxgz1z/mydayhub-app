@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 5.4.0
+**Version:** Beta 5.5.2
 **Audience:** Internal Development & Project Management
 
 
@@ -239,6 +239,7 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * Privacy, attachment, and sharing icons are always visible on both card and column headers, featuring subtle animations (opacity and blur transitions) on hover/tap.
   * Card borders and backgrounds utilize a “soft shadow ring” and backdrop blur for depth without clutter, consistent from mobile to desktop layouts.
   * All drag-and-drop gestures trigger animated “lift” and “drop” UI cues, scalable for touch and pointer events.ß
+  * A privacy indicator (diagonal line pattern) is applied to the entire card when it is marked as private.
 
 * **Attachments Display:**
   * An attachment icon (e.g., 📎) with a count badge will appear on cards with attachments.
@@ -478,7 +479,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
     * Left Side: Live counters for Words, Characters, and Lines.
     * Right Side: A "Last Saved" timestamp that updates automatically.
    
-#### TOOLBAR FUNCTIONALITY
+#### EDITOR TOOLBAR FUNCTIONALITY
 * **Format Tab:**
   * **Text Transformations:** Tools for case conversion (UPPER, Title, lower), trimming whitespace and removing duplicate or empty lines.
   * **Formatting & Symbols:** One-click actions for applying/removing list formatting (bulleted, numbered), inserting a text border and underline.
@@ -515,7 +516,7 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 	**Toolbar Controls**
 	  * **Left:** Current Username within square parenthesis (example: [alfa]), Current Date (formatted as dd mmm yy).
 	  * **Center:** A central filter icon button opens a contextual menu containing filter toggles for the current view.
-	  * **Tasks View Filters:** The menu contains an on/off slider for "Show/Hide Completed" (default hide). Future filters will be added here.
+	  * **Tasks View Filters:** The menu contains on/off sliders for "Show/Hide Completed" (default hide) and "Show/Hide Private Items" (default hide). These preferences are saved per-user and persist across sessions..
 	  * **Right:** Application Version Number, Logout link. 
    ⠀
 #### IMPORT & EXPORT
@@ -614,6 +615,7 @@ All timestamps (created_at, updated_at, due_date) are stored in the database in 
 	  [RDY] getAttachments (in tasks.php)
 	  [RDY] uploadAttachment (in tasks.php)
 	  [RDY] deleteAttachment (in tasks.php)
+	  [RDY] togglePrivacy (in tasks.php)	  
   Future API Actions:
 	  [FUT] moveTask
 	  [FUT] shareTask / revokeShare
@@ -638,13 +640,14 @@ All timestamps (created_at, updated_at, due_date) are stored in the database in 
 	  [RDY] Delete Task (from actions menu with confirmation)
 	  [RDY] Custom modals/toasts to replace native alerts
 	  [RDY] Due Date picker (custom modal)
+	  [RDY] Task Attachments UI (drop zone, gallery)
 	  [RDY] Bottom toolbar with filters
+	  [RDY] Privacy toggles
+	  [WIP] Settings slider panel
   Future UI Features:
-	  [FUT] Settings slider panel
 	  [FUT] Task Notes integration (Unified Editor)
 	  [FUT] Sharing UI
-	  [FUT] Privacy toggles
-	  [WIP] Attachments UI (drop zone, gallery)
+	  
 			  
 ### FRONT END ARCHITECTURE
 			  

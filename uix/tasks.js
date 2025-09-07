@@ -4,14 +4,16 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.5.1
+ * @version 5.5.4
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
 
+// Modified for Private Filter
 let filterState = {
-	showCompleted: false
+	showCompleted: false,
+	showPrivate: false
 };
 
 let userStorage = { used: 0, quota: 50 * 1024 * 1024 }; 
@@ -20,7 +22,6 @@ let isImageViewerOpen = false;
 
 let isModalOpening = false; 
 
-// Modified for Privacy Bug Fix
 let isActionRunning = false;
 
 /**
@@ -53,7 +54,6 @@ function getTaskDataFromElement(taskCardEl) {
 			notes: decodeURIComponent(taskCardEl.dataset.notes)
 		}),
 		classification: taskCardEl.dataset.classification,
-		// Modified for Privacy Feature
 		is_private: taskCardEl.dataset.isPrivate === 'true',
 		due_date: taskCardEl.dataset.dueDate || null,
 		has_notes: taskCardEl.dataset.hasNotes === 'true',
@@ -197,6 +197,7 @@ function initEventListeners() {
 			}
 		});
 
+		// Modified for Column Controls Bug Fix
 		boardContainer.addEventListener('click', async (e) => {
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
@@ -225,30 +226,42 @@ function initEventListeners() {
 			
 			const privacyBtn = e.target.closest('.btn-toggle-column-privacy');
 			if (privacyBtn) {
-				const columnEl = privacyBtn.closest('.task-column');
-				const columnId = columnEl.dataset.columnId;
-				if (columnId) {
-					await togglePrivacy('column', columnId);
+				if (isActionRunning) return;
+				isActionRunning = true;
+				try {
+					const columnEl = privacyBtn.closest('.task-column');
+					const columnId = columnEl.dataset.columnId;
+					if (columnId) {
+						await togglePrivacy('column', columnId);
+					}
+				} finally {
+					isActionRunning = false;
 				}
 				return;
 			}
 
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
-				const columnEl = deleteBtn.closest('.task-column');
-				const columnId = columnEl.dataset.columnId;
-				
-				const confirmed = await showConfirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
+				if (isActionRunning) return;
+				isActionRunning = true;
+				try {
+					const columnEl = deleteBtn.closest('.task-column');
+					const columnId = columnEl.dataset.columnId;
+					
+					const confirmed = await showConfirm('Are you sure you want to delete this column and all of its tasks? This cannot be undone.');
 
-				if (confirmed && columnId) {
-					const success = await deleteColumn(columnId);
-					if (success) {
-						columnEl.remove();
-						updateMoveButtonVisibility();
-						showToast('Column deleted.', 'success');
-					} else {
-						showToast('Error: Could not delete the column.', 'error');
+					if (confirmed && columnId) {
+						const success = await deleteColumn(columnId);
+						if (success) {
+							columnEl.remove();
+							updateMoveButtonVisibility();
+							showToast('Column deleted.', 'success');
+						} else {
+							showToast('Error: Could not delete the column.', 'error');
+						}
 					}
+				} finally {
+					isActionRunning = false;
 				}
 				return;
 			}
@@ -289,7 +302,6 @@ function initEventListeners() {
 			}
 		});
 		
-		// Modified for Privacy Bug Fix
 		document.body.addEventListener('click', async (e) => {
 			const actionButton = e.target.closest('.task-action-btn');
 			if (!actionButton || isActionRunning) return;
@@ -299,7 +311,6 @@ function initEventListeners() {
 				e.stopPropagation();
 		
 				const menu = actionButton.closest('.task-actions-menu');
-				// Add a defensive guard to prevent crash if menu disappears
 				if (!menu) return;
 
 				const taskId = menu.dataset.taskId;
@@ -549,6 +560,7 @@ async function saveFilterPreference(key, value) {
 /**
  * Creates and displays the filter menu.
  */
+// Modified for Private Filter
 function showFilterMenu() {
 	closeFilterMenu(); 
 	const btnFilters = document.getElementById('btn-filters');
@@ -558,12 +570,20 @@ function showFilterMenu() {
 	menu.id = 'filter-menu';
 	
 	const showCompletedChecked = filterState.showCompleted ? 'checked' : '';
+	const showPrivateChecked = filterState.showPrivate ? 'checked' : '';
 
 	menu.innerHTML = `
 		<div class="filter-item">
 			<span class="filter-label">Show Completed Tasks</span>
 			<label class="switch">
 				<input type="checkbox" data-filter="showCompleted" ${showCompletedChecked}>
+				<span class="slider round"></span>
+			</label>
+		</div>
+		<div class="filter-item">
+			<span class="filter-label">Show Private Items</span>
+			<label class="switch">
+				<input type="checkbox" data-filter="showPrivate" ${showPrivateChecked}>
 				<span class="slider round"></span>
 			</label>
 		</div>
@@ -583,7 +603,12 @@ function showFilterMenu() {
 			const value = e.target.checked;
 			filterState[filter] = value;
 			applyAllFilters();
-			saveFilterPreference('filter_show_completed', value);
+			
+			const keyMap = {
+				showCompleted: 'filter_show_completed',
+				showPrivate: 'filter_show_private'
+			};
+			saveFilterPreference(keyMap[filter], value);
 		}
 	});
 }
@@ -591,18 +616,24 @@ function showFilterMenu() {
 /**
  * Applies all active filters to the task cards on the board.
  */
+// Modified for Private Filter
 function applyAllFilters() {
-	const taskCards = document.querySelectorAll('.task-card');
-	taskCards.forEach(card => {
-		const isCompleted = card.classList.contains('completed');
+	const allItems = document.querySelectorAll('.task-card, .task-column');
+
+	allItems.forEach(item => {
+		const isCompleted = item.classList.contains('completed');
+		const isPrivate = item.classList.contains('private');
 		
 		let shouldBeVisible = true;
 
 		if (isCompleted && !filterState.showCompleted) {
 			shouldBeVisible = false;
 		}
+		if (isPrivate && !filterState.showPrivate) {
+			shouldBeVisible = false;
+		}
 
-		card.style.display = shouldBeVisible ? 'flex' : 'none';
+		item.style.display = shouldBeVisible ? 'flex' : 'none';
 	});
 
 	const allColumns = document.querySelectorAll('.task-column');
@@ -985,6 +1016,7 @@ async function reorderTasks(columnId, tasks) {
 /**
  * Toggles the privacy status of a task or column.
  */
+// Modified for Private Filter Bug Fix
 async function togglePrivacy(type, id) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
@@ -1014,6 +1046,8 @@ async function togglePrivacy(type, id) {
 					const btn = element.querySelector('.btn-toggle-column-privacy');
 					if (btn) btn.title = privacyBtnText;
 				}
+				
+				applyAllFilters();
 			}
 		} else {
 			throw new Error(result.message || `Failed to toggle privacy for ${type}.`);
@@ -1253,6 +1287,11 @@ async function fetchAndRenderBoard() {
 			
 			if (userPrefs && typeof userPrefs.filter_show_completed !== 'undefined') {
 				filterState.showCompleted = userPrefs.filter_show_completed;
+			}
+			
+			// Modified for Private Filter
+			if (userPrefs && typeof userPrefs.filter_show_private !== 'undefined') {
+				filterState.showPrivate = userPrefs.filter_show_private;
 			}
 
 			renderBoard(boardData);

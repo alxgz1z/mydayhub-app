@@ -4,23 +4,78 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.1.2
+ * @version 5.6.1
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
-	// Modified for dynamic date: Update the footer date on load
 	updateFooterDate();
+
+	// Modified for Settings Panel: Initialize the panel listeners
+	initSettingsPanel();
 
 	// For now, we only have the Tasks view.
 	// We check if the function to initialize it exists before calling it.
 	if (typeof initTasksView === 'function') {
 		initTasksView();
 	}
-
-	// Future logic for view tabs and other global UI will go here.
 });
+
+// ==========================================================================
+// --- SETTINGS PANEL ---
+// Modified for Animation Bug Fix
+// ==========================================================================
+
+/**
+ * Initializes all event listeners for the settings panel.
+ */
+function initSettingsPanel() {
+	const toggleBtn = document.getElementById('btn-settings-toggle');
+	const closeBtn = document.getElementById('btn-settings-close');
+	const overlay = document.getElementById('settings-panel-overlay');
+
+	if (!toggleBtn || !closeBtn || !overlay) {
+		console.error('Settings panel elements could not be found.');
+		return;
+	}
+
+	toggleBtn.addEventListener('click', openSettingsPanel);
+	closeBtn.addEventListener('click', closeSettingsPanel);
+	
+	overlay.addEventListener('click', (e) => {
+		if (e.target === overlay) {
+			closeSettingsPanel();
+		}
+	});
+
+	document.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
+			closeSettingsPanel();
+		}
+	});
+}
+
+/**
+ * Opens the settings panel by removing the .hidden class from its overlay.
+ */
+function openSettingsPanel() {
+	const overlay = document.getElementById('settings-panel-overlay');
+	if (overlay) {
+		overlay.classList.remove('hidden');
+	}
+}
+
+/**
+ * Closes the settings panel by adding the .hidden class to its overlay.
+ */
+function closeSettingsPanel() {
+	const overlay = document.getElementById('settings-panel-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
+	}
+}
+
 
 // ==========================================================================
 // --- UI HELPERS ---

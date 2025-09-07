@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.2.3
+ * @version 5.6.0
  * @author Alex & Gemini
  */
 
@@ -38,8 +38,7 @@ $username = $_SESSION['username'] ?? 'User';
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css">
 	<link rel="stylesheet" href="uix/attachments.css">
-
-	<script>
+	<link rel="stylesheet" href="uix/settings.css"> <script>
 		// Expose server-side configuration to client-side JavaScript.
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>"
@@ -53,6 +52,13 @@ $username = $_SESSION['username'] ?? 'User';
 
 		<header id="app-header">
 			<div class="header-left">
+				<button id="btn-settings-toggle" class="btn-icon" title="Settings">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="3" y1="12" x2="21" y2="12"></line>
+						<line x1="3" y1="6" x2="21" y2="6"></line>
+						<line x1="3" y1="18" x2="21" y2="18"></line>
+					</svg>
+				</button>
 				<h1 id="app-title">MyDayHub</h1>
 				<img src="media/logo.svg" alt="MyDayHub Logo" id="header-logo">
 			</div>
@@ -89,6 +95,18 @@ $username = $_SESSION['username'] ?? 'User';
 		</footer>
 
 	</div>
+
+	<div id="settings-panel-overlay" class="hidden">
+		<div id="settings-panel">
+			<div class="settings-panel-header">
+				<h2>Settings</h2>
+				<button id="btn-settings-close" class="btn-icon">&times;</button>
+			</div>
+			<div class="settings-panel-body">
+				<p>Global settings will be available here in a future update.</p>
+			</div>
+		</div>
+	</div>
 	
 	<div id="toast-container"></div>
 
@@ -108,7 +126,7 @@ $username = $_SESSION['username'] ?? 'User';
 				<h3 id="editor-title">Edit Note</h3>
 				<div class="editor-controls">
 					<button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
-						<svg xmlns="http://www.w.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
 					</button>
 					<button id="editor-btn-maximize" class="btn-icon" title="Maximize">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="6 15 12 21 18 15"></polyline><polyline points="18 9 12 3 6 9"></polyline></g></svg>
