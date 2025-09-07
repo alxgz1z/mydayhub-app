@@ -703,3 +703,25 @@ The Task Attachments feature is now feature-complete, polished, and stable for t
 2.  **Implement "Undo" for Deletes:** Enhance the user experience by replacing the permanent delete actions for tasks and columns with a temporary "Undo" option, which will require implementing a soft-delete pattern on the backend.
 3.  **Begin Privacy Foundation:** Add the `is_private` flag to tasks and columns and implement the `togglePrivacy` API action. This will serve as the foundation for the larger sharing feature set.
 4.  **Implement Settings Slider Panel:** Build the UI shell for the global settings panel, accessible from the main header, to house future application-wide preferences.
+
+
+---
+## Timestamp: 2025-09-06 22:03 - Stability Fixes: Attachments & UI Integrity
+
+Version: Beta 5.4.2
+
+**Focus**
+Resolve a critical bug preventing the UI from updating after an attachment was deleted, and to harden the frontend against unexpected API responses.
+
+**Key work**
+* **Bug Diagnosis:** Traced a UI freeze and console error to a JavaScript crash. The error occurred when deleting an attachment, as the backend would sometimes return a non-numeric value for the user's remaining storage, causing the `updateStorageBar` function to fail.
+* **Resiliency Fix:** Implemented a defensive guard in the `updateStorageBar` function in `/uix/tasks.js`. This check ensures the function can handle `null` or `undefined` values from the API without crashing, which in turn allows the subsequent UI refresh logic to execute correctly.
+* **UI Integrity Restored:** With the crash prevented, deleting the final attachment on a task now correctly and immediately removes the attachment indicator from the task card footer, ensuring the UI stays in sync with the application's state.
+
+**Status**
+The Task Attachments feature is now fully stable and robust across all core actions (upload, view, and delete). A critical data-handling bug has been resolved, improving overall application stability. The Tasks View is feature-complete and polished.
+
+**Recommended next steps (priority order)**
+1.  **Implement "Undo" for Deletes:** Now that the core task functionality is stable, enhance the user experience by replacing permanent delete actions for tasks and columns with a temporary "Undo" option. This will require implementing a soft-delete pattern on the backend.
+2.  **Begin Privacy Foundation:** Add the `is_private` flag to tasks and columns and implement the `togglePrivacy` API action. This will serve as the foundation for the larger sharing and privacy features.
+3.  **Implement Settings Slider Panel:** Build the UI shell for the global settings panel, accessible from the main header, to house future application-wide preferences.
