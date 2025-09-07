@@ -545,8 +545,8 @@ All timestamps (created_at, updated_at, due_date) are stored in the database in 
 #### DATABASE SCHEMA
   
   * users: user_id, username, email, password_hash, preferences (JSON), created_at, storage_used_bytes
-  * columns: column_id, user_id, column_name, position, is_private, created_at, updated_at
-  * tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at
+  * columns: column_id, user_id, column_name, position, is_private, created_at, updated_at, deleted_at
+  * tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at, deleted_at
   * task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, 	created_at
   
   **Future Schema Extensions**
