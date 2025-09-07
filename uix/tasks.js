@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.4.1
+ * @version 5.4.2
  * @author Alex & Gemini
  */
 
