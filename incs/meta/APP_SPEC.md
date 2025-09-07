@@ -1,51 +1,65 @@
 # MYDAYHUB
 
+**Version:** Beta 5.4.0
+**Audience:** Internal Development & Project Management
+
+
 ## WHY ARE WE DOING THIS
-* Because I need to collaborate with an small team and promote productivity on activities that matter.
-* Because I want to experiment with AI code assistance, agents, etc. to put myself in the shoes of my team.
-* Because I'm curious and this is a way to channel my creativity and passion for development. 
 
-## APPLICATION SPECIFICATION (Beta 5.4.0)
-* Audience: Internal Development & PM Use Only
-* This spec is a resource for contributors, testers, and future "Alex”
+* To collaborate effectively with a small team and promote productivity on activities that matter.
+* To experiment with AI code assistance and agents, putting myself in the shoes of my team.
+* To channel my creativity and passion for development.
 
-## APP SCOPE (*IMPORTANT*)
-From Beta 5.0.0 on, the application scope is strictly focused on perfecting the Tasks View. All development, UI, and architecture improvements will support this “tasks-first” approach. Other views (Journal, Outlines, Events) and their code remain deferred, except for maintenance work required for future integration. This narrowly defined scope is foundational to delivering a high-quality, fluid, and privacy-focused experience.
+## Table of Contents
 
-## ENVIRONMENTS
-* Prod (v3): Isolated; no shared users/DB/files
-* Dev (v4): Localhost, Apache+PHP 8, mariaDB, XAMPP
+**1** **The Vision & Scope**
+	* Application Scope
+	* Application Description
+	* Core Philosophy
+	* General Requirements
+	* User Stories & Use Cases
 
-## FILE LOCATIONS
-* \ 			only index.php here
-* \api\			API module handlers (e.g., tasks.php, users.php), no subdirectories.
-* \uix\			all js and css files, no subdirectories.
-* \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
-* \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
-* \incs\		any includes needed by the app, no subdirectories, except \migrations and \meta
-* \login\		all login, logout, register, etc. needed for registration, authentication, password management, etc.
-* \meta\		documents explaining the app scope, status, next steps, etc.
+**2** **The Functional Specification**
+	* Tasks View
+	* Journal View (Future)
+	* Outlines View (Future)
+	* Events View (Agenda Planner) (Future)
+	* Unified Note Editor
+	* Settings Slider
 
-## STATUS LEGENDS
-**Important**
-* status updates are tracked for high level functions
-* application progress log details low level status
-**Legends**
-* **[RDY]** Feature complete, matches spec intent
-* **[WIP]** Under construction, present but evolving
-* **[FIX]** Implemented, needs refactoring/bug fixes
-* **[FUT]** Scheduled for future milestone
-* **[CNS]** Under consideration, not yet scheduled
+**3** **The Technical Specification**
+	* Technical Architecture
+	* API Gateway and Contracts
+	* Frontend Architecture
+	* Environment Setup & Workflow
 
-## APP DESCRIPTION
-**MyDayHub** is a next-generation productivity hub, built from the ground up for focus, simplicity, and absolute privacy. We start with task management and in the future plan to integrate other powerful tools into one seamless, app-like experience. The interface takes inspiration from the latest productivity and fintech UI trends, integrating dark backgrounds, vivid accent gradients, and translucent overlays for overlays and modals. Rounded cards, ample white space, and legible, scalable typography reinforce clarity and intention. The color-coded status bands and quick-action icons for classification, privacy, attachments, and sharing are visible at all times—making key features discoverable while keeping the workspace visually calm and focused.   All user content is encrypted end-to-end with zero-knowledge encryption—no plaintext content is ever stored on or leaves the client device. The only content that is stored remotely is encrypted data or metadata essential for synchronization and session handling.
+**4** **The Appendices**
+	* Glossary
+	* Wireframe Mockups
+	* Application Icons
+	* Environments
+	* File Locations
+	* Status Legends
+	* Versioning and workflow
+	* Debug and testing patters
 
-* **Tasks:** Kanban inspired tasks board for flexible task tracking. Create custom columns, prioritize with a click, and manage your entire workflow with simple drag-and-drop.
-* **Journal:** (Future development) Capture your daily thoughts, notes, and ideas in a chronological log. Your entire history is archived and instantly searchable.
-* **Outlines:** (Future development) Structure complex ideas and connect your thoughts by creating hierarchical, tree-like notes.
-* **Events:** (Future development) Effortlessly plan complex, multi-day events. Build a clear agenda by arranging activity blocks for multiple teams or participants, keeping everyone perfectly in sync.
+	
+## 1. VISION & SCOPE
 
-## GENERAL PHILOSOPHY
+### APPLICATION SCOPE
+
+From Beta 5.0.0 on, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements will support this “tasks-first” approach. Other views (Journal, Outlines, Events) and their code remain deferred, except for maintenance work required for future integration. This narrowly defined scope is foundational to delivering a high-quality, fluid, and privacy-focused experience.
+
+### APPLICATION DESCRIPTION
+
+**MyDayHub** is a next-generation productivity hub, built from the ground up for focus, simplicity, and absolute privacy. We start with task management and in the future plan to integrate other powerful tools into one seamless, app-like experience. The interface takes inspiration from the latest productivity and fintech UI trends, integrating dark backgrounds, vivid accent gradients, and translucent overlays for modals. Rounded cards, ample white space, and legible, scalable typography reinforce clarity and intention. The color-coded status bands and quick-action icons for classification, privacy, attachments, and sharing are visible at all times—making key features discoverable while keeping the workspace visually calm and focused. All user content is encrypted end-to-end with zero-knowledge encryption—no plaintext content is ever stored on or leaves the client device.
+* **Tasks:** A Kanban-inspired board for flexible task tracking. Create custom columns, manage workflow with simple drag-and-drop, and classify tasks to focus on what truly matters.
+* **Journal:** (Future) Capture your daily thoughts, notes, and ideas in a chronological log.
+* **Outlines:** (Future) Structure complex ideas and connect your thoughts by creating hierarchical, tree-like notes.
+* **Events:** (Future) Effortlessly plan complex, multi-day events by arranging activity blocks in a clear agenda.
+
+### CORE PHILOSOPHY
+
 Our development is guided by a few core principles to ensure the best possible experience.
 * **Absolute Privacy:** Your data is yours alone. We use **zero-knowledge encryption**, meaning all your content is encrypted and decrypted directly on your device. We can never see your data, and neither can anyone else. True Zero-Knowledge: Every item (task, note) is encrypted client-side using a per-item Data Encryption Key (DEK). Each DEK is itself encrypted with a Master Key derived on-device via Argon2id from the user’s passphrase and a user-specific salt.
 * **Fluid Experience:** MyDayHub feels like a native app. Edit text inline, drag and drop items, and switch between tools instantly without ever waiting for a page to reload. The interface is fully responsive, working beautifully on any screen from your phone to your desktop.
@@ -61,7 +75,7 @@ and prevents getting lost in busywork.
 	* Focus indicators, clear error feedback, and persistent status messages appear for all user-triggered actions across desktop and mobile contexts.
 	* Visual hierarchy carefully guides attention, using both color and relative card elevation.
 
-## GENERAL REQUIREMENTS
+### GENERAL REQUIREMENTS
 
 * **Aesthetics**
   * UI is intentionally minimal: rounded corners, clean sans-serif typography, soft shadows, and backdrop-filter effects for depth.
@@ -74,16 +88,23 @@ and prevents getting lost in busywork.
   * Consistent visual spacing, card elevation, and hover feedback for all interactive elements.
   * No modal overload or overwhelming toolbars; progressive disclosure only.
   * Enhanced Visual Language & Accessibility
-  	* The visual design deliberately uses distinct accent colors, deep card backgrounds, and clear status bands to reinforce actionable priorities and privacy states for tasks, columns, and notes.
-  	* All interactive elements utilize large, touch-friendly targets and maintain a minimum contrast ratio of 4.5:1 for both text and icons, supporting WCAG AA accessibility.
-  	* Responsive layouts maintain card padding and flexible column stacking for horizontal scroll on desktop and vertical stacking on mobile, ensuring information is always accessible and readable.
-  	* Every control state (hover, focus, active) exhibits smooth elevation and color changes for improved discoverability and feedback.
-  	* Per-item privacy toggles and encrypted status indicators should incorporate subtle, universally recognizable iconography (e.g., locks, diagonal bands, or shading).
-  	* Animations for drag-and-drop, completion, and modal transitions use a “gentle spring” pattern, reducing cognitive load and minimizing distraction.
+	  * The visual design deliberately uses distinct accent colors, deep card backgrounds, and clear status bands to reinforce actionable priorities and privacy states for tasks, columns, and notes.
+	  * All interactive elements utilize large, touch-friendly targets and maintain a minimum contrast ratio of 4.5:1 for both text and icons, supporting WCAG AA accessibility.
+	  * Responsive layouts maintain card padding and flexible column stacking for horizontal scroll on desktop and vertical stacking on mobile, ensuring information is always accessible and readable.
+	  * Every control state (hover, focus, active) exhibits smooth elevation and color changes for improved discoverability and feedback.
+	  * Per-item privacy toggles and encrypted status indicators should incorporate subtle, universally recognizable iconography (e.g., locks, diagonal bands, or shading).
+	  * Animations for drag-and-drop, completion, and modal transitions use a “gentle spring” pattern, reducing cognitive load and minimizing distraction.
+  * **Layout:** All interactive elements use large, touch-friendly targets. Responsive layouts ensure columns stack vertically on mobile while scrolling horizontally on desktop.
+  * **Feedback:** All interactive elements (hover, focus, active) exhibit smooth elevation and color changes. All actions are confirmed with non-blocking toast notifications.
+  * **Modals:** All modals (Confirmation, Due Date, etc.) are custom-styled, non-blocking, and close with the Escape key.
 
 * **Modular visibility and dynamic UI**
   * Fast toggling of task board, journal, outlines, meeting, preserving context.
   * Column drag/drop supports intuitive workflow management.
+  * Columns stack vertically at ≤768px width; mobile supports all features.
+  * Footer spacers for iOS Safari overlays.
+  * Optimize scroll, button hits.
+  * Pull-to-create for mobile.
 
 * **Privacy switch on every item**
   * Each task, journal, outline, or meeting has per-item privacy toggle.
@@ -123,7 +144,7 @@ and prevents getting lost in busywork.
   Real multi-user sessions, renewal, token-based.
   Per-item privacy flag, zero-knowledge encryption parity.
   * Rationale: Data security and privacy toggles built to prevent cross-user leaks.
-  * Universally necessary for individual/team productivity.
+  * Universally necessDATABASE SCHEMAual/team productivity.
 
 * **Frontend Encryption (Zero-Knowledge Boundary)**
   * All encryption and decryption logic is encapsulated in assets/js/crypto.js.
@@ -142,10 +163,13 @@ and prevents getting lost in busywork.
   * Network Strategy: Stale-while-revalidate shell; network-first API for mutations, local fallback for lists.
   * Acceptance: CRUD and move actions fully tested for offline/online transitions; deliberate network drops simulated in tests.
   * Planned: Progressive roll-out for automatic background sync and intelligent retry policy.
-  
-## USER STORIES AND USE CASES
 
-### USER STORIES
+
+### USER STORIES & USE CASES
+
+
+**User Stories**
+
 * _As a user, I want the confidence that all my content is securely encrypted._
 * _As a user, I want to mark any item as "private" to instantly hide it from view._
 * _As a user, I want to prevent concurrent sessions from accidentally overwriting each other's changes._
@@ -169,7 +193,8 @@ and prevents getting lost in busywork.
 * _As a user, I want to be prompted before my oldest images are deleted to make space for new ones._
 
 
-### USE CASES
+**Use Cases**
+
 * Mark any task (Future: journal entry, outline node, or event segment) as private and filter/hide accordingly.
 * Drag and drop tasks (Future: journal entries, outline nodes, and event segments) with smooth, animated feedback.
 * See usage stats and plan limits; receive UI warnings when close to quota.
@@ -181,40 +206,9 @@ and prevents getting lost in busywork.
 * Access help and onboarding, with clear feedback for every action via toasts and OS-level notifications.
 * Keep user preferences always persisted in the backend instantly and adhering to active session supersedes others.
 
-## FEATURE DEEP DIVES AND UX COMMENTARY
 
-### TITLE BAR
 
-  Visible on all views. Context sensitive. Background is subtle; bottom has a thin border.
-  Includes:
-	* Hamburger button to open Settings slider
-	* App title on left (default: “MyDayHub”)
-	* (Future: Section tabs ("Tasks", "Journal", "Outlines", "Events"))
-	* Context-sensitive controls (visible based on view selected):
-	  * (Future: Journal: "Today" button and calendar date picker to make the desired date the central column in the view.)
-	  * Tasks: Add Column form.
-	  * (Future: Journal: "Search" (keyword, etc.) to lookup Entries from the user Journal.
-	* Responsive Header: "more options" dropdown menu (⋮) appears on narrow screens to house controls like "Search," "Today," etc., preventing UI overflow.)
-  
-### BOTTOM TOOLBAR
-Full-width, one-row control bar
-(Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
-  **Toolbar Controls**
-	* **Left:** Current Username within square parenthesis (example: [alfa]), Current Date (formatted as dd mmm yy).
-	* **Center:** A central filter icon button opens a contextual menu containing filter toggles for the current view.
-	* **Tasks View Filters:** The menu contains an on/off slider for "Show/Hide Completed" (default hide). Future filters will be added here.
-	* **Right:** Application Version Number, Logout link.
- 
-### SETTINGS
-Slider accessible from title bar
-* High-Contrast/Colorblind Mode toggle: Increases color separation for icons, status bands, and accents
-* Keyboard & screen reader navigation mode: Option to enable strict tab order for all actionable controls.
-* (Future: Skip weekends in journal swtich)
-* (Future: Calendar Overlays (button opens modal))
-* Automatic Logout (dropdown select 5 mins, 30 min, 3 hours, never)
-* Change Password (button opens modal)
-* Import/Export (button opens modal)
-* Help (button opens User Manual)
+## 2. VIEWS
 
 ### TASKS VIEW
 
@@ -289,12 +283,12 @@ Columns are user-created, re-orderable via header controls, and their positions 
   * **Compaction:** Deleting or completing a task instantly compacts the list, removing empty space.
 
 #### TASK ATTACHMENTS
-  This feature allows users to attach images to tasks for visual reference, mockups, or context. Attachments are managed within a storage quota to control server space.
+This feature allows users to attach images to tasks for visual reference, mockups, or context. Attachments are managed within a storage quota to control server space.
 
   * Upload Methods:
-  	* File Picker: Clicking a "Browse Files..." button in the gallery modal opens the native file dialog.
-  	* Drag and Drop: Dropping image files directly onto a task card initiates an upload for that task.
-  	* Paste: Pasting image data from the clipboard (e.g., a screenshot) while a task card or its attachment gallery is in focus initiates an upload.
+	  * File Picker: Clicking a "Browse Files..." button in the gallery modal opens the native file dialog.
+	  * Drag and Drop: Dropping image files directly onto a task card initiates an upload for that task.
+	  * Paste: Pasting image data from the clipboard (e.g., a screenshot) while a task card or its attachment gallery is in focus initiates an upload.
   
   * File Handling:
 	* Supported formats: JPEG, PNG, GIF, WebP.
@@ -302,19 +296,17 @@ Columns are user-created, re-orderable via header controls, and their positions 
 	* The UI must provide feedback for upload progress (e.g., a spinning icon on the attachment badge) and show clear success or error messages.
   
   * Storage Quota:
-  	* Each user has a defined storage quota (e.g., 50 MB).
-  	* Before an upload, the system checks if the new file will exceed the user's quota.
-  	* FIX] Pruning Policy: If the quota is exceeded, the user will be presented with a confirmation modal: "Uploading this file will exceed your storage limit. The oldest attachment, [oldest_image_filename.jpg], will be deleted to make space. Continue?". Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
+	  * Each user has a defined storage quota (e.g., 50 MB).
+	  * Before an upload, the system checks if the new file will exceed the user's quota.
+	  * FIX] Pruning Policy: If the quota is exceeded, the user will be presented with a confirmation modal: "Uploading this file will exceed your storage limit. The oldest attachment, [oldest_image_filename.jpg], will be deleted to make space. Continue?". Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
 	  
 	  *Implementation Note: The current backend logic automatically deletes the oldest file without a user prompt. This needs to be updated to include the confirmation modal flow.*
 	  
-  	* Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
+	  * Upon confirmation, the oldest image file is deleted from the server and its database record is removed before the new file is uploaded.
 
 
 ### JOURNAL VIEW (Future)
-   
 This view provides a chronological, date-based layout for journal entries, organized into horizontally scrollable daily columns. The interface is designed for fluid navigation through time and rapid logging of notes and ideas.
-  
   
 #### COLUMNS & NAVIGATION
   
@@ -334,7 +326,6 @@ The core of the view is a set of columns, each representing a single day.
 * **Footer:**
   * An input field is present at the bottom of each column for adding new entries.
   * Pressing Enter creates the entry, clears the input, and immediately re-focuses the field, allowing for rapid, sequential logging.
-  
   ⠀
 #### JOURNAL ENTRY CARDS
   
@@ -421,7 +412,7 @@ Each card represents a single journal entry for a given day.
     
 #### SETUP
     
-  Before building an agenda, the user first defines the event's high-level container, referred to as a Event.
+efore building an agenda, the user first defines the event's high-level container, referred to as a Event.
 * **Event Creation:** An Event is a first-class object with a Title, a Start Date, and an End Date. These parameters define the scope and duration of the event being planned.
 * **Assets:** Within as Event's setup screen, users can define a master list of all available assets for the event. This pre-populates the options available for each Event segment.  Assets include physical materials (e.g., notebooks, whiteboards) and Technical Devices (e.g., projectors, video conferencing units).
 * **Participants:** A list of all potential Participants.
@@ -503,191 +494,179 @@ This component is a universal, dual size (small-factor and full-screen modal) ed
 * **Search Tab:**
   * Searches across all notes created by the current user and shows the list below the editor.
   * User can click on any of the notes in the list, the note opens, and the user can edit the note, go back to the note from which the search was launched.  This allows for a use case in which the user can trace back multiple instances of a topic to get in context quick.  
-   ⠀
-## IMPORT & EXPORT
-	* Export Options: Notes can be exported in multiple formats, including Plain Text (.txt), Markdown (.md), and PDF. The PDF export will use the rendered Markdown view.
-	* Print: A print-friendly view renders the note's Markdown for clean, readable hard copies. 
   
-## TECHNICAL ARCHITECTURE
-
-**Timestamp Policy**
-
-All date and time values (`created_at`, `updated_at`, `due_date`, etc.) are stored in the database in **UTC (Coordinated Universal Time)**. The backend uses the `UTC_TIMESTAMP()` function for all writes. The frontend is responsible for converting these UTC timestamps to the user's local timezone for display. This ensures data consistency regardless of user location or server configuration.
-
-**Database Schema Core**
-
-* users
-  user_id INT PK
-  username VARCHAR(50) NOT NULL UNIQUE
-  email VARCHAR(255) NOT NULL UNIQUE
-  password_hash VARCHAR(255) NOT NULL
-  preferences JSON NOT NULL
-  created_at DATETIME NOT NULL DEFAULT current_timestamp()
-  storage_used_bytes BIGINT NOT NULL DEFAULT 0
-
-* columns
-  column_id INT PK
-  user_id INT NOT NULL
-  column_name VARCHAR(64) NOT NULL
-  position INT NOT NULL
-  created_at, updated_at DATETIME NULL
-
-* tasks
-  task_id INT PK
-  user_id, column_id INT NOT NULL
-  encrypted_data TEXT NOT NULL
-  position INT NOT NULL
-  classification ENUM('signal','support','noise','completed') NOT NULL
-  is_private BOOL NOT NULL DEFAULT 0
-  delegated_to INT NULL
-  created_at, updated_at DATETIME NULL
+#### TITLE BAR
   
-* task_attachments
-  attachment_id INT PK
-  task_id INT NOT NULL (FK to tasks.task_id)
-  user_id INT NOT NULL (FK to users.user_id, for easy quota lookup)
-  filename_on_server VARCHAR(255) NOT NULL (e.g., user1_1661899731_a4e1b.jpg)
-  original_filename VARCHAR(255) NOT NULL
-  filesize_bytes INT NOT NULL
-  mime_type VARCHAR(50) NOT NULL
-  created_at DATETIME NOT NULL
-
-**Future Schema Extensions**
-
-* tasks.encrypted_data: "notes", "dueDate"
-* tasks.delegated_to: INT FK
-* tasks.is_private: BOOL privacy switch
-* task_shares: (task_id, owner_id, shared_with_user_id, permissions, shared_at)
-* column_shares: (column_id, owner_id, shared_with_user_id, permissions, shared_at)
-* Usage logs, plan tiers, analytics tables 
-* Compaction: Position indices recompact on any task/column change, for fast UI/DB.
-
-## API GATEWAY AND CONTRACTS
-
-* Endpoint: /api/api.php
-* Requests: POST JSON {module, action, data}
-* Response: {"status": "...", "data": ...} or {"status": "error", "message": ...}
-* All mutations require CSRF token.
-* Current Endpoints:
-  * getAll 
-  * createTask 
-  * moveTask 
-  * reorderColumn 
-  * toggleComplete 
-  * togglePriority 
-  * deleteTask 
-  * duplicateTask 
-  * renameTaskTitle 
-  * createColumn 
-  * deleteColumn 
-  * renameColumn 
-  * reorderColumns 
-  * HTTP codes: 200, 201, 400, 403, 404, etc.
-  * getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
-  uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. * Requires task_id.
-  * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
-* New API actions for Beta 5:
-  * toggleClassification: cycles a task’s classification through Signal, Support, Noise, Completed
-  * togglePrivacy: sets per-task or per-column privacy
-  * shareTask and revokeShare: manage encrypted sharing and access
-  * Analytics endpoints: log CRUD/user navigation for quota status and feature improvement.
-  * All mutations require verifiable session ownership and CSRF validation.
-* File Uploads: Requests for uploadAttachment will use multipart/form-data, not application/json. The gateway must be adapted to handle this, extracting {module, action, data} from the form fields alongside the file data.
-* New Endpoints:
-  * getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
-  * uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. Requires task_id.
-  * deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
-
-### API IMPLEMENTATION TRACKING
-	Implemented API Actions:
-		[RDY] register (in auth.php)
-		[RDY] login (in auth.php)
-		[RDY] getAll (in tasks.php)
-		[RDY] createColumn (in tasks.php)
-		[RDY] createTask (in tasks.php)
-		[RDY] toggleComplete (in tasks.php)
-		[RDY] reorderTasks (in tasks.php)
-		[RDY] toggleClassification (in tasks.php)
-		[RDY] renameColumn (in tasks.php)
-		[RDY] deleteColumn (in tasks.php)
-		[RDY] reorderColumns (in tasks.php)
-		[RDY] deleteTask (in tasks.php)
-		[RDY] renameTaskTitle (in tasks.php)
-		[RDY] duplicateTask (in tasks.php)
-		[RDY] saveTaskDetails (in tasks.php)
-		[RDY] saveUserPreference (in users.php)
-		[RDY] getAttachments (in tasks.php)
-		[RDY] uploadAttachment (in tasks.php)
-		[RDY] deleteAttachment (in tasks.php)
-	Future API Actions:
-		[FUT] moveTask
-		[FUT] shareTask / revokeShare
+	Visible on all views. Context sensitive. Background is subtle; bottom has a thin border.
+	Includes:
+	  * Hamburger button to open Settings slider
+	  * App title on left (default: “MyDayHub”)
+	  * (Future: Section tabs ("Tasks", "Journal", "Outlines", "Events"))
+	  * Context-sensitive controls (visible based on view selected):
+		* (Future: Journal: "Today" button and calendar date picker to make the desired date the central column in the view.)
+		* Tasks: Add Column form.
+		* (Future: Journal: "Search" (keyword, etc.) to lookup Entries from the user Journal.
+	  * Responsive Header: "more options" dropdown menu (⋮) appears on narrow screens to house controls like "Search," "Today," etc., preventing UI overflow.)
 	
-### UI Implementation tracking
-	Implemented UI Features:
-		[RDY] User Registration page
-		[RDY] User Login page
-		[RDY] Responsive board layout (desktop/mobile)
-		[RDY] Board rendering from getAll API
-		[RDY] Create Column (inline form)
-		[RDY] Rename Column (double-click)
-		[RDY] Delete Column (hover button with confirmation)
-		[RDY] Reorder Columns (hover buttons)
-		[RDY] Create Task (footer input)
-		[RDY] Rename Task Title (double-click)
-		[RDY] Toggle Task Completion (checkbox)
-		[RDY] Task Drag-and-Drop (within and between columns)
-		[RDY] Task Classification (clicking status band)
-		[RDY] Enforced Task Sorting by classification
-		[RDY] Task Actions Menu (⋮ button)
-		[RDY] Delete Task (from actions menu with confirmation)
-		[RDY] Custom modals/toasts to replace native alerts
-		[RDY] Due Date picker (custom modal)
-		[RDY] Bottom toolbar with filters
-	Future UI Features:
-		[FUT] Settings slider panel
-		[FUT] Task Notes integration (Unified Editor)
-		[FUT] Sharing UI
-		[FUT] Privacy toggles
-		[WIP] Attachments UI (drop zone, gallery)
+#### BOTTOM TOOLBAR
 
-## FRONT END ARCHITECTURE
+  Full-width, one-row control bar
+  (Future: Contents vary depending on active section (Tasks, Journal, Outlines, Events))
+	**Toolbar Controls**
+	  * **Left:** Current Username within square parenthesis (example: [alfa]), Current Date (formatted as dd mmm yy).
+	  * **Center:** A central filter icon button opens a contextual menu containing filter toggles for the current view.
+	  * **Tasks View Filters:** The menu contains an on/off slider for "Show/Hide Completed" (default hide). Future filters will be added here.
+	  * **Right:** Application Version Number, Logout link. 
+   ⠀
+#### IMPORT & EXPORT
 
-* uix/app.js: bootstrap, tab/view switch, global toast notification system.
-* uix/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
-* uix/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
-  * SPA logic implements classification cycles, privacy toggles, offline notifications, and optimistic rollbacks.
-  * IndexedDB logic ensures full CRUD parity with network, respecting sort/group/crypto constraints.
-* uix/style.css: global responsive layout.
-* uix/tasks.css, uix/editor.css: feature-specific styling.
+	* Export Options: Notes can be exported in multiple formats, including Plain Text (.txt), Markdown (.md), and PDF. The PDF export will use the rendered Markdown view.
+	* Print: A print-friendly view renders the note's Markdown for clean, readable hard copies.
+	
+### SETTINGS SLIDER
+	Slider accessible from title bar
+	* High-Contrast/Colorblind Mode toggle: Increases color separation for icons, status bands, and accents
+	* (Future: Skip weekends in journal swtich)
+	* (Future: Calendar Overlays (button opens modal))
+	* Automatic Logout (dropdown select 5 mins, 30 min, 3 hours, never)
+	* Change Password (button opens modal)
+	* Import/Export (button opens modal)
+	* Help (button opens User Manual)
 
-## MOBILE UX
 
- Columns stack vertically at ≤768px width; mobile supports all features.
- Footer spacers for iOS Safari overlays.
-[FIX] Optimize scroll, button hits [pending QA].
- Pull-to-create for mobile.
+## 3. TECHNICAL SPECIFICATION
 
-## VERSIONING AND WORKFLOW
+### TECHNICAL ARCHITECTURE
 
-* Spec version: v4.7.0 (merged).
-* Minor: new features.
-* Patch: docs or refactors.
-* Source files tagged.
-* Git: commits ≤100 words, scope/files explicit.
-* Tags: v4.7.x-dev for merged feature sets.
+#### TIMESTAMP POLICY
+All timestamps (created_at, updated_at, due_date) are stored in the database in **UTC** using UTC_TIMESTAMP(). The frontend is responsible for converting to the user's local time.
 
-## DEBUG AND TESTING PATTERNS
+#### DATABASE SCHEMA
+  
+  * users: user_id, username, email, password_hash, preferences (JSON), created_at, storage_used_bytes
+  * columns: column_id, user_id, column_name, position, is_private, created_at, updated_at
+  * tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at
+  * task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, 	created_at
+  
+  **Future Schema Extensions**
+  
+  * tasks.encrypted_data: "notes", "dueDate"
+  * tasks.delegated_to: INT FK
+  * tasks.is_private: BOOL privacy switch
+  * task_shares: (task_id, owner_id, shared_with_user_id, permissions, shared_at)
+  * column_shares: (column_id, owner_id, shared_with_user_id, permissions, shared_at)
+  * Usage logs, plan tiers, analytics tables 
+  * Compaction: Position indices recompact on any task/column change, for fast UI/DB.
 
-* Set /incs/config.php DEVMODE=true for debug.log.
-* Test API via curl/REST with CSRF.
-* Dev test accounts: alfa, delta, omega.
+### API GATEWAY AND CONTRACTS
+  * Endpoint: /api/api.php
+  * Requests: POST JSON {module, action, data}
+  * Response: {"status": "...", "data": ...} or {"status": "error", "message": ...}
+  * All mutations require CSRF token.
+  * Current Endpoints:
+	* getAll 
+	* createTask 
+	* moveTask 
+	* reorderColumn 
+	* toggleComplete 
+	* togglePriority 
+	* deleteTask 
+	* duplicateTask 
+	* renameTaskTitle 
+	* createColumn 
+	* deleteColumn 
+	* renameColumn 
+	* reorderColumns 
+	* HTTP codes: 200, 201, 400, 403, 404, etc.
+	* getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
+	uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. * Requires task_id.
+	* deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
+  * New API actions for Beta 5:
+	* toggleClassification: cycles a task’s classification through Signal, Support, Noise, Completed
+	* togglePrivacy: sets per-task or per-column privacy
+	* shareTask and revokeShare: manage encrypted sharing and access
+	* Analytics endpoints: log CRUD/user navigation for quota status and feature improvement.
+	* All mutations require verifiable session ownership and CSRF validation.
+  * File Uploads: Requests for uploadAttachment will use multipart/form-data, not application/json. The gateway must be adapted to handle this, extracting {module, action, data} from the form fields alongside the file data.
+  * New Endpoints:
+  	* getAttachments (module: tasks): Retrieves a list of attachments for a given task_id.
+  	* uploadAttachment (module: tasks): Handles file upload, quota check, and pruning logic. Requires task_id.
+  	* deleteAttachment (module: tasks): Deletes a specific attachment. Requires attachment_id. Updates user's storage_used_bytes.
 
-## ENVIRONMENT SETUP
+#### API IMPLEMENTATION TRACKING
+  Implemented API Actions:
+	  [RDY] register (in auth.php)
+	  [RDY] login (in auth.php)
+	  [RDY] getAll (in tasks.php)
+	  [RDY] createColumn (in tasks.php)
+	  [RDY] createTask (in tasks.php)
+	  [RDY] toggleComplete (in tasks.php)
+	  [RDY] reorderTasks (in tasks.php)
+	  [RDY] toggleClassification (in tasks.php)
+	  [RDY] renameColumn (in tasks.php)
+	  [RDY] deleteColumn (in tasks.php)
+	  [RDY] reorderColumns (in tasks.php)
+	  [RDY] deleteTask (in tasks.php)
+	  [RDY] renameTaskTitle (in tasks.php)
+	  [RDY] duplicateTask (in tasks.php)
+	  [RDY] saveTaskDetails (in tasks.php)
+	  [RDY] saveUserPreference (in users.php)
+	  [RDY] getAttachments (in tasks.php)
+	  [RDY] uploadAttachment (in tasks.php)
+	  [RDY] deleteAttachment (in tasks.php)
+  Future API Actions:
+	  [FUT] moveTask
+	  [FUT] shareTask / revokeShare
+		  
+#### UI Implementation tracking
+  Implemented UI Features:
+	  [RDY] User Registration page
+	  [RDY] User Login page
+	  [RDY] Responsive board layout (desktop/mobile)
+	  [RDY] Board rendering from getAll API
+	  [RDY] Create Column (inline form)
+	  [RDY] Rename Column (double-click)
+	  [RDY] Delete Column (hover button with confirmation)
+	  [RDY] Reorder Columns (hover buttons)
+	  [RDY] Create Task (footer input)
+	  [RDY] Rename Task Title (double-click)
+	  [RDY] Toggle Task Completion (checkbox)
+	  [RDY] Task Drag-and-Drop (within and between columns)
+	  [RDY] Task Classification (clicking status band)
+	  [RDY] Enforced Task Sorting by classification
+	  [RDY] Task Actions Menu (⋮ button)
+	  [RDY] Delete Task (from actions menu with confirmation)
+	  [RDY] Custom modals/toasts to replace native alerts
+	  [RDY] Due Date picker (custom modal)
+	  [RDY] Bottom toolbar with filters
+  Future UI Features:
+	  [FUT] Settings slider panel
+	  [FUT] Task Notes integration (Unified Editor)
+	  [FUT] Sharing UI
+	  [FUT] Privacy toggles
+	  [WIP] Attachments UI (drop zone, gallery)
+			  
+### FRONT END ARCHITECTURE
+			  
+			  * uix/app.js: bootstrap, tab/view switch, global toast notification system.
+			  * uix/tasks.js: board render, column/task creation, drag/drop, sort, editors, rollback.
+			  * uix/crypto.js: Handles all encryption/decryption, key management, and crypto-related user actions.
+				* SPA logic implements classification cycles, privacy toggles, offline notifications, and optimistic rollbacks.
+				* IndexedDB logic ensures full CRUD parity with network, respecting sort/group/crypto constraints.
+			  * uix/style.css: global responsive layout.
+			  * uix/tasks.css, uix/editor.css: feature-specific styling.
+			  
+### ENVIRONMENT SETUP & WORKFLOW
+			  
+* **Configuration:** The application uses a .env file in the root for all credentials and environment-specific settings.
+* **Dependencies:** vlucas/phpdotenv is managed via Composer.
+* **Prerequisites:** The fileinfo PHP extension must be enabled. The /media/imgs/ directory must be writable by the web server.
+* **Debugging:** Setting DEVMODE=true in .env enables detailed error logging to /debug.log.
+* **Testing:** Use test accounts alfa, delta, omega.
 
 This application uses a `.env` file in the root directory to manage sensitive credentials and environment-specific settings. This file should **not** be committed to version control.
 
-### PHP & File System Prerequisites (for Local Dev)
+#### PHP & File System Prerequisites (for Local Dev)
 
 For all features to work correctly, the local development environment (XAMPP) must be configured as follows:
 
@@ -703,7 +682,7 @@ For all features to work correctly, the local development environment (XAMPP) mu
 
 After making any changes to `php.ini` or file ownership, remember to restart the Apache server.
 
-### Required Variables
+#### REQUIRED VARIABLES
 Create a '.env' file in the project root with the following variables:
 
 	~~~ini
@@ -723,7 +702,7 @@ Create a '.env' file in the project root with the following variables:
 	SMTP_PORT=587
 	~~~
 
-### Installation
+#### INSTALLATION
 	This project uses Composer to manage PHP dependencies. To install the required libraries (like phpdotenv), run the following command in the project root (connect SSH):
 	~~~~
 	terminal> ssh u756585617@185.185.185.185 -p 65002
@@ -731,7 +710,9 @@ Create a '.env' file in the project root with the following variables:
 	ssh> composer require vlucas/phpdotenv
 
 
-## GLOSSARY
+## 4. APPENDICES
+
+### GLOSSARY
 
 * Task card = task
 * Journal entry card = entry
@@ -750,9 +731,10 @@ Create a '.env' file in the project root with the following variables:
 * Toast Notification = Toast
 * Modal Window = Modal
 
-## WIREFRAME MOCKUPS
 
-### TASKS VIEW
+### WIREFRAME MOCKUPS
+
+#### TASKS VIEW
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Column]  │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -778,7 +760,7 @@ Create a '.env' file in the project root with the following variables:
 * Status cycling and privacy actions are always reachable via quick controls.
 
 
-### JOURNAL VIEW (Future)
+#### JOURNAL VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]                      │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -796,7 +778,7 @@ Create a '.env' file in the project root with the following variables:
 │ 19.Aug.25, Tuesday  [<<][<] [>][>>] View [1][3][5] Days [Wrap-up]   (alfa)│
 └───────────────────────────────────────────────────────────────────────────┘
 
-### OUTLINES VIEW (Future)
+#### OUTLINES VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Outline] │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -822,7 +804,7 @@ Create a '.env' file in the project root with the following variables:
 │ 19.Aug.25, Tuesday       [Promote] [Demote] [Fold] [Unfold]        (alfa) │
 └───────────────────────────────────────────────────────────────────────────┘
 
-### EVENTS VIEW (Future)
+#### EVENTS VIEW (Future)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]       [+ New Event]  │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -840,7 +822,7 @@ Create a '.env' file in the project root with the following variables:
 │ 19.Aug.25, Tuesday       Filters: [Rooms] [Assets] [People]         (alfa)│
 └───────────────────────────────────────────────────────────────────────────┘
 
-### NOTES EDITOR VIEW (MAXIMIZED)
+#### NOTES EDITOR VIEW (MAXIMIZED)
 ┌───────────────────────────────────────────────────────────────────────────┐
 │ Editing a task's note                                            [▫] [×]  │
 └───────────────────────────────────────────────────────────────────────────┘
@@ -866,7 +848,7 @@ Create a '.env' file in the project root with the following variables:
 │ Words: 231  Chars: 1664  Lines: 12                      Last saved: Never │
 └───────────────────────────────────────────────────────────────────────────┘
 
-### NOTES EDITOR VIEW (REDUCED, OVERLAY)
+#### NOTES EDITOR VIEW (REDUCED, OVERLAY)
 ┌─────────────────────────────────────────────┐
 │ Editing a task's note                [□][×] │
 └─────────────────────────────────────────────┘
@@ -885,13 +867,10 @@ Create a '.env' file in the project root with the following variables:
 └─────────────────────────────────────────────┘
 
 
-### Visual Language Note
-The rendered wireframes and UI samples reinforce minimalism, clarity, and actionable feedback directly inspired by leading productivity and fintech apps. Accent colors, rounded shapes, and live counters are always paired with clear status bands and fluid mobile layouts, supporting every user on any device.
+### APPLICATION ICONS
 
+#### MENU BAR
 
-## APP ICONS
-
-### MENU BAR
 * Mug
  <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
    <title>MyDayHub Logo</title>
@@ -908,14 +887,15 @@ The rendered wireframes and UI samples reinforce minimalism, clarity, and action
    </g>
  </svg>
 
-### CONTEXTUAL MENU
+#### CONTEXTUAL MENU
+
 * Cycle Classification
   <svg xmlns="http://www.w3.org/2000/svg"
-     width="24" height="24" viewBox="0 0 24 24"
-     fill="none" stroke="currentColor"
-     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="6 15 12 21 18 15"></polyline>
-    <polyline points="18 9 12 3 6 9"></polyline>
+	 width="24" height="24" viewBox="0 0 24 24"
+	 fill="none" stroke="currentColor"
+	 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<polyline points="6 15 12 21 18 15"></polyline>
+	<polyline points="18 9 12 3 6 9"></polyline>
   </svg>
 
 * Edit Note  
@@ -931,70 +911,110 @@ The rendered wireframes and UI samples reinforce minimalism, clarity, and action
   
 * Change Column
   <svg xmlns="http://www.w3.org/2000/svg"
-    width="24" height="24" viewBox="0 0 24 24"
-    fill="none" stroke="currentColor"
-    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="15 6 21 12 15 18"></polyline>
-    <polyline points="9 18 3 12 9 6"></polyline>
+	width="24" height="24" viewBox="0 0 24 24"
+	fill="none" stroke="currentColor"
+	stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<polyline points="15 6 21 12 15 18"></polyline>
+	<polyline points="9 18 3 12 9 6"></polyline>
   </svg>
 
 * Share
   <svg width="24" height="24" viewBox="0 0 24 24" 
-    fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98m0-9.98-6.83 3.98"/>
+	fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="m8.59 13.51 6.83 3.98m0-9.98-6.83 3.98"/>
   </svg>
 * Mark as Private
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24"
-    viewBox="0 0 24 24" fill="none" stroke="currentColor"
-    stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a20.29 20.29 0 0 1 4.23-5.29"/>
-    <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.29 20.29 0 0 1-2.88 3.88"/>
-    <circle cx="12" cy="12" r="3"></circle>
-    <line x1="2" y1="2" x2="22" y2="22"></line>
+	viewBox="0 0 24 24" fill="none" stroke="currentColor"
+	stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a20.29 20.29 0 0 1 4.23-5.29"/>
+	<path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a20.29 20.29 0 0 1-2.88 3.88"/>
+	<circle cx="12" cy="12" r="3"></circle>
+	<line x1="2" y1="2" x2="22" y2="22"></line>
   </svg>
   
 * Duplicate Task
   <svg width="24" height="24" viewBox="0 0 24 24" 
-    fill="none" 	stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+	fill="none" 	stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
   </svg>
   
 * Delete Task
   <svg width="24" height="24" viewBox="0 0 24 24" fill="none"
-    stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
+	stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/>
   </svg>
   
-### NOTES EDITOR
+#### NOTES EDITOR
 
 * Expand
   <svg xmlns="http://www.w3.org/2000/svg"
-       width="24" height="24" viewBox="0 0 24 24"
-       fill="none" stroke="currentColor"
-       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <g transform="rotate(45 12 12)">
-      <polyline points="6 15 12 21 18 15"></polyline>
-      <polyline points="18 9 12 3 6 9"></polyline>
-    </g>
+	   width="24" height="24" viewBox="0 0 24 24"
+	   fill="none" stroke="currentColor"
+	   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<g transform="rotate(45 12 12)">
+	  <polyline points="6 15 12 21 18 15"></polyline>
+	  <polyline points="18 9 12 3 6 9"></polyline>
+	</g>
   </svg>
 
 * Collapse
   <svg xmlns="http://www.w3.org/2000/svg"
-       width="24" height="24" viewBox="0 0 24 24"
-       fill="none" stroke="currentColor"
-       stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <g transform="rotate(45 12 12)">
-      <polyline points="15 6 21 12 15 18"></polyline>
-      <polyline points="9 18 3 12 9 6"></polyline>
-    </g>
+	   width="24" height="24" viewBox="0 0 24 24"
+	   fill="none" stroke="currentColor"
+	   stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	<g transform="rotate(45 12 12)">
+	  <polyline points="15 6 21 12 15 18"></polyline>
+	  <polyline points="9 18 3 12 9 6"></polyline>
+	</g>
   </svg>
   
 * Save and Close
 <svg xmlns="http://www.w3.org/2000/svg"
-     width="24" height="24" viewBox="0 0 24 24"
-     fill="none" stroke="currentColor"
-     stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+	 width="24" height="24" viewBox="0 0 24 24"
+	 fill="none" stroke="currentColor"
+	 stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path>
   <polyline points="8 14 11 17 16 12"></polyline>
 </svg>
 
 
+### ENVIRONMENTS
+* Prod (v3): Isolated; no shared users/DB/files
+* Dev (v4): Localhost, Apache+PHP 8, mariaDB, XAMPP
 
-// End of APP_SPEC Beta 5.0.0 //
+### FILE LOCATIONS
+* \ 			only index.php here
+* \api\			API module handlers (e.g., tasks.php, users.php), no subdirectories.
+* \uix\			all js and css files, no subdirectories.
+* \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
+* \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
+* \incs\		any includes needed by the app, no subdirectories, except \migrations and \meta
+* \login\		all login, logout, register, etc. needed for registration, authentication, password management, etc.
+* \meta\		documents explaining the app scope, status, next steps, etc.
+
+### STATUS LEGENDS
+**Important**
+* status updates are tracked for high level functions
+* application progress log details low level status
+**Legends**
+* **[RDY]** Feature complete, matches spec intent
+* **[WIP]** Under construction, present but evolving
+* **[FIX]** Implemented, needs refactoring/bug fixes
+* **[FUT]** Scheduled for future milestone
+* **[CNS]** Under consideration, not yet scheduled
+  
+### VERSIONING AND WORKFLOW
+
+* Spec version: v4.7.0 (merged).
+* Minor: new features.
+* Patch: docs or refactors.
+* Source files tagged.
+* Git: commits ≤100 words, scope/files explicit.
+* Tags: v4.7.x-dev for merged feature sets.
+
+## DEBUG AND TESTING PATTERNS
+
+* Set /incs/config.php DEVMODE=true for debug.log.
+* Test API via curl/REST with CSRF.
+* Dev test accounts: alfa, delta, omega.
+
+
+// End of APP_SPEC//

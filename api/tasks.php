@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.3.0
+ * @version 5.4.5
  * @author Alex & Gemini
  */
 
@@ -113,6 +113,13 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
+		// Modified for Privacy Feature
+		case 'togglePrivacy':
+			if ($method === 'POST') {
+				handle_toggle_privacy($pdo, $userId, $data);
+			}
+			break;
+
 		case 'uploadAttachment':
 			if ($method === 'POST') {
 				handle_upload_attachment($pdo, $userId, $data);
@@ -130,6 +137,67 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 	}
 }
+
+// Modified for Privacy Feature
+/**
+ * Toggles the 'is_private' flag for a given task or column.
+ */
+function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
+	$type = $data['type'] ?? null;
+	$id = isset($data['id']) ? (int)$data['id'] : 0;
+
+	if (empty($type) || !in_array($type, ['task', 'column']) || $id <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.']);
+		return;
+	}
+
+	$table = ($type === 'task') ? 'tasks' : 'columns';
+	$idColumn = ($type === 'task') ? 'task_id' : 'column_id';
+
+	try {
+		$pdo->beginTransaction();
+
+		$updateSql = "UPDATE `{$table}` SET is_private = NOT is_private, updated_at = UTC_TIMESTAMP() WHERE {$idColumn} = :id AND user_id = :userId";
+		$stmtUpdate = $pdo->prepare($updateSql);
+		$stmtUpdate->execute([':id' => $id, ':userId' => $userId]);
+
+		if ($stmtUpdate->rowCount() === 0) {
+			$pdo->rollBack();
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => ucfirst($type) . ' not found or permission denied.']);
+			return;
+		}
+
+		$selectSql = "SELECT is_private FROM `{$table}` WHERE {$idColumn} = :id";
+		$stmtSelect = $pdo->prepare($selectSql);
+		$stmtSelect->execute([':id' => $id]);
+		$newPrivateState = (bool)$stmtSelect->fetchColumn();
+
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'type' => $type,
+				'id' => $id,
+				'is_private' => $newPrivateState
+			]
+		]);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log("Error in handle_toggle_privacy: " . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating privacy status.']);
+	}
+}
+
 
 /**
  * Saves details (notes and/or due date) to a task.
@@ -289,7 +357,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 
 		$stmtColumns = $pdo->prepare(
-			"SELECT column_id, column_name, position FROM `columns` WHERE user_id = :userId ORDER BY position ASC"
+			"SELECT column_id, column_name, position, is_private FROM `columns` WHERE user_id = :userId ORDER BY position ASC"
 		);
 		$stmtColumns->execute([':userId' => $userId]);
 		$columns = $stmtColumns->fetchAll();
@@ -305,7 +373,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
-				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, 
+				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
 				t.updated_at, t.due_date, COUNT(ta.attachment_id) as attachments_count
 			 FROM 
 				tasks t
@@ -392,6 +460,7 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 				'column_id' => $newColumnId,
 				'column_name' => $columnName,
 				'position' => $position,
+				'is_private' => false, // Modified for Privacy Feature
 				'tasks' => []
 			]
 		]);
@@ -446,6 +515,7 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 				'encrypted_data' => $encryptedData,
 				'position' => $position,
 				'classification' => 'support',
+				'is_private' => false, // Modified for Privacy Feature
 				'due_date' => null,
 				'has_notes' => false,
 				'attachments_count' => 0

@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.4.2
+ * @version 5.5.1
  * @author Alex & Gemini
  */
 
@@ -19,6 +19,9 @@ let userStorage = { used: 0, quota: 50 * 1024 * 1024 };
 let isImageViewerOpen = false;
 
 let isModalOpening = false; 
+
+// Modified for Privacy Bug Fix
+let isActionRunning = false;
 
 /**
  * Helper to format YYY-MM-DD to MM/DD.
@@ -50,6 +53,8 @@ function getTaskDataFromElement(taskCardEl) {
 			notes: decodeURIComponent(taskCardEl.dataset.notes)
 		}),
 		classification: taskCardEl.dataset.classification,
+		// Modified for Privacy Feature
+		is_private: taskCardEl.dataset.isPrivate === 'true',
 		due_date: taskCardEl.dataset.dueDate || null,
 		has_notes: taskCardEl.dataset.hasNotes === 'true',
 		attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
@@ -217,6 +222,16 @@ function initEventListeners() {
 				}
 				return;
 			}
+			
+			const privacyBtn = e.target.closest('.btn-toggle-column-privacy');
+			if (privacyBtn) {
+				const columnEl = privacyBtn.closest('.task-column');
+				const columnId = columnEl.dataset.columnId;
+				if (columnId) {
+					await togglePrivacy('column', columnId);
+				}
+				return;
+			}
 
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
@@ -274,58 +289,70 @@ function initEventListeners() {
 			}
 		});
 		
+		// Modified for Privacy Bug Fix
 		document.body.addEventListener('click', async (e) => {
 			const actionButton = e.target.closest('.task-action-btn');
-			if (!actionButton) return;
+			if (!actionButton || isActionRunning) return;
+
+			isActionRunning = true;
+			try {
+				e.stopPropagation();
 		
-			e.stopPropagation(); 
+				const menu = actionButton.closest('.task-actions-menu');
+				// Add a defensive guard to prevent crash if menu disappears
+				if (!menu) return;
+
+				const taskId = menu.dataset.taskId;
+				const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+				const columnEl = taskCard.closest('.task-column');
+				const action = actionButton.dataset.action;
 		
-			const menu = actionButton.closest('.task-actions-menu');
-			const taskId = menu.dataset.taskId;
-			const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
-			const columnEl = taskCard.closest('.task-column');
-			const action = actionButton.dataset.action;
+				closeAllTaskActionMenus();
 		
-			closeAllTaskActionMenus();
-		
-			// Modified for Cycle Classification
-			if (action === 'cycle-classification') {
-				if (taskId && taskCard) {
-					toggleTaskClassification(taskId, taskCard);
-				}
-			} else if (action === 'edit-notes') {
-				openNotesEditorForTask(taskCard);
-			} else if (action === 'set-due-date') {
-				await openDueDateModalForTask(taskCard);
-			} else if (action === 'attachments') {
-				const taskTitle = decodeURIComponent(taskCard.dataset.title);
-				await openAttachmentsModal(taskId, taskTitle);
-			} else if (action === 'delete') {
-				const confirmed = await showConfirm('Are you sure you want to delete this task?');
-				if (confirmed && taskId) {
-					const success = await deleteTask(taskId);
-					if (success) {
-						taskCard.remove();
-						updateColumnTaskCount(columnEl);
-						showToast('Task deleted.', 'success');
-					} else {
-						showToast('Error: Could not delete task.', 'error');
+				if (action === 'cycle-classification') {
+					if (taskId && taskCard) {
+						await toggleTaskClassification(taskId, taskCard);
+					}
+				} else if (action === 'edit-notes') {
+					openNotesEditorForTask(taskCard);
+				} else if (action === 'set-due-date') {
+					await openDueDateModalForTask(taskCard);
+				} else if (action === 'toggle-privacy') {
+					if (taskId) {
+						await togglePrivacy('task', taskId);
+					}
+				} else if (action === 'attachments') {
+					const taskTitle = decodeURIComponent(taskCard.dataset.title);
+					await openAttachmentsModal(taskId, taskTitle);
+				} else if (action === 'delete') {
+					const confirmed = await showConfirm('Are you sure you want to delete this task?');
+					if (confirmed && taskId) {
+						const success = await deleteTask(taskId);
+						if (success) {
+							taskCard.remove();
+							updateColumnTaskCount(columnEl);
+							showToast('Task deleted.', 'success');
+						} else {
+							showToast('Error: Could not delete task.', 'error');
+						}
+					}
+				} else if (action === 'duplicate') {
+					if (taskId) {
+						const newTaskData = await duplicateTask(taskId);
+						if (newTaskData) {
+							const columnBody = columnEl.querySelector('.column-body');
+							const newTaskCardHTML = createTaskCard(newTaskData);
+							columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+							updateColumnTaskCount(columnEl);
+							sortTasksInColumn(columnBody);
+							showToast('Task duplicated successfully.', 'success');
+						} else {
+							showToast('Error: Could not duplicate the task.', 'error');
+						}
 					}
 				}
-			} else if (action === 'duplicate') {
-				if (taskId) {
-					const newTaskData = await duplicateTask(taskId);
-					if (newTaskData) {
-						const columnBody = columnEl.querySelector('.column-body');
-						const newTaskCardHTML = createTaskCard(newTaskData);
-						columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
-						updateColumnTaskCount(columnEl);
-						sortTasksInColumn(columnBody);
-						showToast('Task duplicated successfully.', 'success');
-					} else {
-						showToast('Error: Could not duplicate the task.', 'error');
-					}
-				}
+			} finally {
+				isActionRunning = false;
 			}
 		});
 
@@ -670,7 +697,6 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
-// Modified for Cycle Classification
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -681,6 +707,12 @@ function showTaskActionsMenu(buttonEl) {
 	const menu = document.createElement('div');
 	menu.className = 'task-actions-menu';
 	menu.dataset.taskId = taskCard.dataset.taskId;
+
+	const isPrivate = taskCard.dataset.isPrivate === 'true';
+	const privacyText = isPrivate ? 'Make Public' : 'Make Private';
+	const privacyIcon = isPrivate 
+		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
 	menu.innerHTML = `
 		<button class="task-action-btn" data-action="cycle-classification">
@@ -702,6 +734,10 @@ function showTaskActionsMenu(buttonEl) {
 				<line x1="3" y1="10" x2="21" y2="10"></line>
 			</svg>
 			<span>Set Due Date</span>
+		</button>
+		<button class="task-action-btn" data-action="toggle-privacy">
+			${privacyIcon}
+			<span>${privacyText}</span>
 		</button>
 		<button class="task-action-btn" data-action="attachments">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
@@ -943,6 +979,48 @@ async function reorderTasks(columnId, tasks) {
 		showToast('A network error occurred. Please try again.', 'error');
 		console.error('Reorder tasks error:', error);
 		return false;
+	}
+}
+
+/**
+ * Toggles the privacy status of a task or column.
+ */
+async function togglePrivacy(type, id) {
+	try {
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		const response = await fetch(`${appURL}/api/api.php`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+				module: 'tasks',
+				action: 'togglePrivacy',
+				data: { type, id }
+			})
+		});
+		const result = await response.json();
+		if (result.status === 'success') {
+			const { is_private } = result.data;
+			const selector = type === 'task' ? `.task-card[data-task-id="${id}"]` : `.task-column[data-column-id="${id}"]`;
+			const element = document.querySelector(selector);
+			
+			if (element) {
+				element.classList.toggle('private', is_private);
+				element.dataset.isPrivate = is_private;
+
+				const privacyBtnText = is_private ? 'Make Public' : 'Make Private';
+				showToast(`${type.charAt(0).toUpperCase() + type.slice(1)} set to ${is_private ? 'private' : 'public'}.`, 'success');
+
+				if (type === 'column') {
+					const btn = element.querySelector('.btn-toggle-column-privacy');
+					if (btn) btn.title = privacyBtnText;
+				}
+			}
+		} else {
+			throw new Error(result.message || `Failed to toggle privacy for ${type}.`);
+		}
+	} catch (error) {
+		showToast(error.message, 'error');
+		console.error('Toggle privacy error:', error);
 	}
 }
 
@@ -1218,8 +1296,10 @@ function renderBoard(boardData) {
  */
 function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
-	columnEl.className = 'task-column';
+	const isPrivate = columnData.is_private;
+	columnEl.className = `task-column ${isPrivate ? 'private' : ''}`;
 	columnEl.dataset.columnId = columnData.column_id;
+	columnEl.dataset.isPrivate = isPrivate;
 
 	let tasksHTML = '';
 	if (columnData.tasks && columnData.tasks.length > 0) {
@@ -1227,12 +1307,17 @@ function createColumnElement(columnData) {
 	} else {
 		tasksHTML = '<p class="no-tasks-message">No tasks in this column.</p>';
 	}
+	
+	const privacyBtnTitle = isPrivate ? 'Make Public' : 'Make Private';
+	const privacyIcon = isPrivate
+		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
 	columnEl.innerHTML = `
 		<div class="column-header">
 			<div class="column-header-controls">
 				<button class="btn-move-column" data-direction="left" title="Move Left">&lt;</button>
-				<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
+				<button class="btn-toggle-column-privacy" title="${privacyBtnTitle}">${privacyIcon}</button>
 				<button class="btn-delete-column" title="Delete Column">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -1240,6 +1325,7 @@ function createColumnElement(columnData) {
 						<line x1="14" y1="11" x2="14" y2="17"/>
 					</svg>
 				</button>
+				<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
 			</div>
 			<h2 class="column-title">${columnData.column_name}</h2>
 			<span class="task-count">${columnData.tasks ? columnData.tasks.length : 0}</span>
@@ -1269,6 +1355,7 @@ function createTaskCard(taskData) {
 	}
 
 	const isCompleted = taskData.classification === 'completed';
+	const isPrivate = taskData.is_private;
 	let classificationClass = '';
 	if (!isCompleted) {
 		classificationClass = `classification-${taskData.classification}`;
@@ -1327,11 +1414,12 @@ function createTaskCard(taskData) {
 
 	return `
 		<div 
-			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass}" 
+			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''}" 
 			data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
 			data-classification="${taskData.classification}"
+			data-is-private="${isPrivate}"
 			data-has-notes="${taskData.has_notes}"
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"

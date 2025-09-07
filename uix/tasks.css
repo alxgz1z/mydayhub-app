@@ -25,6 +25,8 @@
 	display: flex;
 	flex-direction: column;
 	max-height: 100%;
+	position: relative; /* Modified for Privacy Feature */
+	overflow: hidden;   /* Modified for Privacy Feature */
 }
 
 .column-header {
@@ -72,7 +74,8 @@
 	color: var(--accent-color);
 }
 
-.btn-delete-column {
+.btn-delete-column,
+.btn-toggle-column-privacy { /* Modified for Privacy Feature */
 	background: transparent;
 	border: none;
 	padding: 2px;
@@ -80,13 +83,18 @@
 	line-height: 0;
 }
 
-.btn-delete-column svg {
+.btn-delete-column svg,
+.btn-toggle-column-privacy svg { /* Modified for Privacy Feature */
 	stroke: var(--text-secondary);
 	transition: stroke 0.2s ease-in-out;
 }
 
 .btn-delete-column:hover svg {
 	stroke: #e57373; /* A soft red for hover */
+}
+
+.btn-toggle-column-privacy:hover svg { /* Modified for Privacy Feature */
+	stroke: var(--accent-color);
 }
 
 
@@ -143,6 +151,8 @@
 	padding: 0.75rem;
 	border-radius: 6px;
 	margin-bottom: 0.5rem;
+	position: relative; /* Modified for Privacy Feature */
+	overflow: hidden;   /* Modified for Privacy Feature */
 }
 
 .task-card-main {
@@ -366,4 +376,44 @@
 .task-action-btn:hover {
 	background-color: var(--accent-color);
 	color: white;
+}
+
+/* ==========================================================================
+   7. PRIVACY STYLES
+   ========================================================================== */
+/* Modified for Privacy Feature */
+
+.task-column.private::after,
+.task-card.private::after {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	/* Modified for UI Polish */
+	background-image: repeating-linear-gradient(
+		135deg,
+		rgba(255, 255, 255, 0.12),
+		rgba(255, 255, 255, 0.12) 1px,
+		transparent 1px,
+		transparent 10px
+	);
+	pointer-events: none;
+	z-index: 1;
+	border-radius: inherit;
+}
+
+.task-column.private,
+.task-card.private {
+	opacity: 0.8;
+}
+
+.task-card-main,
+.task-card-footer,
+.column-header,
+.column-body,
+.column-footer {
+	z-index: 2;
+	position: relative;
 }
