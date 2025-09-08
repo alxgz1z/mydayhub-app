@@ -780,3 +780,29 @@ The Undo feature is now feature-complete, stable, and fully tested. Two long-sta
 **Recommended next steps (priority order)**
 1.  **Build Out Settings Panel:** Add the first functional setting, "High-Contrast Mode," as specified in the spec. This will involve updating the UI based on a persistent user preference.
 2.  **Column Reordering (Drag & Drop):** Implement drag-and-drop for reordering entire columns, which is a key missing piece of board management.
+
+---
+
+# Timestamp: 2025-09-07 20:05 - UX Overhaul: Classification Popover & CSRF Foundation
+
+Version: Beta 5.9.0
+**Focus** To completely overhaul the task classification user experience, replacing the inefficient click-to-cycle method with an intuitive popover. A second major goal was to implement a full-stack CSRF protection mechanism to secure all mutating API endpoints.
+**Key work**
+* **Terminology & Database:** Replaced the term 'Noise' with 'Backlog' throughout the application. The tasks table schema was altered, and a data migration script was run to update existing records.
+* **UX/UI Overhaul:**
+  * Implemented a contextual popover menu that appears when a task's status band is clicked, allowing for direct selection of 'Signal', 'Support', or 'Backlog'.
+  * The redundant "Cycle Classification" button was removed from the task actions menu, simplifying the UI.
+  * Added CSS to /uix/tasks.css to style the new popover for a polished, professional appearance.
+* **Security Hardening (CSRF):**
+  * **Token Generation:** /incs/config.php now generates a secure, unique CSRF token for each user session.
+  * **Token Embedding:** /index.php embeds this token in a <meta name="csrf-token"> tag in the page head.
+* **Major Code Refactor:**
+  * A new, global apiFetch() helper was created in /uix/tasks.js. This function now handles all mutating API calls, automatically reading the CSRF token and adding it to the request headers.
+  * All existing fetch() calls for POST requests in tasks.js were refactored to use this new, more secure helper.
+  * The API gateway (/api/api.php) was made more robust to handle different JSON payload structures.
+
+⠀**Status** The classification feature is now feature-complete, stable, and provides a significantly improved user experience. The foundation for CSRF protection is fully implemented on the frontend. The next critical step is to enforce token validation on the backend.
+**Recommended next steps (priority order)**
+**1** **CRITICAL - Enable CSRF Validation:** Update /api/api.php to validate the X-CSRF-TOKEN header against the session token for all mutating requests. This is a critical security step that is not yet active.
+**2** **Implement Mobile "Move Mode":** Begin the implementation of the button-based "Move Mode" for mobile users by creating the moveTask API action in /api/tasks.php, adapting the logic from the Beta 4 codebase.
+**3** **Build Out Settings Panel:** Add the first functional setting, "High-Contrast Mode," as specified in the spec. This will involve updating the UI based on a persistent user preference.

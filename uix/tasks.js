@@ -4,13 +4,12 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.7.2
+ * @version 5.8.2
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
 
-// Modified for Private Filter
 let filterState = {
 	showCompleted: false,
 	showPrivate: false
@@ -23,6 +22,44 @@ let isImageViewerOpen = false;
 let isModalOpening = false; 
 
 let isActionRunning = false;
+
+// Modified for Classification Popover - Centralized and secure API fetch function
+/**
+ * A wrapper for the fetch API that automatically includes the CSRF token for mutating requests.
+ * @param {object} bodyPayload - The JSON payload to send.
+ * @returns {Promise<any>} - The JSON response from the server.
+ */
+async function apiFetch(bodyPayload = {}) {
+	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+	if (!csrfToken) {
+		throw new Error('CSRF token not found. Please refresh the page.');
+	}
+
+	const headers = {
+		'Content-Type': 'application/json',
+		'X-CSRF-TOKEN': csrfToken,
+	};
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+	const response = await fetch(`${appURL}/api/api.php`, {
+		method: 'POST',
+		headers,
+		body: JSON.stringify(bodyPayload),
+	});
+
+	if (!response.ok) {
+		let errorData;
+		try {
+			errorData = await response.json();
+		} catch (e) {
+			throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
+		}
+		throw new Error(errorData.message || 'An unknown API error occurred.');
+	}
+
+	return response.json();
+}
+
 
 /**
  * Helper to format YYY-MM-DD to MM/DD.
@@ -145,33 +182,27 @@ async function openDueDateModalForTask(taskCard) {
 	}
 }
 
-// Modified for Soft Deletes Bug Fix
 /**
  * Sends a request to restore a soft-deleted item.
  */
 async function restoreItem(type, id) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'restoreItem',
-				data: { type, id }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'restoreItem',
+			type: type,
+			id: id
 		});
-		const result = await response.json();
+
 		if (result.status === 'success') {
 			if (type === 'task') {
 				const restoredTask = result.data;
 				const columnEl = document.querySelector(`.task-column[data-column-id="${restoredTask.column_id}"]`);
 				if (columnEl) {
-					// Un-hide the original element if it's still in the DOM
 					const hiddenCard = document.querySelector(`.task-card[data-task-id="${id}"][style*="display: none"]`);
 					if (hiddenCard) {
 						hiddenCard.style.display = '';
-					} else { // Or create it if it was removed
+					} else {
 						const taskCardHTML = createTaskCard(restoredTask);
 						const columnBody = columnEl.querySelector('.column-body');
 						columnBody.insertAdjacentHTML('beforeend', taskCardHTML);
@@ -199,7 +230,6 @@ async function restoreItem(type, id) {
 	} catch (error) {
 		showToast({ message: `Error restoring item: ${error.message}`, type: 'error' });
 		console.error('Restore item error:', error);
-		// If restore fails, we should probably just reload the board to get a consistent state
 		fetchAndRenderBoard();
 	}
 }
@@ -209,6 +239,10 @@ async function restoreItem(type, id) {
  */
 function initEventListeners() {
 	document.addEventListener('click', (e) => {
+		// Modified for Classification Popover
+		if (e.target.closest('#classification-popover') === null && e.target.closest('.task-status-band') === null) {
+			closeClassificationPopover();
+		}
 		if (e.target.closest('.task-actions-menu') === null && e.target.closest('.btn-task-actions') === null) {
 			closeAllTaskActionMenus();
 		}
@@ -232,7 +266,6 @@ function initEventListeners() {
 		boardContainer.addEventListener('keypress', async (e) => {
 			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
 				e.preventDefault();
-				// Modified for Double-Fire Bug Fix
 				if (isActionRunning) return;
 				isActionRunning = true;
 				try {
@@ -263,7 +296,6 @@ function initEventListeners() {
 			}
 		});
 
-		// Modified for Column Controls Bug Fix
 		boardContainer.addEventListener('click', async (e) => {
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
@@ -281,12 +313,10 @@ function initEventListeners() {
 				return;
 			}
 			
+			// Modified for Classification Popover
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
-				const taskId = taskCard.dataset.taskId;
-				if (taskId) {
-					toggleTaskClassification(taskId, taskCard);
-				}
+				showClassificationPopover(taskCard);
 				return;
 			}
 			
@@ -306,7 +336,6 @@ function initEventListeners() {
 				return;
 			}
 
-			// Modified for Soft Deletes
 			const deleteBtn = e.target.closest('.btn-delete-column');
 			if (deleteBtn) {
 				if (isActionRunning) return;
@@ -317,13 +346,12 @@ function initEventListeners() {
 			
 					const success = await deleteColumn(columnId);
 					if (success) {
-						// Hide the element temporarily
 						columnEl.style.display = 'none';
 						updateMoveButtonVisibility();
 			
 						const removalTimeout = setTimeout(() => {
 							columnEl.remove();
-							updateMoveButtonVisibility(); // Re-run after permanent removal
+							updateMoveButtonVisibility();
 						}, 7000);
 			
 						showToast({
@@ -401,11 +429,7 @@ function initEventListeners() {
 		
 				closeAllTaskActionMenus();
 		
-				if (action === 'cycle-classification') {
-					if (taskId && taskCard) {
-						await toggleTaskClassification(taskId, taskCard);
-					}
-				} else if (action === 'edit-notes') {
+				if (action === 'edit-notes') {
 					openNotesEditorForTask(taskCard);
 				} else if (action === 'set-due-date') {
 					await openDueDateModalForTask(taskCard);
@@ -416,7 +440,7 @@ function initEventListeners() {
 				} else if (action === 'attachments') {
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
 					await openAttachmentsModal(taskId, taskTitle);
-				} else if (action === 'delete') { // Modified for Soft Deletes
+				} else if (action === 'delete') {
 					const success = await deleteTask(taskId);
 					if (success) {
 						taskCard.style.display = 'none';
@@ -632,20 +656,12 @@ function closeFilterMenu() {
  */
 async function saveFilterPreference(key, value) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'users',
-				action: 'saveUserPreference',
-				data: { key: key, value: value }
-			})
+		await apiFetch({
+			module: 'users',
+			action: 'saveUserPreference',
+			key: key,
+			value: value
 		});
-		const result = await response.json();
-		if (result.status !== 'success') {
-			console.error('Failed to save filter preference:', result.message);
-		}
 	} catch (error) {
 		console.error('Error saving filter preference:', error);
 	}
@@ -654,7 +670,6 @@ async function saveFilterPreference(key, value) {
 /**
  * Creates and displays the filter menu.
  */
-// Modified for Private Filter
 function showFilterMenu() {
 	closeFilterMenu(); 
 	const btnFilters = document.getElementById('btn-filters');
@@ -710,7 +725,6 @@ function showFilterMenu() {
 /**
  * Applies all active filters to the task cards on the board.
  */
-// Modified for Private Filter
 function applyAllFilters() {
 	const allItems = document.querySelectorAll('.task-card, .task-column');
 
@@ -742,26 +756,14 @@ function applyAllFilters() {
  */
 async function saveTaskDueDate(taskId, newDate) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'saveTaskDetails',
-				data: {
-					task_id: taskId,
-					dueDate: newDate
-				}
-			})
+		await apiFetch({
+			module: 'tasks',
+			action: 'saveTaskDetails',
+			task_id: taskId,
+			dueDate: newDate
 		});
-		const result = await response.json();
-		if (result.status === 'success') {
-			showToast({ message: 'Due date updated.', type: 'success' });
-			return true;
-		} else {
-			throw new Error(result.message || 'Failed to update due date.');
-		}
+		showToast({ message: 'Due date updated.', type: 'success' });
+		return true;
 	} catch (error) {
 		showToast({ message: error.message, type: 'error' });
 		console.error('Save due date error:', error);
@@ -789,11 +791,13 @@ function getDragAfterElement(container, y) {
 /**
  * Gets the numerical rank of a task card based on its classification.
  */
+// Modified for Classification Popover
 const getTaskRank = (taskEl) => {
-	if (taskEl.classList.contains('completed')) return 3;
-	if (taskEl.classList.contains('classification-signal')) return 0;
-	if (taskEl.classList.contains('classification-support')) return 1;
-	if (taskEl.classList.contains('classification-noise')) return 2;
+	const classification = taskEl.dataset.classification;
+	if (classification === 'completed') return 3;
+	if (classification === 'signal') return 0;
+	if (classification === 'support') return 1;
+	if (classification === 'backlog') return 2;
 	return 1; // Default to 'support' rank
 };
 
@@ -822,6 +826,7 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
+// Modified for Classification Popover
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -840,13 +845,6 @@ function showTaskActionsMenu(buttonEl) {
 		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
 	menu.innerHTML = `
-		<button class="task-action-btn" data-action="cycle-classification">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="6 15 12 21 18 15"></polyline>
-				<polyline points="18 9 12 3 6 9"></polyline>
-			</svg>
-			<span>Cycle Classification</span>
-		</button>
 		<button class="task-action-btn" data-action="edit-notes">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
 			<span>Edit Notes</span>
@@ -912,7 +910,7 @@ function updateColumnTaskCount(columnEl) {
  * Hides/shows move buttons based on column position (first/last).
  */
 function updateMoveButtonVisibility() {
-	const columns = document.querySelectorAll('.task-column');
+	const columns = document.querySelectorAll('.task-column:not([style*="display: none"])');
 	columns.forEach((col, index) => {
 		const btnLeft = col.querySelector('.btn-move-column[data-direction="left"]');
 		const btnRight = col.querySelector('.btn-move-column[data-direction="right"]');
@@ -930,22 +928,17 @@ function updateMoveButtonVisibility() {
  */
 async function duplicateTask(taskId) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'duplicateTask',
-				data: { task_id: taskId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'duplicateTask',
+			task_id: taskId
 		});
-		const result = await response.json();
 		if (result.status === 'success') {
 			return result.data;
 		}
 		return null;
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Duplicate task error:', error);
 		return null;
 	}
@@ -957,19 +950,14 @@ async function duplicateTask(taskId) {
  */
 async function deleteTask(taskId) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'deleteTask',
-				data: { task_id: taskId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'deleteTask',
+			task_id: taskId
 		});
-		const result = await response.json();
 		return result.status === 'success';
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Delete task error:', error);
 		return false;
 	}
@@ -980,19 +968,14 @@ async function deleteTask(taskId) {
  */
 async function reorderColumns(orderedColumnIds) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'reorderColumns',
-				data: { column_ids: orderedColumnIds }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'reorderColumns',
+			column_ids: orderedColumnIds
 		});
-		const result = await response.json();
 		return result.status === 'success';
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Reorder columns error:', error);
 		return false;
 	}
@@ -1003,19 +986,14 @@ async function reorderColumns(orderedColumnIds) {
  */
 async function deleteColumn(columnId) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'deleteColumn',
-				data: { column_id: columnId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'deleteColumn',
+			column_id: columnId
 		});
-		const result = await response.json();
 		return result.status === 'success';
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Delete column error:', error);
 		return false;
 	}
@@ -1026,22 +1004,15 @@ async function deleteColumn(columnId) {
  */
 async function renameColumn(columnId, newName) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'renameColumn',
-				data: {
-					column_id: columnId,
-					new_name: newName
-				}
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'renameColumn',
+			column_id: columnId,
+			new_name: newName
 		});
-		const result = await response.json();
 		return result.status === 'success';
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Rename column error:', error);
 		return false;
 	}
@@ -1052,22 +1023,15 @@ async function renameColumn(columnId, newName) {
  */
 async function renameTaskTitle(taskId, newTitle) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'renameTaskTitle',
-				data: {
-					task_id: taskId,
-					new_title: newTitle
-				}
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'renameTaskTitle',
+			task_id: taskId,
+			new_title: newTitle
 		});
-		const result = await response.json();
 		return result.status === 'success';
 	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
 		console.error('Rename task title error:', error);
 		return false;
 	}
@@ -1079,22 +1043,12 @@ async function renameTaskTitle(taskId, newTitle) {
  */
 async function reorderTasks(columnId, tasks) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'reorderTasks',
-				data: {
-					column_id: columnId,
-					tasks: tasks
-				}
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'reorderTasks',
+			column_id: columnId,
+			tasks: tasks
 		});
-
-		const result = await response.json();
-
 		if (result.status !== 'success') {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
 			return false;
@@ -1110,20 +1064,14 @@ async function reorderTasks(columnId, tasks) {
 /**
  * Toggles the privacy status of a task or column.
  */
-// Modified for Private Filter Bug Fix
 async function togglePrivacy(type, id) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'togglePrivacy',
-				data: { type, id }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'togglePrivacy',
+			type: type,
+			id: id
 		});
-		const result = await response.json();
 		if (result.status === 'success') {
 			const { is_private } = result.data;
 			const selector = type === 'task' ? `.task-card[data-task-id="${id}"]` : `.task-column[data-column-id="${id}"]`;
@@ -1159,26 +1107,19 @@ async function togglePrivacy(type, id) {
 async function toggleTaskComplete(taskId, isComplete) {
 	const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'toggleComplete',
-				data: { task_id: taskId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'toggleComplete',
+			task_id: taskId
 		});
-
-		const result = await response.json();
 
 		if (result.status === 'success') {
 			taskCard.classList.toggle('completed', isComplete);
 			taskCard.dataset.classification = result.data.new_classification;
 			
-			if (isComplete) {
-				taskCard.classList.remove('classification-signal', 'classification-support', 'classification-noise');
-			} else {
+			// Modified for Classification Popover
+			taskCard.classList.remove('classification-signal', 'classification-support', 'classification-backlog');
+			if (!isComplete) {
 				taskCard.classList.add(`classification-${result.data.new_classification}`);
 			}
 			sortTasksInColumn(taskCard.closest('.column-body'));
@@ -1195,37 +1136,90 @@ async function toggleTaskComplete(taskId, isComplete) {
 	}
 }
 
+// Modified for Classification Popover
 /**
- * Cycles a task's classification by calling the API and updating the UI.
+ * Sets a task's classification by calling the API and updating the UI.
+ * @param {string} taskId - The ID of the task to update.
+ * @param {string} newClassification - The new classification ('signal', 'support', 'backlog').
  */
-async function toggleTaskClassification(taskId, taskCardEl) {
+async function setTaskClassification(taskId, newClassification) {
+	const taskCardEl = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'toggleClassification',
-				data: { task_id: taskId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'toggleClassification',
+			task_id: taskId,
+			classification: newClassification
 		});
 
-		const result = await response.json();
-
 		if (result.status === 'success') {
-			const newClassification = result.data.new_classification;
-			taskCardEl.dataset.classification = newClassification;
-			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-noise');
-			taskCardEl.classList.add(`classification-${newClassification}`);
+			const returnedClassification = result.data.new_classification;
+			taskCardEl.dataset.classification = returnedClassification;
+			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-backlog', 'classification-noise');
+			taskCardEl.classList.add(`classification-${returnedClassification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
 		} else {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
 	} catch (error) {
-		showToast({ message: 'A network error occurred while updating classification.', type: 'error' });
-		console.error('Toggle classification error:', error);
+		showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
+		console.error('Set classification error:', error);
 	}
+}
+
+// Modified for Classification Popover
+/**
+ * Closes the classification popover if it exists.
+ */
+function closeClassificationPopover() {
+	const popover = document.getElementById('classification-popover');
+	if (popover) {
+		popover.remove();
+	}
+}
+
+// Modified for Classification Popover
+/**
+ * Shows a popover menu to change a task's classification.
+ * @param {HTMLElement} taskCard - The task card element that was clicked.
+ */
+function showClassificationPopover(taskCard) {
+	closeClassificationPopover();
+
+	const taskId = taskCard.dataset.taskId;
+	if (!taskId || taskCard.classList.contains('completed')) {
+		return;
+	}
+
+	const popover = document.createElement('div');
+	popover.id = 'classification-popover';
+	popover.innerHTML = `
+		<button class="classification-option" data-value="signal">
+			<span class="swatch classification-signal"></span> Signal
+		</button>
+		<button class="classification-option" data-value="support">
+			<span class="swatch classification-support"></span> Support
+		</button>
+		<button class="classification-option" data-value="backlog">
+			<span class="swatch classification-backlog"></span> Backlog
+		</button>
+	`;
+
+	document.body.appendChild(popover);
+
+	const band = taskCard.querySelector('.task-status-band');
+	const rect = band.getBoundingClientRect();
+	popover.style.top = `${window.scrollY + rect.top}px`;
+	popover.style.left = `${window.scrollX + rect.right + 5}px`;
+
+	popover.addEventListener('click', (e) => {
+		const button = e.target.closest('.classification-option');
+		if (button) {
+			const newClassification = button.dataset.value;
+			setTaskClassification(taskId, newClassification);
+			closeClassificationPopover();
+		}
+	});
 }
 
 
@@ -1262,18 +1256,11 @@ function showAddColumnForm() {
 		const columnName = input.value.trim();
 		if (columnName) {
 			try {
-				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/api.php`, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						module: 'tasks',
-						action: 'createColumn',
-						data: { column_name: columnName }
-					})
+				const result = await apiFetch({
+					module: 'tasks',
+					action: 'createColumn',
+					column_name: columnName
 				});
-
-				const result = await response.json();
 
 				if (result.status === 'success') {
 					const boardContainer = document.getElementById('task-board-container');
@@ -1291,7 +1278,7 @@ function showAddColumnForm() {
 					showToast({ message: `Error: ${result.message}`, type: 'error' });
 				}
 			} catch (error) {
-				showToast({ message: 'A network error occurred. Please try again.', type: 'error' });
+				showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
 				console.error('Create column error:', error);
 			}
 		}
@@ -1304,21 +1291,12 @@ function showAddColumnForm() {
  */
 async function createNewTask(columnId, taskTitle, columnEl) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'createTask',
-				data: {
-					column_id: columnId,
-					task_title: taskTitle
-				}
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'createTask',
+			column_id: columnId,
+			task_title: taskTitle
 		});
-
-		const result = await response.json();
 
 		if (result.status === 'success') {
 			const columnBody = columnEl.querySelector('.column-body');
@@ -1335,7 +1313,7 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
 	} catch (error) {
-		showToast({ message: 'A network error occurred while creating the task.', type: 'error' });
+		showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
 		console.error('Create task error:', error);
 	}
 }
@@ -1383,7 +1361,6 @@ async function fetchAndRenderBoard() {
 				filterState.showCompleted = userPrefs.filter_show_completed;
 			}
 			
-			// Modified for Private Filter
 			if (userPrefs && typeof userPrefs.filter_show_private !== 'undefined') {
 				filterState.showPrivate = userPrefs.filter_show_private;
 			}
@@ -1476,6 +1453,7 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
+// Modified for Classification Popover
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
@@ -1491,7 +1469,8 @@ function createTaskCard(taskData) {
 	const isPrivate = taskData.is_private;
 	let classificationClass = '';
 	if (!isCompleted) {
-		classificationClass = `classification-${taskData.classification}`;
+		const classification = taskData.classification === 'noise' ? 'backlog' : taskData.classification;
+		classificationClass = `classification-${classification}`;
 	}
 	
 	let footerHTML = '';
@@ -1575,42 +1554,24 @@ function createTaskCard(taskData) {
 /**
  * Deletes a single attachment by its ID.
  */
-// Modified for Storage Bar
 async function deleteAttachment(attachmentId) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({
-				module: 'tasks',
-				action: 'deleteAttachment',
-				data: { attachment_id: attachmentId }
-			})
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'deleteAttachment',
+			attachment_id: attachmentId
 		});
 
-		if (!response.ok) {
-			const errorText = await response.text();
-			let errorJson;
-			try {
-				errorJson = JSON.parse(errorText);
-			} catch (e) {
-				throw new Error(`Server returned status ${response.status}`);
-			}
-			throw new Error(errorJson.message || `Server returned status ${response.status}`);
-		}
-
-		const result = await response.json();
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			return result.data; // Return data on success
+			return result.data;
 		} else {
 			throw new Error(result.message || 'Failed to delete attachment.');
 		}
 	} catch (error) {
 		showToast({ message: error.message, type: 'error' });
 		console.error('Delete attachment error:', error);
-		return null; // Return null on failure
+		return null;
 	}
 }
 
@@ -1637,7 +1598,6 @@ async function getAttachments(taskId) {
 /**
  * Uploads a single file attachment for a task.
  */
-// Modified for Storage Bar
 async function uploadAttachment(taskId, file) {
 	const formData = new FormData();
 	formData.append('module', 'tasks');
@@ -1654,7 +1614,7 @@ async function uploadAttachment(taskId, file) {
 		const result = await response.json();
 		
 		if (result.status === 'success') {
-			return result.data; // Return data on success
+			return result.data;
 		} else {
 			showToast({ message: `Upload failed for ${file.name}: ${result.message}`, type: 'error' });
 			return null;
@@ -1677,15 +1637,10 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
 	}
 }
 
-// Modified for Storage Bar
 /**
  * Updates the UI for the storage quota bar and text.
- * @param {number} usedBytes - The number of bytes used.
- * @param {number} quotaBytes - The total quota in bytes.
  */
 function updateStorageBar(usedBytes, quotaBytes) {
-	// Modified for delete attachment bug fix
-	// Add a defensive check to prevent crashes if the API returns a non-numeric value.
 	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
 		usedBytes = 0;
 	}
@@ -1706,7 +1661,6 @@ function updateStorageBar(usedBytes, quotaBytes) {
 /**
  * Opens the attachments modal and populates it with data for a given task.
  */
-// Modified for UI Polish (All 3 issues)
 async function openAttachmentsModal(taskId, taskTitle) {
 	if (isModalOpening) return;
 	isModalOpening = true;
@@ -1716,13 +1670,10 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		const modalTitle = document.getElementById('attachments-modal-title');
 		const listContainer = document.getElementById('attachment-list');
 		const dropZone = document.getElementById('attachment-drop-zone');
-		// Modified for listener fix: Use new button ID
 		const btnBrowse = document.getElementById('btn-browse-files');
 		const fileInput = document.getElementById('attachment-file-input');
-		// Modified for listener fix: Get reference to the static upload button
 		const btnUploadStaged = document.getElementById('btn-upload-staged');
 		
-		// Modified for listener fix: Check for the new button ID
 		if (!modalOverlay || !btnBrowse || !btnUploadStaged) {
 			console.error('Attachments modal components are missing!');
 			return;
@@ -1735,7 +1686,6 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			dropZone.insertAdjacentElement('afterend', stagedListContainer);
 		}
 		
-		// Modified for listener fix: Remove dynamic button creation logic as it's now in index.php
 		let stagedFiles = [];
 		
 		modalOverlay.dataset.currentTaskId = taskId;
@@ -1762,7 +1712,6 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			stagedListContainer.innerHTML = '';
 			if (stagedFiles.length > 0) {
 				const fileCount = stagedFiles.length;
-				// Modified for listener fix: Update text content of the button
 				btnUploadStaged.textContent = `Upload ${fileCount} File${fileCount > 1 ? 's' : ''}`;
 				stagedFiles.forEach((file, index) => {
 					const fileSizeKB = (file.size / 1024).toFixed(1);
@@ -1857,7 +1806,6 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		};
 
 		const closeModalHandler = () => {
-			// Modified for listener fix: Use new button ID for removing listener
 			btnBrowse.removeEventListener('click', handleBrowseClick);
 			fileInput.removeEventListener('change', handleFileChange);
 			btnUploadStaged.removeEventListener('click', handleUploadStaged);
@@ -1884,7 +1832,6 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			if (e.target === modalOverlay) closeModalHandler();
 		};
 		
-		// Modified for listener fix: Use new button ID for adding listener
 		btnBrowse.addEventListener('click', handleBrowseClick);
 		fileInput.addEventListener('change', handleFileChange);
 		btnUploadStaged.addEventListener('click', handleUploadStaged);
@@ -1989,16 +1936,15 @@ function renderAttachmentList(attachments, container) {
 /**
  * Opens the full-screen attachment viewer modal with the specified content.
  */
-// Modified for Escape Key Bug
 function openAttachmentViewer(fileUrl, filename) {
-	isImageViewerOpen = true; // Set the flag
+	isImageViewerOpen = true; 
 	const viewerOverlay = document.getElementById('attachment-viewer-modal-overlay');
 	const contentContainer = document.getElementById('attachment-viewer-content');
 	const viewerCloseBtn = document.getElementById('attachment-viewer-close-btn');
 
 	if (!viewerOverlay || !contentContainer || !viewerCloseBtn) {
 		console.error('Attachment viewer elements not found.');
-		isImageViewerOpen = false; // Reset flag on error
+		isImageViewerOpen = false; 
 		return;
 	}
 
@@ -2031,7 +1977,6 @@ function openAttachmentViewer(fileUrl, filename) {
 /**
  * Closes the attachment viewer modal.
  */
-// Modified for Escape Key Bug
 function closeAttachmentViewer() {
 	const viewerOverlay = document.getElementById('attachment-viewer-modal-overlay');
 	if (viewerOverlay) {
@@ -2041,7 +1986,7 @@ function closeAttachmentViewer() {
 			contentContainer.innerHTML = '';
 		}
 	}
-	isImageViewerOpen = false; // Reset the flag
+	isImageViewerOpen = false;
 }
 
 

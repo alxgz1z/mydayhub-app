@@ -1257,3 +1257,55 @@ echo json_encode(['ok'=>true,'id'=>$id]);
 * Safari supports Pointer Events and getCoalescedEvents(). Use coalesced points for buttery lines.
 * Hover (Pencil on M2 iPad Pro) is available; treat as preview only, not required.
 * Don’t block the main thread with heavy smoothing; batch via requestAnimationFrame.
+
+********************************************************************************
+## ON IMPLEMENTING MOBILE SUPPORT TO MOVE TASKS TO OTHER COLUMNS
+*Alex asked to ChatGPT*
+
+there's one usability matter that was resolved in Beta 4 and hasn't been addressed in Beta 4: mobile users can't drag and drop tasks to other columns. take a look at the way it was resolved in Beta 4 for which I'm attaching the code base. Please give me a summary of how you found that implementation and the viability to replicate it in Beta 5.
+
+
+*Gemini Responded*
+
+Of course. This is an excellent catch and a crucial usability feature for mobile. I've analyzed the Beta 4 codebase you provided to understand how this was solved previously. The implementation is quite clever and, fortunately, highly portable to our current Beta 5 architecture.
+
+Summary of Beta 4's "Move Mode" Implementation
+The Beta 4 code solved the mobile cross-column move problem by implementing a feature I'll call "Move Mode." Instead of relying on drag-and-drop, it uses a simple, tap-friendly, button-based workflow.
+
+Here's a breakdown of how it works:
+Initiation:
+The user taps the "..." actions button on a task card to open the quick actions menu.
+Inside this menu, there is a dedicated "Move" button (represented by a < > icon).
+Entering "Move Mode":
+Tapping the "Move" button triggers a JavaScript function, enterMoveMode().
+This function immediately changes the state of the entire UI:
+The selected task card gets a distinct visual highlight (a colored border or shadow) to show it's "active."
+Crucially, the footers of all columns are dynamically replaced.
+The source column's footer changes to a "Cancel Move" button.
+All other columns' footers change to a prominent "Move here" button.
+Execution & Persistence:
+The user scrolls to the desired destination column and taps its "Move here" button.
+A click listener detects this, grabs the ID of the active task and the destination column, and performs the following:
+API Call: It sends a request to the moveTask action in the API, passing the task_id and to_column_id.
+DOM Update: The task card element is immediately moved to the new column in the browser.
+Cleanup: The exitMoveMode() function is called to restore the original footers (+ New Task) and remove the task highlight.
+This approach completely bypasses the difficulties of mobile drag-and-drop for cross-column actions, providing a clear and unambiguous way for users to move tasks on a touch screen.
+
+Viability for Beta 5
+The viability of replicating this feature in Beta 5 is extremely high.
+
+The core architecture of columns, task cards, and footers is nearly identical between the two versions. The logic from Beta 4 is self-contained and can be ported over with minimal changes.
+
+Here is the implementation plan:
+Backend (PHP): The Beta 5 spec.md lists moveTask as a future item. We will need to implement this action in /api/modules/tasks.handler.php. The good news is that the Beta 4 code you provided contains a complete, working move_task function that we can adapt. It correctly handles moving the task and re-compacting the positions of the remaining tasks in the source column.
+Frontend (JavaScript): In /assets/js/tasks.js, we will:
+Port the enterMoveMode() and exitMoveMode() functions from the Beta 4 tasks.js file.
+Add a "Move" button to the showTaskActionsMenu() function.
+Add the necessary logic to our global click listener to handle clicks on the "Move", "Move here", and "Cancel Move" buttons.
+Styling (CSS): In /assets/css/views/tasks.css, we will add the styles for:
+The highlighted task card (.is-moving).
+The "Move here" button (.btn-move-task-here).
+The "Cancel Move" button (.btn-cancel-move-inline).
+This is a proven solution to a known problem, and we have the code to do it. I recommend we proceed with this plan.
+
+If you agree, we can begin by implementing the moveTask action on the backend.

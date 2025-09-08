@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.6.4
+ * @version 5.7.3
  * @author Alex & Gemini
  */
 
@@ -114,6 +114,7 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 
+		// Modified for Classification Popover
 		case 'toggleClassification':
 			if ($method === 'POST') {
 				handle_toggle_classification($pdo, $userId, $data);
@@ -693,50 +694,44 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 	}
 }
 
+// Modified for Classification Popover
 /**
- * Cycles a task's classification through Signal, Support, and Noise.
+ * Sets a task's classification to a specific value (Signal, Support, or Backlog).
  */
 function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void {
-	if (empty($data['task_id'])) {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$newClassification = $data['classification'] ?? null;
+
+	if ($taskId <= 0 || empty($newClassification)) {
 		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID is required.']);
+		echo json_encode(['status' => 'error', 'message' => 'Task ID and classification are required.']);
 		return;
 	}
 
-	$taskId = (int)$data['task_id'];
+	$allowedClassifications = ['signal', 'support', 'backlog'];
+	if (!in_array($newClassification, $allowedClassifications)) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Invalid classification value provided.']);
+		return;
+	}
 
 	try {
-		$stmtGet = $pdo->prepare("SELECT classification FROM tasks WHERE task_id = :taskId AND user_id = :userId");
-		$stmtGet->execute([':taskId' => $taskId, ':userId' => $userId]);
-		$currentClassification = $stmtGet->fetchColumn();
-
-		if ($currentClassification === false) {
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
-			return;
-		}
-
-		$newClassification = 'signal'; // Default
-		switch ($currentClassification) {
-			case 'signal':
-				$newClassification = 'support';
-				break;
-			case 'support':
-				$newClassification = 'noise';
-				break;
-			case 'noise':
-				$newClassification = 'signal';
-				break;
-		}
-
 		$stmtUpdate = $pdo->prepare(
-			"UPDATE tasks SET classification = :newClassification, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
+			"UPDATE tasks 
+			 SET classification = :newClassification, updated_at = UTC_TIMESTAMP() 
+			 WHERE task_id = :taskId AND user_id = :userId AND classification != 'completed'"
 		);
 		$stmtUpdate->execute([
 			':newClassification' => $newClassification,
 			':taskId' => $taskId,
 			':userId' => $userId
 		]);
+
+		if ($stmtUpdate->rowCount() === 0) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'Task not found, permission denied, or task is already completed.']);
+			return;
+		}
 
 		http_response_code(200);
 		echo json_encode([
@@ -1110,7 +1105,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'classification' => $classification,
 				'due_date' => $dueDate,
 				'has_notes' => $hasNotes,
-				'attachments_count' => 0
+				'attachments_count' => 0,
+				'is_private' => false,
 			]
 		]);
 

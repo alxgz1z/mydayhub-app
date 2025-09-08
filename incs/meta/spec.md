@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 5.6.2  
+**Version:** Beta 5.9.0 
 **Audience:** Internal Development & Project Management  
 
 ---
@@ -95,7 +95,7 @@
   [RDY] Rename Task Title (double-click)
   [RDY] Toggle Task Completion (checkbox)
   [RDY] Task Drag-and-Drop (within and between columns)
-  [RDY] Task Classification (clicking status band)
+  [WIP] Task Classification (clicking status band)
   [RDY] Enforced Task Sorting by classification
   [RDY] Task Actions Menu (⋮ button)
   [RDY] Delete Task (from actions menu with confirmation)
@@ -184,9 +184,10 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 #### Task Cards
 * **Display:** Title (inline edit), drag-and-drop, metadata footer (notes, due date).  
 * **Delegation & Sharing:** Distinct styling + share icon.  
-* **Status Bands:** Signal (green), Support (blue), Noise (orange), Completed (gray).  
+* **Status Bands:** Status Bands: Signal (green), Support (blue), Backlog (orange), Completed (gray).  
 * **Privacy & Attachments:** Icons always visible.  
 * **UX:** Shadows, hover lift, animated drag/drop.  
+* Clicking on a task's status band opens a contextual popover menu, allowing for direct selection of Signal, Support, or Backlog. This is the primary method for changing a task's classification.
 
 #### Attachments
 * **Methods:** File picker, drag-drop, paste.  
@@ -205,7 +206,6 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * Persisted instantly.  
 
 #### Actions Menu
-* Cycle Classification  
 * Notes  
 * Due Date  
 * Duplicate  
@@ -349,7 +349,7 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * Branch node = node
 * Signal task = directly advances the mission
 * Support task = indirectly enables Signal
-* Noise task = does not advance the mission, candidate for delegation or drop
+* Backlog task = does not require immediate attention; candidate for deferral to a later time.
 * Completed task = finished item, archived at bottom
 * hostinger hosted environment = web-env
 * local hosted environment = loc-env

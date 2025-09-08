@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.6.0
+ * @version 5.8.0
  * @author Alex & Gemini
  */
 
@@ -32,13 +32,15 @@ $username = $_SESSION['username'] ?? 'User';
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
 	<title>MyDayHub</title>
 	<link rel="icon" type="image/svg+xml" href="media/logo.svg">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css">
 	<link rel="stylesheet" href="uix/attachments.css">
-	<link rel="stylesheet" href="uix/settings.css"> <script>
+	<link rel="stylesheet" href="uix/settings.css">
+	<script>
 		// Expose server-side configuration to client-side JavaScript.
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>"

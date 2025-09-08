@@ -5,7 +5,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
  *
- * @version 5.1.3
+ * @version 5.8.2
  * @author Alex & Gemini
  */
 
@@ -39,24 +39,22 @@ if ($method === 'GET') {
 	$module = $_GET['module'] ?? null;
 	$action = $_GET['action'] ?? null;
 } elseif ($method === 'POST') {
-	// Modified for Case-Insensitive Header Check
 	$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
 	if (stripos($contentType, 'application/json') !== false) {
-		// Standard JSON request
 		$json_data = file_get_contents('php://input');
-		$input = json_decode($json_data, true);
+		$input = json_decode($json_data, true) ?: []; // Ensure $input is an array
 		$module = $input['module'] ?? null;
 		$action = $input['action'] ?? null;
-		$data = $input['data'] ?? [];
+		
+		// Modified to handle both nested and flat JSON payloads
+		// This makes the gateway robust for both frontend calls (nested) and simple tests (flat).
+		$data = $input['data'] ?? $input;
+
 	} elseif (stripos($contentType, 'multipart/form-data') !== false) {
-		// File upload request
 		$module = $_POST['module'] ?? null;
 		$action = $_POST['action'] ?? null;
-		// The handler will access the actual file data from $_FILES.
-		// Other non-file data can be passed in the 'data' field.
 		$data = $_POST['data'] ?? [];
-		// If 'data' is sent as a JSON string (a common practice), decode it.
 		if (is_string($data)) {
 			$decodedData = json_decode($data, true);
 			if (json_last_error() === JSON_ERROR_NONE) {
@@ -64,12 +62,10 @@ if ($method === 'GET') {
 			}
 		}
 	} else {
-		// Unsupported content type for POST requests
 		http_response_code(415); // Unsupported Media Type
 		echo json_encode(['status' => 'error', 'message' => 'Unsupported content type for POST requests.']);
 		exit();
 	}
-	// End of modification
 } else {
 	http_response_code(405); // Method Not Allowed
 	echo json_encode(['status' => 'error', 'message' => 'Method not allowed.']);

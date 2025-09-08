@@ -3,6 +3,10 @@
  * MyDayHub Beta 5 - Core Configuration
  *
  * Reads credentials from a .env file for security and portability.
+ * Manages session start and CSRF token generation.
+ *
+ * @version 5.8.0
+ * @author Alex & Gemini
  */
 
 // --- FILE PATHS ---
@@ -52,8 +56,8 @@ if (DEVMODE) {
 	set_error_handler('mydayhub_error_handler');
 }
 
-// --- APPLICATION URL & VERSION --- 👈📍
-define('APP_VER', 'Beta 5.6.2');
+// --- APPLICATION URL & VERSION ---
+define('APP_VER', 'Beta 5.9.0');
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
 $script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
@@ -69,6 +73,17 @@ define('DB_PASS', getenv('DB_PASS'));
 
 // --- SESSION & SECURITY --- //
 define('SESSION_TIMEOUT_SECONDS', 28800); // 8 hours
+
+// Modified for CSRF Token implementation
+if (session_status() === PHP_SESSION_NONE) {
+	session_start();
+}
+
+// Generate a CSRF token if one doesn't exist for the current session.
+if (empty($_SESSION['csrf_token'])) {
+	$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 
 // --- SMTP (MAIL) SERVICE (from Environment Variables) --- //
 // Modified for .env consistency: Removed fallback credentials.

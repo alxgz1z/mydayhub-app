@@ -241,7 +241,8 @@
 	);
 }
 
-.task-card.classification-noise .task-status-band {
+/* Modified for Classification Popover */
+.task-card.classification-backlog .task-status-band {
 	background-color: #fd7e14; /* Orange */
 }
 
@@ -416,4 +417,67 @@
 .column-footer {
 	z-index: 2;
 	position: relative;
+}
+
+/* ==========================================================================
+   8. CLASSIFICATION POPOVER
+   ========================================================================== */
+/* Modified for Classification Popover */
+
+#classification-popover {
+	position: absolute;
+	z-index: 1000; /* High z-index to appear above other content */
+	background-color: var(--toolbar-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 6px;
+	padding: 4px;
+	display: flex;
+	gap: 4px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+	backdrop-filter: blur(5px);
+}
+
+.classification-option {
+	background: none;
+	border: 1px solid var(--border-color);
+	color: var(--text-secondary);
+	padding: 6px 10px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	transition: background-color 0.2s ease-out, color 0.2s ease-out;
+}
+
+.classification-option:hover {
+	background-color: var(--accent-color);
+	color: white;
+	 border-color: var(--accent-color);
+}
+
+.classification-option .swatch {
+	display: inline-block;
+	width: 12px;
+	height: 12px;
+	border-radius: 3px;
+	flex-shrink: 0;
+}
+
+/* Re-use existing background styles for the swatches */
+.classification-option .swatch.classification-signal {
+	background-color: #28a745;
+}
+.classification-option .swatch.classification-support {
+	background: repeating-linear-gradient(
+		45deg,
+		#007bff,
+		#007bff 2px,
+		rgba(0, 0, 0, 0.2) 2px,
+		rgba(0, 0, 0, 0.2) 3px
+	);
+}
+.classification-option .swatch.classification-backlog {
+	background-color: #fd7e14;
 }
