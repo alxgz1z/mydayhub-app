@@ -5,7 +5,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.7.3
+ * @version 5.9.5
  * @author Alex & Gemini
  */
 
@@ -113,6 +113,13 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_reorder_tasks($pdo, $userId, $data);
 			}
 			break;
+		
+		// Modified for Mobile Move Mode
+		case 'moveTask':
+			if ($method === 'POST') {
+				handle_move_task($pdo, $userId, $data);
+			}
+			break;
 
 		// Modified for Classification Popover
 		case 'toggleClassification':
@@ -145,6 +152,88 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 	}
 }
+
+// Modified for Mobile Move Mode
+/**
+ * Moves a task to a new column and updates task positions in both columns.
+ */
+function handle_move_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$toColumnId = isset($data['to_column_id']) ? (int)$data['to_column_id'] : 0;
+
+	if ($taskId <= 0 || $toColumnId <= 0) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'Valid task_id and to_column_id are required.']);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// 1. Get the task's current column_id
+		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt_find->fetch();
+
+		if ($task === false) {
+			throw new Exception('Task not found or permission denied.');
+		}
+		$fromColumnId = $task['column_id'];
+
+		// If moving to the same column, do nothing.
+		if ($fromColumnId == $toColumnId) {
+			$pdo->commit();
+			http_response_code(200);
+			echo json_encode(['status' => 'success', 'message' => 'Task already in the destination column.']);
+			return;
+		}
+
+		// 2. Determine the new position for the task (at the end of the destination column)
+		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :toColumnId AND user_id = :userId AND deleted_at IS NULL");
+		$stmt_pos->execute([':toColumnId' => $toColumnId, ':userId' => $userId]);
+		$newPosition = (int)$stmt_pos->fetchColumn();
+
+		// 3. Update the task to move it
+		$stmt_move = $pdo->prepare(
+			"UPDATE tasks SET column_id = :toColumnId, position = :newPosition, updated_at = UTC_TIMESTAMP() 
+			 WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt_move->execute([
+			':toColumnId' => $toColumnId,
+			':newPosition' => $newPosition,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		// 4. Re-compact the positions in the source column
+		$stmt_get_source_tasks = $pdo->prepare(
+			"SELECT task_id FROM tasks WHERE column_id = :fromColumnId AND user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
+		);
+		$stmt_get_source_tasks->execute([':fromColumnId' => $fromColumnId, ':userId' => $userId]);
+		$source_tasks = $stmt_get_source_tasks->fetchAll(PDO::FETCH_COLUMN);
+		
+		$stmt_update_source_pos = $pdo->prepare("UPDATE tasks SET position = :position, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId");
+		foreach ($source_tasks as $index => $id) {
+			$stmt_update_source_pos->execute([':position' => $index, ':taskId' => $id, ':userId' => $userId]);
+		}
+		
+		$pdo->commit();
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success']);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log("Error in handle_move_task: " . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while moving the task.']);
+	}
+}
+
 
 // Modified for Soft Deletes
 /**

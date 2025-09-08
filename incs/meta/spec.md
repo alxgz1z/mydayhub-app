@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 5.9.0 
+**Version:** Beta 5.9.8 
 **Audience:** Internal Development & Project Management  
 
 ---
@@ -77,7 +77,7 @@
   [RDY] deleteAttachment (in tasks.php)
   [RDY] togglePrivacy (in tasks.php)
   [RDY] restoreItem (in tasks.php)	  
-  [FUT] moveTask
+  [RDY] moveTask
   [FUT] shareTask / revokeShare
   
   *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
@@ -104,6 +104,7 @@
   [RDY] Task Attachments UI (drop zone, gallery)
   [RDY] Bottom toolbar with filters
   [RDY] Privacy toggles
+  [RDY] Mobile 'Move Mode' for tasks
   [WIP] Settings slider panel
   [FUT] Task Notes integration (Unified Editor)
   [FUT] Sharing UI

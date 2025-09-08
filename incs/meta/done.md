@@ -806,3 +806,29 @@ Version: Beta 5.9.0
 **1** **CRITICAL - Enable CSRF Validation:** Update /api/api.php to validate the X-CSRF-TOKEN header against the session token for all mutating requests. This is a critical security step that is not yet active.
 **2** **Implement Mobile "Move Mode":** Begin the implementation of the button-based "Move Mode" for mobile users by creating the moveTask API action in /api/tasks.php, adapting the logic from the Beta 4 codebase.
 **3** **Build Out Settings Panel:** Add the first functional setting, "High-Contrast Mode," as specified in the spec. This will involve updating the UI based on a persistent user preference.
+
+---
+## Timestamp: 2025-09-07 21:38 - Security Hardening & Major UI Polish
+
+Version: Beta 5.9.8
+
+**Focus**
+To complete the CSRF security implementation by enabling server-side validation, to deliver the mobile-friendly "Move Mode" feature, and to apply a significant round of UI polish based on Beta 3 aesthetics.
+
+**Key work**
+* **Security Hardening:** Activated server-side CSRF token validation in `/api/api.php`. All `POST` requests now require a valid token, protecting against CSRF attacks.
+* **Mobile "Move Mode" (Full Stack):** Implemented the button-based system for moving tasks between columns on touch devices. This included adding the `moveTask` action to the backend and all necessary state management, UI transformations, and event handling to `tasks.js`.
+* **UI & Animation Overhaul:**
+	* Updated the global accent color to a more vibrant blue (`#3B82F6`) in `style.css`.
+	* Added a "raise" animation and shadow on task card hover in `tasks.css`.
+	* Implemented a blue focus ring for all input fields, including inline renaming, for better accessibility and visual feedback.
+	* Added a "tremor" animation to task cards when they are selected in Move Mode.
+	* Restyled the main header with the new accent color for a more prominent look.
+
+**Status**
+The application is now functionally complete regarding core task management for a single user on both desktop and mobile. All major UI polish tasks from this session are complete, and the API is significantly more secure.
+
+**Recommended next steps (priority order)**
+1.  **Build Out Settings Panel:** This is the next major feature from the spec. Begin by implementing the UI shell and the first option: the "High-Contrast Mode" toggle.
+2.  **Column Reordering (Drag & Drop):** The current button-based reordering works but is not ideal for desktop. Implement drag-and-drop for the column headers themselves.
+3.  **Begin Sharing Foundation:** Start the groundwork for task/column sharing. This would involve adding the UI controls (e.g., a "Share" button in menus) and creating the initial placeholder API actions.

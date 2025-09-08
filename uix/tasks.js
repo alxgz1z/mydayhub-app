@@ -4,11 +4,17 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.8.2
+ * @version 5.9.5
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
+// Modified for Mobile Move Mode
+let moveModeState = {
+	isActive: false,
+	taskElement: null,
+	originalFooters: new Map()
+};
 
 let filterState = {
 	showCompleted: false,
@@ -190,8 +196,10 @@ async function restoreItem(type, id) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'restoreItem',
-			type: type,
-			id: id
+			data: {
+				type: type,
+				id: id
+			}
 		});
 
 		if (result.status === 'success') {
@@ -201,7 +209,7 @@ async function restoreItem(type, id) {
 				if (columnEl) {
 					const hiddenCard = document.querySelector(`.task-card[data-task-id="${id}"][style*="display: none"]`);
 					if (hiddenCard) {
-						hiddenCard.style.display = '';
+						hiddenCard.style.display = 'flex'; // Use flex to match default display
 					} else {
 						const taskCardHTML = createTaskCard(restoredTask);
 						const columnBody = columnEl.querySelector('.column-body');
@@ -215,7 +223,7 @@ async function restoreItem(type, id) {
 				const restoredColumn = result.data;
 				const hiddenColumn = document.querySelector(`.task-column[data-column-id="${id}"][style*="display: none"]`);
 				if (hiddenColumn) {
-					hiddenColumn.style.display = '';
+					hiddenColumn.style.display = 'flex'; // Use flex to match default display
 				} else {
 					const boardContainer = document.getElementById('task-board-container');
 					const columnEl = createColumnElement(restoredColumn);
@@ -297,6 +305,21 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
+			// Modified for Mobile Move Mode
+			if (e.target.matches('.btn-move-here')) {
+				const destColumnEl = e.target.closest('.task-column');
+				if (moveModeState.isActive && destColumnEl) {
+					const destColumnId = destColumnEl.dataset.columnId;
+					const taskId = moveModeState.taskElement.dataset.taskId;
+					await moveTask(taskId, destColumnId);
+				}
+				return;
+			}
+			if (e.target.matches('.btn-cancel-move')) {
+				exitMoveMode();
+				return;
+			}
+
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
 				const taskCard = shortcut.closest('.task-card');
@@ -433,6 +456,9 @@ function initEventListeners() {
 					openNotesEditorForTask(taskCard);
 				} else if (action === 'set-due-date') {
 					await openDueDateModalForTask(taskCard);
+				// Modified for Mobile Move Mode
+				} else if (action === 'move-task') {
+					enterMoveMode(taskCard);
 				} else if (action === 'toggle-privacy') {
 					if (taskId) {
 						await togglePrivacy('task', taskId);
@@ -640,6 +666,100 @@ function initEventListeners() {
 	}
 }
 
+// Modified for Mobile Move Mode
+/**
+ * Puts the UI into "Move Mode" for a specific task.
+ * @param {HTMLElement} taskCard The task card element to be moved.
+ */
+function enterMoveMode(taskCard) {
+	if (moveModeState.isActive) {
+		exitMoveMode();
+	}
+
+	moveModeState.isActive = true;
+	moveModeState.taskElement = taskCard;
+	moveModeState.originalFooters.clear();
+
+	taskCard.classList.add('is-moving');
+
+	const allColumns = document.querySelectorAll('.task-column');
+	const sourceColumnId = taskCard.closest('.task-column').dataset.columnId;
+
+	allColumns.forEach(column => {
+		const footer = column.querySelector('.column-footer');
+		moveModeState.originalFooters.set(column, footer.innerHTML);
+
+		footer.classList.add('move-mode');
+		if (column.dataset.columnId === sourceColumnId) {
+			footer.innerHTML = '<button class="btn-cancel-move">Cancel Move</button>';
+		} else {
+			footer.innerHTML = '<button class="btn-move-here">Move Here</button>';
+		}
+	});
+}
+
+/**
+ * Exits "Move Mode" and restores the original UI.
+ */
+function exitMoveMode() {
+	if (!moveModeState.isActive) return;
+
+	if (moveModeState.taskElement) {
+		moveModeState.taskElement.classList.remove('is-moving');
+	}
+
+	moveModeState.originalFooters.forEach((html, column) => {
+		const footer = column.querySelector('.column-footer');
+		if (footer) {
+			footer.classList.remove('move-mode');
+			footer.innerHTML = html;
+		}
+	});
+	
+	moveModeState.isActive = false;
+	moveModeState.taskElement = null;
+	moveModeState.originalFooters.clear();
+}
+
+/**
+ * Persists a task move to the backend and updates the UI.
+ * @param {string} taskId The ID of the task to move.
+ * @param {string} destColumnId The ID of the destination column.
+ */
+async function moveTask(taskId, destColumnId) {
+	const taskCard = moveModeState.taskElement;
+	const sourceColumn = taskCard.closest('.task-column');
+	const destColumn = document.querySelector(`.task-column[data-column-id="${destColumnId}"]`);
+
+	exitMoveMode();
+	
+	try {
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'moveTask',
+			data: {
+				task_id: taskId,
+				to_column_id: destColumnId
+			}
+		});
+
+		if (result.status === 'success') {
+			const destColumnBody = destColumn.querySelector('.column-body');
+			destColumnBody.appendChild(taskCard);
+			sortTasksInColumn(destColumnBody);
+			updateColumnTaskCount(sourceColumn);
+			updateColumnTaskCount(destColumn);
+			showToast({ message: 'Task moved.', type: 'success' });
+		} else {
+			throw new Error(result.message);
+		}
+	} catch (error) {
+		showToast({ message: `Error moving task: ${error.message}`, type: 'error' });
+		console.error('Move task error:', error);
+		// In case of error, revert the UI by re-fetching the board state
+		fetchAndRenderBoard();
+	}
+}
 
 /**
  * Closes the filter menu if it's open.
@@ -659,8 +779,10 @@ async function saveFilterPreference(key, value) {
 		await apiFetch({
 			module: 'users',
 			action: 'saveUserPreference',
-			key: key,
-			value: value
+			data: {
+				key: key,
+				value: value
+			}
 		});
 	} catch (error) {
 		console.error('Error saving filter preference:', error);
@@ -759,8 +881,10 @@ async function saveTaskDueDate(taskId, newDate) {
 		await apiFetch({
 			module: 'tasks',
 			action: 'saveTaskDetails',
-			task_id: taskId,
-			dueDate: newDate
+			data: {
+				task_id: taskId,
+				dueDate: newDate
+			}
 		});
 		showToast({ message: 'Due date updated.', type: 'success' });
 		return true;
@@ -826,7 +950,7 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
-// Modified for Classification Popover
+// Modified for Mobile Move Mode
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -857,6 +981,12 @@ function showTaskActionsMenu(buttonEl) {
 				<line x1="3" y1="10" x2="21" y2="10"></line>
 			</svg>
 			<span>Set Due Date</span>
+		</button>
+		<button class="task-action-btn" data-action="move-task">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline>
+			</svg>
+			<span>Move Task</span>
 		</button>
 		<button class="task-action-btn" data-action="toggle-privacy">
 			${privacyIcon}
@@ -931,7 +1061,7 @@ async function duplicateTask(taskId) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'duplicateTask',
-			task_id: taskId
+			data: { task_id: taskId }
 		});
 		if (result.status === 'success') {
 			return result.data;
@@ -953,7 +1083,7 @@ async function deleteTask(taskId) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'deleteTask',
-			task_id: taskId
+			data: { task_id: taskId }
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -971,7 +1101,7 @@ async function reorderColumns(orderedColumnIds) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'reorderColumns',
-			column_ids: orderedColumnIds
+			data: { column_ids: orderedColumnIds }
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -989,7 +1119,7 @@ async function deleteColumn(columnId) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'deleteColumn',
-			column_id: columnId
+			data: { column_id: columnId }
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1007,8 +1137,10 @@ async function renameColumn(columnId, newName) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'renameColumn',
-			column_id: columnId,
-			new_name: newName
+			data: {
+				column_id: columnId,
+				new_name: newName
+			}
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1026,8 +1158,10 @@ async function renameTaskTitle(taskId, newTitle) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'renameTaskTitle',
-			task_id: taskId,
-			new_title: newTitle
+			data: {
+				task_id: taskId,
+				new_title: newTitle
+			}
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1046,8 +1180,10 @@ async function reorderTasks(columnId, tasks) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'reorderTasks',
-			column_id: columnId,
-			tasks: tasks
+			data: {
+				column_id: columnId,
+				tasks: tasks
+			}
 		});
 		if (result.status !== 'success') {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
@@ -1069,8 +1205,10 @@ async function togglePrivacy(type, id) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'togglePrivacy',
-			type: type,
-			id: id
+			data: {
+				type: type,
+				id: id
+			}
 		});
 		if (result.status === 'success') {
 			const { is_private } = result.data;
@@ -1110,7 +1248,7 @@ async function toggleTaskComplete(taskId, isComplete) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'toggleComplete',
-			task_id: taskId
+			data: { task_id: taskId }
 		});
 
 		if (result.status === 'success') {
@@ -1148,8 +1286,10 @@ async function setTaskClassification(taskId, newClassification) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'toggleClassification',
-			task_id: taskId,
-			classification: newClassification
+			data: {
+				task_id: taskId,
+				classification: newClassification
+			}
 		});
 
 		if (result.status === 'success') {
@@ -1259,7 +1399,7 @@ function showAddColumnForm() {
 				const result = await apiFetch({
 					module: 'tasks',
 					action: 'createColumn',
-					column_name: columnName
+					data: { column_name: columnName }
 				});
 
 				if (result.status === 'success') {
@@ -1294,8 +1434,10 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'createTask',
-			column_id: columnId,
-			task_title: taskTitle
+			data: {
+				column_id: columnId,
+				task_title: taskTitle
+			}
 		});
 
 		if (result.status === 'success') {
@@ -1559,7 +1701,7 @@ async function deleteAttachment(attachmentId) {
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'deleteAttachment',
-			attachment_id: attachmentId
+			data: { attachment_id: attachmentId }
 		});
 
 		if (result.status === 'success') {

@@ -5,7 +5,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
  *
- * @version 5.8.2
+ * @version 5.9.2
  * @author Alex & Gemini
  */
 
@@ -39,16 +39,22 @@ if ($method === 'GET') {
 	$module = $_GET['module'] ?? null;
 	$action = $_GET['action'] ?? null;
 } elseif ($method === 'POST') {
+	// Modified for CSRF Validation
+	// For all POST (mutating) requests, we must validate the CSRF token.
+	$csrf_token_header = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
+	if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrf_token_header)) {
+		http_response_code(403); // Forbidden
+		echo json_encode(['status' => 'error', 'message' => 'Invalid or missing CSRF token. Please refresh the page.']);
+		exit();
+	}
+
 	$contentType = $_SERVER['CONTENT_TYPE'] ?? '';
 
 	if (stripos($contentType, 'application/json') !== false) {
 		$json_data = file_get_contents('php://input');
-		$input = json_decode($json_data, true) ?: []; // Ensure $input is an array
+		$input = json_decode($json_data, true) ?: [];
 		$module = $input['module'] ?? null;
 		$action = $input['action'] ?? null;
-		
-		// Modified to handle both nested and flat JSON payloads
-		// This makes the gateway robust for both frontend calls (nested) and simple tests (flat).
 		$data = $input['data'] ?? $input;
 
 	} elseif (stripos($contentType, 'multipart/form-data') !== false) {
@@ -99,7 +105,7 @@ try {
 			break;
 	}
 } catch (Exception $e) {
-	if (defined('DEV_MODE') && DEV_MODE) {
+	if (defined('DEVMODE') && DEVMODE) {
 		error_log("API Gateway Error: " . $e->getMessage());
 	}
 	http_response_code(500);
