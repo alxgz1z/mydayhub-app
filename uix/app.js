@@ -1,22 +1,60 @@
 /**
- * MyDayHub Beta 5 - Main Application Logic
+ * MyDayHub Beta 6 - Main Application Logic
  *
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 5.6.5
+ * @version 6.0.2
  * @author Alex & Gemini
  */
+
+// Modified for Global API Fetch
+/**
+ * A global wrapper for the fetch API that automatically includes the CSRF token for mutating requests.
+ * @param {object} bodyPayload - The JSON payload to send.
+ * @returns {Promise<any>} - The JSON response from the server.
+ */
+async function apiFetch(bodyPayload = {}) {
+	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+	if (!csrfToken) {
+		// For editor save, a toast is better than an error throw
+		showToast({ message: 'CSRF token not found. Please refresh the page.', type: 'error' });
+		throw new Error('CSRF token not found.');
+	}
+
+	const headers = {
+		'Content-Type': 'application/json',
+		'X-CSRF-TOKEN': csrfToken,
+	};
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+	const response = await fetch(`${appURL}/api/api.php`, {
+		method: 'POST',
+		headers,
+		body: JSON.stringify(bodyPayload),
+	});
+
+	if (!response.ok) {
+		let errorData;
+		try {
+			errorData = await response.json();
+		} catch (e) {
+			throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
+		}
+		throw new Error(errorData.message || 'An unknown API error occurred.');
+	}
+
+	return response.json();
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
 	updateFooterDate();
 
-	// Modified for Settings Panel: Initialize the panel listeners
 	initSettingsPanel();
 
-	// For now, we only have the Tasks view.
-	// We check if the function to initialize it exists before calling it.
 	if (typeof initTasksView === 'function') {
 		initTasksView();
 	}
@@ -24,12 +62,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==========================================================================
 // --- SETTINGS PANEL ---
-// Modified for Animation Bug Fix
 // ==========================================================================
 
-/**
- * Initializes all event listeners for the settings panel.
- */
 function initSettingsPanel() {
 	const toggleBtn = document.getElementById('btn-settings-toggle');
 	const closeBtn = document.getElementById('btn-settings-close');
@@ -56,9 +90,6 @@ function initSettingsPanel() {
 	});
 }
 
-/**
- * Opens the settings panel by removing the .hidden class from its overlay.
- */
 function openSettingsPanel() {
 	const overlay = document.getElementById('settings-panel-overlay');
 	if (overlay) {
@@ -66,9 +97,6 @@ function openSettingsPanel() {
 	}
 }
 
-/**
- * Closes the settings panel by adding the .hidden class to its overlay.
- */
 function closeSettingsPanel() {
 	const overlay = document.getElementById('settings-panel-overlay');
 	if (overlay) {
@@ -79,12 +107,8 @@ function closeSettingsPanel() {
 
 // ==========================================================================
 // --- UI HELPERS ---
-// Added for dynamic date
 // ==========================================================================
 
-/**
- * Updates the date in the footer to the current date in "dd mmm yy" format.
- */
 function updateFooterDate() {
 	const dateEl = document.getElementById('footer-date');
 	if (!dateEl) return;
@@ -104,17 +128,6 @@ function updateFooterDate() {
 // --- TOAST NOTIFICATION SYSTEM ---
 // ==========================================================================
 
-/**
- * Displays a toast notification message.
- * @param {object} options - The options for the toast.
- * @param {string} options.message - The message to display.
- * @param {string} [options.type='info'] - The type of toast ('info', 'success', 'error').
- * @param {number} [options.duration=5000] - The duration in ms for the toast to be visible.
- * @param {object|null} [options.action=null] - An object for an action button.
- * @param {string} options.action.text - The text for the action button (e.g., 'Undo').
- * @param {function} options.action.callback - The function to execute on button click.
- */
-// Modified for Soft Deletes and UI Polish
 function showToast(options) {
 	const { message, type = 'info', duration = 5000, action = null } = options;
 
@@ -124,48 +137,42 @@ function showToast(options) {
 		return;
 	}
 
-	// Create toast element and its main content wrapper
 	const toast = document.createElement('div');
 	toast.className = `toast ${type}`;
 	
 	const toastContent = document.createElement('div');
 	toastContent.className = 'toast-content';
 
-	// Message
 	const messageEl = document.createElement('span');
 	messageEl.textContent = message;
 	toastContent.appendChild(messageEl);
 
-	// Action Button (if provided)
 	if (action && typeof action.callback === 'function') {
 		const actionBtn = document.createElement('button');
 		actionBtn.className = 'toast-action-btn';
 		actionBtn.textContent = action.text || 'Action';
 		actionBtn.addEventListener('click', () => {
 			action.callback();
-			removeToast(); // Close toast immediately on action
+			removeToast();
 		}, { once: true });
 		toastContent.appendChild(actionBtn);
 	}
 	
 	toast.appendChild(toastContent);
 
-	// Close Button
 	const closeBtn = document.createElement('button');
 	closeBtn.className = 'toast-close-btn';
 	closeBtn.innerHTML = '&times;';
 	closeBtn.addEventListener('click', () => removeToast(), { once: true });
 	toast.appendChild(closeBtn);
 
-	// Add to DOM and animate in
 	container.appendChild(toast);
 	setTimeout(() => toast.classList.add('visible'), 10);
 
-	// Set up removal logic
 	const timeoutId = setTimeout(() => removeToast(), duration);
 
 	function removeToast() {
-		clearTimeout(timeoutId); // Prevent multiple removals
+		clearTimeout(timeoutId);
 		toast.classList.remove('visible');
 		toast.addEventListener('transitionend', () => toast.remove());
 	}
@@ -176,11 +183,6 @@ function showToast(options) {
 // --- CONFIRMATION MODAL SYSTEM ---
 // ==========================================================================
 
-/**
- * Displays a confirmation modal and returns a Promise that resolves with the user's choice.
- * @param {string} message The confirmation message to display.
- * @returns {Promise<boolean>} A promise that resolves to `true` if confirmed, `false` otherwise.
- */
 function showConfirm(message) {
 	const modalOverlay = document.getElementById('confirm-modal-overlay');
 	const messageEl = document.getElementById('confirm-modal-message');
@@ -189,7 +191,7 @@ function showConfirm(message) {
 
 	if (!modalOverlay || !messageEl || !yesBtn || !noBtn) {
 		console.error('Confirmation modal elements not found!');
-		return Promise.resolve(false); // Fails safely
+		return Promise.resolve(false);
 	}
 
 	messageEl.textContent = message;
@@ -206,14 +208,11 @@ function showConfirm(message) {
 			resolve(false);
 		};
 		
-		// Use { once: true } to automatically remove listeners after they fire once.
 		yesBtn.addEventListener('click', handleYes, { once: true });
 		noBtn.addEventListener('click', handleNo, { once: true });
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
-			// Although {once: true} handles the fired event, we still remove the other one
-			// in case the modal is closed via other means in the future.
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
 		}
@@ -225,13 +224,6 @@ function showConfirm(message) {
 // --- DATE PICKER MODAL SYSTEM ---
 // ==========================================================================
 
-/**
- * Displays a date picker modal.
- * @param {string} [currentDate=''] The current date in YYYY-MM-DD format.
- * @returns {Promise<string|null>} A promise that resolves to the new date string (YYYY-MM-DD),
- * an empty string if cleared, or null if canceled.
- */
-// Modified for Double Toast Bug
 function showDueDateModal(currentDate = '') {
 	const modalOverlay = document.getElementById('date-modal-overlay');
 	const input = document.getElementById('date-modal-input');
@@ -241,7 +233,7 @@ function showDueDateModal(currentDate = '') {
 
 	if (!modalOverlay || !input || !saveBtn || !removeBtn || !cancelBtn) {
 		console.error('Date modal elements not found!');
-		return Promise.resolve(null); // Fails safely
+		return Promise.resolve(null);
 	}
 
 	input.value = currentDate;
@@ -269,7 +261,6 @@ function showDueDateModal(currentDate = '') {
 			if (e.key === 'Escape') handleCancel();
 		};
 
-		// Add listeners
 		saveBtn.addEventListener('click', handleSave);
 		removeBtn.addEventListener('click', handleRemove);
 		cancelBtn.addEventListener('click', handleCancel);
@@ -278,7 +269,6 @@ function showDueDateModal(currentDate = '') {
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
-			// Remove all listeners to prevent duplicates on next open
 			saveBtn.removeEventListener('click', handleSave);
 			removeBtn.removeEventListener('click', handleRemove);
 			cancelBtn.removeEventListener('click', handleCancel);

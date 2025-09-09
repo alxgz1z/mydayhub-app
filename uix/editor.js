@@ -1,16 +1,10 @@
 /**
- * MyDayHub Beta 5 - Unified Note Editor
+ * MyDayHub Beta 6 - Unified Note Editor
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 5.1.2
+ * @version 6.0.4
  * @author Alex & Gemini
- *
- * Public API:
- * window.UnifiedEditor.open({ id, kind, title, content, updatedAt, fontSize })
- * window.UnifiedEditor.close()
- *
- * This module is self-contained and handles its own visibility.
  */
 
 (function() {
@@ -60,9 +54,11 @@
 	}
 
 	function markAsDirtyAndQueueSave() {
-		state.isDirty = true;
+		if (!state.isDirty) {
+			state.isDirty = true;
+			elements.saveStatus.textContent = 'Unsaved changes...';
+		}
 		updateStats();
-		elements.saveStatus.textContent = 'Unsaved changes...';
 		clearTimeout(autosaveTimer);
 		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
 	}
@@ -93,20 +89,14 @@
 
 	async function saveFontSizePreference(size) {
 		try {
-			const appURL = window.MyDayHub_Config?.appURL || '';
-			const response = await fetch(`${appURL}/api/api.php`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					module: 'users',
-					action: 'saveUserPreference',
-					data: {
-						key: 'editor_font_size',
-						value: size
-					}
-				})
+			const result = await apiFetch({
+				module: 'users',
+				action: 'saveUserPreference',
+				data: {
+					key: 'editor_font_size',
+					value: size
+				}
 			});
-			const result = await response.json();
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save font size.');
 			}
@@ -116,7 +106,6 @@
 			}
 		} catch (error) {
 			console.error('Save font size error:', error);
-			showToast('Could not save font size preference.', 'error');
 		}
 	}
 
@@ -132,7 +121,6 @@
 		}
 	}
 	
-	// Modified for "Clear Note" feature: Added async and confirmation dialog.
 	async function handleFormatAction(e) {
 		const button = e.currentTarget;
 		const action = button.dataset.action;
@@ -182,7 +170,6 @@
 			case 'calculate':
 				if (!selectedText) return;
 				try {
-					// Use math.js for safer evaluation
 					newText = `${selectedText} = ${math.evaluate(selectedText)}`;
 				} catch (err) {
 					newText = selectedText;
@@ -225,21 +212,15 @@
 		elements.saveStatus.textContent = 'Saving...';
 		
 		try {
-			const appURL = window.MyDayHub_Config?.appURL || '';
-			const response = await fetch(`${appURL}/api/api.php`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					module: 'tasks',
-					action: 'saveTaskDetails',
-					data: {
-						task_id: state.currentTaskId,
-						notes: elements.textarea.value
-					}
-				})
+			const result = await apiFetch({
+				module: 'tasks',
+				action: 'saveTaskDetails',
+				data: {
+					task_id: state.currentTaskId,
+					notes: elements.textarea.value
+				}
 			});
-
-			const result = await response.json();
+			
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save notes.');
 			}
@@ -267,29 +248,36 @@
 		} catch (error) {
 			console.error('Save error:', error);
 			elements.saveStatus.textContent = 'Save failed!';
-			showToast(error.message, 'error');
+			showToast({ message: error.message, type: 'error' });
 			return false;
 		}
 	}
 
+	// Modified for Editor Save Bug Fix
 	function open(options = {}) {
-		const { id, kind = 'task', title = 'Edit Note', content = '', updatedAt, fontSize } = options;
+		const { id, kind = 'task', title = 'Edit Note', content = '', originalContent, updatedAt, fontSize } = options;
 		
 		state.currentTaskId = id;
 		state.fontSize = fontSize || 16;
-
+		
 		elements.title.textContent = title;
 		elements.textarea.value = content;
 		elements.textarea.style.fontSize = `${state.fontSize}px`;
-
+		
 		elements.overlay.classList.remove('hidden');
-
+		
 		elements.textarea.focus();
 		updateStats();
 		state.isOpen = true;
-		state.isDirty = false;
-		
-		if (updatedAt) {
+
+		// If originalContent is provided and differs from the display content,
+		// the editor is dirty from the start.
+		const isPreDirty = (originalContent !== undefined && content !== originalContent);
+		state.isDirty = isPreDirty;
+
+		if (isPreDirty) {
+			elements.saveStatus.textContent = 'Unsaved changes...';
+		} else if (updatedAt) {
 			const savedDate = new Date(updatedAt.replace(' ', 'T') + 'Z'); 
 			elements.saveStatus.textContent = `Last saved: ${savedDate.toLocaleString()}`;
 		} else {

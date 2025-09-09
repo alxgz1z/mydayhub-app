@@ -833,6 +833,8 @@ The application is now functionally complete regarding core task management for 
 2.  **Column Reordering (Drag & Drop):** The current button-based reordering works but is not ideal for desktop. Implement drag-and-drop for the column headers themselves.
 3.  **Begin Sharing Foundation:** Start the groundwork for task/column sharing. This would involve adding the UI controls (e.g., a "Share" button in menus) and creating the initial placeholder API actions.
 
+---
+
 # Timestamp: 2025-09-08 21:16 - Major UX Feature: Quick Notes Card Flip
 
 Version: Beta 5.9.9
@@ -853,3 +855,25 @@ Version: Beta 5.9.9
 **2** **Column Reordering (Drag & Drop):** The current button-based reordering works but is not ideal for desktop. Implement drag-and-drop for the column headers themselves.
 **3** **Begin Sharing Foundation:** Start the groundwork for task/column sharing. This would involve adding the UI controls (e.g., a "Share" button in menus) and creating the initial placeholder API actions.
 
+---
+
+# Timestamp: 2025-09-08 23:23 - Bug Fixes: Quick Notes UI & Editor Save Logic
+
+Version: Beta 6.0.4
+**Focus** To resolve a series of critical bugs and UI regressions introduced with the new "Quick Notes" card flip feature. The primary goals were to fix a fatal save error in the Unified Editor, correct a broken layout on the back of task cards, and ensure data consistency between the quick note and full editor modes.
+**Key work**
+* **Critical Save Fix (**editor.js**,** app.js**):**
+  * Diagnosed a CSRF token error preventing saves from the Unified Editor.
+  * Resolved this by promoting the secure apiFetch() function to a global utility in app.js and refactoring editor.js to use it, ensuring all API calls are now secure.
+* **Quick Notes UI Overhaul (**tasks.css**):**
+  * Completely redesigned the layout on the back of the task card to use a more stable vertical button stack, addressing severe alignment and element distortion issues.
+  * Fixed a mobile Safari rendering bug where content from the front of the card was visible on the back.
+* **Data Consistency Fix (**tasks.js**):**
+  * Corrected a bug where unsaved text from the quick notes textarea was lost when clicking the "Expand" button. The live text is now correctly passed to the full Unified Editor.
+
+⠀**Status** The application's core save functionality has been restored, and major rendering/data-loss bugs have been fixed. However, the Quick Notes UI still has significant aesthetic issues and a few remaining functional bugs that need to be addressed.
+**Recommended next steps (priority order)**
+**1** **Fix Quick Notes UI:** The current layout is still misaligned. The immediate next step is to refine the CSS for .task-card-back to properly align the vertical buttons with the textarea, ensuring a polished look on both desktop and mobile.
+**2** **Investigate Missing "Save" Toast:** The toast notification for a successful save from the quick notes editor is not appearing. This needs to be debugged.
+**3** **Fix Column Scrollbar:** Diagnose and fix the CSS issue causing an unnecessary horizontal scrollbar to appear on the last column of the board.
+**4** **Re-verify Editor Save Logic:** The user reported that saving from the expanded editor (after writing in the quick note) still fails. This indicates the "dirty" state logic in editor.js needs further review to ensure it correctly identifies changes passed from the quick note view.

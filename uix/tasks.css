@@ -1,4 +1,4 @@
-/* MyDayHub Beta 5 - Tasks View Specific Styles */
+/* MyDayHub Beta 6 - Tasks View Specific Styles */
 
 /* ==========================================================================
    1. TASK BOARD LAYOUT
@@ -11,7 +11,7 @@
 	overflow-x: auto; /* Allow horizontal scrolling */
 	height: 100%;
 	padding-bottom: 1rem; /* Ensure cards have space at the bottom */
-	perspective: 1000px; /* Modified for Quick Notes Feature */
+	perspective: 1000px;
 }
 
 /* ==========================================================================
@@ -27,8 +27,8 @@
 	display: flex;
 	flex-direction: column;
 	max-height: 100%;
-	position: relative; /* Modified for Privacy Feature */
-	overflow: hidden;   /* Modified for Privacy Feature */
+	position: relative;
+	overflow: hidden;
 }
 
 .column-header {
@@ -77,7 +77,7 @@
 }
 
 .btn-delete-column,
-.btn-toggle-column-privacy { /* Modified for Privacy Feature */
+.btn-toggle-column-privacy {
 	background: transparent;
 	border: none;
 	padding: 2px;
@@ -86,7 +86,7 @@
 }
 
 .btn-delete-column svg,
-.btn-toggle-column-privacy svg { /* Modified for Privacy Feature */
+.btn-toggle-column-privacy svg {
 	stroke: var(--text-secondary);
 	transition: stroke 0.2s ease-in-out;
 }
@@ -95,7 +95,7 @@
 	stroke: #e57373; /* A soft red for hover */
 }
 
-.btn-toggle-column-privacy:hover svg { /* Modified for Privacy Feature */
+.btn-toggle-column-privacy:hover svg {
 	stroke: var(--accent-color);
 }
 
@@ -119,7 +119,6 @@
 	border-top: 1px solid var(--border-color);
 }
 
-/* Modified for UI Polish */
 .column-footer input,
 .inline-edit-input {
 	width: 100%;
@@ -132,7 +131,6 @@
 	transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
 
-/* Modified for UI Polish */
 .column-footer input:focus,
 .inline-edit-input:focus {
 	outline: none;
@@ -154,16 +152,20 @@
    3. TASK CARD STYLES
    ========================================================================== */
 
-/* Modified for Quick Notes Feature */
 .task-card {
-	background-color: transparent; /* The card itself is now a container */
+	background-color: transparent;
 	border: none;
 	padding: 0;
 	margin-bottom: 0.5rem;
-	min-height: 60px; /* Ensure card has a minimum height for flipping */
+	min-height: 60px;
+	position: relative;
+	transition: min-height 0.3s ease-in-out;
 }
 
-/* Modified for Quick Notes Feature */
+.task-card.is-flipped {
+	min-height: 120px;
+}
+
 .task-card-inner {
 	position: relative;
 	width: 100%;
@@ -174,37 +176,52 @@
 	box-shadow: 0 1px 3px rgba(0,0,0,0.2);
 }
 
-/* Modified for Quick Notes Feature */
 .task-card.is-flipped .task-card-inner {
 	transform: rotateY(180deg);
 }
 
-/* Modified for Quick Notes Feature */
 .task-card-front,
 .task-card-back {
-	position: absolute;
 	width: 100%;
 	height: 100%;
-	-webkit-backface-visibility: hidden; /* Safari */
+	-webkit-backface-visibility: hidden;
 	backface-visibility: hidden;
-	display: flex;
-	flex-direction: column;
 	background-color: var(--bg-color);
 	border: 1px solid var(--border-color);
 	border-radius: 6px;
-	overflow: hidden;
-}
-
-/* Modified for Quick Notes Feature */
-.task-card-back {
-	transform: rotateY(180deg);
-	padding: 0.75rem;
 	box-sizing: border-box;
-	justify-content: space-between;
+	/* Modified for Mobile Safari Bug Fix */
+	transform: translateZ(0); /* Force GPU layer for better rendering */
+}
+
+.task-card-front {
+	display: flex;
+	flex-direction: column;
+	padding: 0.75rem;
+	pointer-events: auto;
+}
+
+.task-card-back {
+	position: absolute;
+	top: 0;
+	left: 0;
+	transform: rotateY(180deg);
+	display: flex;
+	/* Modified for Quick Notes UI Rework */
+	padding: 0.5rem;
+	gap: 0.5rem;
+	align-items: stretch; /* Make children fill height */
+	pointer-events: none;
+}
+
+.task-card.is-flipped .task-card-front {
+	pointer-events: none;
+}
+.task-card.is-flipped .task-card-back {
+	pointer-events: auto;
 }
 
 
-/* Modified for UI Polish */
 .task-card:hover .task-card-inner {
 	transform: translateY(-2px);
 	box-shadow: 0 4px 10px rgba(0,0,0,0.2);
@@ -212,12 +229,6 @@
 .task-card.is-flipped:hover .task-card-inner {
 	transform: rotateY(180deg) translateY(-2px);
 }
-
-
-.task-card-content {
-	padding: 0.75rem;
-}
-
 
 .task-card-main {
 	display: flex;
@@ -585,31 +596,33 @@
 /* ==========================================================================
    10. QUICK NOTES (BACK OF CARD) STYLES
    ========================================================================== */
-/* Modified for Quick Notes Feature */
 
+/* Modified for Quick Notes UI Rework */
 .quick-note-textarea {
 	flex-grow: 1;
 	width: 100%;
-	background-color: transparent;
-	border: none;
+	background-color: rgba(255, 255, 255, 0.05);
+	border: 1px solid var(--border-color);
 	color: var(--text-primary);
 	font-family: inherit;
 	font-size: 0.9rem;
+	line-height: 1.5;
 	resize: none;
-	padding: 0.25rem;
+	padding: 0.5rem;
 	box-sizing: border-box;
-	margin-bottom: 0.5rem;
+	border-radius: 4px;
 }
 
 .quick-note-textarea:focus {
 	outline: none;
-	background-color: rgba(255, 255, 255, 0.05);
-	border-radius: 4px;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .quick-note-controls {
 	display: flex;
-	justify-content: flex-end;
+	flex-direction: column;
+	justify-content: space-between;
 	align-items: center;
 	gap: 0.5rem;
 	flex-shrink: 0;
@@ -621,12 +634,17 @@
 	color: var(--text-secondary);
 	border-radius: 4px;
 	cursor: pointer;
-	width: 32px;
-	height: 32px;
+	width: 34px;
+	height: 34px;
 	display: flex;
 	align-items: center;
 	justify-content: center;
 	transition: background-color 0.2s, color 0.2s;
+}
+
+.btn-quick-note svg {
+	width: 18px;
+	height: 18px;
 }
 
 .btn-quick-note:hover {
@@ -635,10 +653,10 @@
 }
 
 .btn-quick-note.save {
-	background-color: var(--accent-color);
-	color: var(--bg-color);
+	background-color: var(--btn-success-bg);
+	color: #fff;
 }
 
 .btn-quick-note.save:hover {
-	background-color: #a3c9ff;
+	background-color: var(--btn-success-hover-bg);
 }

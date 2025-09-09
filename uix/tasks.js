@@ -1,15 +1,14 @@
 /**
- * MyDayHub Beta 5 - Tasks View Module
+ * MyDayHub Beta 6 - Tasks View Module
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.9.9
+ * @version 6.0.4
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
-// Modified for Mobile Move Mode
 let moveModeState = {
 	isActive: false,
 	taskElement: null,
@@ -28,44 +27,6 @@ let isImageViewerOpen = false;
 let isModalOpening = false; 
 
 let isActionRunning = false;
-
-// Modified for Classification Popover - Centralized and secure API fetch function
-/**
- * A wrapper for the fetch API that automatically includes the CSRF token for mutating requests.
- * @param {object} bodyPayload - The JSON payload to send.
- * @returns {Promise<any>} - The JSON response from the server.
- */
-async function apiFetch(bodyPayload = {}) {
-	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-	if (!csrfToken) {
-		throw new Error('CSRF token not found. Please refresh the page.');
-	}
-
-	const headers = {
-		'Content-Type': 'application/json',
-		'X-CSRF-TOKEN': csrfToken,
-	};
-
-	const appURL = window.MyDayHub_Config?.appURL || '';
-	const response = await fetch(`${appURL}/api/api.php`, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify(bodyPayload),
-	});
-
-	if (!response.ok) {
-		let errorData;
-		try {
-			errorData = await response.json();
-		} catch (e) {
-			throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
-		}
-		throw new Error(errorData.message || 'An unknown API error occurred.');
-	}
-
-	return response.json();
-}
-
 
 /**
  * Helper to format YYY-MM-DD to MM/DD.
@@ -115,7 +76,6 @@ function rerenderTaskCard(taskCard) {
 
 	const taskData = getTaskDataFromElement(taskCard);
 	const newCardHTML = createTaskCard(taskData);
-	// Modified for Quick Notes Feature - Create a temporary parent to parse the new HTML
 	const tempDiv = document.createElement('div');
 	tempDiv.innerHTML = newCardHTML;
 	const finalCard = tempDiv.firstElementChild;
@@ -142,11 +102,17 @@ function handleNoteSaved(e) {
 
 /**
  * Opens the Unified Editor for a given task card.
+ * @param {HTMLElement} taskCard - The task card element.
+ * @param {string|null} liveContent - Optional live content from an editor.
  */
-function openNotesEditorForTask(taskCard) {
+// Modified for Editor Save Bug Fix
+function openNotesEditorForTask(taskCard, liveContent = null) {
 	if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
 		const taskId = taskCard.dataset.taskId;
-		const notes = decodeURIComponent(taskCard.dataset.notes || '');
+		
+		const originalNotes = decodeURIComponent(taskCard.dataset.notes || '');
+		const displayNotes = (liveContent !== null) ? liveContent : originalNotes;
+
 		const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
 		const updatedAt = taskCard.dataset.updatedAt;
 
@@ -157,7 +123,8 @@ function openNotesEditorForTask(taskCard) {
 			id: taskId,
 			kind: 'task',
 			title: `Note: ${title}`,
-			content: notes,
+			content: displayNotes,
+			originalContent: originalNotes,
 			updatedAt: updatedAt,
 			fontSize: parseInt(savedFontSize, 10)
 		});
@@ -166,7 +133,6 @@ function openNotesEditorForTask(taskCard) {
 	}
 }
 
-// Modified for Quick Notes Feature
 /**
  * Toggles the flip state of a task card.
  * @param {HTMLElement} taskCard The .task-card element.
@@ -174,24 +140,19 @@ function openNotesEditorForTask(taskCard) {
  */
 function toggleCardFlip(taskCard, forceFlip = null) {
 	if (!taskCard) return;
-	const inner = taskCard.querySelector('.task-card-inner');
-	if (!inner) return;
 
 	const notes = decodeURIComponent(taskCard.dataset.notes || '');
-	const textarea = inner.querySelector('.quick-note-textarea');
+	const textarea = taskCard.querySelector('.quick-note-textarea');
 	
-	const isFlipped = inner.classList.contains('is-flipped');
+	const isFlipped = taskCard.classList.contains('is-flipped');
 	const shouldFlip = forceFlip !== null ? forceFlip : !isFlipped;
 
 	if (shouldFlip && !isFlipped) {
-		// Flipping to back
 		textarea.value = notes;
-		inner.classList.add('is-flipped');
-		// Defer focus until transition is complete to avoid visual glitches
+		taskCard.classList.add('is-flipped');
 		setTimeout(() => textarea.focus(), 300); 
 	} else if (!shouldFlip && isFlipped) {
-		// Flipping to front
-		inner.classList.remove('is-flipped');
+		taskCard.classList.remove('is-flipped');
 	}
 }
 
@@ -241,10 +202,9 @@ async function restoreItem(type, id) {
 				if (columnEl) {
 					const hiddenCard = document.querySelector(`.task-card[data-task-id="${id}"][style*="display: none"]`);
 					if (hiddenCard) {
-						hiddenCard.style.display = 'flex'; // Use flex to match default display
+						hiddenCard.style.display = 'block';
 					} else {
 						const taskCardHTML = createTaskCard(restoredTask);
-						// Modified for Quick Notes Feature
 						const tempDiv = document.createElement('div');
 						tempDiv.innerHTML = taskCardHTML;
 						const newCard = tempDiv.firstElementChild;
@@ -259,7 +219,7 @@ async function restoreItem(type, id) {
 				const restoredColumn = result.data;
 				const hiddenColumn = document.querySelector(`.task-column[data-column-id="${id}"][style*="display: none"]`);
 				if (hiddenColumn) {
-					hiddenColumn.style.display = 'flex'; // Use flex to match default display
+					hiddenColumn.style.display = 'flex';
 				} else {
 					const boardContainer = document.getElementById('task-board-container');
 					const columnEl = createColumnElement(restoredColumn);
@@ -340,7 +300,6 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
-			// Modified for Quick Notes Feature
 			const quickNoteButton = e.target.closest('.btn-quick-note');
 			if (quickNoteButton) {
 				const taskCard = quickNoteButton.closest('.task-card');
@@ -349,19 +308,27 @@ function initEventListeners() {
 				if (action === 'cancel') {
 					toggleCardFlip(taskCard, false);
 				} else if (action === 'expand') {
-					toggleCardFlip(taskCard, false);
-					openNotesEditorForTask(taskCard);
-				} else if (action === 'save') {
+					// Modified for Editor Save Bug Fix
 					const textarea = taskCard.querySelector('.quick-note-textarea');
-					const newNotes = textarea.value;
-					const taskId = taskCard.dataset.taskId;
-					
-					const success = await saveTaskDetails(taskId, newNotes);
-					if (success) {
-						taskCard.dataset.notes = encodeURIComponent(newNotes);
-						taskCard.dataset.hasNotes = newNotes.trim() !== '';
-						toggleCardFlip(taskCard, false);
-						rerenderTaskCard(taskCard); // Re-render to update the notes indicator
+					openNotesEditorForTask(taskCard, textarea.value);
+					toggleCardFlip(taskCard, false);
+				} else if (action === 'save') {
+					if (isActionRunning) return;
+					isActionRunning = true;
+					try {
+						const textarea = taskCard.querySelector('.quick-note-textarea');
+						const newNotes = textarea.value;
+						const taskId = taskCard.dataset.taskId;
+						
+						const success = await saveTaskDetails(taskId, newNotes);
+						if (success) {
+							taskCard.dataset.notes = encodeURIComponent(newNotes);
+							taskCard.dataset.hasNotes = newNotes.trim() !== '';
+							toggleCardFlip(taskCard, false);
+							rerenderTaskCard(taskCard);
+						}
+					} finally {
+						isActionRunning = false;
 					}
 				}
 				return;
@@ -484,7 +451,7 @@ function initEventListeners() {
 
 				updateMoveButtonVisibility();
 
-				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
+				const orderedColumnIds = Array.from(container.querySelectorAll('.task-column:not([style*="display: none"])')).map(col => col.dataset.columnId);
 				const success = await reorderColumns(orderedColumnIds);
 				if (!success) {
 					showToast({ message: 'Error: Could not save new column order.', type: 'error' });
@@ -518,7 +485,6 @@ function initEventListeners() {
 		
 				closeAllTaskActionMenus();
 		
-				// Modified for Quick Notes Feature
 				if (action === 'edit-notes') {
 					const notes = decodeURIComponent(taskCard.dataset.notes || '');
 					if (notes.length > 250) {
@@ -568,7 +534,6 @@ function initEventListeners() {
 						if (newTaskData) {
 							const columnBody = columnEl.querySelector('.column-body');
 							const newTaskCardHTML = createTaskCard(newTaskData);
-							// Modified for Quick Notes Feature
 							const tempDiv = document.createElement('div');
 							tempDiv.innerHTML = newTaskCardHTML;
 							const newCard = tempDiv.firstElementChild;
@@ -937,7 +902,7 @@ function applyAllFilters() {
 			shouldBeVisible = false;
 		}
 
-		item.style.display = shouldBeVisible ? 'flex' : 'none';
+		item.style.display = shouldBeVisible ? 'block' : 'none';
 	});
 
 	const allColumns = document.querySelectorAll('.task-column');
@@ -969,7 +934,6 @@ async function saveTaskDueDate(taskId, newDate) {
 	}
 }
 
-// Modified for Quick Notes Feature
 /**
  * Saves just the notes for a task.
  * @param {string} taskId The ID of the task.
@@ -1539,7 +1503,6 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 				placeholder.remove();
 			}
 			const newTaskCardHTML = createTaskCard(result.data);
-			// Modified for Quick Notes Feature
 			const tempDiv = document.createElement('div');
 			tempDiv.innerHTML = newTaskCardHTML;
 			const newCard = tempDiv.firstElementChild;
@@ -1691,7 +1654,7 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
-// Modified for Quick Notes Feature
+// Modified for Quick Notes UI Rework
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
@@ -1777,29 +1740,27 @@ function createTaskCard(taskData) {
 			draggable="true">
 			<div class="task-card-inner">
 				<div class="task-card-front ${isPrivate ? 'private' : ''}">
-					<div class="task-card-content">
-						<div class="task-card-main">
-							<div class="task-status-band"></div>
-							<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
-							<span class="task-title">${taskTitle}</span>
-							<button class="btn-task-actions" title="Task Actions">&vellip;</button>
-						</div>
-						${footerHTML}
+					<div class="task-card-main">
+						<div class="task-status-band"></div>
+						<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
+						<span class="task-title">${taskTitle}</span>
+						<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 					</div>
+					${footerHTML}
 				</div>
 				<div class="task-card-back">
-					<textarea class="quick-note-textarea" placeholder="Add a quick note..."></textarea>
 					<div class="quick-note-controls">
 						<button class="btn-quick-note" data-action="cancel" title="Cancel">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
 						</button>
 						<button class="btn-quick-note" data-action="expand" title="Expand Editor">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
 						</button>
 						<button class="btn-quick-note save" data-action="save" title="Save Note">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
 						</button>
 					</div>
+					<textarea class="quick-note-textarea" placeholder="Add a quick note..."></textarea>
 				</div>
 			</div>
 		</div>
@@ -1821,7 +1782,6 @@ async function deleteAttachment(attachmentId) {
 
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			// Modified for Final Bug Fix
 			const newStorageUsed = result.data ? result.data.user_storage_used : null;
 			return { user_storage_used: newStorageUsed };
 		} else {
@@ -1900,9 +1860,8 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
  * Updates the UI for the storage quota bar and text.
  */
 function updateStorageBar(usedBytes, quotaBytes) {
-	// Modified for Final Bug Fix - Defensive check for valid number
 	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
-		return; // Do not update if the value is invalid
+		return;
 	}
 
 	const progressBar = document.getElementById('attachment-quota-bar');
@@ -1922,7 +1881,6 @@ function updateStorageBar(usedBytes, quotaBytes) {
  * Opens the attachments modal and populates it with data for a given task.
  */
 async function openAttachmentsModal(taskId, taskTitle) {
-	// Modified for Double Toast Bug
 	if (isModalOpening) return;
 	isModalOpening = true;
 
@@ -2037,8 +1995,6 @@ async function openAttachmentsModal(taskId, taskTitle) {
 				if (confirmed) {
 					const result = await deleteAttachment(attachmentId);
 					if (result) {
-						// Modified for Final Bug Fix
-						// We need to re-fetch storage used as the result is now partial
 						const boardDataResponse = await fetch(`${window.MyDayHub_Config?.appURL || ''}/api/api.php?module=tasks&action=getAll`);
 						const boardDataResult = await boardDataResponse.json();
 						if (boardDataResult.status === 'success' && boardDataResult.data.user_storage) {
