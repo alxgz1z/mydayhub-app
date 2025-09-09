@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 5.9.5
+ * @version 5.9.9
  * @author Alex & Gemini
  */
 
@@ -115,9 +115,11 @@ function rerenderTaskCard(taskCard) {
 
 	const taskData = getTaskDataFromElement(taskCard);
 	const newCardHTML = createTaskCard(taskData);
-	const newCardEl = document.createElement('div');
-	newCardEl.innerHTML = newCardHTML;
-	const finalCard = newCardEl.firstElementChild;
+	// Modified for Quick Notes Feature - Create a temporary parent to parse the new HTML
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = newCardHTML;
+	const finalCard = tempDiv.firstElementChild;
+
 	taskCard.replaceWith(finalCard);
 	
 	if (columnBody) {
@@ -163,6 +165,36 @@ function openNotesEditorForTask(taskCard) {
 		showToast({ message: 'Editor component is not available.', type: 'error' });
 	}
 }
+
+// Modified for Quick Notes Feature
+/**
+ * Toggles the flip state of a task card.
+ * @param {HTMLElement} taskCard The .task-card element.
+ * @param {boolean} [forceFlip=null] Force a flip state (true=flipped, false=front).
+ */
+function toggleCardFlip(taskCard, forceFlip = null) {
+	if (!taskCard) return;
+	const inner = taskCard.querySelector('.task-card-inner');
+	if (!inner) return;
+
+	const notes = decodeURIComponent(taskCard.dataset.notes || '');
+	const textarea = inner.querySelector('.quick-note-textarea');
+	
+	const isFlipped = inner.classList.contains('is-flipped');
+	const shouldFlip = forceFlip !== null ? forceFlip : !isFlipped;
+
+	if (shouldFlip && !isFlipped) {
+		// Flipping to back
+		textarea.value = notes;
+		inner.classList.add('is-flipped');
+		// Defer focus until transition is complete to avoid visual glitches
+		setTimeout(() => textarea.focus(), 300); 
+	} else if (!shouldFlip && isFlipped) {
+		// Flipping to front
+		inner.classList.remove('is-flipped');
+	}
+}
+
 
 /**
  * Opens the Due Date modal for a given task card and handles the result.
@@ -212,8 +244,12 @@ async function restoreItem(type, id) {
 						hiddenCard.style.display = 'flex'; // Use flex to match default display
 					} else {
 						const taskCardHTML = createTaskCard(restoredTask);
+						// Modified for Quick Notes Feature
+						const tempDiv = document.createElement('div');
+						tempDiv.innerHTML = taskCardHTML;
+						const newCard = tempDiv.firstElementChild;
 						const columnBody = columnEl.querySelector('.column-body');
-						columnBody.insertAdjacentHTML('beforeend', taskCardHTML);
+						columnBody.appendChild(newCard);
 					}
 					const columnBody = columnEl.querySelector('.column-body');
 					sortTasksInColumn(columnBody);
@@ -247,7 +283,6 @@ async function restoreItem(type, id) {
  */
 function initEventListeners() {
 	document.addEventListener('click', (e) => {
-		// Modified for Classification Popover
 		if (e.target.closest('#classification-popover') === null && e.target.closest('.task-status-band') === null) {
 			closeClassificationPopover();
 		}
@@ -305,7 +340,34 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
-			// Modified for Mobile Move Mode
+			// Modified for Quick Notes Feature
+			const quickNoteButton = e.target.closest('.btn-quick-note');
+			if (quickNoteButton) {
+				const taskCard = quickNoteButton.closest('.task-card');
+				const action = quickNoteButton.dataset.action;
+				
+				if (action === 'cancel') {
+					toggleCardFlip(taskCard, false);
+				} else if (action === 'expand') {
+					toggleCardFlip(taskCard, false);
+					openNotesEditorForTask(taskCard);
+				} else if (action === 'save') {
+					const textarea = taskCard.querySelector('.quick-note-textarea');
+					const newNotes = textarea.value;
+					const taskId = taskCard.dataset.taskId;
+					
+					const success = await saveTaskDetails(taskId, newNotes);
+					if (success) {
+						taskCard.dataset.notes = encodeURIComponent(newNotes);
+						taskCard.dataset.hasNotes = newNotes.trim() !== '';
+						toggleCardFlip(taskCard, false);
+						rerenderTaskCard(taskCard); // Re-render to update the notes indicator
+					}
+				}
+				return;
+			}
+
+
 			if (e.target.matches('.btn-move-here')) {
 				const destColumnEl = e.target.closest('.task-column');
 				if (moveModeState.isActive && destColumnEl) {
@@ -325,7 +387,12 @@ function initEventListeners() {
 				const taskCard = shortcut.closest('.task-card');
 				const action = shortcut.dataset.action;
 				if (action === 'open-notes') {
-					openNotesEditorForTask(taskCard);
+					const notes = decodeURIComponent(taskCard.dataset.notes || '');
+					if (notes.length > 250) {
+						openNotesEditorForTask(taskCard);
+					} else {
+						toggleCardFlip(taskCard, true);
+					}
 				} else if (action === 'open-due-date') {
 					await openDueDateModalForTask(taskCard);
 				} else if (action === 'open-attachments') {
@@ -336,7 +403,6 @@ function initEventListeners() {
 				return;
 			}
 			
-			// Modified for Classification Popover
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				showClassificationPopover(taskCard);
@@ -452,11 +518,16 @@ function initEventListeners() {
 		
 				closeAllTaskActionMenus();
 		
+				// Modified for Quick Notes Feature
 				if (action === 'edit-notes') {
-					openNotesEditorForTask(taskCard);
+					const notes = decodeURIComponent(taskCard.dataset.notes || '');
+					if (notes.length > 250) {
+						openNotesEditorForTask(taskCard);
+					} else {
+						toggleCardFlip(taskCard, true);
+					}
 				} else if (action === 'set-due-date') {
 					await openDueDateModalForTask(taskCard);
-				// Modified for Mobile Move Mode
 				} else if (action === 'move-task') {
 					enterMoveMode(taskCard);
 				} else if (action === 'toggle-privacy') {
@@ -497,7 +568,11 @@ function initEventListeners() {
 						if (newTaskData) {
 							const columnBody = columnEl.querySelector('.column-body');
 							const newTaskCardHTML = createTaskCard(newTaskData);
-							columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+							// Modified for Quick Notes Feature
+							const tempDiv = document.createElement('div');
+							tempDiv.innerHTML = newTaskCardHTML;
+							const newCard = tempDiv.firstElementChild;
+							columnBody.appendChild(newCard);
 							updateColumnTaskCount(columnEl);
 							sortTasksInColumn(columnBody);
 							showToast({ message: 'Task duplicated successfully.', type: 'success' });
@@ -666,7 +741,6 @@ function initEventListeners() {
 	}
 }
 
-// Modified for Mobile Move Mode
 /**
  * Puts the UI into "Move Mode" for a specific task.
  * @param {HTMLElement} taskCard The task card element to be moved.
@@ -895,6 +969,33 @@ async function saveTaskDueDate(taskId, newDate) {
 	}
 }
 
+// Modified for Quick Notes Feature
+/**
+ * Saves just the notes for a task.
+ * @param {string} taskId The ID of the task.
+ * @param {string} newNotes The new note content.
+ * @returns {Promise<boolean>} True on success, false on failure.
+ */
+async function saveTaskDetails(taskId, newNotes) {
+	try {
+		await apiFetch({
+			module: 'tasks',
+			action: 'saveTaskDetails',
+			data: {
+				task_id: taskId,
+				notes: newNotes
+			}
+		});
+		showToast({ message: 'Note saved.', type: 'success' });
+		return true;
+	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
+		console.error('Save note error:', error);
+		return false;
+	}
+}
+
+
 /**
  * Gets the element to drop a dragged element after.
  */
@@ -915,7 +1016,6 @@ function getDragAfterElement(container, y) {
 /**
  * Gets the numerical rank of a task card based on its classification.
  */
-// Modified for Classification Popover
 const getTaskRank = (taskEl) => {
 	const classification = taskEl.dataset.classification;
 	if (classification === 'completed') return 3;
@@ -950,7 +1050,6 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
-// Modified for Mobile Move Mode
 function showTaskActionsMenu(buttonEl) {
 	closeAllTaskActionMenus(); 
 	const taskCard = buttonEl.closest('.task-card');
@@ -1255,7 +1354,6 @@ async function toggleTaskComplete(taskId, isComplete) {
 			taskCard.classList.toggle('completed', isComplete);
 			taskCard.dataset.classification = result.data.new_classification;
 			
-			// Modified for Classification Popover
 			taskCard.classList.remove('classification-signal', 'classification-support', 'classification-backlog');
 			if (!isComplete) {
 				taskCard.classList.add(`classification-${result.data.new_classification}`);
@@ -1274,11 +1372,8 @@ async function toggleTaskComplete(taskId, isComplete) {
 	}
 }
 
-// Modified for Classification Popover
 /**
- * Sets a task's classification by calling the API and updating the UI.
- * @param {string} taskId - The ID of the task to update.
- * @param {string} newClassification - The new classification ('signal', 'support', 'backlog').
+ * Sets a task's classification to a specific value (Signal, Support, or Backlog).
  */
 async function setTaskClassification(taskId, newClassification) {
 	const taskCardEl = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
@@ -1307,7 +1402,6 @@ async function setTaskClassification(taskId, newClassification) {
 	}
 }
 
-// Modified for Classification Popover
 /**
  * Closes the classification popover if it exists.
  */
@@ -1318,10 +1412,8 @@ function closeClassificationPopover() {
 	}
 }
 
-// Modified for Classification Popover
 /**
  * Shows a popover menu to change a task's classification.
- * @param {HTMLElement} taskCard - The task card element that was clicked.
  */
 function showClassificationPopover(taskCard) {
 	closeClassificationPopover();
@@ -1447,7 +1539,11 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 				placeholder.remove();
 			}
 			const newTaskCardHTML = createTaskCard(result.data);
-			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
+			// Modified for Quick Notes Feature
+			const tempDiv = document.createElement('div');
+			tempDiv.innerHTML = newTaskCardHTML;
+			const newCard = tempDiv.firstElementChild;
+			columnBody.appendChild(newCard);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
 			showToast({ message: 'Task created.', type: 'success' });
@@ -1595,7 +1691,7 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
-// Modified for Classification Popover
+// Modified for Quick Notes Feature
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
@@ -1679,14 +1775,33 @@ function createTaskCard(taskData) {
 			data-due-date="${taskData.due_date || ''}"
 			data-attachments-count="${taskData.attachments_count || 0}"
 			draggable="true">
-			
-			<div class="task-card-main">
-				<div class="task-status-band"></div>
-				<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
-				<span class="task-title">${taskTitle}</span>
-				<button class="btn-task-actions" title="Task Actions">&vellip;</button>
+			<div class="task-card-inner">
+				<div class="task-card-front ${isPrivate ? 'private' : ''}">
+					<div class="task-card-content">
+						<div class="task-card-main">
+							<div class="task-status-band"></div>
+							<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
+							<span class="task-title">${taskTitle}</span>
+							<button class="btn-task-actions" title="Task Actions">&vellip;</button>
+						</div>
+						${footerHTML}
+					</div>
+				</div>
+				<div class="task-card-back">
+					<textarea class="quick-note-textarea" placeholder="Add a quick note..."></textarea>
+					<div class="quick-note-controls">
+						<button class="btn-quick-note" data-action="cancel" title="Cancel">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+						</button>
+						<button class="btn-quick-note" data-action="expand" title="Expand Editor">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
+						</button>
+						<button class="btn-quick-note save" data-action="save" title="Save Note">
+							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+						</button>
+					</div>
+				</div>
 			</div>
-			${footerHTML}
 		</div>
 	`;
 }
@@ -1706,7 +1821,9 @@ async function deleteAttachment(attachmentId) {
 
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			return result.data;
+			// Modified for Final Bug Fix
+			const newStorageUsed = result.data ? result.data.user_storage_used : null;
+			return { user_storage_used: newStorageUsed };
 		} else {
 			throw new Error(result.message || 'Failed to delete attachment.');
 		}
@@ -1783,8 +1900,9 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
  * Updates the UI for the storage quota bar and text.
  */
 function updateStorageBar(usedBytes, quotaBytes) {
+	// Modified for Final Bug Fix - Defensive check for valid number
 	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
-		usedBytes = 0;
+		return; // Do not update if the value is invalid
 	}
 
 	const progressBar = document.getElementById('attachment-quota-bar');
@@ -1804,6 +1922,7 @@ function updateStorageBar(usedBytes, quotaBytes) {
  * Opens the attachments modal and populates it with data for a given task.
  */
 async function openAttachmentsModal(taskId, taskTitle) {
+	// Modified for Double Toast Bug
 	if (isModalOpening) return;
 	isModalOpening = true;
 
@@ -1918,8 +2037,14 @@ async function openAttachmentsModal(taskId, taskTitle) {
 				if (confirmed) {
 					const result = await deleteAttachment(attachmentId);
 					if (result) {
-						userStorage.used = result.user_storage_used;
-						updateStorageBar(userStorage.used, userStorage.quota);
+						// Modified for Final Bug Fix
+						// We need to re-fetch storage used as the result is now partial
+						const boardDataResponse = await fetch(`${window.MyDayHub_Config?.appURL || ''}/api/api.php?module=tasks&action=getAll`);
+						const boardDataResult = await boardDataResponse.json();
+						if (boardDataResult.status === 'success' && boardDataResult.data.user_storage) {
+							userStorage.used = boardDataResult.data.user_storage.used;
+							updateStorageBar(userStorage.used, userStorage.quota);
+						}
 						await refreshAttachmentList();
 					}
 				}

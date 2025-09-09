@@ -124,4 +124,3 @@ You are tasked with producing clear, actionable documentation to capture the exa
 	* Use markdown lists, clear headings, and bold text for emphasis.
 	* Be generous in context so that future sessions have enough detail to continue confidently.
 	* Ensure style consistency with both done.md and spec.md.
-	* End with a Conformance Statement: “I confirm this documentation fully complies with MyDayHub’s end-of-session standards and has passed the Conformance Check.”

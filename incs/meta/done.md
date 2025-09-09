@@ -832,3 +832,24 @@ The application is now functionally complete regarding core task management for 
 1.  **Build Out Settings Panel:** This is the next major feature from the spec. Begin by implementing the UI shell and the first option: the "High-Contrast Mode" toggle.
 2.  **Column Reordering (Drag & Drop):** The current button-based reordering works but is not ideal for desktop. Implement drag-and-drop for the column headers themselves.
 3.  **Begin Sharing Foundation:** Start the groundwork for task/column sharing. This would involve adding the UI controls (e.g., a "Share" button in menus) and creating the initial placeholder API actions.
+
+# Timestamp: 2025-09-08 21:16 - Major UX Feature: Quick Notes Card Flip
+
+Version: Beta 5.9.9
+**Focus** To enhance the note-taking workflow by implementing a "quick notes" feature. This replaces the immediate launch of the Unified Editor for short notes with an intuitive 3D card flip animation, revealing a simple text editor on the back of the task card.
+**Key work**
+* **UI/UX Overhaul:**
+  * Re-architected the task card's structure in tasks.js and tasks.css to support a two-sided, flippable interface (.task-card-inner, .task-card-front, .task-card-back).
+  * Implemented a smooth, 3D flip animation using CSS transitions and transforms.
+* **Frontend Logic (**tasks.js**):**
+  * Created a new toggleCardFlip() function to manage the card's state.
+  * The "Edit Notes" action now intelligently checks the note length; short notes trigger the card flip, while notes over 250 characters directly open the full Unified Editor to provide more space.
+  * The back of the card features a "quick note" textarea and three functional controls: **Save**, **Cancel**, and **Expand**.
+* **API Integration:** The "Save" button on the card's back face utilizes the existing saveTaskDetails API endpoint, making the feature efficient and lightweight.
+
+⠀**Status** The Quick Notes feature is feature-complete and provides a significantly more fluid and context-aware user experience for managing short notes. The implementation is stable and has been integrated without regressing existing functionalities like drag-and-drop or mobile "Move Mode".
+**Recommended next steps (priority order)**
+**1** **Build Out Settings Panel:** This remains the next major feature from the spec. Begin by implementing the UI shell and the first option: the "High-Contrast Mode" toggle.
+**2** **Column Reordering (Drag & Drop):** The current button-based reordering works but is not ideal for desktop. Implement drag-and-drop for the column headers themselves.
+**3** **Begin Sharing Foundation:** Start the groundwork for task/column sharing. This would involve adding the UI controls (e.g., a "Share" button in menus) and creating the initial placeholder API actions.
+

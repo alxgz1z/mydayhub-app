@@ -105,8 +105,8 @@
   [RDY] Bottom toolbar with filters
   [RDY] Privacy toggles
   [RDY] Mobile 'Move Mode' for tasks
+  [WIP] Task Notes integration (Quick Notes flip UI & Unified Editor)
   [WIP] Settings slider panel
-  [FUT] Task Notes integration (Unified Editor)
   [FUT] Sharing UI
 
 ---
@@ -188,7 +188,12 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * **Status Bands:** Status Bands: Signal (green), Support (blue), Backlog (orange), Completed (gray).  
 * **Privacy & Attachments:** Icons always visible.  
 * **UX:** Shadows, hover lift, animated drag/drop.  
-* Clicking on a task's status band opens a contextual popover menu, allowing for direct selection of Signal, Support, or Backlog. This is the primary method for changing a task's classification.
+	* Clicking on a task's status band opens a contextual popover menu, allowing for direct selection of Signal, Support, or Backlog. This is the primary method for changing a task's classification.
+* **Quick Notes UI:** To streamline note-taking, tasks utilize a two-sided interface.
+	* For short notes (under 250 characters), activating the "Edit Notes" function triggers a 3D flip of the card, revealing a simple text area on the back for quick edits.
+	* Controls are provided to **Save**, **Cancel**, or **Expand** the note to the full Unified Editor.
+	* For notes longer than 250 characters, the system bypasses the flip and opens the Unified Editor directly.
+
 
 #### Attachments
 * **Methods:** File picker, drag-drop, paste.  
