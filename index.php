@@ -7,7 +7,7 @@
  *
  * @version 6.4.0
  * @author Alex & Gemini
- */
+ */ 
 
 require_once __DIR__ . '/incs/config.php';
 
