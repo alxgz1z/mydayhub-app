@@ -28,6 +28,16 @@ h1 {
 	margin-bottom: 1.5rem;
 }
 
+/* Modified for Forgot Password */
+.form-instructions {
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+	text-align: center;
+	margin-top: -1rem;
+	margin-bottom: 1.5rem;
+	line-height: 1.5;
+}
+
 .form-group {
 	margin-bottom: 1rem;
 }
@@ -78,6 +88,21 @@ input:focus {
 	color: #8ab4f8;
 	text-decoration: none;
 }
+
+/* Modified for Forgot Password */
+.auth-sub-link {
+	text-align: center;
+	margin-top: 0.75rem;
+}
+.auth-sub-link a {
+	color: #9aa0a6;
+	font-size: 0.9rem;
+	text-decoration: none;
+}
+.auth-sub-link a:hover {
+	text-decoration: underline;
+}
+
 
 /* Style for messages we will add later with JS */
 #message-container {

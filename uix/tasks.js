@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 6.1.5
+ * @version 6.3.1
  * @author Alex & Gemini
  */
 
@@ -618,7 +618,7 @@ function closeFilterMenu() {
 }
 
 /**
- * Saves a filter preference to the backend. Fire-and-forget.
+ * Saves a filter preference to the backend.
  */
 async function saveFilterPreference(key, value) {
 	try {
@@ -1279,6 +1279,7 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 }
 
 
+// Modified for High Contrast Mode
 /**
  * Fetches the complete board data from the API and initiates rendering.
  */
@@ -1313,16 +1314,28 @@ async function fetchAndRenderBoard() {
 				userStorage = result.data.user_storage;
 			}
 
-			if (userPrefs && userPrefs.editor_font_size) {
-				container.dataset.editorFontSize = userPrefs.editor_font_size;
-			}
-			
-			if (userPrefs && typeof userPrefs.filter_show_completed !== 'undefined') {
-				filterState.showCompleted = userPrefs.filter_show_completed;
-			}
-			
-			if (userPrefs && typeof userPrefs.filter_show_private !== 'undefined') {
-				filterState.showPrivate = userPrefs.filter_show_private;
+			// Apply user preferences on load
+			if (userPrefs) {
+				if (userPrefs.editor_font_size) {
+					container.dataset.editorFontSize = userPrefs.editor_font_size;
+				}
+				if (typeof userPrefs.filter_show_completed !== 'undefined') {
+					filterState.showCompleted = userPrefs.filter_show_completed;
+				}
+				if (typeof userPrefs.filter_show_private !== 'undefined') {
+					filterState.showPrivate = userPrefs.filter_show_private;
+				}
+				// Handle theme preferences
+				const highContrastToggle = document.getElementById('toggle-high-contrast');
+				const lightModeToggle = document.getElementById('toggle-light-mode');
+
+				if (userPrefs.high_contrast_mode) {
+					document.body.classList.add('high-contrast');
+					if (highContrastToggle) highContrastToggle.checked = true;
+				} else if (userPrefs.light_mode) {
+					document.body.classList.add('light-mode');
+					if (lightModeToggle) lightModeToggle.checked = true;
+				}
 			}
 
 			renderBoard(boardData);
@@ -1355,14 +1368,6 @@ function renderBoard(boardData) {
 		container.appendChild(columnEl);
 		const columnBody = columnEl.querySelector('.column-body');
 		sortTasksInColumn(columnBody);
-	});
-
-	document.querySelectorAll('.task-card').forEach(card => {
-		const inner = card.querySelector('.task-card-inner');
-		const front = card.querySelector('.task-card-front');
-		if (inner && front) {
-			inner.style.height = `${front.scrollHeight}px`;
-		}
 	});
 
 	updateMoveButtonVisibility();
@@ -1504,19 +1509,13 @@ function createTaskCard(taskData) {
 			data-due-date="${taskData.due_date || ''}"
 			data-attachments-count="${taskData.attachments_count || 0}"
 			draggable="true">
-			<div class="task-card-inner">
-				<div class="task-card-front">
-					<div class="task-card-main">
-						<div class="task-status-band"></div>
-						<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
-						<span class="task-title">${taskTitle}</span>
-						<button class="btn-task-actions" title="Task Actions">&vellip;</button>
-					</div>
-					${footerHTML}
-				</div>
-				<div class="task-card-back">
-					</div>
+			<div class="task-card-main">
+				<div class="task-status-band"></div>
+				<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
+				<span class="task-title">${taskTitle}</span>
+				<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 			</div>
+			${footerHTML}
 		</div>
 	`;
 }
@@ -1819,7 +1818,7 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			document.body.addEventListener(eventName, preventDefaults, false);
 		});
 		dropZone.addEventListener('dragenter', handleDragEnter, false);
-		dropZone.addEventListener('dragleave', handleDragLeave, false);
+		dropZone.removeEventListener('dragleave', handleDragLeave, false);
 		dropZone.addEventListener('drop', handleDrop, false);
 		document.addEventListener('paste', handlePaste, false);
 		document.addEventListener('keydown', handleEscKey, false);

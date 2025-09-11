@@ -13,16 +13,62 @@
 	--border-color: #3c4043;
 	--btn-hover-bg: rgba(255, 255, 255, 0.1);
 	--column-bg: var(--toolbar-bg);
+	--card-bg: var(--bg-color);
 	--card-border: var(--border-color);
 	--toast-success-bg: #4CAF50;
 	--toast-error-bg: #d94f46; 
 	--btn-danger-bg: #d94f46;
 	--btn-danger-hover-bg: #c53b32;
-	/* Modified for Button UI Overhaul */
 	--btn-success-bg: #34a853;
 	--btn-success-hover-bg: #2c9f47;
 	--border-color-light: #4a4d50;
 }
+
+body.high-contrast {
+	--bg-color: #000000;
+	--app-header-bg: #111111;
+	--toolbar-bg: #1a1a1a;
+	--text-primary: #ffffff;
+	--text-secondary: #cccccc;
+	--accent-color: #ffcc00; /* High-viz yellow */
+	--border-color: #666666;
+	--btn-hover-bg: #444444;
+	--card-bg: #111111;
+	--card-border: #888888;
+	--toast-success-bg: #00e676;
+	--toast-error-bg: #ff5252;
+	--btn-danger-bg: #ff5252;
+	--btn-danger-hover-bg: #ff1744;
+	--btn-success-bg: #00e676;
+	--btn-success-hover-bg: #00c853;
+	--border-color-light: #555555;
+}
+
+body.light-mode {
+	--bg-color: #f0f2f5; /* Softer grey background */
+	--app-header-bg: rgba(255, 255, 255, 0.85);
+	--toolbar-bg: #ffffff; /* White columns and toolbars */
+	--text-primary: #202124;
+	--text-secondary: #5f6368;
+	--accent-color: #1a73e8; /* Google Blue */
+	--border-color: #dee2e6; /* Softer borders */
+	--btn-hover-bg: rgba(0, 0, 0, 0.05);
+	--card-bg: #ffffff; /* White cards to match columns */
+	--card-border: #e0e0e0;
+	--toast-success-bg: #34a853;
+	--toast-error-bg: #ea4335;
+	--btn-danger-bg: #ea4335;
+	--btn-danger-hover-bg: #d93025;
+	--btn-success-bg: #34a853;
+	--btn-success-hover-bg: #2c9f47;
+	--border-color-light: #f1f3f5;
+}
+
+/* Additional overrides for light mode for better visibility */
+body.light-mode #date-modal-input::-webkit-calendar-picker-indicator {
+	filter: none;
+}
+
 
 body {
 	background-color: var(--bg-color);
@@ -32,7 +78,7 @@ body {
 	height: 100vh;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden; /* Prevent body scroll */
+	overflow: hidden;
 }
 
 /* ==========================================================================
@@ -41,12 +87,12 @@ body {
 #main-app-container {
 	display: flex;
 	flex-direction: column;
-	flex-grow: 1; /* Take up all available vertical space */
-	min-height: 0; /* Necessary for flexbox scrolling children */
+	flex-grow: 1;
+	min-height: 0;
 }
 
 #app-header {
-	flex-shrink: 0; /* Prevent header from shrinking */
+	flex-shrink: 0;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
@@ -58,20 +104,20 @@ body {
 }
 
 #main-content {
-	flex-grow: 1; /* Allow main content to fill space */
-	overflow-y: auto; /* Enable vertical scroll ONLY for the main content */
+	flex-grow: 1;
+	overflow-y: auto;
 	padding: 1rem 1.5rem;
 }
 
 #app-footer {
-	flex-shrink: 0; /* Prevent footer from shrinking */
+	flex-shrink: 0;
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
 	padding: 0.5rem 1.5rem;
 	background-color: var(--toolbar-bg);
 	border-top: 1px solid var(--border-color);
-	transition: background-color 0.3s, border-top-color 0.3s; /* Smooth transition */
+	transition: background-color 0.3s, border-top-color 0.3s;
 }
 
 /* ==========================================================================
@@ -137,7 +183,7 @@ body {
 }
 
 #app-footer.dev-mode {
-	background-color: #442c2e; /* Dark red */
+	background-color: #442c2e;
 	border-top-color: var(--toast-error-bg);
 }
 
@@ -166,7 +212,6 @@ body {
 	color: var(--text-primary);
 }
 
-/* Modified for Mobile Safari Bug Fix */
 #btn-settings-toggle {
 	cursor: pointer;
 }
@@ -179,15 +224,13 @@ body {
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
-	/* Modified for z-index fix */
-	z-index: 1500; /* Highest z-index to appear over all modals */
+	z-index: 1500;
 	display: flex;
 	flex-direction: column-reverse;
 	gap: 10px;
 	align-items: flex-end;
 }
 
-/* Modified for Soft Deletes */
 .toast {
 	display: flex;
 	align-items: center;
@@ -206,7 +249,6 @@ body {
 	transition: all 0.4s cubic-bezier(0.215, 0.610, 0.355, 1);
 }
 
-/* Modified for Soft Deletes */
 .toast-content {
 	display: flex;
 	align-items: center;
@@ -214,7 +256,6 @@ body {
 	flex-grow: 1;
 }
 
-/* Modified for Soft Deletes */
 .toast-action-btn {
 	background-color: rgba(0, 0, 0, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.3);
@@ -227,12 +268,10 @@ body {
 	transition: background-color 0.2s;
 }
 
-/* Modified for Soft Deletes */
 .toast-action-btn:hover {
 	background-color: rgba(0, 0, 0, 0.4);
 }
 
-/* Modified for Soft Deletes */
 .toast-close-btn {
 	background: none;
 	border: none;
@@ -246,7 +285,6 @@ body {
 	transition: opacity 0.2s;
 }
 
-/* Modified for Soft Deletes */
 .toast-close-btn:hover {
 	opacity: 1;
 }
@@ -339,7 +377,6 @@ body {
 	background-color: var(--btn-danger-hover-bg);
 }
 
-/* Modified for Button UI Overhaul */
 .btn.btn-success {
 	background-color: var(--btn-success-bg);
 	color: #fff;
@@ -359,7 +396,7 @@ body {
 	width: 100%;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.7);
-	z-index: 1100; /* Same as confirm modal */
+	z-index: 1100;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -515,17 +552,84 @@ input:checked + .slider:before {
 }
 
 /* ==========================================================================
-   8. UTILITY CLASSES
+   8. UTILITY & GENERIC MODAL STYLES
    ========================================================================== */
 
-/* Modified for "Click-Deaf" bug fix */
 .hidden {
 	display: none !important;
 }
 
 #confirm-modal-overlay.hidden,
-#date-modal-overlay.hidden {
+#date-modal-overlay.hidden,
+#password-modal-overlay.hidden { /* Modified for Change Password */
 	opacity: 0;
 	pointer-events: none;
 }
-/* End of modification */
+
+/* Modified for Change Password */
+#password-modal-overlay {
+	/* Re-uses confirm-modal-overlay styles */
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 1300; 
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+#password-modal-container {
+	/* Re-uses date-modal-container styles */
+	background-color: var(--toolbar-bg);
+	padding: 1.5rem 2rem;
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	border: 1px solid var(--border-color);
+	width: 100%;
+	max-width: 420px;
+	transform: scale(1);
+	transition: transform 0.2s ease-in-out;
+}
+
+#password-modal-overlay.hidden #password-modal-container {
+	transform: scale(0.95);
+}
+
+#password-modal-container h4 {
+	margin: 0 0 1.5rem 0;
+	font-size: 1.2rem;
+	font-weight: 500;
+	text-align: center;
+}
+
+#password-modal-container .form-group {
+	margin-bottom: 1rem;
+}
+#password-modal-container .form-group label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+}
+#password-modal-container .form-group input {
+	width: 100%;
+	padding: 0.75rem;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	color: var(--text-primary);
+	border-radius: 6px;
+	font-size: 1rem;
+	box-sizing: border-box;
+}
+
+#password-modal-buttons {
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+	margin-top: 1.5rem;
+}

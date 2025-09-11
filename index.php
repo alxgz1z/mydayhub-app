@@ -5,25 +5,21 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 5.8.0
+ * @version 6.4.0
  * @author Alex & Gemini
  */
 
-// Modified to include config for APP_URL
 require_once __DIR__ . '/incs/config.php';
 
-// Start a session if one is not already active.
 if (session_status() === PHP_SESSION_NONE) {
 	session_start();
 }
 
-// SECURITY: Redirect to the login page if the user is not authenticated.
 if (!isset($_SESSION['user_id'])) {
 	header('Location: ' . APP_URL . '/login/login.php');
-	exit(); // Always call exit() after a header redirect.
+	exit();
 }
 
-// Make the username available for display.
 $username = $_SESSION['username'] ?? 'User';
 
 ?>
@@ -41,7 +37,6 @@ $username = $_SESSION['username'] ?? 'User';
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
 	<script>
-		// Expose server-side configuration to client-side JavaScript.
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>"
 		};
@@ -105,7 +100,30 @@ $username = $_SESSION['username'] ?? 'User';
 				<button id="btn-settings-close" class="btn-icon">&times;</button>
 			</div>
 			<div class="settings-panel-body">
-				<p>Global settings will be available here in a future update.</p>
+				<div class="setting-item">
+					<span class="setting-label">Light Mode</span>
+					<div class="setting-control">
+						<label class="switch">
+							<input type="checkbox" id="toggle-light-mode">
+							<span class="slider round"></span>
+						</label>
+					</div>
+				</div>
+				<div class="setting-item">
+					<span class="setting-label">High-Contrast Mode</span>
+					<div class="setting-control">
+						<label class="switch">
+							<input type="checkbox" id="toggle-high-contrast">
+							<span class="slider round"></span>
+						</label>
+					</div>
+				</div>
+				<div class="setting-item">
+					<span class="setting-label">Change Password</span>
+					<div class="setting-control">
+						<button id="btn-change-password" class="btn">Change</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -190,6 +208,30 @@ $username = $_SESSION['username'] ?? 'User';
 					<button id="btn-date-save" class="btn btn-primary">Save</button>
 				</div>
 			</div>
+		</div>
+	</div>
+	
+	<div id="password-modal-overlay" class="hidden">
+		<div id="password-modal-container">
+			<h4>Change Password</h4>
+			<form id="change-password-form">
+				<div class="form-group">
+					<label for="current_password">Current Password</label>
+					<input type="password" id="current_password" required>
+				</div>
+				<div class="form-group">
+					<label for="new_password">New Password</label>
+					<input type="password" id="new_password" required>
+				</div>
+				<div class="form-group">
+					<label for="confirm_password">Confirm New Password</label>
+					<input type="password" id="confirm_password" required>
+				</div>
+				<div id="password-modal-buttons">
+					<button type="button" id="btn-password-cancel" class="btn">Cancel</button>
+					<button type="submit" class="btn btn-primary">Update Password</button>
+				</div>
+			</form>
 		</div>
 	</div>
 

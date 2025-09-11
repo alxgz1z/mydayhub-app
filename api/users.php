@@ -5,7 +5,7 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 5.1.0
+ * @version 6.4.0
  * @author Alex & Gemini
  */
 
@@ -21,6 +21,13 @@ function handle_users_action(string $action, string $method, PDO $pdo, int $user
 				handle_save_user_preference($pdo, $userId, $data);
 			}
 			break;
+		
+		// Modified for Change Password
+		case 'changePassword':
+			if ($method === 'POST') {
+				handle_change_password($pdo, $userId, $data);
+			}
+			break;
 
 		default:
 			http_response_code(404);
@@ -29,12 +36,73 @@ function handle_users_action(string $action, string $method, PDO $pdo, int $user
 	}
 }
 
+// Modified for Change Password
+/**
+ * Handles a password change request for the currently authenticated user.
+ */
+function handle_change_password(PDO $pdo, int $userId, ?array $data): void {
+	$currentPassword = $data['current_password'] ?? '';
+	$newPassword = $data['new_password'] ?? '';
+
+	if (empty($currentPassword) || empty($newPassword)) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'All password fields are required.']);
+		return;
+	}
+
+	if (strlen($newPassword) < 8) {
+		http_response_code(400);
+		echo json_encode(['status' => 'error', 'message' => 'New password must be at least 8 characters long.']);
+		return;
+	}
+
+	try {
+		// 1. Fetch the current user's hashed password
+		$stmt = $pdo->prepare("SELECT password_hash FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$user) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'User not found.']);
+			return;
+		}
+
+		// 2. Verify the provided current password against the stored hash
+		if (!password_verify($currentPassword, $user['password_hash'])) {
+			http_response_code(401); // Unauthorized
+			echo json_encode(['status' => 'error', 'message' => 'Incorrect current password.']);
+			return;
+		}
+		
+		// 3. Hash the new password
+		$newPasswordHash = password_hash($newPassword, PASSWORD_DEFAULT);
+
+		// 4. Update the user's record with the new hash
+		$stmt = $pdo->prepare("UPDATE users SET password_hash = :newHash WHERE user_id = :userId");
+		$stmt->execute([
+			':newHash' => $newPasswordHash,
+			':userId' => $userId
+		]);
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'message' => 'Password changed successfully.']);
+
+	} catch (Exception $e) {
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in users.php handle_change_password(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while changing the password.']);
+	}
+}
+
+
 /**
  * Saves a single key-value pair to the user's preferences JSON blob.
  */
 function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void {
 	$key = isset($data['key']) ? (string)$data['key'] : '';
-	// We check for `isset` but not `empty` because the value could legitimately be 0, false, or an empty string.
 	if ($key === '' || !isset($data['value'])) {
 		http_response_code(400);
 		echo json_encode(['status' => 'error', 'message' => 'A preference key and value are required.']);
@@ -45,7 +113,6 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 	try {
 		$pdo->beginTransaction();
 
-		// Lock the row for update to prevent race conditions
 		$stmt_find = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId FOR UPDATE");
 		$stmt_find->execute([':userId' => $userId]);
 		$result = $stmt_find->fetch(PDO::FETCH_ASSOC);
@@ -60,12 +127,10 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 		$currentPrefsJson = $result['preferences'];
 		$prefs = json_decode($currentPrefsJson, true);
 
-		// If JSON is invalid or null, start with a fresh array
 		if (json_last_error() !== JSON_ERROR_NONE) {
 			$prefs = [];
 		}
 
-		// Update the specific key with the new value
 		$prefs[$key] = $value;
 		$newPrefsJson = json_encode($prefs);
 

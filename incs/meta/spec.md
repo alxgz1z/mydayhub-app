@@ -78,6 +78,9 @@
   [RDY] togglePrivacy (in tasks.php)
   [RDY] restoreItem (in tasks.php)	  
   [RDY] moveTask
+  [WIP] requestPasswordReset (in auth.php)
+  [FUT] performPasswordReset (in auth.php)
+  [RDY] changePassword (in users.php)
   [FUT] shareTask / revokeShare
   
   *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
@@ -105,8 +108,10 @@
   [RDY] Bottom toolbar with filters
   [RDY] Privacy toggles
   [RDY] Mobile 'Move Mode' for tasks
-  [WIP] Task Notes integration (Quick Notes flip UI & Unified Editor)
+  [RDY] Task Notes integration (Unified Editor)
   [WIP] Settings slider panel
+  [RDY] Change Password modal
+  [WIP] Forgot Password page & flow
   [FUT] Sharing UI
 
 ---
@@ -189,10 +194,6 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * **Privacy & Attachments:** Icons always visible.  
 * **UX:** Shadows, hover lift, animated drag/drop.  
 	* Clicking on a task's status band opens a contextual popover menu, allowing for direct selection of Signal, Support, or Backlog. This is the primary method for changing a task's classification.
-* **Quick Notes UI:** To streamline note-taking, tasks utilize a two-sided interface.
-	* For short notes (under 250 characters), activating the "Edit Notes" function triggers a 3D flip of the card, revealing a simple text area on the back for quick edits.
-	* Controls are provided to **Save**, **Cancel**, or **Expand** the note to the full Unified Editor.
-	* For notes longer than 250 characters, the system bypasses the flip and opens the Unified Editor directly.
 
 
 #### Attachments
@@ -340,6 +341,7 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * columns: column_id, user_id, column_name, position, is_private, created_at, updated_at
 * tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at
 * task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, created_at
+* password_resets: id, user_id, token_hash, expires_at, created_at
 
 ---
 
@@ -516,14 +518,14 @@ Consistent SVGs for contextual menu, status, etc.
 ---
 
 ### File Locations
-* site root 	index.php, .env, .gitignore, debug.log, .htaccess
+* site root 	index.php, .env, .gitignore, debug.log, .htaccess, composer.*
 * \api\			api.php, auth.php, tasks.php, users.php
 * \uix\			app.js, auth.js, editor.js, tasks.js, style.css, editor.css, tasks.css, attachments.css, settings.css, login.css
 * \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
 * \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
-* \incs\		config.php, db.php
+* \incs\		config.php, db.php, mailer.php
 * incs\meta		markdown documents describing the app.
-* \login\		login.php, register.php
+* \login\		login.php, register.php, logout.php, forgot-password.php, reset-password.php
 
 ---
 

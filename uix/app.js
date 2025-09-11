@@ -4,11 +4,10 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 6.1.0
+ * @version 6.4.0
  * @author Alex & Gemini
  */
 
-// Modified for Quick Notes Save Fix: Made apiFetch a global utility.
 /**
  * A global wrapper for the fetch API that automatically includes the CSRF token.
  * @param {object} bodyPayload - The JSON payload to send.
@@ -17,7 +16,6 @@
 async function apiFetch(bodyPayload = {}) {
 	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 	if (!csrfToken) {
-		// In a real app, we might want to force a refresh or logout here.
 		throw new Error('CSRF token not found. Please refresh the page.');
 	}
 
@@ -36,31 +34,22 @@ async function apiFetch(bodyPayload = {}) {
 	if (!response.ok) {
 		let errorData;
 		try {
-			// Try to parse the JSON error response from the server
 			errorData = await response.json();
 		} catch (e) {
-			// If parsing fails, use the generic status text
 			throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
 		}
-		// Use the server's message if available, otherwise, a generic error
 		throw new Error(errorData.message || 'An unknown API error occurred.');
 	}
 
-	// If the request was successful, parse and return the JSON response
 	return response.json();
 }
-// End of modification
 
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
 	updateFooterDate();
-
-	// Modified for Settings Panel: Initialize the panel listeners
 	initSettingsPanel();
 
-	// For now, we only have the Tasks view.
-	// We check if the function to initialize it exists before calling it.
 	if (typeof initTasksView === 'function') {
 		initTasksView();
 	}
@@ -68,7 +57,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ==========================================================================
 // --- SETTINGS PANEL ---
-// Modified for Animation Bug Fix
 // ==========================================================================
 
 /**
@@ -78,8 +66,13 @@ function initSettingsPanel() {
 	const toggleBtn = document.getElementById('btn-settings-toggle');
 	const closeBtn = document.getElementById('btn-settings-close');
 	const overlay = document.getElementById('settings-panel-overlay');
+	const highContrastToggle = document.getElementById('toggle-high-contrast');
+	const lightModeToggle = document.getElementById('toggle-light-mode');
+	// Modified for Change Password
+	const changePasswordBtn = document.getElementById('btn-change-password');
 
-	if (!toggleBtn || !closeBtn || !overlay) {
+
+	if (!toggleBtn || !closeBtn || !overlay || !highContrastToggle || !lightModeToggle || !changePasswordBtn) {
 		console.error('Settings panel elements could not be found.');
 		return;
 	}
@@ -98,7 +91,52 @@ function initSettingsPanel() {
 			closeSettingsPanel();
 		}
 	});
+
+	lightModeToggle.addEventListener('change', (e) => {
+		const isEnabled = e.target.checked;
+		document.body.classList.toggle('light-mode', isEnabled);
+		saveUserPreference('light_mode', isEnabled);
+		if (isEnabled) {
+			highContrastToggle.checked = false;
+			document.body.classList.remove('high-contrast');
+			saveUserPreference('high_contrast_mode', false);
+		}
+	});
+
+	highContrastToggle.addEventListener('change', (e) => {
+		const isEnabled = e.target.checked;
+		document.body.classList.toggle('high-contrast', isEnabled);
+		saveUserPreference('high_contrast_mode', isEnabled);
+		if (isEnabled) {
+			lightModeToggle.checked = false;
+			document.body.classList.remove('light-mode');
+			saveUserPreference('light_mode', false);
+		}
+	});
+
+	// Modified for Change Password
+	changePasswordBtn.addEventListener('click', openChangePasswordModal);
+	initPasswordModalListeners();
 }
+
+/**
+ * Saves a user preference to the backend.
+ * @param {string} key - The preference key to save.
+ * @param {any} value - The value to save.
+ */
+async function saveUserPreference(key, value) {
+	try {
+		await window.apiFetch({
+			module: 'users',
+			action: 'saveUserPreference',
+			key: key,
+			value: value
+		});
+	} catch (error) {
+		console.error(`Error saving preference '${key}':`, error);
+	}
+}
+
 
 /**
  * Opens the settings panel by removing the .hidden class from its overlay.
@@ -120,10 +158,84 @@ function closeSettingsPanel() {
 	}
 }
 
+// ==========================================================================
+// --- PASSWORD CHANGE MODAL ---
+// ==========================================================================
+
+// Modified for Change Password
+/**
+ * Sets up event listeners for the password change modal.
+ */
+function initPasswordModalListeners() {
+	const form = document.getElementById('change-password-form');
+	const cancelBtn = document.getElementById('btn-password-cancel');
+	const overlay = document.getElementById('password-modal-overlay');
+
+	if (!form || !cancelBtn || !overlay) return;
+
+	cancelBtn.addEventListener('click', closeChangePasswordModal);
+	overlay.addEventListener('click', (e) => {
+		if(e.target === overlay) closeChangePasswordModal();
+	});
+
+	form.addEventListener('submit', async (e) => {
+		e.preventDefault();
+		const currentPassword = document.getElementById('current_password').value;
+		const newPassword = document.getElementById('new_password').value;
+		const confirmPassword = document.getElementById('confirm_password').value;
+
+		if (newPassword !== confirmPassword) {
+			showToast({ message: "New passwords do not match.", type: 'error' });
+			return;
+		}
+		if (newPassword.length < 8) {
+			showToast({ message: "New password must be at least 8 characters.", type: 'error' });
+			return;
+		}
+
+		try {
+			const result = await window.apiFetch({
+				module: 'users',
+				action: 'changePassword',
+				current_password: currentPassword,
+				new_password: newPassword
+			});
+
+			if (result.status === 'success') {
+				showToast({ message: "Password updated successfully.", type: 'success' });
+				closeChangePasswordModal();
+			}
+		} catch (error) {
+			showToast({ message: error.message, type: 'error' });
+		}
+	});
+}
+
+/**
+ * Opens the password change modal.
+ */
+function openChangePasswordModal() {
+	const overlay = document.getElementById('password-modal-overlay');
+	if (overlay) {
+		overlay.classList.remove('hidden');
+		document.getElementById('current_password').focus();
+	}
+}
+
+/**
+ * Closes the password change modal and resets the form.
+ */
+function closeChangePasswordModal() {
+	const overlay = document.getElementById('password-modal-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
+		document.getElementById('change-password-form').reset();
+	}
+}
+
 
 // ==========================================================================
 // --- UI HELPERS ---
-// Added for dynamic date
 // ==========================================================================
 
 /**
@@ -152,13 +264,7 @@ function updateFooterDate() {
  * Displays a toast notification message.
  * @param {object} options - The options for the toast.
  * @param {string} options.message - The message to display.
- * @param {string} [options.type='info'] - The type of toast ('info', 'success', 'error').
- * @param {number} [options.duration=5000] - The duration in ms for the toast to be visible.
- * @param {object|null} [options.action=null] - An object for an action button.
- * @param {string} options.action.text - The text for the action button (e.g., 'Undo').
- * @param {function} options.action.callback - The function to execute on button click.
  */
-// Modified for Soft Deletes and UI Polish
 function showToast(options) {
 	const { message, type = 'info', duration = 5000, action = null } = options;
 
@@ -168,48 +274,42 @@ function showToast(options) {
 		return;
 	}
 
-	// Create toast element and its main content wrapper
 	const toast = document.createElement('div');
 	toast.className = `toast ${type}`;
 	
 	const toastContent = document.createElement('div');
 	toastContent.className = 'toast-content';
 
-	// Message
 	const messageEl = document.createElement('span');
 	messageEl.textContent = message;
 	toastContent.appendChild(messageEl);
 
-	// Action Button (if provided)
 	if (action && typeof action.callback === 'function') {
 		const actionBtn = document.createElement('button');
 		actionBtn.className = 'toast-action-btn';
 		actionBtn.textContent = action.text || 'Action';
 		actionBtn.addEventListener('click', () => {
 			action.callback();
-			removeToast(); // Close toast immediately on action
+			removeToast();
 		}, { once: true });
 		toastContent.appendChild(actionBtn);
 	}
 	
 	toast.appendChild(toastContent);
 
-	// Close Button
 	const closeBtn = document.createElement('button');
 	closeBtn.className = 'toast-close-btn';
 	closeBtn.innerHTML = '&times;';
 	closeBtn.addEventListener('click', () => removeToast(), { once: true });
 	toast.appendChild(closeBtn);
 
-	// Add to DOM and animate in
 	container.appendChild(toast);
 	setTimeout(() => toast.classList.add('visible'), 10);
 
-	// Set up removal logic
 	const timeoutId = setTimeout(() => removeToast(), duration);
 
 	function removeToast() {
-		clearTimeout(timeoutId); // Prevent multiple removals
+		clearTimeout(timeoutId);
 		toast.classList.remove('visible');
 		toast.addEventListener('transitionend', () => toast.remove());
 	}
@@ -233,7 +333,7 @@ function showConfirm(message) {
 
 	if (!modalOverlay || !messageEl || !yesBtn || !noBtn) {
 		console.error('Confirmation modal elements not found!');
-		return Promise.resolve(false); // Fails safely
+		return Promise.resolve(false);
 	}
 
 	messageEl.textContent = message;
@@ -250,14 +350,11 @@ function showConfirm(message) {
 			resolve(false);
 		};
 		
-		// Use { once: true } to automatically remove listeners after they fire once.
 		yesBtn.addEventListener('click', handleYes, { once: true });
 		noBtn.addEventListener('click', handleNo, { once: true });
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
-			// Although {once: true} handles the fired event, we still remove the other one
-			// in case the modal is closed via other means in the future.
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
 		}
@@ -272,10 +369,8 @@ function showConfirm(message) {
 /**
  * Displays a date picker modal.
  * @param {string} [currentDate=''] The current date in YYYY-MM-DD format.
- * @returns {Promise<string|null>} A promise that resolves to the new date string (YYYY-MM-DD),
- * an empty string if cleared, or null if canceled.
+ * @returns {Promise<string|null>} A promise that resolves to the new date string or null if canceled.
  */
-// Modified for Double Toast Bug
 function showDueDateModal(currentDate = '') {
 	const modalOverlay = document.getElementById('date-modal-overlay');
 	const input = document.getElementById('date-modal-input');
@@ -285,7 +380,7 @@ function showDueDateModal(currentDate = '') {
 
 	if (!modalOverlay || !input || !saveBtn || !removeBtn || !cancelBtn) {
 		console.error('Date modal elements not found!');
-		return Promise.resolve(null); // Fails safely
+		return Promise.resolve(null);
 	}
 
 	input.value = currentDate;
@@ -313,7 +408,6 @@ function showDueDateModal(currentDate = '') {
 			if (e.key === 'Escape') handleCancel();
 		};
 
-		// Add listeners
 		saveBtn.addEventListener('click', handleSave);
 		removeBtn.addEventListener('click', handleRemove);
 		cancelBtn.addEventListener('click', handleCancel);
@@ -322,7 +416,6 @@ function showDueDateModal(currentDate = '') {
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
-			// Remove all listeners to prevent duplicates on next open
 			saveBtn.removeEventListener('click', handleSave);
 			removeBtn.removeEventListener('click', handleRemove);
 			cancelBtn.removeEventListener('click', handleCancel);

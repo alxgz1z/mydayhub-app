@@ -877,3 +877,31 @@ Version: Beta 6.0.4
 **2** **Investigate Missing "Save" Toast:** The toast notification for a successful save from the quick notes editor is not appearing. This needs to be debugged.
 **3** **Fix Column Scrollbar:** Diagnose and fix the CSS issue causing an unnecessary horizontal scrollbar to appear on the last column of the board.
 **4** **Re-verify Editor Save Logic:** The user reported that saving from the expanded editor (after writing in the quick note) still fails. This indicates the "dirty" state logic in editor.js needs further review to ensure it correctly identifies changes passed from the quick note view.
+
+---
+
+# Timestamp: 2025-09-10 23:49 - Major Feature: "Forgot Password" Flow
+
+**Version**: Beta 6.4.2
+**Focus** To build the complete, multi-step "Forgot Password" feature, enabling users to securely reset their password via an email link. This involved significant additions to the database, UI, and backend API.
+**Key work**
+* **Environment:** Integrated the PHPMailer library using Composer to handle SMTP email sending. Updated .envand config.php to securely manage SMTP credentials.
+* **Database:** Created a new password_resets table with a secure structure to store hashed, time-limited reset tokens.
+* **UI:**
+  * Added a "Forgot Password?" link to the login.php page.
+  * Created the login/forgot-password.php page with a form for users to request a reset link.
+  * Created the placeholder login/reset-password.php page, which will contain the form for entering the new password.
+* **Backend (**api/auth.php**):**
+  * Implemented the requestPasswordReset action, which validates a user's email, generates a secure token, stores its hash in the database, and dispatches the reset email via the new mailer utility.
+  * Added robust, DEVMODE-aware error handling to help diagnose a blocking issue.
+* **Frontend (**uix/auth.js**):**
+  * Added a new form handler to send the email from the forgot-password.php page to the API.
+  * The logic was updated to display detailed error messages from the backend when in development mode to aid debugging.
+
+⠀**Status** The entire framework for the "Forgot Password" feature is in place. However, a bug is currently preventing the backend from successfully sending the reset email. The user is not receiving the email, and no token is being stored in the database. Our last action was to add enhanced error reporting to diagnose this issue.
+**Recommended next steps (priority order)**
+**1** **CRITICAL - Debug Email Sending:** The immediate priority is to use the new error reporting to diagnose and fix the bug in the requestPasswordReset flow. The likely causes are an issue with the SMTP connection, a misconfiguration in PHPMailer, or a silent error in the database transaction.
+**2** **Complete the Reset Flow:** Once emails are sending correctly, we must build out the final part of the feature:
+	* Implement the performPasswordReset action in api/auth.php.
+	* Add the frontend logic in uix/auth.js to handle the form submission on the reset-password.php page.
+**3** **Refine Email Template:** Improve the visual design of the HTML email template in incs/mailer.php.
