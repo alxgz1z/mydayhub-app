@@ -1,19 +1,14 @@
 /**
- * MyDayHub Beta 6 - Tasks View Module
+ * MyDayHub Beta 5 - Tasks View Module
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 6.0.4
+ * @version 6.1.5
  * @author Alex & Gemini
  */
 
 let dragSourceColumn = null;
-let moveModeState = {
-	isActive: false,
-	taskElement: null,
-	originalFooters: new Map()
-};
 
 let filterState = {
 	showCompleted: false,
@@ -27,6 +22,7 @@ let isImageViewerOpen = false;
 let isModalOpening = false; 
 
 let isActionRunning = false;
+
 
 /**
  * Helper to format YYY-MM-DD to MM/DD.
@@ -71,16 +67,18 @@ function getTaskDataFromElement(taskCardEl) {
  */
 function rerenderTaskCard(taskCard) {
 	if (!taskCard) return;
+
 	const columnBody = taskCard.closest('.column-body');
 	const oldScroll = { top: columnBody ? columnBody.scrollTop : 0, left: document.documentElement.scrollLeft };
 
 	const taskData = getTaskDataFromElement(taskCard);
-	const newCardHTML = createTaskCard(taskData);
-	const tempDiv = document.createElement('div');
-	tempDiv.innerHTML = newCardHTML;
-	const finalCard = tempDiv.firstElementChild;
+	if (!taskData) return;
 
-	taskCard.replaceWith(finalCard);
+	const tempDiv = document.createElement('div');
+	tempDiv.innerHTML = createTaskCard(taskData);
+	const newCardEl = tempDiv.firstElementChild;
+
+	taskCard.replaceWith(newCardEl);
 	
 	if (columnBody) {
 		columnBody.scrollTop = oldScroll.top;
@@ -102,17 +100,11 @@ function handleNoteSaved(e) {
 
 /**
  * Opens the Unified Editor for a given task card.
- * @param {HTMLElement} taskCard - The task card element.
- * @param {string|null} liveContent - Optional live content from an editor.
  */
-// Modified for Editor Save Bug Fix
-function openNotesEditorForTask(taskCard, liveContent = null) {
+function openNotesEditorForTask(taskCard) {
 	if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
 		const taskId = taskCard.dataset.taskId;
-		
-		const originalNotes = decodeURIComponent(taskCard.dataset.notes || '');
-		const displayNotes = (liveContent !== null) ? liveContent : originalNotes;
-
+		const notes = decodeURIComponent(taskCard.dataset.notes || '');
 		const title = decodeURIComponent(taskCard.dataset.title || 'Edit Note');
 		const updatedAt = taskCard.dataset.updatedAt;
 
@@ -123,8 +115,7 @@ function openNotesEditorForTask(taskCard, liveContent = null) {
 			id: taskId,
 			kind: 'task',
 			title: `Note: ${title}`,
-			content: displayNotes,
-			originalContent: originalNotes,
+			content: notes,
 			updatedAt: updatedAt,
 			fontSize: parseInt(savedFontSize, 10)
 		});
@@ -132,30 +123,6 @@ function openNotesEditorForTask(taskCard, liveContent = null) {
 		showToast({ message: 'Editor component is not available.', type: 'error' });
 	}
 }
-
-/**
- * Toggles the flip state of a task card.
- * @param {HTMLElement} taskCard The .task-card element.
- * @param {boolean} [forceFlip=null] Force a flip state (true=flipped, false=front).
- */
-function toggleCardFlip(taskCard, forceFlip = null) {
-	if (!taskCard) return;
-
-	const notes = decodeURIComponent(taskCard.dataset.notes || '');
-	const textarea = taskCard.querySelector('.quick-note-textarea');
-	
-	const isFlipped = taskCard.classList.contains('is-flipped');
-	const shouldFlip = forceFlip !== null ? forceFlip : !isFlipped;
-
-	if (shouldFlip && !isFlipped) {
-		textarea.value = notes;
-		taskCard.classList.add('is-flipped');
-		setTimeout(() => textarea.focus(), 300); 
-	} else if (!shouldFlip && isFlipped) {
-		taskCard.classList.remove('is-flipped');
-	}
-}
-
 
 /**
  * Opens the Due Date modal for a given task card and handles the result.
@@ -186,13 +153,11 @@ async function openDueDateModalForTask(taskCard) {
  */
 async function restoreItem(type, id) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'restoreItem',
-			data: {
-				type: type,
-				id: id
-			}
+			type: type,
+			id: id
 		});
 
 		if (result.status === 'success') {
@@ -202,14 +167,11 @@ async function restoreItem(type, id) {
 				if (columnEl) {
 					const hiddenCard = document.querySelector(`.task-card[data-task-id="${id}"][style*="display: none"]`);
 					if (hiddenCard) {
-						hiddenCard.style.display = 'block';
+						hiddenCard.style.display = 'flex';
 					} else {
 						const taskCardHTML = createTaskCard(restoredTask);
-						const tempDiv = document.createElement('div');
-						tempDiv.innerHTML = taskCardHTML;
-						const newCard = tempDiv.firstElementChild;
 						const columnBody = columnEl.querySelector('.column-body');
-						columnBody.appendChild(newCard);
+						columnBody.insertAdjacentHTML('beforeend', taskCardHTML);
 					}
 					const columnBody = columnEl.querySelector('.column-body');
 					sortTasksInColumn(columnBody);
@@ -300,66 +262,12 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
-			const quickNoteButton = e.target.closest('.btn-quick-note');
-			if (quickNoteButton) {
-				const taskCard = quickNoteButton.closest('.task-card');
-				const action = quickNoteButton.dataset.action;
-				
-				if (action === 'cancel') {
-					toggleCardFlip(taskCard, false);
-				} else if (action === 'expand') {
-					// Modified for Editor Save Bug Fix
-					const textarea = taskCard.querySelector('.quick-note-textarea');
-					openNotesEditorForTask(taskCard, textarea.value);
-					toggleCardFlip(taskCard, false);
-				} else if (action === 'save') {
-					if (isActionRunning) return;
-					isActionRunning = true;
-					try {
-						const textarea = taskCard.querySelector('.quick-note-textarea');
-						const newNotes = textarea.value;
-						const taskId = taskCard.dataset.taskId;
-						
-						const success = await saveTaskDetails(taskId, newNotes);
-						if (success) {
-							taskCard.dataset.notes = encodeURIComponent(newNotes);
-							taskCard.dataset.hasNotes = newNotes.trim() !== '';
-							toggleCardFlip(taskCard, false);
-							rerenderTaskCard(taskCard);
-						}
-					} finally {
-						isActionRunning = false;
-					}
-				}
-				return;
-			}
-
-
-			if (e.target.matches('.btn-move-here')) {
-				const destColumnEl = e.target.closest('.task-column');
-				if (moveModeState.isActive && destColumnEl) {
-					const destColumnId = destColumnEl.dataset.columnId;
-					const taskId = moveModeState.taskElement.dataset.taskId;
-					await moveTask(taskId, destColumnId);
-				}
-				return;
-			}
-			if (e.target.matches('.btn-cancel-move')) {
-				exitMoveMode();
-				return;
-			}
-
 			const shortcut = e.target.closest('.indicator-shortcut');
 			if (shortcut) {
 				const taskCard = shortcut.closest('.task-card');
 				const action = shortcut.dataset.action;
 				if (action === 'open-notes') {
-					const notes = decodeURIComponent(taskCard.dataset.notes || '');
-					if (notes.length > 250) {
-						openNotesEditorForTask(taskCard);
-					} else {
-						toggleCardFlip(taskCard, true);
-					}
+					openNotesEditorForTask(taskCard);
 				} else if (action === 'open-due-date') {
 					await openDueDateModalForTask(taskCard);
 				} else if (action === 'open-attachments') {
@@ -451,7 +359,7 @@ function initEventListeners() {
 
 				updateMoveButtonVisibility();
 
-				const orderedColumnIds = Array.from(container.querySelectorAll('.task-column:not([style*="display: none"])')).map(col => col.dataset.columnId);
+				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
 				const success = await reorderColumns(orderedColumnIds);
 				if (!success) {
 					showToast({ message: 'Error: Could not save new column order.', type: 'error' });
@@ -486,16 +394,9 @@ function initEventListeners() {
 				closeAllTaskActionMenus();
 		
 				if (action === 'edit-notes') {
-					const notes = decodeURIComponent(taskCard.dataset.notes || '');
-					if (notes.length > 250) {
-						openNotesEditorForTask(taskCard);
-					} else {
-						toggleCardFlip(taskCard, true);
-					}
+					openNotesEditorForTask(taskCard);
 				} else if (action === 'set-due-date') {
 					await openDueDateModalForTask(taskCard);
-				} else if (action === 'move-task') {
-					enterMoveMode(taskCard);
 				} else if (action === 'toggle-privacy') {
 					if (taskId) {
 						await togglePrivacy('task', taskId);
@@ -534,10 +435,7 @@ function initEventListeners() {
 						if (newTaskData) {
 							const columnBody = columnEl.querySelector('.column-body');
 							const newTaskCardHTML = createTaskCard(newTaskData);
-							const tempDiv = document.createElement('div');
-							tempDiv.innerHTML = newTaskCardHTML;
-							const newCard = tempDiv.firstElementChild;
-							columnBody.appendChild(newCard);
+							columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 							updateColumnTaskCount(columnEl);
 							sortTasksInColumn(columnBody);
 							showToast({ message: 'Task duplicated successfully.', type: 'success' });
@@ -657,9 +555,10 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('dragstart', (e) => {
-			if (e.target.matches('.task-card')) {
-				e.target.classList.add('dragging');
-				dragSourceColumn = e.target.closest('.task-column');
+			const taskCard = e.target.closest('.task-card');
+			if (taskCard) {
+				taskCard.classList.add('dragging');
+				dragSourceColumn = taskCard.closest('.task-column');
 			}
 		});
 
@@ -695,6 +594,7 @@ function initEventListeners() {
 			if (columnBody) {
 				e.preventDefault();
 				const draggingCard = document.querySelector('.dragging');
+				if (!draggingCard) return;
 				const afterElement = getDragAfterElement(columnBody, e.clientY);
 				if (afterElement == null) {
 					columnBody.appendChild(draggingCard);
@@ -706,99 +606,6 @@ function initEventListeners() {
 	}
 }
 
-/**
- * Puts the UI into "Move Mode" for a specific task.
- * @param {HTMLElement} taskCard The task card element to be moved.
- */
-function enterMoveMode(taskCard) {
-	if (moveModeState.isActive) {
-		exitMoveMode();
-	}
-
-	moveModeState.isActive = true;
-	moveModeState.taskElement = taskCard;
-	moveModeState.originalFooters.clear();
-
-	taskCard.classList.add('is-moving');
-
-	const allColumns = document.querySelectorAll('.task-column');
-	const sourceColumnId = taskCard.closest('.task-column').dataset.columnId;
-
-	allColumns.forEach(column => {
-		const footer = column.querySelector('.column-footer');
-		moveModeState.originalFooters.set(column, footer.innerHTML);
-
-		footer.classList.add('move-mode');
-		if (column.dataset.columnId === sourceColumnId) {
-			footer.innerHTML = '<button class="btn-cancel-move">Cancel Move</button>';
-		} else {
-			footer.innerHTML = '<button class="btn-move-here">Move Here</button>';
-		}
-	});
-}
-
-/**
- * Exits "Move Mode" and restores the original UI.
- */
-function exitMoveMode() {
-	if (!moveModeState.isActive) return;
-
-	if (moveModeState.taskElement) {
-		moveModeState.taskElement.classList.remove('is-moving');
-	}
-
-	moveModeState.originalFooters.forEach((html, column) => {
-		const footer = column.querySelector('.column-footer');
-		if (footer) {
-			footer.classList.remove('move-mode');
-			footer.innerHTML = html;
-		}
-	});
-	
-	moveModeState.isActive = false;
-	moveModeState.taskElement = null;
-	moveModeState.originalFooters.clear();
-}
-
-/**
- * Persists a task move to the backend and updates the UI.
- * @param {string} taskId The ID of the task to move.
- * @param {string} destColumnId The ID of the destination column.
- */
-async function moveTask(taskId, destColumnId) {
-	const taskCard = moveModeState.taskElement;
-	const sourceColumn = taskCard.closest('.task-column');
-	const destColumn = document.querySelector(`.task-column[data-column-id="${destColumnId}"]`);
-
-	exitMoveMode();
-	
-	try {
-		const result = await apiFetch({
-			module: 'tasks',
-			action: 'moveTask',
-			data: {
-				task_id: taskId,
-				to_column_id: destColumnId
-			}
-		});
-
-		if (result.status === 'success') {
-			const destColumnBody = destColumn.querySelector('.column-body');
-			destColumnBody.appendChild(taskCard);
-			sortTasksInColumn(destColumnBody);
-			updateColumnTaskCount(sourceColumn);
-			updateColumnTaskCount(destColumn);
-			showToast({ message: 'Task moved.', type: 'success' });
-		} else {
-			throw new Error(result.message);
-		}
-	} catch (error) {
-		showToast({ message: `Error moving task: ${error.message}`, type: 'error' });
-		console.error('Move task error:', error);
-		// In case of error, revert the UI by re-fetching the board state
-		fetchAndRenderBoard();
-	}
-}
 
 /**
  * Closes the filter menu if it's open.
@@ -815,13 +622,11 @@ function closeFilterMenu() {
  */
 async function saveFilterPreference(key, value) {
 	try {
-		await apiFetch({
+		await window.apiFetch({
 			module: 'users',
 			action: 'saveUserPreference',
-			data: {
-				key: key,
-				value: value
-			}
+			key: key,
+			value: value
 		});
 	} catch (error) {
 		console.error('Error saving filter preference:', error);
@@ -902,7 +707,7 @@ function applyAllFilters() {
 			shouldBeVisible = false;
 		}
 
-		item.style.display = shouldBeVisible ? 'block' : 'none';
+		item.style.display = shouldBeVisible ? 'flex' : 'none';
 	});
 
 	const allColumns = document.querySelectorAll('.task-column');
@@ -917,13 +722,11 @@ function applyAllFilters() {
  */
 async function saveTaskDueDate(taskId, newDate) {
 	try {
-		await apiFetch({
+		await window.apiFetch({
 			module: 'tasks',
 			action: 'saveTaskDetails',
-			data: {
-				task_id: taskId,
-				dueDate: newDate
-			}
+			task_id: taskId,
+			dueDate: newDate
 		});
 		showToast({ message: 'Due date updated.', type: 'success' });
 		return true;
@@ -933,32 +736,6 @@ async function saveTaskDueDate(taskId, newDate) {
 		return false;
 	}
 }
-
-/**
- * Saves just the notes for a task.
- * @param {string} taskId The ID of the task.
- * @param {string} newNotes The new note content.
- * @returns {Promise<boolean>} True on success, false on failure.
- */
-async function saveTaskDetails(taskId, newNotes) {
-	try {
-		await apiFetch({
-			module: 'tasks',
-			action: 'saveTaskDetails',
-			data: {
-				task_id: taskId,
-				notes: newNotes
-			}
-		});
-		showToast({ message: 'Note saved.', type: 'success' });
-		return true;
-	} catch (error) {
-		showToast({ message: error.message, type: 'error' });
-		console.error('Save note error:', error);
-		return false;
-	}
-}
-
 
 /**
  * Gets the element to drop a dragged element after.
@@ -1045,12 +822,6 @@ function showTaskActionsMenu(buttonEl) {
 			</svg>
 			<span>Set Due Date</span>
 		</button>
-		<button class="task-action-btn" data-action="move-task">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline>
-			</svg>
-			<span>Move Task</span>
-		</button>
 		<button class="task-action-btn" data-action="toggle-privacy">
 			${privacyIcon}
 			<span>${privacyText}</span>
@@ -1121,10 +892,10 @@ function updateMoveButtonVisibility() {
  */
 async function duplicateTask(taskId) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'duplicateTask',
-			data: { task_id: taskId }
+			task_id: taskId
 		});
 		if (result.status === 'success') {
 			return result.data;
@@ -1143,10 +914,10 @@ async function duplicateTask(taskId) {
  */
 async function deleteTask(taskId) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'deleteTask',
-			data: { task_id: taskId }
+			task_id: taskId
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1161,10 +932,10 @@ async function deleteTask(taskId) {
  */
 async function reorderColumns(orderedColumnIds) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'reorderColumns',
-			data: { column_ids: orderedColumnIds }
+			column_ids: orderedColumnIds
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1179,10 +950,10 @@ async function reorderColumns(orderedColumnIds) {
  */
 async function deleteColumn(columnId) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'deleteColumn',
-			data: { column_id: columnId }
+			column_id: columnId
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1197,13 +968,11 @@ async function deleteColumn(columnId) {
  */
 async function renameColumn(columnId, newName) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'renameColumn',
-			data: {
-				column_id: columnId,
-				new_name: newName
-			}
+			column_id: columnId,
+			new_name: newName
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1218,13 +987,11 @@ async function renameColumn(columnId, newName) {
  */
 async function renameTaskTitle(taskId, newTitle) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'renameTaskTitle',
-			data: {
-				task_id: taskId,
-				new_title: newTitle
-			}
+			task_id: taskId,
+			new_title: newTitle
 		});
 		return result.status === 'success';
 	} catch (error) {
@@ -1240,13 +1007,11 @@ async function renameTaskTitle(taskId, newTitle) {
  */
 async function reorderTasks(columnId, tasks) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'reorderTasks',
-			data: {
-				column_id: columnId,
-				tasks: tasks
-			}
+			column_id: columnId,
+			tasks: tasks
 		});
 		if (result.status !== 'success') {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
@@ -1265,13 +1030,11 @@ async function reorderTasks(columnId, tasks) {
  */
 async function togglePrivacy(type, id) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'togglePrivacy',
-			data: {
-				type: type,
-				id: id
-			}
+			type: type,
+			id: id
 		});
 		if (result.status === 'success') {
 			const { is_private } = result.data;
@@ -1308,10 +1071,10 @@ async function togglePrivacy(type, id) {
 async function toggleTaskComplete(taskId, isComplete) {
 	const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'toggleComplete',
-			data: { task_id: taskId }
+			task_id: taskId
 		});
 
 		if (result.status === 'success') {
@@ -1337,18 +1100,18 @@ async function toggleTaskComplete(taskId, isComplete) {
 }
 
 /**
- * Sets a task's classification to a specific value (Signal, Support, or Backlog).
+ * Sets a task's classification by calling the API and updating the UI.
+ * @param {string} taskId - The ID of the task to update.
+ * @param {string} newClassification - The new classification ('signal', 'support', 'backlog').
  */
 async function setTaskClassification(taskId, newClassification) {
 	const taskCardEl = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'toggleClassification',
-			data: {
-				task_id: taskId,
-				classification: newClassification
-			}
+			task_id: taskId,
+			classification: newClassification
 		});
 
 		if (result.status === 'success') {
@@ -1378,6 +1141,7 @@ function closeClassificationPopover() {
 
 /**
  * Shows a popover menu to change a task's classification.
+ * @param {HTMLElement} taskCard - The task card element that was clicked.
  */
 function showClassificationPopover(taskCard) {
 	closeClassificationPopover();
@@ -1452,10 +1216,10 @@ function showAddColumnForm() {
 		const columnName = input.value.trim();
 		if (columnName) {
 			try {
-				const result = await apiFetch({
+				const result = await window.apiFetch({
 					module: 'tasks',
 					action: 'createColumn',
-					data: { column_name: columnName }
+					column_name: columnName
 				});
 
 				if (result.status === 'success') {
@@ -1487,13 +1251,11 @@ function showAddColumnForm() {
  */
 async function createNewTask(columnId, taskTitle, columnEl) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'createTask',
-			data: {
-				column_id: columnId,
-				task_title: taskTitle
-			}
+			column_id: columnId,
+			task_title: taskTitle
 		});
 
 		if (result.status === 'success') {
@@ -1503,10 +1265,7 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 				placeholder.remove();
 			}
 			const newTaskCardHTML = createTaskCard(result.data);
-			const tempDiv = document.createElement('div');
-			tempDiv.innerHTML = newTaskCardHTML;
-			const newCard = tempDiv.firstElementChild;
-			columnBody.appendChild(newCard);
+			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
 			showToast({ message: 'Task created.', type: 'success' });
@@ -1598,6 +1357,14 @@ function renderBoard(boardData) {
 		sortTasksInColumn(columnBody);
 	});
 
+	document.querySelectorAll('.task-card').forEach(card => {
+		const inner = card.querySelector('.task-card-inner');
+		const front = card.querySelector('.task-card-front');
+		if (inner && front) {
+			inner.style.height = `${front.scrollHeight}px`;
+		}
+	});
+
 	updateMoveButtonVisibility();
 	applyAllFilters();
 }
@@ -1654,7 +1421,6 @@ function createColumnElement(columnData) {
 /**
  * Creates the HTML string for a single task card.
  */
-// Modified for Quick Notes UI Rework
 function createTaskCard(taskData) {
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
@@ -1739,7 +1505,7 @@ function createTaskCard(taskData) {
 			data-attachments-count="${taskData.attachments_count || 0}"
 			draggable="true">
 			<div class="task-card-inner">
-				<div class="task-card-front ${isPrivate ? 'private' : ''}">
+				<div class="task-card-front">
 					<div class="task-card-main">
 						<div class="task-status-band"></div>
 						<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
@@ -1749,19 +1515,7 @@ function createTaskCard(taskData) {
 					${footerHTML}
 				</div>
 				<div class="task-card-back">
-					<div class="quick-note-controls">
-						<button class="btn-quick-note" data-action="cancel" title="Cancel">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-						</button>
-						<button class="btn-quick-note" data-action="expand" title="Expand Editor">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-						</button>
-						<button class="btn-quick-note save" data-action="save" title="Save Note">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
-						</button>
 					</div>
-					<textarea class="quick-note-textarea" placeholder="Add a quick note..."></textarea>
-				</div>
 			</div>
 		</div>
 	`;
@@ -1774,16 +1528,20 @@ function createTaskCard(taskData) {
  */
 async function deleteAttachment(attachmentId) {
 	try {
-		const result = await apiFetch({
+		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'deleteAttachment',
-			data: { attachment_id: attachmentId }
+			attachment_id: attachmentId
 		});
 
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			const newStorageUsed = result.data ? result.data.user_storage_used : null;
-			return { user_storage_used: newStorageUsed };
+			const response = await fetch(`${window.MyDayHub_Config.appURL}/api/api.php?module=tasks&action=getAll`);
+			const boardResult = await response.json();
+			if (boardResult.status === 'success' && boardResult.data.user_storage) {
+				userStorage = boardResult.data.user_storage;
+			}
+			return true;
 		} else {
 			throw new Error(result.message || 'Failed to delete attachment.');
 		}
@@ -1826,8 +1584,12 @@ async function uploadAttachment(taskId, file) {
 
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
+		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 		const response = await fetch(`${appURL}/api/api.php`, {
 			method: 'POST',
+			headers: {
+				'X-CSRF-TOKEN': csrfToken 
+			},
 			body: formData
 		});
 		const result = await response.json();
@@ -1861,7 +1623,7 @@ function updateTaskCardAttachmentCount(taskId, newCount) {
  */
 function updateStorageBar(usedBytes, quotaBytes) {
 	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
-		return;
+		usedBytes = 0;
 	}
 
 	const progressBar = document.getElementById('attachment-quota-bar');
@@ -1968,13 +1730,12 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			btnUploadStaged.disabled = true;
 			btnUploadStaged.textContent = 'Uploading...';
 
-			const uploadPromises = stagedFiles.map(file => uploadAttachment(taskId, file));
-			const results = await Promise.all(uploadPromises);
-			
-			const lastSuccessfulResult = results.filter(r => r !== null).pop();
-			if (lastSuccessfulResult) {
-				userStorage.used = lastSuccessfulResult.user_storage_used;
-				updateStorageBar(userStorage.used, userStorage.quota);
+			for (const file of stagedFiles) {
+				const result = await uploadAttachment(taskId, file);
+				if (result) {
+					userStorage.used = result.user_storage_used;
+					updateStorageBar(userStorage.used, userStorage.quota);
+				}
 			}
 
 			stagedFiles = [];
@@ -1993,14 +1754,8 @@ async function openAttachmentsModal(taskId, taskTitle) {
 				const attachmentId = deleteBtn.dataset.attachmentId;
 				const confirmed = await showConfirm('Are you sure you want to permanently delete this attachment?');
 				if (confirmed) {
-					const result = await deleteAttachment(attachmentId);
-					if (result) {
-						const boardDataResponse = await fetch(`${window.MyDayHub_Config?.appURL || ''}/api/api.php?module=tasks&action=getAll`);
-						const boardDataResult = await boardDataResponse.json();
-						if (boardDataResult.status === 'success' && boardDataResult.data.user_storage) {
-							userStorage.used = boardDataResult.data.user_storage.used;
-							updateStorageBar(userStorage.used, userStorage.quota);
-						}
+					const success = await deleteAttachment(attachmentId);
+					if (success) {
 						await refreshAttachmentList();
 					}
 				}

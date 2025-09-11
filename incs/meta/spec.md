@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 5.9.8 
+**Version:** Beta 6.2.0 
 **Audience:** Internal Development & Project Management  
 
 ---

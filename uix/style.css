@@ -9,8 +9,7 @@
 	--toolbar-bg: #282a2d;
 	--text-primary: #e8eaed;
 	--text-secondary: #9aa0a6;
-	/* Modified for UI Polish */
-	--accent-color: #3B82F6;
+	--accent-color: #8ab4f8;
 	--border-color: #3c4043;
 	--btn-hover-bg: rgba(255, 255, 255, 0.1);
 	--column-bg: var(--toolbar-bg);
@@ -46,7 +45,6 @@ body {
 	min-height: 0; /* Necessary for flexbox scrolling children */
 }
 
-/* Modified for UI Polish */
 #app-header {
 	flex-shrink: 0; /* Prevent header from shrinking */
 	display: flex;
@@ -54,10 +52,9 @@ body {
 	align-items: center;
 	padding: 0.75rem 1.5rem;
 	background-color: var(--app-header-bg);
-	border-bottom: 2px solid var(--accent-color);
+	border-bottom: 1px solid var(--border-color);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
-	transition: border-color 0.3s ease-in-out;
 }
 
 #main-content {
@@ -92,14 +89,11 @@ body {
 	gap: 1rem;
 }
 
-/* Modified for UI Polish */
 #app-title {
 	font-size: 1.5rem;
 	font-weight: 500;
 	margin: 0;
 	order: 2;
-	color: var(--accent-color);
-	text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
 }
 
 #header-logo {
@@ -185,7 +179,8 @@ body {
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
-	z-index: 1050;
+	/* Modified for z-index fix */
+	z-index: 1500; /* Highest z-index to appear over all modals */
 	display: flex;
 	flex-direction: column-reverse;
 	gap: 10px;

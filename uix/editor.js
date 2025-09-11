@@ -1,10 +1,16 @@
 /**
- * MyDayHub Beta 6 - Unified Note Editor
+ * MyDayHub Beta 5 - Unified Note Editor
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 6.0.4
+ * @version 6.1.1
  * @author Alex & Gemini
+ *
+ * Public API:
+ * window.UnifiedEditor.open({ id, kind, title, content, updatedAt, fontSize })
+ * window.UnifiedEditor.close()
+ *
+ * This module is self-contained and handles its own visibility.
  */
 
 (function() {
@@ -54,11 +60,9 @@
 	}
 
 	function markAsDirtyAndQueueSave() {
-		if (!state.isDirty) {
-			state.isDirty = true;
-			elements.saveStatus.textContent = 'Unsaved changes...';
-		}
+		state.isDirty = true;
 		updateStats();
+		elements.saveStatus.textContent = 'Unsaved changes...';
 		clearTimeout(autosaveTimer);
 		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
 	}
@@ -87,16 +91,17 @@
 		elements.textarea.addEventListener('keydown', handleTabKey);
 	}
 
+	// Modified for global apiFetch
 	async function saveFontSizePreference(size) {
 		try {
+			// Now using the global, secure apiFetch function from app.js
 			const result = await apiFetch({
 				module: 'users',
 				action: 'saveUserPreference',
-				data: {
-					key: 'editor_font_size',
-					value: size
-				}
+				key: 'editor_font_size',
+				value: size
 			});
+
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save font size.');
 			}
@@ -106,6 +111,7 @@
 			}
 		} catch (error) {
 			console.error('Save font size error:', error);
+			showToast({ message: 'Could not save font size preference.', type: 'error' });
 		}
 	}
 
@@ -170,6 +176,7 @@
 			case 'calculate':
 				if (!selectedText) return;
 				try {
+					// Use math.js for safer evaluation
 					newText = `${selectedText} = ${math.evaluate(selectedText)}`;
 				} catch (err) {
 					newText = selectedText;
@@ -202,6 +209,7 @@
 		markAsDirtyAndQueueSave();
 	}
 
+	// Modified for global apiFetch and success toast
 	async function save() {
 		clearTimeout(autosaveTimer);
 
@@ -212,15 +220,15 @@
 		elements.saveStatus.textContent = 'Saving...';
 		
 		try {
+			// Use the new global, secure apiFetch function.
 			const result = await apiFetch({
 				module: 'tasks',
 				action: 'saveTaskDetails',
-				data: {
-					task_id: state.currentTaskId,
-					notes: elements.textarea.value
-				}
+				task_id: state.currentTaskId,
+				notes: elements.textarea.value
 			});
 			
+			// apiFetch handles non-OK responses, so we only need to check the logical status
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save notes.');
 			}
@@ -234,6 +242,9 @@
 			state.isDirty = false;
 			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleString()}`;
 			
+			// Show a success toast notification to the user.
+			showToast({ message: 'Note saved successfully.', type: 'success' });
+
 			const hasNotes = elements.textarea.value.trim() !== '';
 			const event = new CustomEvent('noteSaved', {
 				detail: {
@@ -253,31 +264,24 @@
 		}
 	}
 
-	// Modified for Editor Save Bug Fix
 	function open(options = {}) {
-		const { id, kind = 'task', title = 'Edit Note', content = '', originalContent, updatedAt, fontSize } = options;
+		const { id, kind = 'task', title = 'Edit Note', content = '', updatedAt, fontSize } = options;
 		
 		state.currentTaskId = id;
 		state.fontSize = fontSize || 16;
-		
+
 		elements.title.textContent = title;
 		elements.textarea.value = content;
 		elements.textarea.style.fontSize = `${state.fontSize}px`;
-		
+
 		elements.overlay.classList.remove('hidden');
-		
+
 		elements.textarea.focus();
 		updateStats();
 		state.isOpen = true;
-
-		// If originalContent is provided and differs from the display content,
-		// the editor is dirty from the start.
-		const isPreDirty = (originalContent !== undefined && content !== originalContent);
-		state.isDirty = isPreDirty;
-
-		if (isPreDirty) {
-			elements.saveStatus.textContent = 'Unsaved changes...';
-		} else if (updatedAt) {
+		state.isDirty = false;
+		
+		if (updatedAt) {
 			const savedDate = new Date(updatedAt.replace(' ', 'T') + 'Z'); 
 			elements.saveStatus.textContent = `Last saved: ${savedDate.toLocaleString()}`;
 		} else {
