@@ -117,6 +117,35 @@
   [WIP] Forgot Password page & flow
   [FUT] Sharing UI
 
+
+### Priority Roadmap (Beta 6.6+)
+  
+  1. Debug/Observability Hardening — TOP
+	 * Ensure all API handlers funnel responses through `send_debug_response()`
+	   when `DEVMODE=true`, and that `/debug.log` is writable and populated.
+	 * Client logs: standardize toast + console structures; correlate client
+	   errors with server `debug[]` payloads.
+  
+  2. Touch Moves: Mobile Move Mode 2.0 + Touch DnD
+	 * Restore/upgrade Move Mode with clear CANCEL affordances and in-column
+	   reordering targets; long-press/handle for touch DnD.
+  
+  3. Zero-Knowledge Baseline (encryption boundary only)
+	 * Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and
+	   wrapping model; defer key-sharing.
+  
+  4. Recovery (Security-Questions) for ZK Password Reset
+	 * Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset.
+  
+  5. Sharing (foundation)
+	 * UI + API stubs (shareTask / revokeShare) without E2E key exchange yet.
+  
+  6. Offline MVP (defer)
+	 * Service Worker app-shell, IndexedDB mirror, write queue (LWW).
+  
+  7. Accessibility Polish
+	 * Colorblind/high-contrast tuning; ARIA announcements for Move Mode.
+
 ---
 
 ## 2. VISION & SCOPE
@@ -195,9 +224,34 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * **Delegation & Sharing:** Distinct styling + share icon.  
 * **Status Bands:** Status Bands: Signal (green), Support (blue), Backlog (orange), Completed (gray).  
 * **Privacy & Attachments:** Icons always visible.  
-* **UX:** Shadows, hover lift, animated drag/drop.  
-	* Clicking on a task's status band opens a contextual popover menu, allowing for direct selection of Signal, Support, or Backlog. This is the primary method for changing a task's classification.
+* **UX:**  
+  * Desktop: click-to-edit and mouse drag-and-drop.  
+  * Mobile/Tablet: two complementary options:  
+	1. **Touch DnD:** Long-press (~350ms) or drag-handle (≡) to lift a task; supports cross-column moves and same-column reordering.  
+	2. **Move Mode 2.0:** Actions → Move puts the task in wiggle state, shows a banner “Move [Task] • Cancel,” and activates footers (“Move here”) plus inter-card drop-zones for precise placement.  
 
+* **Abort Move Mode:** User can cancel by tapping the Cancel banner button, tapping backdrop, pressing Esc (if keyboard present), or device Back button. All abort paths restore normal state without changes.  
+
+* **Accessibility:** Move Mode announces entry via `aria-live` and traps focus to Cancel. Drop-zones and banner controls meet 44–48px touch target guidelines.
+
+#### Touch Drag-and-Drop (Mobile/Tablet)
+* **Start gesture:** Long-press (~350 ms) on the card **handle (≡)** to lift.
+* **During drag:** Card shows elevated shadow; columns auto-scroll when
+  near edges; valid targets highlight.
+* **Behavior:** Same-column reordering and cross-column moves are allowed.
+
+#### Move Mode 2.0 (Mobile-first, precise placement)
+* **Enter:** Actions menu → **Move**. The task enters a subtle **wiggle** state
+  and a top banner appears: “Move ‘Title’ • Cancel”.
+* **Destinations:** 
+  * Column footers switch from “+ New Task” to **“Move here”**.
+  * **In-column drop-zones** appear **between cards** and at top/bottom
+	(↑ Move above • Move below ↓) to support fine reordering without drag.
+* **Exit / Abort:** Tap **Cancel** in the banner, tap the backdrop, press **Esc**
+  (if keyboard present), or use the device **Back** button. Any of these restore
+  normal state with no changes.
+* **A11y:** `aria-live="polite"` on entry: “Move mode on. Choose a destination or
+  Cancel.” Focus starts on the Cancel button in the banner.
 
 #### Attachments
 * **Methods:** File picker, drag-drop, paste.  
@@ -213,16 +267,21 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * Group order: Signal > Support > Noise > Completed.  
 * Manual drag/drop allowed within groups.  
 * Sorting enforced on status change.  
-* Persisted instantly.  
+* Persisted instantly.
+
+Users can change classification either by **clicking the status band** on the
+card or via **Actions → Cycle Classification**; the enforced order remains
+Signal > Support > Noise > Completed.
 
 #### Actions Menu
 * Notes  
 * Due Date  
 * Duplicate  
 * Delete (with Undo)
-* Move  
+* Move ← opens Move Mode 2.0 (wiggle + banner + drop-zones)
 * Share
-* Toggle Private  
+* Toggle Private
+* Cycle Classification  ← alternate to clicking the status band
 
 The 'Delete' action for both tasks and columns now triggers a non-blocking toast notification with a temporary 'Undo' option, allowing for immediate action reversal. This replaces the previous blocking confirmation modal.
 
@@ -279,12 +338,14 @@ Universal modal for tasks, entries, segments, nodes.
 
 ### SETTINGS SLIDER & CALENDAR OVERLAYS
 **Settings Slider**
-* Slider accessible from title bar
-* High-Contrast/Colorblind Mode toggle: Increases color separation for icons, status bands, and accents
-* Automatic Logout (dropdown select 5 mins, 30 min, 3 hours, never)
-* Change Password (button opens modal)
-* Import/Export (button opens modal)
-* Help (button opens User Manual)  
+**Settings Slider**
+* Slider accessible from title bar.
+* **Display Mode:** Light Mode toggle.
+* **High-Contrast/Colorblind Mode:** increases separation for icons, status
+  bands, and accents. **Mutually exclusive with Light Mode.**
+* Change Password (opens modal).
+* (Planned) Automatic Logout.
+* (Planned) Import/Export, Help.
 
 **Calendar Overlays (App-Wide Feature):**  
 * User defines overlays by entering **labels tied to specific calendar dates**.
@@ -338,6 +399,21 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 	* Reduces security compared to pure zero-knowledge (recovery answers could be compromised)
 	* Provides reasonable balance between security and usability
 	* Users who lose both password AND security answers permanently lose data (by design)
+
+#### Zero-Knowledge Enablement Phases
+	1. **Baseline ZK (no sharing):** Consolidate all crypto into `/uix/crypto.js`.
+	   Use per-item DEKs wrapped by a Master Key (derived via Argon2id). Server
+	   stores only ciphertext and wrapped DEKs.
+	2. **Recovery Ready:** Require users to set security questions, derive a
+	   Recovery Key (PBKDF2), and store a **Recovery Envelope** (Master Key copy
+	   encrypted by Recovery Key) before enabling ZK password resets.
+	3. **Sharing Foundation:** Introduce UI and API stubs to designate shared tasks,
+	   leaving key exchange/E2E sharing for a later milestone.
+	4. **E2E Sharing:** Implement asymmetric wrapping of DEKs to recipients’
+	   public keys; sender does not lose local ZK guarantees.
+	
+	**Blocking dependency:** E2E sharing is blocked until **(1) Baseline ZK** and
+	**(2) Recovery Ready** are complete.
 
 #### Crypto Module Architecture
 
@@ -406,6 +482,17 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * Solution: $mail->SMTPDebug = 0 always, regardless of DEVMODE
 * Alternative: Server debug messages provide email sending visibility without response corruption
 
+#### Hardening Checklist (must-pass before new features ship)
+* All mutating API routes call `send_debug_response()`; no raw `echo/json_encode`
+  on error paths.
+* `/debug.log` exists, is writable by the web user, and receives timestamps.
+* Client extracts `debug[]` from responses when `DEVMODE=true` and logs to
+  console under a consistent namespace.
+* SMTP debug is **always off** (`$mail->SMTPDebug = 0`); rely on server logs.
+* UI uses toasts (non-blocking) for errors; confirmations use custom modal,
+  never native `alert/confirm`.
+* Guard repeated actions with an **isActionRunning** debounce flag to prevent
+  double-fires in modals/menus.
 
 ### Offline Support
 * Service Worker caches app shell.  
@@ -456,6 +543,8 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * Drag-and-Drop = DnD
 * Toast Notification = Toast
 * Modal Window = Modal
+* Move Mode = mobile-friendly relocation workflow with banner, wiggle state, and drop-zones.
+* Drag Handle = the ≡ grip area on each task card to initiate touch DnD.
 
 ---
 
@@ -666,3 +755,16 @@ Consistent SVGs for contextual menu, status, etc.
 * Performance: API response times, UI animation smoothness, large dataset handling
 
 ---
+
+### Touch Interaction Rules
+* **Scrolling vs dragging:** Cards scroll the page by default; dragging
+  requires touching the **handle** (≡) or entering **Move Mode**.
+* **Long-press delay:** ~350 ms before lift; provide subtle haptic cue where
+  available.
+* **Target sizes:** Drop-zones are ≥44 px high; banner buttons are ≥48 px.
+* **Abort affordances:** Cancel button, backdrop tap, Esc key (if present),
+  and device Back button must all exit Move Mode without side effects.
+
+***************
+**END OF SPEC**
+***************

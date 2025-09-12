@@ -1392,3 +1392,122 @@ Crypto Module Structure:
 Risk Assessment
 Your approach accepts that users who lose both their password AND security question answers will lose their data. This is actually the correct trade-off for true zero-knowledge - it's what makes the system trustworthy.
 The strategy of implementing encryption before significant user adoption is wise. Once you have paying customers with substantial data, migration becomes much more complex.
+
+---
+
+## ON NEXT STEPS RECOMMENDED BEING AT BETA 6.5
+
+*Alex said*
+here's Beta 6.5 as-is code in a zip file, the app spec and done.md contains a log of what has been done so far. please take a look and recommend next steps.
+
+*ChatGPT said*
+Awesome drop, thanks! I went through your ZIP plus the spec and your running change-log. Here’s a crisp, execution-ready plan that builds directly on what you’ve already shipped.
+# Where you are (quick read)
+* **Attachments**: Uploads + viewer are in, PDFs supported; delete is the last missing core piece and pruning UX needs refinement .
+* **Privacy**: Full-stack privacy toggles + persistent “Show Private” filter are implemented and stable .
+* **Spec & tracking**: API/UI checklists are largely **[RDY]**; soft-delete + restore are defined; sharing remains **[FUT]**.
+* **Security/crypto**: Spec defines zero-knowledge model + recovery system, but it’s not fully wired yet (reset flow still WIP) .
+
+⠀Immediate next steps (finish & harden)
+**1** **Finish attachments**
+	* Implement deleteAttachment endpoint and wire the ✕ button in the modal (it’s the “final pending” piece) .
+	* Replace auto-pruning with a confirmation path per spec (“Manage attachments” UX before deleting oldest) .
+**2** **Undo for deletes (soft-delete)**
+	* You already note soft-delete/restore in spec; surface it with a toast “Undo” and restoreItem (tracked as RDY) to meet your spec’s UX standard .
+**3** **Settings panel (first item = High-Contrast)**
+	* Ship the shell and the **High-Contrast/Colorblind Mode** toggle called out in the spec; then add “Auto-logout” and “Change password” next .
+
+⠀Near-term feature work (spec-aligned)
+**4** **Zero-knowledge recovery & password reset**
+	* Implement the Security-Questions Recovery flow (Recovery Key → Master Key copy) so performPasswordReset can flip to **[RDY]** .
+**5** **Offline MVP**
+	* Service Worker for app-shell, IndexedDB mirror of columns/tasks, write-queue with LWW conflict rule—the exact pattern you documented .
+**6** **Sharing (foundation)**
+	* Keep scope tight: UI affordances + API stubs (shareTask/revokeShare), no crypto yet. This unblocks later E2E key-sharing work and matches your roadmap slotting .
+
+⠀Ops & quality passes
+**7** **Debug/observability**
+	* Ensure send_debug_response is universally used in API handlers and that debug.log creation/permissions are verified (per spec) .
+**8** **Accessibility polish**
+	* Apply the spec’s WCAG/high-contrast commitments across status bands and icons (ties to the Settings toggle) .
+
+⠀Suggested 2-week cut plan
+**Sprint A (Finish & Harden)**
+* Attachments: delete + pruning confirmation.
+* Soft-delete + **Undo** for tasks/columns using existing restoreItem.
+* Settings panel shell + High-Contrast toggle. (Delivers “feature complete Tasks + attachments” feel.)
+
+⠀**Sprint B (Resilience & Reach)**
+* Password reset: implement Security-Questions Recovery end-to-end.
+* Offline MVP: SW + IndexedDB + write queue.
+* Sharing (UI + API placeholders) to stage future E2E key-sharing.
+
+⠀If you want, I can pick one item and ship the actual code drop-ins (PHP handler + JS + minimal CSS) now. My vote: **attachments delete + pruning confirmation**, since it closes a visible hole and simplifies future support.
+
+*Alex responded*
+1. this feature is working already.  just tested for confirmation.
+2. this feature is working already.  just tested for confirmation.
+3. this feature is working already.  settings include for now light mode switch, high-contrast mode switch (which is mutually excluding with light mode), and change password button to open modal.
+4. this should be the next feature, however, this would required to go zero knowledge first, which we have not done.
+5. this feature is important, but I'm inclined to push it to a the bottom of the priorities considering its complexity.
+6. I think we need to push this one up right after we figure out zero knowledge.
+7. I would move this one to the top of the priorities even above zero knowledge because it helps debug as we go on.
+8. let's put this one after sharing in terms off priorities.
+
+A topmost priority, however is to recover a feature we seem to have lost while doing some troubleshooting with tasks.js.     We need to be able to DnD tasks inside and across columns.  That works perfectly in a desktop browser with mouse gestures.  But that doesn't work in a mobile or table browser with touch gestures.  So we had implemented a Move task in the task contextual menu which when taped, put the task card in wiggle mode and replace the add task text field in the footer of each column so the user taps on the desired destination column and the task moves there.  The problem with that implementation was that it wasn't easy to abort (similar to what escape does in a keyboard) and it did not provide a way to move the task up and down in the column it was in.  I'd appreciate your recommendation considering this app es expected to be mobile first.
+
+Thoughts?
+
+*ChatGPT responded*
+# Updated priority stack (short)
+**1** **Debug/observability hardening** (server + client logs surfaced everywhere). This is already part of your spec/process and will accelerate everything else. 
+**2** **Mobile task moving (DnD + Move Mode 2.0)** — fix/upgrade the touch UX now. Your spec already includes both DnD and a mobile “Move Mode” affordance; we’ll refine it. 
+**3** **Zero-knowledge baseline (crypto boundary + data model touch-ups)** — set the crypto boundary but defer key-sharing. 
+**4** **Recovery (security-questions)** — prerequisite for full ZK password reset.
+**5** **Sharing foundation** — UI + API stubs; E2E key sharing after ZK is firm.
+**6** **Offline** — push lower as you suggested (complex), keep hooks per your plan. 
+**7** **Accessibility polish** — after sharing.
+
+⠀
+# Mobile moving: recommendation & concrete plan
+You already shipped desktop DnD and a first Mobile “Move Mode” (button-based) pass; let’s make the touch story solid and easy to cancel. 
+# A) Touch DnD (progressive enhancement via Pointer Events)
+* **Long-press to drag** on touch (≈350ms). Show a subtle “lift” shadow when drag starts.
+* Add a small **drag handle** (≡) on each card; only that area starts drag on touch to avoid scroll conflicts.
+* CSS: touch-action: none on the handle while dragging, restore on drop.
+* Fallback to Move Mode automatically if the environment blocks pointer events (older mobile browsers).
+
+⠀B) Move Mode 2.0 (fast, cancellable, works everywhere)
+Move Mode stays critical for mobile accuracy and for users who dislike drag.
+**Flow**
+1 Tap **Move** in the task menu → the card **wiggles** (already in your log) and a **top banner** appears: “Move ‘Task’ • [Cancel]”. 
+**2** **Destinations** show live:
+	* **Column footers** convert from “+ New Task” to **“Move here”** (you already have this). 
+	* **In-column reordering**: render slim **drop-zones between cards** (↑ Move above • Move below ↓) so users can move *within the same column*—this solves your “up/down” need.
+3 Tap any target → call existing moveTask or reorderTasks, toast “Moved”, exit Move Mode.
+
+⠀**Abort options (missing in v1)**
+* Tap **Cancel** in the top banner (primary).
+* **Tap the dimmed backdrop** (secondary cancel).
+* **Hardware back** (Android) or **Esc** key (desktop/tablet kb).
+* Any of these clears moveTaskId, removes wiggle class, restores footers, hides drop-zones.
+
+⠀**Accessibility**
+* While active, announce “Move mode on. Choose a destination or Cancel.” via aria-live="polite".
+* Focus trapping inside the banner + targets; banner Cancel receives initial focus.
+
+⠀C) Persistence wiring (no new endpoints)
+* Cross-column: reuse your moveTask action. 
+* In-column: reuse reorderTasks with [{task_id, position}] payload after the user taps an in-column drop-zone. 
+* On success: re-render, **update counts** (you’ve already fixed cross-column count drift), show success toast, **exit Move Mode**. 
+
+⠀
+# Minimal implementation notes (so you can ship fast)
+* **State** in tasks.js: isMoveMode, taskToMoveId.
+* **Banner**: lightweight HTML injected once; show/hide with a class.
+* **Drop-zones**: when isMoveMode is true, iterate visible tasks and insert small buttons between cards + at column top/bottom.
+* **Cancel hooks**: banner button, backdrop click, keydown(Esc), popstate (Android back).
+* **CSS**: .task--wiggle animation (you already added), .dropzone hit area ≥44px tall for thumbs.
+
+⠀This fits your current architecture and matches the spec’s Tasks View and UI tracking (“Task DnD”, “Mobile ‘Move Mode’ for tasks”). 
+
