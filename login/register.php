@@ -1,4 +1,14 @@
 <?php
+/**
+ * Code for /login/register.php
+ *
+ * MyDayHub - Register Script
+ *
+ * @version 6.3.1
+ * @author Alex & Gemini
+ */
+
+
 // Modified for robust API pathing
 require_once __DIR__ . '/../incs/config.php';
 ?>

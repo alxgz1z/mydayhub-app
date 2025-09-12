@@ -1,5 +1,7 @@
 /**
- * MyDayHub Beta 5 - Tasks View Module
+ * code for /uix/tasks.js
+ *
+ * MyDayHub - Tasks View Module
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.

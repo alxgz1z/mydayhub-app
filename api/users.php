@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Users Module Handler
+ * Code for /api/users.php
+ *
+ * MyDayHub - Users Module Handler
  *
  * Contains all business logic for user-related API actions,
  * such as managing preferences.

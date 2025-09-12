@@ -1,4 +1,13 @@
 <?php
+/**
+ * Code for /login/forgot-password.php
+ *
+ * MyDayHub - Forgot Password Script
+ *
+ * @version 6.3.1
+ * @author Alex & Gemini
+ */
+
 require_once __DIR__ . '/../incs/config.php';
 ?>
 <!DOCTYPE html>

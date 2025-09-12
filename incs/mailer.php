@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 6 - Mailer Utility
+ * Code for /incs/mailer.php
+ *
+ * MyDayHub - Mailer Utility
  *
  * This file provides a centralized function for sending emails using PHPMailer,
  * configured with credentials from the .env file.

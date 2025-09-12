@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Logout Script
+ * Code for /login/logout.php
+ *
+ * MyDayHub - Logout Script
  *
  * This script handles the user logout process by destroying the
  * current session and redirecting to the login page.

@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Main API Gateway
+ * Code for /api/api.php 
+ *
+ * MyDayHub - Main API Gateway
  *
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.

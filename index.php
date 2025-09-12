@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Main Application Shell
+ * code for index.php 
+ *
+ * MyDayHub - Main Application Shell
  *
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.

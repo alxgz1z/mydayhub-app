@@ -1,5 +1,7 @@
 /**
- * MyDayHub Beta 5 - Main Application Logic
+ * Code for /uix/app.js
+ *
+ *  MyDayHub - Main Application Logic
  *
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.

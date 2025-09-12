@@ -1,5 +1,7 @@
 /**
- * MyDayHub Beta 5 - Unified Note Editor
+ * Code for /uix/editor.js
+ *
+ * MyDayHub - Unified Note Editor
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *

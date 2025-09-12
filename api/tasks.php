@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 6 - Tasks Module Handler
+ * Code for /api/tasks.php
+ *
+ * MyDayHub - Tasks Module Handler
  *
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.

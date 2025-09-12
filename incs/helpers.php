@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 6 - Global Helper Functions
+ * Code for /incs/helpers.php
+ *
+ * MyDayHub - Global Helper Functions
  *
  * This file contains utility functions that are used across multiple
  * parts of the backend application.

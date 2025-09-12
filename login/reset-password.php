@@ -1,4 +1,6 @@
 <?php
+// Code for /login/reset-password.php
+
 // MyDayHub - Password Reset Page
 
 require_once __DIR__ . '/../incs/config.php';

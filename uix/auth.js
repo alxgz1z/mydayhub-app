@@ -1,5 +1,7 @@
 /**
- * MyDayHub Beta 5 - Authentication Handler (Client-Side)
+ * Code for /uix/auth.js
+ *
+ * MyDayHub - Authentication Handler (Client-Side)
  *
  * Handles form submissions for registration, login, and password reset pages.
  *

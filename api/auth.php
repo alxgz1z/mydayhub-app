@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Authentication API
+ * Code for /api/auth.php
+ *
+ * MyDayHub - Authentication API
  *
  * Handles user registration, login, and other authentication actions.
  *

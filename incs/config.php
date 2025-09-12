@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 6 - Core Configuration
+ * Code for /incs/config.php
+ *
+ * MyDayHub - Core Configuration
  *
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.

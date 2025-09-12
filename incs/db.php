@@ -1,6 +1,8 @@
 <?php
 /**
- * MyDayHub Beta 5 - Database Connection
+ * Code for /incs/db.php
+ *
+ * MyDayHub - Database Connection
  *
  * This file provides a function to establish a secure and configured
  * PDO database connection using the credentials from /incs/config.php.

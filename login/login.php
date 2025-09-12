@@ -1,4 +1,13 @@
 <?php
+/**
+ * Code for /login/login.php
+ *
+ * MyDayHub - Login Script
+ *
+ * @version 6.3.1
+ * @author Alex & Gemini
+ */
+
 require_once __DIR__ . '/../incs/config.php';
 ?>
 <!DOCTYPE html>
