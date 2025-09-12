@@ -950,3 +950,22 @@ Version: Beta 6.0.4
 **2** **Zero-Knowledge Architecture:** Begin implementing the encryption foundation with security questions recovery system as discussed, since password resets fundamentally conflict with zero-knowledge encryption without recovery mechanisms.
 **3** **Clean Up Debugging Code:** Remove temporary raw response logging from /uix/auth.js since the core issue is resolved.
 **4** **Settings Panel Development:** Resume work on the Settings Panel with the first functional setting (High-Contrast Mode toggle).
+
+
+---
+
+Timestamp: 2025-09-12 14:22 - Regression: Task Completion Persistence & Animation
+
+**Version**: Beta 6.7.1 (Broken) **Focus** To introduce a gratifying "celebration flare" animation when a user marks a task as complete.
+**Key work**
+* **CSS (**uix/tasks.css**):** Added @keyframes for a "confetti burst" animation and defined a .is-completing helper class to trigger it on a task card.
+* **JavaScript (**uix/tasks.js**):** Modified the toggleTaskComplete function to add the .is-completing class to the task card when the completion checkbox is clicked.
+
+⠀⠀**Status** **[CRITICAL BUG]** The changes introduced a severe regression. The toggleTaskComplete function no longer persists the completed status to the backend. The "celebration flare" animation also fails to trigger. The feature is non-functional and has broken a core piece of existing functionality.
+
+**Recommended next steps (priority order)** 
+**1** **CRITICAL - Debug** toggleTaskComplete**:** The immediate and only priority for the next session is to debug the toggleTaskComplete function in uix/tasks.js. 
+* **Verify API Call:** Ensure the apiFetch call to the toggleComplete action is being made correctly. 
+* **Check** isComplete **Logic:** Confirm the isComplete boolean is being handled properly. 
+* **Fix Animation Trigger:** Ensure the .is-completing class is added *after* a successful API response and is correctly removed after the animation duration. 
+**2** **Harden a Test Plan:** Once fixed, create a specific test plan for this feature, including checking, un-checking, and rapid-fire clicks to ensure stability.

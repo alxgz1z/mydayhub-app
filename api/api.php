@@ -5,7 +5,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
  *
- * @version 6.5.0
+ * @version 6.6.0
  * @author Alex & Gemini
  */
 
@@ -15,23 +15,8 @@ declare(strict_types=1);
 // config.php sets up error handling and the debug message collector.
 require_once __DIR__ . '/../incs/config.php';
 require_once __DIR__ . '/../incs/db.php';
-
-// Modified for In-Browser Debugging: New response helper function.
-/**
- * Encodes and sends a JSON response, appending debug messages if in DEVMODE.
- * @param array $data The payload to send.
- * @param int $http_code The HTTP status code to set.
- */
-function send_json_response(array $data, int $http_code = 200): void {
-	global $__DEBUG_MESSAGES__;
-	if (DEVMODE && !empty($__DEBUG_MESSAGES__)) {
-		$data['debug'] = $__DEBUG_MESSAGES__;
-	}
-	http_response_code($http_code);
-	header('Content-Type: application/json');
-	echo json_encode($data);
-	exit();
-}
+// Modified for Debugging Hardening: Include the global helpers file.
+require_once __DIR__ . '/../incs/helpers.php';
 
 
 // --- SESSION SECURITY ---

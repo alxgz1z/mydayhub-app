@@ -4,7 +4,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 6.3.1
+ * @version 6.7.1
  * @author Alex & Gemini
  */
 
@@ -22,6 +22,10 @@ let isImageViewerOpen = false;
 let isModalOpening = false; 
 
 let isActionRunning = false;
+
+// Modified for Mobile Move Mode
+let isMoveModeActive = false;
+let taskToMoveId = null;
 
 
 /**
@@ -204,7 +208,14 @@ async function restoreItem(type, id) {
  * Sets up the main event listeners for the tasks view.
  */
 function initEventListeners() {
-	document.addEventListener('click', (e) => {
+	document.addEventListener('click', (e) => { // Modified for Mobile Move Mode
+		if (isMoveModeActive && !e.target.closest('.task-actions-menu') && !e.target.closest('.btn-move-here')) {
+			const taskCard = document.querySelector(`.task-card[data-task-id="${taskToMoveId}"]`);
+			if (taskCard && !taskCard.contains(e.target)) {
+				exitMoveMode();
+				return;
+			}
+		}
 		if (e.target.closest('#classification-popover') === null && e.target.closest('.task-status-band') === null) {
 			closeClassificationPopover();
 		}
@@ -373,6 +384,21 @@ function initEventListeners() {
 				showTaskActionsMenu(actionsBtn);
 				return;
 			}
+
+			// Modified for Mobile Move Mode
+			if (e.target.matches('.btn-move-here')) {
+				if (isActionRunning || !isMoveModeActive) return;
+				isActionRunning = true;
+				try {
+					const columnEl = e.target.closest('.task-column');
+					const toColumnId = columnEl.dataset.columnId;
+					await moveTask(taskToMoveId, toColumnId);
+				} finally {
+					exitMoveMode();
+					isActionRunning = false;
+				}
+				return;
+			}
 		});
 		
 		document.body.addEventListener('click', async (e) => {
@@ -400,6 +426,10 @@ function initEventListeners() {
 				} else if (action === 'toggle-privacy') {
 					if (taskId) {
 						await togglePrivacy('task', taskId);
+					}
+				} else if (action === 'move-task') {
+					if (taskCard) { // Modified for Mobile Move Mode Bug Fix
+						enterMoveMode(taskCard); // Modified for Mobile Move Mode Bug Fix
 					}
 				} else if (action === 'attachments') {
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
@@ -826,6 +856,12 @@ function showTaskActionsMenu(buttonEl) {
 			${privacyIcon}
 			<span>${privacyText}</span>
 		</button>
+		<button class="task-action-btn" data-action="move-task">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline>
+			</svg>
+			<span>Move Task</span>
+		</button>
 		<button class="task-action-btn" data-action="attachments">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
 			<span>Attachments</span>
@@ -1001,6 +1037,29 @@ async function renameTaskTitle(taskId, newTitle) {
 	}
 }
 
+/**
+ * Sends a request to move a task to a different column.
+ */
+async function moveTask(taskId, toColumnId) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'moveTask',
+			task_id: taskId,
+			to_column_id: toColumnId
+		});
+		if (result.status === 'success') {
+			showToast({ message: 'Task moved.', type: 'success' });
+			fetchAndRenderBoard(); // Refresh the board to show the change
+			return true;
+		}
+		return false;
+	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
+		return false;
+	}
+}
+
 
 /**
  * Sends the new order of tasks to the API.
@@ -1078,6 +1137,14 @@ async function toggleTaskComplete(taskId, isComplete) {
 		});
 
 		if (result.status === 'success') {
+			// Modified for Completion Animation
+			if (isComplete) {
+				taskCard.classList.add('is-completing');
+				setTimeout(() => {
+					taskCard.classList.remove('is-completing');
+				}, 800); // Match animation duration
+			}
+
 			taskCard.classList.toggle('completed', isComplete);
 			taskCard.dataset.classification = result.data.new_classification;
 			
@@ -1964,6 +2031,54 @@ function closeAttachmentViewer() {
 		}
 	}
 	isImageViewerOpen = false;
+}
+
+// --- Mobile Move Mode Functions ---
+
+/**
+ * Enters a UI state that allows for moving a task via tapping.
+ * @param {HTMLElement} taskCard - The task card element to be moved.
+ */
+function enterMoveMode(taskCard) {
+	if (isMoveModeActive) {
+		exitMoveMode(); // Exit any previous move mode first
+	}
+
+	isMoveModeActive = true;
+	taskToMoveId = taskCard.dataset.taskId;
+
+	taskCard.classList.add('is-moving');
+
+	const sourceColumnId = taskCard.closest('.task-column').dataset.columnId;
+
+	document.querySelectorAll('.task-column').forEach(column => {
+		const footer = column.querySelector('.column-footer');
+		if (column.dataset.columnId === sourceColumnId) {
+			footer.innerHTML = `<button class="btn btn-danger btn-cancel-move">Cancel Move</button>`;
+			footer.querySelector('.btn-cancel-move').addEventListener('click', exitMoveMode, { once: true });
+		} else {
+			footer.innerHTML = `<button class="btn btn-success btn-move-here">Move Here</button>`;
+		}
+	});
+}
+
+/**
+ * Exits the "Move Mode" UI state and restores the original column footers.
+ */
+function exitMoveMode() {
+	if (!isMoveModeActive) return;
+
+	const movingCard = document.querySelector(`.task-card[data-task-id="${taskToMoveId}"]`);
+	if (movingCard) {
+		movingCard.classList.remove('is-moving');
+	}
+
+	document.querySelectorAll('.column-footer').forEach(footer => {
+		footer.innerHTML = `<input type="text" class="new-task-input" placeholder="+ New Task" />`;
+	});
+
+	isMoveModeActive = false;
+	taskToMoveId = null;
 }
 
 

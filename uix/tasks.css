@@ -262,6 +262,36 @@
 	transform: rotate(2deg);
 }
 
+/* Modified for Completion Animation */
+.task-card.is-completing::before,
+.task-card.is-completing::after {
+	content: '';
+	position: absolute;
+	top: 18px; /* Align with checkbox */
+	left: 45px; /* Align with checkbox */
+	width: 8px;
+	height: 8px;
+	background: var(--accent-color);
+	border-radius: 50%;
+	animation: confetti-burst 0.8s ease-out forwards;
+	opacity: 0;
+}
+
+.task-card.is-completing::after {
+	animation-delay: 0.1s;
+}
+
+@keyframes confetti-burst {
+	0% {
+		opacity: 1;
+		transform: scale(0.5) translate(0, 0);
+	}
+	100% {
+		opacity: 0;
+		transform: scale(1) translate(40px, -20px);
+	}
+}
+
 /* ==========================================================================
    4. HEADER CONTROLS
    ========================================================================== */
@@ -474,4 +504,31 @@
 }
 .classification-option .swatch.classification-backlog {
 	background-color: #fd7e14;
+}
+
+/* ==========================================================================
+   9. MOBILE MOVE MODE
+   ========================================================================== */
+
+.task-card.is-moving {
+	outline: 2px solid var(--accent-color);
+	box-shadow: 0 0 15px var(--accent-color);
+	animation: tremor 0.3s infinite;
+}
+
+.column-footer .btn-move-here,
+.column-footer .btn-cancel-move {
+	width: 100%;
+	padding: 0.75rem;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+/* Tremor animation for the selected card */
+@keyframes tremor {
+  0% { transform: rotate(0.5deg); }
+  25% { transform: rotate(0deg); }
+  50% { transform: rotate(-0.5deg); }
+  75% { transform: rotate(0deg); }
+  100% { transform: rotate(0.5deg); }
 }

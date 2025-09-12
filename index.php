@@ -5,7 +5,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 6.4.0
+ * @version 6.6.1
  * @author Alex & Gemini
  */ 
 
@@ -215,17 +215,18 @@ $username = $_SESSION['username'] ?? 'User';
 		<div id="password-modal-container">
 			<h4>Change Password</h4>
 			<form id="change-password-form">
+				<input type="text" name="username" value="<?php echo htmlspecialchars($username); ?>" autocomplete="username" style="display: none;">
 				<div class="form-group">
 					<label for="current_password">Current Password</label>
-					<input type="password" id="current_password" required>
+					<input type="password" id="current_password" required autocomplete="current-password">
 				</div>
 				<div class="form-group">
 					<label for="new_password">New Password</label>
-					<input type="password" id="new_password" required>
+					<input type="password" id="new_password" required autocomplete="new-password">
 				</div>
 				<div class="form-group">
 					<label for="confirm_password">Confirm New Password</label>
-					<input type="password" id="confirm_password" required>
+					<input type="password" id="confirm_password" required autocomplete="new-password">
 				</div>
 				<div id="password-modal-buttons">
 					<button type="button" id="btn-password-cancel" class="btn">Cancel</button>

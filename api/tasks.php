@@ -1,15 +1,20 @@
 <?php
 /**
- * MyDayHub Beta 5 - Tasks Module Handler
+ * MyDayHub Beta 6 - Tasks Module Handler
  *
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 5.9.5
+ * @version 6.6.0
  * @author Alex & Gemini
  */
 
 declare(strict_types=1);
+
+// Modified for Debugging Hardening: Include the global helpers file.
+// Note: While the gateway includes this, including it here makes the module self-contained and runnable in isolation for testing.
+require_once __DIR__ . '/../incs/helpers.php';
+
 
 // Define constants for the attachment feature
 define('ATTACHMENT_UPLOAD_DIR', __DIR__ . '/../media/imgs/');
@@ -147,8 +152,7 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 
 		default:
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."]);
+			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
 	}
 }
@@ -162,8 +166,7 @@ function handle_move_task(PDO $pdo, int $userId, ?array $data): void {
 	$toColumnId = isset($data['to_column_id']) ? (int)$data['to_column_id'] : 0;
 
 	if ($taskId <= 0 || $toColumnId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Valid task_id and to_column_id are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id and to_column_id are required.'], 400);
 		return;
 	}
 
@@ -183,8 +186,7 @@ function handle_move_task(PDO $pdo, int $userId, ?array $data): void {
 		// If moving to the same column, do nothing.
 		if ($fromColumnId == $toColumnId) {
 			$pdo->commit();
-			http_response_code(200);
-			echo json_encode(['status' => 'success', 'message' => 'Task already in the destination column.']);
+			send_json_response(['status' => 'success', 'message' => 'Task already in the destination column.'], 200);
 			return;
 		}
 
@@ -219,18 +221,14 @@ function handle_move_task(PDO $pdo, int $userId, ?array $data): void {
 		
 		$pdo->commit();
 
-		http_response_code(200);
-		echo json_encode(['status' => 'success']);
+		send_json_response(['status' => 'success'], 200);
 
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
 		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log("Error in handle_move_task: " . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while moving the task.']);
+		log_debug_message("Error in handle_move_task: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while moving the task.'], 500);
 	}
 }
 
@@ -244,50 +242,39 @@ function handle_restore_item(PDO $pdo, int $userId, ?array $data): void {
 	$id = isset($data['id']) ? (int)$data['id'] : 0;
 
 	if (empty($type) || !in_array($type, ['task', 'column']) || $id <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.']);
+		send_json_response(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.'], 400);
 		return;
 	}
-
-	$table = ($type === 'task') ? 'tasks' : 'columns';
-	$idColumn = ($type === 'task') ? 'task_id' : 'column_id';
 
 	try {
 		$pdo->beginTransaction();
 
-		// Restore the primary item and move it to the end of the list
 		if ($type === 'task') {
-			// Find column_id before restoring
 			$stmtFind = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :id AND user_id = :userId");
 			$stmtFind->execute([':id' => $id, ':userId' => $userId]);
 			$task = $stmtFind->fetch();
 			if (!$task) { throw new Exception(ucfirst($type) . ' not found or permission denied.'); }
 			$columnId = $task['column_id'];
 
-			// Get new position
 			$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL");
 			$stmtPos->execute([':columnId' => $columnId, ':userId' => $userId]);
 			$newPosition = (int)$stmtPos->fetchColumn();
 			
-			// Restore
 			$stmtRestore = $pdo->prepare(
 				"UPDATE tasks SET deleted_at = NULL, position = :pos, updated_at = UTC_TIMESTAMP() WHERE task_id = :id AND user_id = :userId"
 			);
 			$stmtRestore->execute([':pos' => $newPosition, ':id' => $id, ':userId' => $userId]);
 			
 		} else { // type is 'column'
-			// Get new position
 			$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
 			$stmtPos->execute([':userId' => $userId]);
 			$newPosition = (int)$stmtPos->fetchColumn();
 
-			// Restore column
 			$stmtRestore = $pdo->prepare(
 				"UPDATE `columns` SET deleted_at = NULL, position = :pos, updated_at = UTC_TIMESTAMP() WHERE column_id = :id AND user_id = :userId"
 			);
 			$stmtRestore->execute([':pos' => $newPosition, ':id' => $id, ':userId' => $userId]);
 
-			// Also restore all tasks that were in that column
 			$stmtRestoreTasks = $pdo->prepare(
 				"UPDATE tasks SET deleted_at = NULL, updated_at = UTC_TIMESTAMP() WHERE column_id = :id AND user_id = :userId"
 			);
@@ -298,9 +285,8 @@ function handle_restore_item(PDO $pdo, int $userId, ?array $data): void {
 			throw new Exception(ucfirst($type) . ' not found or permission denied.');
 		}
 
-		// Fetch the newly restored data to send back to the client
 		if ($type === 'task') {
-			$stmtSelect = $pdo->prepare("SELECT * FROM tasks WHERE task_id = :id"); // Simplified for brevity
+			$stmtSelect = $pdo->prepare("SELECT * FROM tasks WHERE task_id = :id");
 			$stmtSelect->execute([':id' => $id]);
 			$restoredItem = $stmtSelect->fetch(PDO::FETCH_ASSOC);
 		} else { // 'column'
@@ -315,22 +301,18 @@ function handle_restore_item(PDO $pdo, int $userId, ?array $data): void {
 
 		$pdo->commit();
 
-		http_response_code(200);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success',
 			'message' => ucfirst($type) . ' restored successfully.',
 			'data' => $restoredItem
-		]);
+		], 200);
 
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
 		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log("Error in handle_restore_item: " . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while restoring the item.']);
+		log_debug_message("Error in handle_restore_item: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => $e->getMessage() ?: 'A server error occurred while restoring the item.'], 500);
 	}
 }
 
@@ -343,8 +325,7 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 	$id = isset($data['id']) ? (int)$data['id'] : 0;
 
 	if (empty($type) || !in_array($type, ['task', 'column']) || $id <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.']);
+		send_json_response(['status' => 'error', 'message' => 'A valid type (task/column) and ID are required.'], 400);
 		return;
 	}
 
@@ -360,8 +341,7 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 
 		if ($stmtUpdate->rowCount() === 0) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => ucfirst($type) . ' not found or permission denied.']);
+			send_json_response(['status' => 'error', 'message' => ucfirst($type) . ' not found or permission denied.'], 404);
 			return;
 		}
 
@@ -372,25 +352,21 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 
 		$pdo->commit();
 
-		http_response_code(200);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success',
 			'data' => [
 				'type' => $type,
 				'id' => $id,
 				'is_private' => $newPrivateState
 			]
-		]);
+		], 200);
 
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
 		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log("Error in handle_toggle_privacy: " . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating privacy status.']);
+		log_debug_message("Error in handle_toggle_privacy: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while updating privacy status.'], 500);
 	}
 }
 
@@ -400,13 +376,10 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-	
-	$notes = isset($data['notes']) ? (string)$data['notes'] : null;
-	$dueDate = isset($data['dueDate']) ? $data['dueDate'] : null;
+	$notes = $data['notes'] ?? null;
 
 	if ($taskId <= 0 || ($notes === null && !array_key_exists('dueDate', $data))) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID and at least one field to update (notes or dueDate) are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Task ID and at least one field to update (notes or dueDate) are required.'], 400);
 		return;
 	}
 
@@ -417,8 +390,7 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 		} elseif (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data['dueDate'])) {
 			$dueDateForDb = $data['dueDate'];
 		} else {
-			http_response_code(400);
-			echo json_encode(['status' => 'error', 'message' => 'Invalid dueDate format. Please use YYYY-MM-DD.']);
+			send_json_response(['status' => 'error', 'message' => 'Invalid dueDate format. Please use YYYY-MM-DD.'], 400);
 			return;
 		}
 	}
@@ -432,15 +404,12 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 
 		if ($task === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
 		}
 
-		$currentData = json_decode($task['encrypted_data'], true);
-		if (json_last_error() !== JSON_ERROR_NONE) {
-			$currentData = [];
-		}
+		$currentData = json_decode($task['encrypted_data'], true) ?: [];
+
 
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
@@ -468,18 +437,14 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 
 		$pdo->commit();
 
-		http_response_code(200);
-		echo json_encode(['status' => 'success']);
+		send_json_response(['status' => 'success'], 200);
 
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
 		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_save_task_details(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while saving the task details.']);
+		log_debug_message('Error in tasks.php handle_save_task_details(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while saving the task details.'], 500);
 	}
 }
 
@@ -489,8 +454,7 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_id']) || !isset($data['tasks'])) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Column ID and tasks array are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Column ID and tasks array are required.'], 400);
 		return;
 	}
 
@@ -498,20 +462,17 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 	$taskIds = $data['tasks'];
 
 	if (!is_array($taskIds)) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Tasks must be an array.']);
+		send_json_response(['status' => 'error', 'message' => 'Tasks must be an array.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
 			 SET position = :position, column_id = :columnId, updated_at = UTC_TIMESTAMP()
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
-
 		foreach ($taskIds as $position => $taskId) {
 			$stmt->execute([
 				':position'  => $position,
@@ -520,19 +481,12 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 				':userId'    => $userId
 			]);
 		}
-
 		$pdo->commit();
-
-		http_response_code(200);
-		echo json_encode(['status' => 'success']);
-
+		send_json_response(['status' => 'success'], 200);
 	} catch (Exception $e) {
 		$pdo->rollBack();
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_reorder_tasks(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while reordering tasks.']);
+		log_debug_message('Error in tasks.php handle_reorder_tasks(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while reordering tasks.'], 500);
 	}
 }
 
@@ -540,19 +494,14 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 /**
  * Fetches all columns, tasks, and user preferences.
  */
-// Modified for Soft Deletes
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
-		// Fetch user preferences and storage usage in one query
 		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes FROM users WHERE user_id = :userId");
 		$stmtUser->execute([':userId' => $userId]);
 		$userData = $stmtUser->fetch(PDO::FETCH_ASSOC);
-
-		$prefsJson = $userData['preferences'] ?? '{}';
-		$userPrefs = json_decode($prefsJson, true);
+		$userPrefs = json_decode($userData['preferences'] ?? '{}', true);
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 
-		// Modified for Soft Deletes
 		$stmtColumns = $pdo->prepare(
 			"SELECT column_id, column_name, position, is_private 
 			 FROM `columns` 
@@ -561,68 +510,46 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		);
 		$stmtColumns->execute([':userId' => $userId]);
 		$columns = $stmtColumns->fetchAll();
-
 		$boardData = [];
 		$columnMap = [];
-
 		foreach ($columns as $column) {
 			$column['tasks'] = [];
 			$boardData[] = $column;
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
-		// Modified for Soft Deletes
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
 				t.updated_at, t.due_date, COUNT(ta.attachment_id) as attachments_count
-			 FROM 
-				tasks t
-			 LEFT JOIN 
-				task_attachments ta ON t.task_id = ta.task_id
-			 WHERE 
-				t.user_id = :userId AND t.deleted_at IS NULL
-			 GROUP BY 
-				t.task_id
-			 ORDER BY 
-				t.position ASC"
+			 FROM tasks t
+			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
+			 WHERE t.user_id = :userId AND t.deleted_at IS NULL
+			 GROUP BY t.task_id
+			 ORDER BY t.position ASC"
 		);
-
 		$stmtTasks->execute([':userId' => $userId]);
 
 		while ($task = $stmtTasks->fetch()) {
-			$columnId = $task['column_id'];
-			if (isset($columnMap[$columnId])) {
+			if (isset($columnMap[$task['column_id']])) {
 				$encryptedData = json_decode($task['encrypted_data'], true);
-				$hasNotes = false;
-				if (json_last_error() === JSON_ERROR_NONE && !empty($encryptedData['notes'])) {
-					$hasNotes = true;
-				}
-				$task['has_notes'] = $hasNotes;
-
-				$columnMap[$columnId]['tasks'][] = $task;
+				$task['has_notes'] = !empty($encryptedData['notes']);
+				$columnMap[$task['column_id']]['tasks'][] = $task;
 			}
 		}
 
-		http_response_code(200);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success', 
 			'data' => [
 				'board' => $boardData,
 				'user_prefs' => $userPrefs,
-				'user_storage' => [
-					'used' => $storageUsed,
-					'quota' => USER_STORAGE_QUOTA_BYTES
-				]
+				'user_storage' => ['used' => $storageUsed, 'quota' => USER_STORAGE_QUOTA_BYTES]
 			]
-		]);
+		], 200);
 
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_get_all_board_data(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while fetching board data.']);
+		log_debug_message('Error in tasks.php handle_get_all_board_data(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while fetching board data.'], 500);
 	}
 }
 
@@ -631,15 +558,12 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
  */
 function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_name'])) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Column name is required.']);
+		send_json_response(['status' => 'error', 'message' => 'Column name is required.'], 400);
 		return;
 	}
-
 	$columnName = trim($data['column_name']);
 
 	try {
-		// Modified for Soft Deletes
 		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
 		$stmtPos->execute([':userId' => $userId]);
 		$position = (int)$stmtPos->fetchColumn();
@@ -647,32 +571,22 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 		$stmt = $pdo->prepare(
 			"INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, :columnName, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
-		$stmt->execute([
-			':userId' => $userId,
-			':columnName' => $columnName,
-			':position' => $position
-		]);
-
+		$stmt->execute([':userId' => $userId, ':columnName' => $columnName, ':position' => $position]);
 		$newColumnId = (int)$pdo->lastInsertId();
 
-		http_response_code(201);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success',
 			'data' => [
 				'column_id' => $newColumnId,
 				'column_name' => $columnName,
 				'position' => $position,
-				'is_private' => false, // Modified for Privacy Feature
+				'is_private' => false,
 				'tasks' => []
 			]
-		]);
-
+		], 201);
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_create_column(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while creating the column.']);
+		log_debug_message('Error in tasks.php handle_create_column(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while creating the column.'], 500);
 	}
 }
 
@@ -681,56 +595,34 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_id']) || empty($data['task_title'])) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Column ID and task title are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Column ID and task title are required.'], 400);
 		return;
 	}
-
 	$columnId = (int)$data['column_id'];
 	$taskTitle = trim($data['task_title']);
 
 	try {
-		// Modified for Soft Deletes
 		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `tasks` WHERE user_id = :userId AND column_id = :columnId AND deleted_at IS NULL");
 		$stmtPos->execute([':userId' => $userId, ':columnId' => $columnId]);
 		$position = (int)$stmtPos->fetchColumn();
-
 		$encryptedData = json_encode(['title' => $taskTitle, 'notes' => '']);
-
 		$stmt = $pdo->prepare(
 			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
-		$stmt->execute([
-			':userId' => $userId,
-			':columnId' => $columnId,
-			':encryptedData' => $encryptedData,
-			':position' => $position
-		]);
-
+		$stmt->execute([':userId' => $userId, ':columnId' => $columnId, ':encryptedData' => $encryptedData, ':position' => $position]);
 		$newTaskId = (int)$pdo->lastInsertId();
 
-		http_response_code(201);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success',
 			'data' => [
-				'task_id' => $newTaskId,
-				'column_id' => $columnId,
-				'encrypted_data' => $encryptedData,
-				'position' => $position,
-				'classification' => 'support',
-				'is_private' => false, // Modified for Privacy Feature
-				'due_date' => null,
-				'has_notes' => false,
-				'attachments_count' => 0
+				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $encryptedData,
+				'position' => $position, 'classification' => 'support', 'is_private' => false,
+				'due_date' => null, 'has_notes' => false, 'attachments_count' => 0
 			]
-		]);
-
+		], 201);
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_create_task(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while creating the task.']);
+		log_debug_message('Error in tasks.php handle_create_task(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while creating the task.'], 500);
 	}
 }
 
@@ -739,11 +631,9 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['task_id'])) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID is required.']);
+		send_json_response(['status' => 'error', 'message' => 'Task ID is required.'], 400);
 		return;
 	}
-
 	$taskId = (int)$data['task_id'];
 
 	try {
@@ -752,38 +642,22 @@ function handle_toggle_complete(PDO $pdo, int $userId, ?array $data): void {
 		$currentClassification = $stmtGet->fetchColumn();
 
 		if ($currentClassification === false) {
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found.'], 404);
 			return;
 		}
 
 		$newClassification = ($currentClassification === 'completed') ? 'support' : 'completed';
-
 		$stmtUpdate = $pdo->prepare(
 			"UPDATE tasks SET classification = :newClassification, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
 		);
-		$stmtUpdate->execute([
-			':newClassification' => $newClassification,
-			':taskId' => $taskId,
-			':userId' => $userId
-		]);
-
-		http_response_code(200);
-		echo json_encode([
-			'status' => 'success',
-			'data' => ['new_classification' => $newClassification]
-		]);
-
+		$stmtUpdate->execute([':newClassification' => $newClassification, ':taskId' => $taskId, ':userId' => $userId]);
+		send_json_response(['status' => 'success', 'data' => ['new_classification' => $newClassification]], 200);
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_toggle_complete(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating the task.']);
+		log_debug_message('Error in tasks.php handle_toggle_complete(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while updating the task.'], 500);
 	}
 }
 
-// Modified for Classification Popover
 /**
  * Sets a task's classification to a specific value (Signal, Support, or Backlog).
  */
@@ -791,16 +665,8 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	$newClassification = $data['classification'] ?? null;
 
-	if ($taskId <= 0 || empty($newClassification)) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID and classification are required.']);
-		return;
-	}
-
-	$allowedClassifications = ['signal', 'support', 'backlog'];
-	if (!in_array($newClassification, $allowedClassifications)) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid classification value provided.']);
+	if ($taskId <= 0 || empty($newClassification) || !in_array($newClassification, ['signal', 'support', 'backlog'])) {
+		send_json_response(['status' => 'error', 'message' => 'Task ID and a valid classification are required.'], 400);
 		return;
 	}
 
@@ -810,30 +676,16 @@ function handle_toggle_classification(PDO $pdo, int $userId, ?array $data): void
 			 SET classification = :newClassification, updated_at = UTC_TIMESTAMP() 
 			 WHERE task_id = :taskId AND user_id = :userId AND classification != 'completed'"
 		);
-		$stmtUpdate->execute([
-			':newClassification' => $newClassification,
-			':taskId' => $taskId,
-			':userId' => $userId
-		]);
+		$stmtUpdate->execute([':newClassification' => $newClassification, ':taskId' => $taskId, ':userId' => $userId]);
 
 		if ($stmtUpdate->rowCount() === 0) {
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found, permission denied, or task is already completed.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found, permission denied, or task is already completed.'], 404);
 			return;
 		}
-
-		http_response_code(200);
-		echo json_encode([
-			'status' => 'success',
-			'data' => ['new_classification' => $newClassification]
-		]);
-
+		send_json_response(['status' => 'success', 'data' => ['new_classification' => $newClassification]], 200);
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_toggle_classification(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while updating the task classification.']);
+		log_debug_message('Error in tasks.php handle_toggle_classification(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
@@ -845,8 +697,7 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 	$newName = isset($data['new_name']) ? trim($data['new_name']) : '';
 
 	if ($columnId <= 0 || $newName === '') {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Column ID and a non-empty new name are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Column ID and a non-empty new name are required.'], 400);
 		return;
 	}
 
@@ -854,61 +705,37 @@ function handle_rename_column(PDO $pdo, int $userId, ?array $data): void {
 		$stmt = $pdo->prepare(
 			"UPDATE `columns` SET column_name = :newName, updated_at = UTC_TIMESTAMP() WHERE column_id = :columnId AND user_id = :userId"
 		);
-		
-		$stmt->execute([
-			':newName' => $newName,
-			':columnId' => $columnId,
-			':userId' => $userId
-		]);
+		$stmt->execute([':newName' => $newName, ':columnId' => $columnId, ':userId' => $userId]);
 
 		if ($stmt->rowCount() === 0) {
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Column not found or you do not have permission to edit it.']);
+			send_json_response(['status' => 'error', 'message' => 'Column not found or permission denied.'], 404);
 			return;
 		}
-
-		http_response_code(200);
-		echo json_encode([
-			'status' => 'success',
-			'data' => [
-				'column_id' => $columnId,
-				'new_name' => $newName
-			]
-		]);
-
+		send_json_response(['status' => 'success', 'data' => ['column_id' => $columnId, 'new_name' => $newName]], 200);
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_rename_column(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while renaming the column.']);
+		log_debug_message('Error in tasks.php handle_rename_column(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
 /**
  * Soft-deletes a column and all its tasks for the authenticated user.
  */
-// Modified for Soft Deletes
 function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	$columnId = isset($data['column_id']) ? (int)$data['column_id'] : 0;
 
 	if ($columnId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid Column ID.']);
+		send_json_response(['status' => 'error', 'message' => 'Invalid Column ID.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
-		// Soft-delete all tasks within the column first
 		$stmt_delete_tasks = $pdo->prepare(
 			"UPDATE tasks SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
 			 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL"
 		);
 		$stmt_delete_tasks->execute([':columnId' => $columnId, ':userId' => $userId]);
-
-		// Soft-delete the column itself
 		$stmt_delete_column = $pdo->prepare(
 			"UPDATE `columns` SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP()
 			 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL"
@@ -917,12 +744,10 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 
 		if ($stmt_delete_column->rowCount() === 0) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Column not found or you do not have permission to delete it.']);
+			send_json_response(['status' => 'error', 'message' => 'Column not found or permission denied.'], 404);
 			return;
 		}
 
-		// Re-compact positions of remaining ACTIVE columns
 		$stmt_get_columns = $pdo->prepare(
 			"SELECT column_id FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
 		);
@@ -935,19 +760,11 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 		}
 
 		$pdo->commit();
-
-		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => ['deleted_column_id' => $columnId]]);
-
+		send_json_response(['status' => 'success', 'data' => ['deleted_column_id' => $columnId]], 200);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) {
-			$pdo->rollBack();
-		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_delete_column(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the column.']);
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('Error in tasks.php handle_delete_column(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
@@ -957,80 +774,58 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_reorder_columns(PDO $pdo, int $userId, ?array $data): void {
 	if (empty($data['column_ids']) || !is_array($data['column_ids'])) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'An ordered array of column_ids is required.']);
+		send_json_response(['status' => 'error', 'message' => 'An ordered array of column_ids is required.'], 400);
 		return;
 	}
-
 	$columnIds = $data['column_ids'];
 
 	try {
 		$pdo->beginTransaction();
-
 		$stmt = $pdo->prepare(
 			"UPDATE `columns` SET position = :position, updated_at = UTC_TIMESTAMP() WHERE column_id = :columnId AND user_id = :userId"
 		);
-
 		foreach ($columnIds as $position => $columnId) {
-			$stmt->execute([
-				':position' => $position,
-				':columnId' => (int)$columnId,
-				':userId'   => $userId
-			]);
+			$stmt->execute([':position' => $position, ':columnId' => (int)$columnId, ':userId' => $userId]);
 		}
-
 		$pdo->commit();
-
-		http_response_code(200);
-		echo json_encode(['status' => 'success']);
-
+		send_json_response(['status' => 'success'], 200);
 	} catch (Exception $e) {
 		$pdo->rollBack();
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_reorder_columns(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while reordering columns.']);
+		log_debug_message('Error in tasks.php handle_reorder_columns(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
 /**
  * Soft-deletes a task and re-compacts the positions of remaining tasks in its column.
  */
-// Modified for Soft Deletes
 function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 
 	if ($taskId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid Task ID.']);
+		send_json_response(['status' => 'error', 'message' => 'Invalid Task ID.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
-		// Find the task to ensure it exists and get its column_id
 		$stmt_find = $pdo->prepare("SELECT column_id FROM tasks WHERE task_id = :taskId AND user_id = :userId AND deleted_at IS NULL");
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$task = $stmt_find->fetch();
 
 		if ($task === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to delete it.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
 			return;
 		}
 		$columnId = $task['column_id'];
 
-		// Soft-delete the task
 		$stmt_delete = $pdo->prepare(
 			"UPDATE tasks SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_delete->execute([':taskId' => $taskId, ':userId' => $userId]);
 
-		// Re-compact positions of remaining ACTIVE tasks in the same column
 		$stmt_get_tasks = $pdo->prepare(
 			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
 		);
@@ -1043,19 +838,11 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 
 		$pdo->commit();
-
-		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => ['deleted_task_id' => $taskId]]);
-
+		send_json_response(['status' => 'success', 'data' => ['deleted_task_id' => $taskId]], 200);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) {
-			$pdo->rollBack();
-		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_delete_task(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while deleting the task.']);
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('Error in tasks.php handle_delete_task(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
@@ -1068,57 +855,35 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
 	$newTitle = isset($data['new_title']) ? trim($data['new_title']) : '';
 
 	if ($taskId <= 0 || $newTitle === '') {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Task ID and a non-empty new title are required.']);
+		send_json_response(['status' => 'error', 'message' => 'Task ID and a non-empty new title are required.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
 		$stmt_find = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$task = $stmt_find->fetch();
 
 		if ($task === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
 			return;
 		}
 
-		$currentData = json_decode($task['encrypted_data'], true);
-		if (json_last_error() !== JSON_ERROR_NONE) {
-			if (defined('DEVMODE') && DEVMODE) {
-				error_log("Corrupted JSON found for task_id: {$taskId}. Data: " . $task['encrypted_data']);
-			}
-			$currentData = [];
-		}
-
+		$currentData = json_decode($task['encrypted_data'], true) ?: [];
 		$currentData['title'] = $newTitle;
 		$newDataJson = json_encode($currentData);
-
 		$stmt_update = $pdo->prepare(
 			"UPDATE tasks SET encrypted_data = :newDataJson, updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId"
 		);
-		$stmt_update->execute([
-			':newDataJson' => $newDataJson,
-			':taskId' => $taskId,
-			':userId' => $userId
-		]);
-
+		$stmt_update->execute([':newDataJson' => $newDataJson, ':taskId' => $taskId, ':userId' => $userId]);
 		$pdo->commit();
-
-		http_response_code(200);
-		echo json_encode(['status' => 'success']);
-
+		send_json_response(['status' => 'success'], 200);
 	} catch (Exception $e) {
 		$pdo->rollBack();
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_rename_task_title(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while renaming the task.']);
+		log_debug_message('Error in tasks.php handle_rename_task_title(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
@@ -1127,17 +892,13 @@ function handle_rename_task_title(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-
 	if ($taskId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'Invalid Task ID.']);
+		send_json_response(['status' => 'error', 'message' => 'Invalid Task ID.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
-		// Step 1: Fetch the original task's data
 		$stmt_find = $pdo->prepare(
 			"SELECT column_id, encrypted_data, classification, due_date FROM tasks WHERE task_id = :taskId AND user_id = :userId"
 		);
@@ -1146,114 +907,74 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 
 		if ($originalTask === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task to duplicate not found or you do not have permission.']);
+			send_json_response(['status' => 'error', 'message' => 'Task to duplicate not found or permission denied.'], 404);
 			return;
 		}
 		
 		$columnId = $originalTask['column_id'];
-		$encryptedData = $originalTask['encrypted_data'];
-		$classification = $originalTask['classification'];
-		$dueDate = $originalTask['due_date'];
-
-		// Step 2: Determine the new position (at the end of the column)
 		$stmt_pos = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL");
 		$stmt_pos->execute([':columnId' => $columnId, ':userId' => $userId]);
 		$newPosition = (int)$stmt_pos->fetchColumn();
 
-		// Step 3: Insert the new (duplicated) task
 		$stmt_insert = $pdo->prepare(
 			"INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, due_date, created_at, updated_at) 
 			 VALUES (:userId, :columnId, :encryptedData, :position, :classification, :dueDate, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
 		$stmt_insert->execute([
-			':userId' => $userId,
-			':columnId' => $columnId,
-			':encryptedData' => $encryptedData,
-			':position' => $newPosition,
-			':classification' => $classification,
-			':dueDate' => $dueDate
+			':userId' => $userId, ':columnId' => $columnId, ':encryptedData' => $originalTask['encrypted_data'],
+			':position' => $newPosition, ':classification' => $originalTask['classification'], ':dueDate' => $originalTask['due_date']
 		]);
-
 		$newTaskId = (int)$pdo->lastInsertId();
-
 		$pdo->commit();
 		
-		$encryptedDataDecoded = json_decode($encryptedData, true);
-		$hasNotes = !empty($encryptedDataDecoded['notes']);
-
-		// Step 4: Respond with the complete new task object
-		http_response_code(201);
-		echo json_encode([
+		$encryptedDataDecoded = json_decode($originalTask['encrypted_data'], true);
+		
+		send_json_response([
 			'status' => 'success',
 			'data' => [
-				'task_id' => $newTaskId,
-				'column_id' => $columnId,
-				'encrypted_data' => $encryptedData,
-				'position' => $newPosition,
-				'classification' => $classification,
-				'due_date' => $dueDate,
-				'has_notes' => $hasNotes,
-				'attachments_count' => 0,
-				'is_private' => false,
+				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $originalTask['encrypted_data'],
+				'position' => $newPosition, 'classification' => $originalTask['classification'], 'due_date' => $originalTask['due_date'],
+				'has_notes' => !empty($encryptedDataDecoded['notes']), 'attachments_count' => 0, 'is_private' => false,
 			]
-		]);
-
+		], 201);
 	} catch (Exception $e) {
 		$pdo->rollBack();
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in tasks.php handle_duplicate_task(): ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while duplicating the task.']);
+		log_debug_message('Error in tasks.php handle_duplicate_task(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }
 
 /**
  * Handles the upload of a file attachment for a specific task.
  */
-// Modified for Final Bug Fix
 function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
-	// 1. --- VALIDATION ---
 	$taskId = isset($_POST['task_id']) ? (int)$_POST['task_id'] : 0;
 	if ($taskId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'A valid Task ID is required.']);
+		send_json_response(['status' => 'error', 'message' => 'A valid Task ID is required.'], 400);
 		return;
 	}
-
 	if (empty($_FILES['attachment']) || $_FILES['attachment']['error'] !== UPLOAD_ERR_OK) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'File upload error or no file provided.']);
+		send_json_response(['status' => 'error', 'message' => 'File upload error or no file provided.'], 400);
 		return;
 	}
-
 	$file = $_FILES['attachment'];
-	$fileSize = $file['size'];
-	$fileMimeType = mime_content_type($file['tmp_name']);
-
-	if ($fileSize > MAX_FILE_SIZE_BYTES) {
-		http_response_code(413); // Payload Too Large
-		echo json_encode(['status' => 'error', 'message' => 'File is too large. Max size is ' . (MAX_FILE_SIZE_BYTES / 1024 / 1024) . 'MB.']);
+	if ($file['size'] > MAX_FILE_SIZE_BYTES) {
+		send_json_response(['status' => 'error', 'message' => 'File is too large.'], 413);
 		return;
 	}
-
+	$fileMimeType = mime_content_type($file['tmp_name']);
 	if (!in_array($fileMimeType, ALLOWED_MIME_TYPES)) {
-		http_response_code(415); // Unsupported Media Type
-		echo json_encode(['status' => 'error', 'message' => 'Invalid file type. Allowed types are JPG, PNG, GIF, WebP.']);
+		send_json_response(['status' => 'error', 'message' => 'Invalid file type.'], 415);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
-		// 2. --- PERMISSIONS & QUOTA CHECK ---
 		$stmt = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
 		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
 		if ($stmt->fetch() === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found or permission denied.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
 			return;
 		}
 
@@ -1261,156 +982,92 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 		$stmt->execute([':userId' => $userId]);
 		$storageUsed = (int)$stmt->fetchColumn();
 
-		// 3. --- PRUNING LOGIC ---
-		if (($storageUsed + $fileSize) > USER_STORAGE_QUOTA_BYTES) {
-			$stmt = $pdo->prepare(
-				"SELECT attachment_id, filename_on_server, filesize_bytes FROM task_attachments 
-				 WHERE user_id = :userId ORDER BY created_at ASC LIMIT 1"
-			);
+		if (($storageUsed + $file['size']) > USER_STORAGE_QUOTA_BYTES) {
+			$stmt = $pdo->prepare("SELECT attachment_id, filename_on_server, filesize_bytes FROM task_attachments WHERE user_id = :userId ORDER BY created_at ASC LIMIT 1");
 			$stmt->execute([':userId' => $userId]);
-			$oldestAttachment = $stmt->fetch(PDO::FETCH_ASSOC);
-
-			if ($oldestAttachment) {
-				$oldFilePath = ATTACHMENT_UPLOAD_DIR . $oldestAttachment['filename_on_server'];
-				if (file_exists($oldFilePath)) {
-					unlink($oldFilePath);
+			$oldest = $stmt->fetch(PDO::FETCH_ASSOC);
+			if ($oldest) {
+				if (file_exists(ATTACHMENT_UPLOAD_DIR . $oldest['filename_on_server'])) {
+					unlink(ATTACHMENT_UPLOAD_DIR . $oldest['filename_on_server']);
 				}
-				$stmt = $pdo->prepare("DELETE FROM task_attachments WHERE attachment_id = :id");
-				$stmt->execute([':id' => $oldestAttachment['attachment_id']]);
-				
-				$storageUsed -= (int)$oldestAttachment['filesize_bytes'];
+				$stmtDel = $pdo->prepare("DELETE FROM task_attachments WHERE attachment_id = :id");
+				$stmtDel->execute([':id' => $oldest['attachment_id']]);
+				$storageUsed -= (int)$oldest['filesize_bytes'];
 			}
 		}
 
-		// 4. --- FILE PROCESSING ---
 		$originalFilename = basename($file['name']);
 		$fileExtension = pathinfo($originalFilename, PATHINFO_EXTENSION);
 		$newFilename = "user{$userId}_" . time() . "_" . bin2hex(random_bytes(4)) . "." . $fileExtension;
-		$destinationPath = ATTACHMENT_UPLOAD_DIR . $newFilename;
-
-		if (!move_uploaded_file($file['tmp_name'], $destinationPath)) {
-			$pdo->rollBack();
+		if (!move_uploaded_file($file['tmp_name'], ATTACHMENT_UPLOAD_DIR . $newFilename)) {
 			throw new Exception("Failed to move uploaded file.");
 		}
 
-		// 5. --- DATABASE UPDATES ---
 		$stmt = $pdo->prepare(
 			"INSERT INTO task_attachments (task_id, user_id, filename_on_server, original_filename, filesize_bytes, mime_type, created_at)
-			 VALUES (:taskId, :userId, :filename_on_server, :original_filename, :filesize_bytes, :mime_type, UTC_TIMESTAMP())"
+			 VALUES (:taskId, :userId, :newFilename, :originalFilename, :filesize, :mimeType, UTC_TIMESTAMP())"
 		);
 		$stmt->execute([
-			':taskId' => $taskId,
-			':userId' => $userId,
-			':filename_on_server' => $newFilename,
-			':original_filename' => $originalFilename,
-			':filesize_bytes' => $fileSize,
-			':mime_type' => $fileMimeType
+			':taskId' => $taskId, ':userId' => $userId, ':newFilename' => $newFilename,
+			':originalFilename' => $originalFilename, ':filesize' => $file['size'], ':mimeType' => $fileMimeType
 		]);
 		$newAttachmentId = (int)$pdo->lastInsertId();
 
-		$newStorageUsed = $storageUsed + $fileSize;
+		$newStorageUsed = $storageUsed + $file['size'];
 		$stmt = $pdo->prepare("UPDATE users SET storage_used_bytes = :storage WHERE user_id = :userId");
 		$stmt->execute([':storage' => $newStorageUsed, ':userId' => $userId]);
 
 		$pdo->commit();
-
-		// 6. --- RESPOND ---
-		http_response_code(201);
-		echo json_encode([
+		send_json_response([
 			'status' => 'success',
 			'data' => [
-				'attachment_id' => $newAttachmentId,
-				'task_id' => $taskId,
-				'filename_on_server' => $newFilename,
-				'original_filename' => $originalFilename,
-				'filesize_bytes' => $fileSize,
-				'user_storage_used' => $newStorageUsed,
-				'user_storage_quota' => USER_STORAGE_QUOTA_BYTES
+				'attachment_id' => $newAttachmentId, 'task_id' => $taskId, 'filename_on_server' => $newFilename,
+				'original_filename' => $originalFilename, 'filesize_bytes' => $file['size'],
+				'user_storage_used' => $newStorageUsed, 'user_storage_quota' => USER_STORAGE_QUOTA_BYTES
 			]
-		]);
-
+		], 201);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) {
-			$pdo->rollBack();
-		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in handle_upload_attachment: ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred during file upload.']);
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('Error in handle_upload_attachment: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
 	}
 }
 
-// Modified for deleteAttachment
 /**
  * Deletes an attachment, removes the file, and updates user storage quota.
  */
 function handle_delete_attachment(PDO $pdo, int $userId, ?array $data): void {
 	$attachmentId = isset($data['attachment_id']) ? (int)$data['attachment_id'] : 0;
-
 	if ($attachmentId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'A valid Attachment ID is required.']);
+		send_json_response(['status' => 'error', 'message' => 'A valid Attachment ID is required.'], 400);
 		return;
 	}
 
 	try {
 		$pdo->beginTransaction();
-
-		// 1. --- OWNERSHIP CHECK & DATA RETRIEVAL ---
-		$stmt = $pdo->prepare(
-			"SELECT filename_on_server, filesize_bytes 
-			 FROM task_attachments 
-			 WHERE attachment_id = :attachmentId AND user_id = :userId"
-		);
+		$stmt = $pdo->prepare("SELECT filename_on_server, filesize_bytes FROM task_attachments WHERE attachment_id = :attachmentId AND user_id = :userId");
 		$stmt->execute([':attachmentId' => $attachmentId, ':userId' => $userId]);
 		$attachment = $stmt->fetch(PDO::FETCH_ASSOC);
 
 		if ($attachment === false) {
 			$pdo->rollBack();
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Attachment not found or permission denied.']);
+			send_json_response(['status' => 'error', 'message' => 'Attachment not found or permission denied.'], 404);
 			return;
 		}
 
-		$filename = $attachment['filename_on_server'];
-		$filesize = (int)$attachment['filesize_bytes'];
-		$filePath = ATTACHMENT_UPLOAD_DIR . $filename;
-
-		// 2. --- FILE & DATABASE DELETION ---
-		if (file_exists($filePath)) {
-			unlink($filePath);
+		if (file_exists(ATTACHMENT_UPLOAD_DIR . $attachment['filename_on_server'])) {
+			unlink(ATTACHMENT_UPLOAD_DIR . $attachment['filename_on_server']);
 		}
-
 		$stmt = $pdo->prepare("DELETE FROM task_attachments WHERE attachment_id = :attachmentId");
 		$stmt->execute([':attachmentId' => $attachmentId]);
-
-		// 3. --- UPDATE USER QUOTA ---
-		$stmt = $pdo->prepare(
-			"UPDATE users SET storage_used_bytes = storage_used_bytes - :filesize WHERE user_id = :userId"
-		);
-		$stmt->execute([':filesize' => $filesize, ':userId' => $userId]);
-
+		$stmt = $pdo->prepare("UPDATE users SET storage_used_bytes = GREATEST(0, storage_used_bytes - :filesize) WHERE user_id = :userId");
+		$stmt->execute([':filesize' => (int)$attachment['filesize_bytes'], ':userId' => $userId]);
 		$pdo->commit();
-
-		// 4. --- RESPOND ---
-		http_response_code(200);
-		echo json_encode([
-			'status' => 'success',
-			'data' => [
-				'deleted_attachment_id' => $attachmentId
-			]
-		]);
-
+		send_json_response(['status' => 'success', 'data' => ['deleted_attachment_id' => $attachmentId]], 200);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) {
-			$pdo->rollBack();
-		}
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in handle_delete_attachment: ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred while deleting the attachment.']);
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('Error in handle_delete_attachment: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
 	}
 }
 
@@ -1422,22 +1079,18 @@ function handle_get_attachments(PDO $pdo, int $userId): void {
 	$taskId = isset($_GET['task_id']) ? (int)$_GET['task_id'] : 0;
 
 	if ($taskId <= 0) {
-		http_response_code(400);
-		echo json_encode(['status' => 'error', 'message' => 'A valid Task ID is required.']);
+		send_json_response(['status' => 'error', 'message' => 'A valid Task ID is required.'], 400);
 		return;
 	}
 
 	try {
-		// Security Check: Ensure the user owns the task they are requesting attachments for.
 		$stmt = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :taskId AND user_id = :userId");
 		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
 		if ($stmt->fetch() === false) {
-			http_response_code(404);
-			echo json_encode(['status' => 'error', 'message' => 'Task not found or permission denied.']);
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
 			return;
 		}
 
-		// Fetch the attachments
 		$stmt = $pdo->prepare(
 			"SELECT attachment_id, task_id, filename_on_server, original_filename, filesize_bytes, created_at 
 			 FROM task_attachments 
@@ -1447,14 +1100,10 @@ function handle_get_attachments(PDO $pdo, int $userId): void {
 		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$attachments = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-		http_response_code(200);
-		echo json_encode(['status' => 'success', 'data' => $attachments]);
+		send_json_response(['status' => 'success', 'data' => $attachments], 200);
 
 	} catch (Exception $e) {
-		if (defined('DEVMODE') && DEVMODE) {
-			error_log('Error in handle_get_attachments: ' . $e->getMessage());
-		}
-		http_response_code(500);
-		echo json_encode(['status' => 'error', 'message' => 'An internal server error occurred while fetching attachments.']);
+		log_debug_message('Error in handle_get_attachments: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
 	}
 }

@@ -5,7 +5,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 6.5.0
+ * @version 6.7.0
  * @author Alex & Gemini
  */
 
@@ -72,7 +72,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Beta 6.5.0');
+define('APP_VER', 'Beta 6.7.0');
 $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
 $host = $_SERVER['HTTP_HOST'];
 $script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
