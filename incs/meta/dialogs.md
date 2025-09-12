@@ -1309,3 +1309,86 @@ The "Cancel Move" button (.btn-cancel-move-inline).
 This is a proven solution to a known problem, and we have the code to do it. I recommend we proceed with this plan.
 
 If you agree, we can begin by implementing the moveTask action on the backend.
+
+
+
+
+## ON ZERO TRUST IMPLEMENTATION CHALLENGES
+*Alex Informed*
+We have a fundamental problem we haven't tackled.  the app Is supposed to be zero knowledge (you can find some references to that in dialogs.md and basic specs in spec.md) and it hasn't been implemented.  so password management, for example, changes if the user needs to reset their password because the server has no knowledge of the encryption key that is tied to the password, thus resetting a password implies loosing access to previous encrypted data for the user. 
+
+
+*Claude Responded*
+The Zero-Knowledge Problem
+In a true zero-knowledge system:
+
+The user's password derives the encryption key client-side
+The server never sees the master key
+All user data is encrypted before reaching the server
+Password reset = permanent data loss (unless there's a recovery mechanism)
+
+Your current implementation allows password resets but would make all previously encrypted data permanently inaccessible, which defeats the purpose of the encryption.
+Solution Options
+Option 1: Accept Data Loss (Simple but harsh)
+
+Warn users during password reset that all data will be permanently lost
+Clear all encrypted data on password reset
+Simple to implement but terrible UX
+
+Option 2: Recovery Key System (Recommended)
+
+Generate a recovery key during registration/first login
+User must securely store this recovery key
+Password reset requires the recovery key to re-encrypt data with new password-derived key
+Standard practice for zero-knowledge apps (1Password, Bitwarden, etc.)
+
+Option 3: Security Questions/Recovery Data
+
+Encrypt a copy of the master key with answers to security questions
+Less secure but more user-friendly than recovery keys
+
+Immediate Decision Needed
+Before implementing zero-knowledge encryption, you need to decide:
+
+Is zero-knowledge encryption a firm requirement? If so, you must accept that password resets become complex.
+What level of data loss is acceptable? Complete loss vs recovery mechanisms.
+Implementation timeline: Zero-knowledge should be implemented before users create significant data, or you'll need migration logic.
+
+*Alex replied*
+I'd prefer to of with Option 3.  However I would like the user to create their own questions.
+Regarding immediate decisions, my concern is that previous version of this app have failed to achieve sharing successfully because we couldn't figure out a working workflow for asymmetric encryption that could live side by side with symmetric encryption. The premise of the app is to make it zero knowledge even at the price of having users loose information if they can't remember or find their answers to the security questions.  I believe once we finish a few minor features pending, we should move on to encryption and sharing.  Thoughts?
+
+*Claude Responded*
+Your approach is sound. Option 3 with user-generated security questions provides a reasonable balance between security and usability for a zero-knowledge system.
+Regarding Implementation Strategy
+Your prioritization makes sense. Here's why the encryption/sharing challenge has historically been difficult and how to approach it:
+The Core Challenge:
+
+Symmetric encryption (AES) is fast and suitable for user's own data
+Asymmetric encryption (RSA/ECC) is needed for sharing but is slow and complex
+The integration point between these systems is where most implementations fail
+
+Recommended Approach:
+
+Finish current features first - Complete the stable foundation
+Implement symmetric encryption with security questions recovery
+Add asymmetric sharing later as a separate, well-defined layer
+
+Technical Architecture for Zero-Knowledge
+When you're ready to implement:
+Security Questions System:
+
+User creates 3-5 custom questions during setup
+Answers hash to derive a recovery key that encrypts a copy of the master key
+Store encrypted master key copy + question hashes (never plaintext answers)
+Password reset requires answering questions to decrypt and re-encrypt with new password
+
+Crypto Module Structure:
+/uix/crypto.js
+├── Symmetric operations (user's data)
+├── Key derivation (password + salt → master key)
+├── Recovery system (questions → recovery key)
+└── Asymmetric layer (future sharing)
+Risk Assessment
+Your approach accepts that users who lose both their password AND security question answers will lose their data. This is actually the correct trade-off for true zero-knowledge - it's what makes the system trustworthy.
+The strategy of implementing encryption before significant user adoption is wise. Once you have paying customers with substantial data, migration becomes much more complex.

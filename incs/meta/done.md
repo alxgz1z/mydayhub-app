@@ -926,3 +926,27 @@ Version: Beta 6.0.4
 **2** **Diagnose Root Cause:** With the updated auth.php in place, run the "Forgot Password" test again. The browser's developer console will now display the step-by-step execution trace from the server, revealing the exact line where the process fails.
 **3** **Fix the Bug:** Once the error is identified from the console log, apply the necessary fix.
 **4** **Cleanup:** After the feature is working, delete the diagnostic test_mailer.php file.
+
+
+---
+
+# Timestamp: 2025-09-12 02:58 - Critical Bug Fix: Password Reset Email Flow
+**Version**: Beta 6.5.0-debug-complete
+**Focus** Resolve a critical silent failure in the "Forgot Password" feature that was preventing reset emails from being sent, despite having a complete UI and backend implementation.
+**Key work**
+* **Root Cause Identified:** PHPMailer's SMTPDebug = DEVMODE ? 2 : 0 was outputting SMTP communication logs directly into JSON responses, corrupting the client-side parsing.
+* **Debugging System Enhanced:**
+  * Built a comprehensive server-to-browser debugging pipeline using log_debug_message() in /incs/config.php
+  * Updated /api/auth.php to use the new send_debug_response() helper function for consistent JSON responses with debug info
+  * Modified /uix/auth.js to capture raw server responses and display debug messages in browser console
+* **Email Flow Restored:**
+  * Fixed /incs/mailer.php by setting $mail->SMTPDebug = 0 permanently to prevent output corruption
+  * Verified complete password reset workflow: form submission → token generation → email dispatch → database storage
+  * Confirmed email delivery and token persistence in password_resets table
+
+⠀**Status** The "Forgot Password" feature is now fully functional. Users can successfully request password reset emails, which are delivered with secure tokens. The debugging infrastructure provides excellent visibility into server-side execution. The final step of the password reset flow (handling the reset link and updating passwords) remains to be implemented.
+**Recommended next steps (priority order)**
+**1** **Complete Password Reset Flow:** Implement the performPasswordReset action in /api/auth.php and corresponding frontend logic in /uix/auth.js for the /login/reset-password.php page.
+**2** **Zero-Knowledge Architecture:** Begin implementing the encryption foundation with security questions recovery system as discussed, since password resets fundamentally conflict with zero-knowledge encryption without recovery mechanisms.
+**3** **Clean Up Debugging Code:** Remove temporary raw response logging from /uix/auth.js since the core issue is resolved.
+**4** **Settings Panel Development:** Resume work on the Settings Panel with the first functional setting (High-Contrast Mode toggle).

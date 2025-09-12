@@ -67,7 +67,7 @@ You are my **expert coding copilot**—a seasoned LAMP + UI/UX developer. You wo
 * **Editor:** Panic Nova (local)
 * **Hosts:** XAMPP (loc-env), Hostinger (web-env)
 * **Browser:** Chrome & Safari
-* **VCS:** GitHub https://github.com/alxgz1z/mydayhub-app
+* **VCS:** Public GitHub https://github.com/alxgz1z/mydayhub-app
 * **OS:** macOS 26
 
 ⠀

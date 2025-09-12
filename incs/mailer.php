@@ -5,7 +5,7 @@
  * This file provides a centralized function for sending emails using PHPMailer,
  * configured with credentials from the .env file.
  *
- * @version 6.4.3
+ * @version 6.5.0-debug-fixed
  * @author Alex & Gemini
  */
 
@@ -33,7 +33,8 @@ function send_email(string $toEmail, string $toName, string $subject, string $ht
 
 	try {
 		// --- Server Settings ---
-		$mail->SMTPDebug = DEVMODE ? 2 : 0;
+		// Modified for Clean JSON Response: Always disable SMTP debug output
+		$mail->SMTPDebug = 0; // Disabled to prevent corrupting JSON responses
 		$mail->isSMTP();
 		$mail->Host       = SMTP_HOST;
 		$mail->SMTPAuth   = true;

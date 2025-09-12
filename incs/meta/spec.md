@@ -1,6 +1,6 @@
 # MYDAYHUB
 
-**Version:** Beta 6.2.0 
+**Version:** Beta 6.5.0 
 **Audience:** Internal Development & Project Management  
 
 ---
@@ -31,10 +31,13 @@
 * Settings Slider & Calendar Overlays  
 
 **3 Technical Specification**  
-* Technical Architecture  
-* API Gateway and Contracts  
-* Frontend Architecture  
-* Environment Setup & Workflow  
+* Technical Architecture
+* API Gateway and Contracts
+* Frontend Architecture
+* Zero-Knowledge Architecture & Recovery Systems
+* Password Reset & Security Model
+* Development Debugging Infrastructure
+* Environment Setup & Workflow
 
 **4 Appendices**  
 * Glossary  
@@ -119,7 +122,7 @@
 ## 2. VISION & SCOPE
 
 ### APPLICATION SCOPE
-From Beta 5.0.0 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this “tasks-first” approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration.  
+From Beta 5 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this “tasks-first” approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration.  
 
 ### APPLICATION DESCRIPTION
 **MyDayHub** is a next-generation productivity hub, built for focus, simplicity, and absolute privacy. We start with task management and plan to integrate Journal, Outlines, and Events later. The UI combines dark backgrounds, accent gradients, translucent overlays, and rounded cards. Typography is clean and scalable. Status bands and quick-action icons are always visible, supporting classification, privacy, attachments, and sharing.  
@@ -270,8 +273,7 @@ Universal modal for tasks, entries, segments, nodes.
 * **Text Area:** Scrollable, with line numbers.  
 * **Status Bar:** Word/char/line counters + last saved timestamp.  
 * **Tools:** Case conversion, formatting, font resize, calculator.  
-* **Search:** Cross-note search opens results list, enabling seamless switching.  
-* **Fix:** Completed truncated sentence → *“This allows for a seamless workflow when switching between notes and prevents losing track of context.”*  
+* **Search:** Cross-note search opens results list, enabling seamless switching.
 
 ---
 
@@ -311,13 +313,99 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * Multi-user sessions with renewal + token.  
 * Per-item privacy flags.  
 
-### Frontend Encryption (Zero-Knowledge Boundary)
-* crypto.js encapsulates all crypto.  
-* Items encrypted with per-item DEKs.  
-* DEK wrapped with per-user Master Key (Argon2id).  
-* Master Key never leaves device.  
-* Sharing uses X25519 + Ed25519.  
-* CRUD actions operate only on ciphertext.  
+#### Zero-Knowledge Architecture & Recovery Systems
+* Core Encryption Model
+	* Encryption Boundary: All cryptographic operations handled by /uix/crypto.js module
+	* Per-Item Encryption: Each item (task, column, entry) encrypted with unique Data Encryption Key (DEK)
+	* Master Key: User-specific key derived on-device using Argon2id from passphrase + salt
+	* Key Wrapping: DEKs encrypted with user's Master Key before storage
+	* Server Blindness: Server never sees plaintext data or Master Key
+
+* Security Questions Recovery System
+  * Purpose: Enables password reset without data loss in zero-knowledge system
+  * Implementation:
+	* User creates 3-5 custom security questions during initial setup
+	* Question answers hash to derive a Recovery Key using PBKDF2
+	* Recovery Key encrypts a copy of the Master Key (Recovery Envelope)
+	* Server stores: question text (plaintext), answer hashes (irreversible), encrypted Recovery Envelope
+  * Recovery Process:
+	* User provides correct answers to security questions
+	* Client derives Recovery Key from answers
+	* Recovery Key decrypts Master Key copy
+	* New password generates new Master Key
+	* All user data re-encrypted with new Master Key
+  * Security Trade-offs:
+	* Reduces security compared to pure zero-knowledge (recovery answers could be compromised)
+	* Provides reasonable balance between security and usability
+	* Users who lose both password AND security answers permanently lose data (by design)
+
+#### Crypto Module Architecture
+
+/uix/crypto.js Structure:
+├── Key Derivation (password + salt → Master Key)
+├── DEK Management (generate, wrap, unwrap DEKs)
+├── Symmetric Operations (encrypt/decrypt user data)
+└── Recovery System (questions → Recovery Key → Master Key)
+
+### Password Reset & Security Model
+Standard Password Reset (Pre-Zero-Knowledge)
+* Current Implementation: Traditional email-based reset with secure tokens
+* Token Security: SHA-256 hashed tokens, 1-hour expiration, single-use
+* Email Delivery: PHPMailer with SMTP, styled HTML templates
+* Database: Dedicated password_resets table with cleanup policies
+
+#### Zero-Knowledge Password Reset (Future Implementation)
+* Fundamental Challenge: Password resets incompatible with zero-knowledge unless recovery mechanism exists
+* User Warning: Clear notification that password reset without recovery questions = permanent data loss
+* Migration Strategy:
+  * Phase 1: Implement security questions for new users
+  * Phase 2: Prompt existing users to set up recovery questions
+  * Phase 3: Enforce recovery questions for all users before enabling zero-knowledge mode
+* Recovery Flow:
+  * User requests reset → receives email with reset link
+  * Reset page requires answering security questions + new password
+  * Client derives Recovery Key, decrypts Master Key copy, re-encrypts all data with new Master Key
+
+#### Security Considerations
+* Threat Model: Protects against server compromise, but recovery questions reduce overall security
+* User Education: Clear documentation about security trade-offs and importance of strong, memorable answers
+* Attack Vectors: Social engineering of security questions, but better than alternative of total data loss
+
+
+### Development Debugging Infrastructure
+Server-Side Debugging
+* Debug Message Collection: Global $__DEBUG_MESSAGES__ array in /incs/config.php
+* Function: log_debug_message($message) appends timestamped entries
+* Integration: All API responses include debug array when DEVMODE=true
+* File Logging: Fallback to /debug.log for persistent logging
+
+#### Client-Side Debug Display
+* Browser Console Integration: JavaScript automatically extracts and displays server debug messages
+* Format: Clearly marked debug sections with consistent formatting
+* Raw Response Logging: Temporary capability to log full server responses for JSON parsing issues
+* Error Correlation: Links client-side errors with server-side debug traces
+
+#### Debug Response Helper
+
+~~~
+php
+function send_debug_response(array $data, int $http_code = 200): void {
+	global $__DEBUG_MESSAGES__;
+	if (DEVMODE && !empty($__DEBUG_MESSAGES__)) {
+		$data['debug'] = $__DEBUG_MESSAGES__;
+	}
+	http_response_code($http_code);
+	header('Content-Type: application/json');
+	echo json_encode($data);
+	exit();
+}
+~~~
+
+#### PHPMailer Debug Handling
+* Issue: SMTP debug output corrupts JSON responses in development mode
+* Solution: $mail->SMTPDebug = 0 always, regardless of DEVMODE
+* Alternative: Server debug messages provide email sending visibility without response corruption
+
 
 ### Offline Support
 * Service Worker caches app shell.  
@@ -329,8 +417,8 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 
 ### Environment Setup & Workflow
 * Production: mydayhub.com (Beta 3).  
-* Development: localhost (Beta 5).  
-* Online Test: breaveasy.com (Beta 5).  
+* Development: localhost (Beta 5 and on).  
+* Online Test: breaveasy.com (Beta 5 and on).  
 * Isolated DBs/files.  
 * Composer add-on: SMTP runtime.  
 * Debugging: DEVMODE logs.  
@@ -359,6 +447,10 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * Support task = indirectly enables Signal
 * Backlog task = does not require immediate attention; candidate for deferral to a later time.
 * Completed task = finished item, archived at bottom
+* Master Key = user-specific encryption key derived on-device, never transmitted
+* DEK = Data Encryption Key, unique per item, wrapped with Master Key
+* Recovery Envelope = Master Key copy encrypted with Recovery Key
+* Recovery Key = key derived from security question answers
 * hostinger hosted environment = web-env
 * local hosted environment = loc-env
 * Drag-and-Drop = DnD
@@ -386,7 +478,7 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 │ + New Task      │ │ + New Task       │ │ + New Task      │
 └─────────────────┘ └──────────────────┘ └─────────────────┘
 ┌───────────────────────────────────────────────────────────────────────────┐
-│ 19.Aug.25, Tuesday             [F1] [F2] [F3] [F4]                 [alfa] │
+│ 19.Aug.25, Tuesday                [FILTERS]                        [alfa] │
 └───────────────────────────────────────────────────────────────────────────┘
 
 
@@ -511,8 +603,8 @@ Consistent SVGs for contextual menu, status, etc.
 
 ### Environments
 * **Production:** mydayhub.com (Beta 3)  
-* **Development:** localhost (Beta 5)  
-* **Online Test:** breaveasy.com (Beta 5)  
+* **Development:** localhost (Beta 5 and on)  
+* **Online Test:** breaveasy.com (Beta 5 and on)  
 * All environments use isolated DBs and files.  
 
 ---
@@ -536,11 +628,41 @@ Consistent SVGs for contextual menu, status, etc.
 ---
 
 ### Debug & Testing Patterns
-* **DEVMODE=true Logging:** Debug.log with timestamps.  
-* **API Testing:** curl requests for CRUD and CSRF.  
-* **UI Testing:** Verify DnD, classification, privacy toggles, quotas.  
-* **Offline Testing:** Simulate network drop; confirm write queue + resync.  
-* **Encryption Testing:** Ensure crypto.js boundaries, no plaintext leaks.  
-* **Regression Testing:** After new features, confirm prior flows intact.  
+#### Development Mode Debugging
+* DEVMODE=true Logging: Comprehensive debug message collection and browser display
+* Server-to-Client Pipeline: Debug messages automatically included in API responses
+* Browser Console Integration: JavaScript extracts and displays server debug traces
+* Response Debugging: Temporary capability to log raw server responses for JSON parsing issues
+* PHPMailer Handling: SMTP debug output disabled to prevent JSON corruption
+
+#### API Testing
+* CURL Commands: Direct API endpoint testing with proper CSRF tokens
+* Authentication Testing: Registration, login, password reset flows
+* CRUD Operations: All task and column operations with ownership verification
+* File Upload Testing: Attachment handling, quota enforcement, MIME validation
+
+#### UI Testing Patterns
+* Drag & Drop: Cross-column moves, within-column reordering, mobile Move Mode
+* Classification: Status band interactions, sorting enforcement, popover functionality
+* Privacy Toggles: Item-level privacy, filter visibility, sharing restrictions
+* Quota Management: Storage limits, pruning policies, user notifications
+* Offline Simulation: Network drop scenarios, write queue behavior, sync resolution
+
+#### Encryption Testing (Future)
+* Crypto Module Boundaries: Ensure no plaintext leaks, proper key derivation
+* Recovery System: Security question setup, Master Key recovery, data re-encryption
+* Zero-Knowledge Verification: Server blindness testing, client-side encryption validation
+
+#### Security Testing
+* CSRF Protection: Token validation on all mutations
+* Session Management: Authentication enforcement, ownership checks
+* Input Validation: SQL injection prevention, XSS protection, file upload security
+* Password Reset: Token security, expiration handling, single-use enforcement
+
+#### Regression Testing
+* After New Features: Confirm prior workflows remain intact
+* Cross-Browser: Desktop Chrome/Firefox/Safari, Mobile Chrome/Safari
+* Responsive Design: Mobile layout, touch interactions, keyboard navigation
+* Performance: API response times, UI animation smoothness, large dataset handling
 
 ---

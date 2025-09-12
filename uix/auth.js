@@ -3,7 +3,7 @@
  *
  * Handles form submissions for registration, login, and password reset pages.
  *
- * @version 6.5.0
+ * @version 6.5.2-debug-response
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
@@ -136,7 +136,21 @@ document.addEventListener('DOMContentLoaded', () => {
 					body: JSON.stringify(data),
 				});
 				
-				const result = await response.json();
+				// Modified for Raw Response Debugging
+				const responseText = await response.text();
+				console.log('Raw server response:', responseText);
+				console.log('Response status:', response.status);
+				
+				let result;
+				try {
+					result = JSON.parse(responseText);
+				} catch (parseError) {
+					console.error('JSON parse failed:', parseError);
+					console.error('Response text:', responseText);
+					displayMessage('Server returned invalid response. Check console for details.', 'error');
+					return;
+				}
+
 				logServerDebug(result); // Log debug info
 
 				if (response.ok) {
