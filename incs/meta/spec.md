@@ -385,10 +385,6 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
 * All task operations must use `window.apiFetch` to maintain security consistency
 
-#### Global API Functions
-* `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
-* All task operations must use `window.apiFetch` to maintain security consistency
-
 ### Security Model & Privacy
 * CSRF protection.  
 * Ownership checks enforced server-side.  

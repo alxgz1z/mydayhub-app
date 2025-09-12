@@ -29,6 +29,20 @@
 	overflow: hidden;   
 }
 
+/* Modified for Column Drag & Drop - Visual feedback for dragging columns */
+.task-column.dragging-column {
+	border: 2px solid var(--accent-color);
+	box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
+	transform: rotate(1deg);
+	opacity: 0.9;
+	z-index: 1000;
+}
+
+.task-column.dragging-column .column-title {
+	color: var(--accent-color);
+	font-weight: 600;
+}
+
 .column-header {
 	display: flex;
 	align-items: center;
@@ -37,11 +51,22 @@
 	gap: 0.75rem; /* Add gap for spacing between elements */
 }
 
+/* Modified for Column Drag & Drop - Indicate draggable columns */
 .column-title {
 	font-size: 1.1rem;
 	font-weight: 500;
 	margin: 0;
 	flex-grow: 1; /* Allows title to push count to the right */
+	cursor: grab; /* Indicate draggable */
+	transition: color 0.2s ease-in-out;
+}
+
+.column-title:active {
+	cursor: grabbing;
+}
+
+.column-title:hover {
+	color: var(--accent-color);
 }
 
 .column-header-controls {

@@ -591,14 +591,25 @@ function initEventListeners() {
 			}
 		});
 
+		// Modified for Column Drag & Drop - Task drag handlers
 		boardContainer.addEventListener('dragstart', (e) => {
 			const taskCard = e.target.closest('.task-card');
 			if (taskCard) {
 				taskCard.classList.add('dragging');
 				dragSourceColumn = taskCard.closest('.task-column');
+				return;
+			}
+
+			// Modified for Column Drag & Drop - Column drag handlers
+			const columnHeader = e.target.closest('.column-header');
+			if (columnHeader && e.target.matches('.column-title')) {
+				const columnEl = columnHeader.closest('.task-column');
+				columnEl.classList.add('dragging-column');
+				e.dataTransfer.effectAllowed = 'move';
 			}
 		});
 
+		// Modified for Column Drag & Drop - Enhanced dragend handler
 		boardContainer.addEventListener('dragend', async (e) => {
 			if (e.target.matches('.task-card')) {
 				e.target.classList.remove('dragging');
@@ -622,10 +633,27 @@ function initEventListeners() {
 						fetchAndRenderBoard();
 					}
 				}
+				dragSourceColumn = null;
 			}
-			dragSourceColumn = null;
+			// Modified for Column Drag & Drop - Column dragend handler
+			else if (e.target.matches('.column-title')) {
+				const columnEl = e.target.closest('.task-column');
+				columnEl.classList.remove('dragging-column');
+				
+				// Save the new column order
+				const container = columnEl.parentElement;
+				const orderedColumnIds = Array.from(container.children).map(col => col.dataset.columnId);
+				const success = await reorderColumns(orderedColumnIds);
+				if (!success) {
+					showToast({ message: 'Error: Could not save new column order.', type: 'error' });
+					fetchAndRenderBoard();
+				} else {
+					updateMoveButtonVisibility();
+				}
+			}
 		});
 
+		// Modified for Column Drag & Drop - Enhanced dragover handler
 		boardContainer.addEventListener('dragover', (e) => {
 			const columnBody = e.target.closest('.column-body');
 			if (columnBody) {
@@ -637,6 +665,24 @@ function initEventListeners() {
 					columnBody.appendChild(draggingCard);
 				} else {
 					columnBody.insertBefore(draggingCard, afterElement);
+				}
+				return;
+			}
+
+			// Modified for Column Drag & Drop - Column dragover handler
+			const columnEl = e.target.closest('.task-column');
+			if (columnEl && !e.target.closest('.column-body')) {
+				e.preventDefault();
+				const draggingColumn = document.querySelector('.dragging-column');
+				if (draggingColumn && draggingColumn !== columnEl) {
+					const container = columnEl.parentElement;
+					const afterElement = getColumnAfterElement(container, e.clientX);
+					if (afterElement == null) {
+						container.appendChild(draggingColumn);
+					} else {
+						container.insertBefore(draggingColumn, afterElement);
+					}
+					updateMoveButtonVisibility();
 				}
 			}
 		});
@@ -783,6 +829,23 @@ function getDragAfterElement(container, y) {
 	return draggableElements.reduce((closest, child) => {
 		const box = child.getBoundingClientRect();
 		const offset = y - box.top - box.height / 2;
+		if (offset < 0 && offset > closest.offset) {
+			return { offset: offset, element: child };
+		} else {
+			return closest;
+		}
+	}, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+/**
+ * Modified for Column Drag & Drop - Gets the column element to drop a dragged column after.
+ */
+function getColumnAfterElement(container, x) {
+	const draggableColumns = [...container.querySelectorAll('.task-column:not(.dragging-column)')];
+
+	return draggableColumns.reduce((closest, child) => {
+		const box = child.getBoundingClientRect();
+		const offset = x - box.left - box.width / 2;
 		if (offset < 0 && offset > closest.offset) {
 			return { offset: offset, element: child };
 		} else {
@@ -1494,7 +1557,7 @@ function createColumnElement(columnData) {
 				</button>
 				<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
 			</div>
-			<h2 class="column-title">${columnData.column_name}</h2>
+			<h2 class="column-title" draggable="true">${columnData.column_name}</h2>
 			<span class="task-count">${columnData.tasks ? columnData.tasks.length : 0}</span>
 		</div>
 		<div class="column-body">
