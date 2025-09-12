@@ -1,35 +1,39 @@
 <?php
 /**
- * MyDayHub Beta 5 - Mailer Utility
+ * MyDayHub Beta 6 - Mailer Utility
  *
- * This file contains a reusable function for sending emails via SMTP
- * using the PHPMailer library.
+ * This file provides a centralized function for sending emails using PHPMailer,
+ * configured with credentials from the .env file.
  *
- * @version 6.4.0
+ * @version 6.4.3
  * @author Alex & Gemini
  */
 
 declare(strict_types=1);
 
-// Use the PHPMailer classes from the vendor directory
+// --- PHPMailer ---
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// Require Composer's autoloader to make the library available
-require_once __DIR__ . '/../vendor/autoload.php';
+require_once ROOT_PATH . '/vendor/autoload.php';
 
 /**
- * Sends a password reset email to a user.
+ * Sends an email using the application's configured SMTP settings.
  *
- * @param string $recipientEmail The user's email address.
- * @param string $token The raw password reset token (not the hash).
+ * @param string $toEmail The recipient's email address.
+ * @param string $toName The recipient's name.
+ * @param string $subject The subject of the email.
+ * @param string $htmlBody The HTML content of the email.
+ * @param string $altBody An optional plain-text alternative body.
  * @return bool True on success, false on failure.
+ * @throws Exception For detailed PHPMailer errors if DEVMODE is on.
  */
-function send_password_reset_email(string $recipientEmail, string $token): bool {
-	$mail = new PHPMailer(true);
+function send_email(string $toEmail, string $toName, string $subject, string $htmlBody, string $altBody = ''): bool {
+	$mail = new PHPMailer(true); 
 
 	try {
-		// --- Server settings from config.php (which reads from .env) ---
+		// --- Server Settings ---
+		$mail->SMTPDebug = DEVMODE ? 2 : 0;
 		$mail->isSMTP();
 		$mail->Host       = SMTP_HOST;
 		$mail->SMTPAuth   = true;
@@ -39,36 +43,25 @@ function send_password_reset_email(string $recipientEmail, string $token): bool 
 		$mail->Port       = SMTP_PORT;
 
 		// --- Recipients ---
-		$mail->setFrom(SMTP_FROM_EMAIL, SMTP_FROM_NAME);
-		$mail->addAddress($recipientEmail);
+		// Modified for Deliverability Test: Temporarily using the SMTP username as the "From" address.
+		// The SMTP_USER is an email address that Hostinger's mail server is inherently authorized to send from.
+		// This helps bypass potential SPF/DKIM domain validation issues for debugging.
+		$mail->setFrom(SMTP_USER, SMTP_FROM_NAME);
+		$mail->addAddress($toEmail, $toName);
 
 		// --- Content ---
 		$mail->isHTML(true);
-		$mail->Subject = 'Your MyDayHub Password Reset Request';
-		
-		// Create the reset link
-		$resetLink = APP_URL . '/login/reset-password.php?token=' . urlencode($token);
-
-		// Simple HTML email body
-		$mail->Body    = "
-			<p>Hello,</p>
-			<p>We received a request to reset your password for your MyDayHub account.</p>
-			<p>Please click the link below to set a new password:</p>
-			<p><a href='{$resetLink}'>{$resetLink}</a></p>
-			<p>This link will expire in 1 hour.</p>
-			<p>If you did not request a password reset, you can safely ignore this email.</p>
-			<p>Thanks,<br>The MyDayHub Team</p>
-		";
-		
-		$mail->AltBody = "To reset your password, please visit the following link: {$resetLink}";
+		$mail->Subject = $subject;
+		$mail->Body    = $htmlBody;
+		$mail->AltBody = ($altBody === '') ? strip_tags($htmlBody) : $altBody;
 
 		$mail->send();
 		return true;
+
 	} catch (Exception $e) {
-		// In dev mode, log the detailed error. In production, this would go to a more secure log.
-		if (defined('DEVMODE') && DEVMODE) {
+		if (DEVMODE) {
 			error_log("Mailer Error: {$mail->ErrorInfo}");
 		}
-		return false;
+		throw $e;
 	}
 }

@@ -1,14 +1,23 @@
 /**
  * MyDayHub Beta 5 - Authentication Handler (Client-Side)
  *
- * Handles form submissions for registration and login pages.
+ * Handles form submissions for registration, login, and password reset pages.
  *
- * @version 5.1.0
+ * @version 6.5.0
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
 	// Shared elements for all forms
 	const messageContainer = document.getElementById('message-container');
+
+	// Modified for In-Browser Debugging: New helper to log debug info from the server.
+	function logServerDebug(result) {
+		if (result && result.debug && Array.isArray(result.debug)) {
+			console.warn('--- MyDayHub Server Debug ---');
+			result.debug.forEach(msg => console.log(msg));
+			console.warn('-----------------------------');
+		}
+	}
 
 	// --- Registration Form Logic ---
 	const registerForm = document.getElementById('register-form');
@@ -24,7 +33,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			messageContainer.className = '';
 
 			const formData = new FormData(registerForm);
-			const data = Object.fromEntries(formData.entries());
+			const data = { action: 'register', ...Object.fromEntries(formData.entries()) };
 
 			if (!data.username || !data.email || !data.password) {
 				displayMessage('All fields are required.', 'error');
@@ -35,12 +44,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/auth.php?action=register`, {
+				const response = await fetch(`${appURL}/api/auth.php`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(data),
 				});
 				const result = await response.json();
+				logServerDebug(result); // Log debug info
 				if (response.ok) {
 					displayMessage(result.message, 'success');
 					registerForm.reset();
@@ -71,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			messageContainer.className = '';
 
 			const formData = new FormData(loginForm);
-			const data = Object.fromEntries(formData.entries());
+			const data = { action: 'login', ...Object.fromEntries(formData.entries()) };
 
 			if (!data.username || !data.password) {
 				displayMessage('Please enter both username and password.', 'error');
@@ -82,12 +92,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/auth.php?action=login`, {
+				const response = await fetch(`${appURL}/api/auth.php`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
 					body: JSON.stringify(data),
 				});
 				const result = await response.json();
+				logServerDebug(result); // Log debug info
 				if (response.ok) {
 					window.location.href = `${appURL}/index.php`;
 				} else {
@@ -104,7 +115,6 @@ document.addEventListener('DOMContentLoaded', () => {
 		});
 	}
 
-	// Modified for Forgot Password
 	// --- Forgot Password Form Logic ---
 	const forgotForm = document.getElementById('forgot-form');
 	if (forgotForm) {
@@ -113,40 +123,99 @@ document.addEventListener('DOMContentLoaded', () => {
 			const submitButton = forgotForm.querySelector('button[type="submit"]');
 			submitButton.disabled = true;
 			submitButton.textContent = 'Sending...';
-
 			messageContainer.style.display = 'none';
 
 			const formData = new FormData(forgotForm);
-			const data = Object.fromEntries(formData.entries());
+			const data = { action: 'requestPasswordReset', ...Object.fromEntries(formData.entries()) };
 
-			if (!data.email) {
-				displayMessage('Please enter your email address.', 'error');
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/auth.php`, {
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify(data),
+				});
+				
+				const result = await response.json();
+				logServerDebug(result); // Log debug info
+
+				if (response.ok) {
+					displayMessage(result.message, 'success');
+					forgotForm.reset();
+				} else {
+					// In DEVMODE, the server might send a real error. Show it.
+					displayMessage(result.message, 'error');
+				}
+
+			} catch (error) {
+				console.error('Forgot password fetch error:', error);
+				displayMessage('A network error occurred. Please try again.', 'error');
+			} finally {
+				// Keep the button disabled on success to prevent spamming
+				if(messageContainer.classList.contains('error')) {
+					submitButton.disabled = false;
+					submitButton.textContent = 'Send Reset Link';
+				}
+			}
+		});
+	}
+	
+	// --- Reset Password Form Logic ---
+	const resetPasswordForm = document.getElementById('reset-password-form');
+	if (resetPasswordForm) {
+		resetPasswordForm.addEventListener('submit', async (e) => {
+			e.preventDefault();
+			const submitButton = resetPasswordForm.querySelector('button[type="submit"]');
+			submitButton.disabled = true;
+			submitButton.textContent = 'Resetting...';
+			messageContainer.style.display = 'none';
+
+			const formData = new FormData(resetPasswordForm);
+			const data = { action: 'performPasswordReset', ...Object.fromEntries(formData.entries()) };
+
+			// Client-side validation
+			if (data.new_password !== data.confirm_password) {
+				displayMessage('Passwords do not match.', 'error');
 				submitButton.disabled = false;
-				submitButton.textContent = 'Send Reset Link';
+				submitButton.textContent = 'Reset Password';
+				return;
+			}
+			if (data.new_password.length < 8) {
+				displayMessage('Password must be at least 8 characters long.', 'error');
+				submitButton.disabled = false;
+				submitButton.textContent = 'Reset Password';
 				return;
 			}
 
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/auth.php?action=requestPasswordReset`, {
+				const response = await fetch(`${appURL}/api/auth.php`, {
 					method: 'POST',
 					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify(data),
+					body: JSON.stringify(data)
 				});
-				// We don't need the result, as we show a generic message for security.
-				await response.json(); 
 
-				// For security reasons, always show a success message to prevent email enumeration.
-				displayMessage('If an account with that email exists, a password reset link has been sent.', 'success');
-				forgotForm.reset();
+				const result = await response.json();
+				logServerDebug(result); // Log debug info
+
+				if (response.ok) {
+					displayMessage(result.message, 'success');
+					resetPasswordForm.reset();
+					// Redirect to login page after a short delay
+					setTimeout(() => {
+						window.location.href = `${appURL}/login/login.php`;
+					}, 3000);
+				} else {
+					displayMessage(result.message || 'An unknown error occurred.', 'error');
+					submitButton.disabled = false;
+					submitButton.textContent = 'Reset Password';
+				}
 
 			} catch (error) {
-				console.error('Forgot password fetch error:', error);
-				// Still show the generic success message on the frontend.
-				displayMessage('If an account with that email exists, a password reset link has been sent.', 'success');
-			} finally {
-				// Keep the button disabled to prevent spamming
-				// The user should check their email now.
+				console.error('Reset password fetch error:', error);
+				displayMessage('A network error occurred. Please try again.', 'error');
+				submitButton.disabled = false;
+				submitButton.textContent = 'Reset Password';
 			}
 		});
 	}
@@ -154,8 +223,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	/**
 	 * A helper function to display messages in the designated container.
-	 * @param {string} message The message to show.
-	 * @param {string} type 'success' or 'error'.
 	 */
 	function displayMessage(message, type) {
 		if (messageContainer) {

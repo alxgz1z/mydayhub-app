@@ -78,8 +78,8 @@
   [RDY] togglePrivacy (in tasks.php)
   [RDY] restoreItem (in tasks.php)	  
   [RDY] moveTask
-  [WIP] requestPasswordReset (in auth.php)
-  [FUT] performPasswordReset (in auth.php)
+  [FIX] requestPasswordReset (in auth.php)
+  [WIP] performPasswordReset (in auth.php)
   [RDY] changePassword (in users.php)
   [FUT] shareTask / revokeShare
   

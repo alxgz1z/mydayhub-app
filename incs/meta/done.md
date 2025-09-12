@@ -905,3 +905,24 @@ Version: Beta 6.0.4
 	* Implement the performPasswordReset action in api/auth.php.
 	* Add the frontend logic in uix/auth.js to handle the form submission on the reset-password.php page.
 **3** **Refine Email Template:** Improve the visual design of the HTML email template in incs/mailer.php.
+
+---
+
+# Timestamp: 2025-09-11 22:00 - Debugging: Silent Failure in "Forgot Password" Flow
+
+**Version**: Beta 6.5.0
+**Focus** To diagnose and resolve a critical, silent bug preventing the "Forgot Password" feature from sending reset emails. The core of the session involved isolating the point of failure and building a new, more reliable debugging system.
+**Key work**
+* **Confirmed Mailer Works:** Created a standalone test_mailer.php script to isolate the PHPMailer utility. This test **succeeded**, proving that SMTP credentials, server configuration, and email deliverability are all functional. This definitively ruled out the mailer as the source of the problem.
+* **Isolated the Bug:** The successful mailer test confirmed the bug lies within the application logic of api/auth.php, specifically in the handle_request_password_reset function. The failure occurs before a token is written to the password_resets table.
+* **Pivoted Debugging Strategy:** The initial debug.log file-writing approach failed due to a suspected permissions or server configuration issue. We pivoted to a more robust, in-browser debugging strategy.
+* **Built New Debug System:**
+  * **Backend:** incs/config.php was updated to collect errors in a global array. api/api.php was updated to append this array to all JSON responses when DEVMODE is active.
+  * **Frontend:** uix/auth.js was updated to check all API responses for this debug information and print it to the browser's developer console.
+
+⠀**Status** The "Forgot Password" feature is fully coded but remains non-functional due to the silent backend error. A complete, end-to-end debugging system is now in place and ready for use. The final step is to correctly apply this new system to the failing function (handle_request_password_reset) to expose the error.
+**Recommended next steps (priority order)**
+**1** **CRITICAL - Apply New Debug System:** The immediate next action is to correctly update api/auth.php. Replace the old, non-functional file_put_contents calls in the handle_request_password_reset function with our new log_debug_message() function. This must be done carefully to ensure the file remains complete.
+**2** **Diagnose Root Cause:** With the updated auth.php in place, run the "Forgot Password" test again. The browser's developer console will now display the step-by-step execution trace from the server, revealing the exact line where the process fails.
+**3** **Fix the Bug:** Once the error is identified from the console log, apply the necessary fix.
+**4** **Cleanup:** After the feature is working, delete the diagnostic test_mailer.php file.
