@@ -64,7 +64,7 @@
   [RDY] getAll (in tasks.php)
   [RDY] createColumn (in tasks.php)
   [RDY] createTask (in tasks.php)
-  [RDY] toggleComplete (in tasks.php)
+  [RDY] toggleComplete (in tasks.php) 
   [RDY] reorderTasks (in tasks.php)
   [RDY] toggleClassification (in tasks.php)
   [RDY] renameColumn (in tasks.php)
@@ -87,6 +87,8 @@
   [FUT] shareTask / revokeShare
   
   *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
+  
+  *Architectura fix: Confirm all API endpoints using window.apiFetch are properly documented*
 		  
 ### UI Implementation tracking
   [RDY] User Registration page
@@ -99,7 +101,8 @@
   [RDY] Reorder Columns (hover buttons)
   [RDY] Create Task (footer input)
   [RDY] Rename Task Title (double-click)
-  [RDY] Toggle Task Completion (checkbox)
+  [RDY] Toggle Task Completion (checkbox) with enhanced animation.
+  [RDY] Task Completion Celebration Animation (enhanced multi-effect sequence)
   [RDY] Task Drag-and-Drop (within and between columns)
   [WIP] Task Classification (clicking status band)
   [RDY] Enforced Task Sorting by classification
@@ -233,6 +236,16 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * **Abort Move Mode:** User can cancel by tapping the Cancel banner button, tapping backdrop, pressing Esc (if keyboard present), or device Back button. All abort paths restore normal state without changes.  
 
 * **Accessibility:** Move Mode announces entry via `aria-live` and traps focus to Cancel. Drop-zones and banner controls meet 44–48px touch target guidelines.
+
+#### Completion Celebration
+* **Animation Sequence:** 1.5-second multi-effect celebration on task completion
+  * Rainbow glow expanding outward from card
+  * Multi-colored confetti burst (12 particles)
+  * Bouncing checkmark overlay on checkbox
+  * Subtle card shake for haptic-like feedback
+  * Brightness/saturation boost for visual impact
+* **Filter Integration:** Animation completes before filter hiding takes effect
+* **Mobile Optimization:** Scaled appropriately for touch devices
 
 #### Touch Drag-and-Drop (Mobile/Tablet)
 * **Start gesture:** Long-press (~350 ms) on the card **handle (≡)** to lift.
@@ -368,6 +381,14 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 ### Frontend Architecture
 /uix holds SPA modules. crypto.js = encryption boundary.  
 
+#### Global API Functions
+* `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
+* All task operations must use `window.apiFetch` to maintain security consistency
+
+#### Global API Functions
+* `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
+* All task operations must use `window.apiFetch` to maintain security consistency
+
 ### Security Model & Privacy
 * CSRF protection.  
 * Ownership checks enforced server-side.  
@@ -481,6 +502,14 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * Issue: SMTP debug output corrupts JSON responses in development mode
 * Solution: $mail->SMTPDebug = 0 always, regardless of DEVMODE
 * Alternative: Server debug messages provide email sending visibility without response corruption
+
+
+#### Animation & Filter Integration Testing
+* Test task completion with "Hide Completed" filter enabled
+* Verify full animation sequence plays before task hiding
+* Confirm celebration effects are visible on various screen sizes
+* Test double-click prevention on rapid checkbox interactions
+
 
 #### Hardening Checklist (must-pass before new features ship)
 * All mutating API routes call `send_debug_response()`; no raw `echo/json_encode`

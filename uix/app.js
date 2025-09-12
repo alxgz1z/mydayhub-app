@@ -44,6 +44,10 @@ async function apiFetch(bodyPayload = {}) {
 	return response.json();
 }
 
+// Modified for Global apiFetch Architecture Fix
+// Make apiFetch globally available
+window.apiFetch = apiFetch;
+
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 

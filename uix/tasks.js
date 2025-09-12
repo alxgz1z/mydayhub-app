@@ -262,13 +262,20 @@ function initEventListeners() {
 
 		boardContainer.addEventListener('change', async (e) => {
 			if (e.target.matches('.task-checkbox')) {
+				// Prevent double firing
+				if (e.target.dataset.processing) return;
+				e.target.dataset.processing = 'true';
+				
 				const checkbox = e.target;
 				const taskCard = checkbox.closest('.task-card');
 				const taskId = taskCard.dataset.taskId;
-
+		
 				if (taskId) {
-					toggleTaskComplete(taskId, checkbox.checked);
+					await toggleTaskComplete(taskId, checkbox.checked);
 				}
+				
+				// Remove processing flag
+				setTimeout(() => delete e.target.dataset.processing, 100);
 			}
 		});
 
@@ -1127,6 +1134,7 @@ async function togglePrivacy(type, id) {
 /**
  * Toggles a task's completion status.
  */
+// Modified for Bug Fix - Completion persistence and animation
 async function toggleTaskComplete(taskId, isComplete) {
 	const taskCard = document.querySelector(`[data-task-id="${taskId}"]`);
 	try {
@@ -1137,31 +1145,40 @@ async function toggleTaskComplete(taskId, isComplete) {
 		});
 
 		if (result.status === 'success') {
-			// Modified for Completion Animation
-			if (isComplete) {
-				taskCard.classList.add('is-completing');
-				setTimeout(() => {
-					taskCard.classList.remove('is-completing');
-				}, 800); // Match animation duration
-			}
-
+			// Update the task data first
 			taskCard.classList.toggle('completed', isComplete);
 			taskCard.dataset.classification = result.data.new_classification;
-			
+
 			taskCard.classList.remove('classification-signal', 'classification-support', 'classification-backlog');
 			if (!isComplete) {
 				taskCard.classList.add(`classification-${result.data.new_classification}`);
 			}
-			sortTasksInColumn(taskCard.closest('.column-body'));
+			
+			// Re-render the card to update its content
 			rerenderTaskCard(taskCard);
-			applyAllFilters();
+			
+			// Apply the animation to the new card
+			if (isComplete) {
+				const updatedCard = document.querySelector(`[data-task-id="${taskId}"]`);
+				updatedCard.classList.add('is-completing');
+				setTimeout(() => {
+					updatedCard.classList.remove('is-completing');
+					// IMPORTANT: Apply filters AFTER animation completes
+					applyAllFilters();
+				}, 1500);
+			} else {
+				// If unchecking, apply filters immediately
+				applyAllFilters();
+			}
+			
+			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
-			showToast({ message: `Error: ${result.message}`, type: 'error' });
-			taskCard.querySelector('.task-checkbox').checked = !isComplete;
+			throw new Error(result.message);
 		}
 	} catch (error) {
-		showToast({ message: 'A network error occurred. Please try again.', type: 'error' });
-		taskCard.querySelector('.task-checkbox').checked = !isComplete;
+		showToast({ message: `Error: ${error.message}`, type: 'error' });
+		const checkbox = taskCard.querySelector('.task-checkbox');
+		if (checkbox) checkbox.checked = !isComplete;
 		console.error('Toggle complete error:', error);
 	}
 }
