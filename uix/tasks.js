@@ -64,7 +64,10 @@ function getTaskDataFromElement(taskCardEl) {
 		due_date: taskCardEl.dataset.dueDate || null,
 		has_notes: taskCardEl.dataset.hasNotes === 'true',
 		attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
-		updated_at: taskCardEl.dataset.updatedAt
+		updated_at: taskCardEl.dataset.updatedAt,
+		snoozed_until: taskCardEl.dataset.snoozedUntil || null,
+		snoozed_at: taskCardEl.dataset.snoozedAt || null,
+		is_snoozed: taskCardEl.dataset.isSnoozed === 'true'
 	};
 }
 
@@ -482,6 +485,11 @@ function initEventListeners() {
 							showToast({ message: 'Error: Could not duplicate the task.', type: 'error' });
 						}
 					}
+				} else if (action === 'unsnooze') {
+					await unsnoozeTask(taskCard.dataset.taskId, taskCard);
+					
+				} else if (action === 'snooze') {
+					await openSnoozeModalForTask(taskCard);
 				}
 			} finally {
 				isActionRunning = false;
@@ -905,8 +913,9 @@ function showTaskActionsMenu(buttonEl) {
 	menu.dataset.taskId = taskCard.dataset.taskId;
 
 	const isPrivate = taskCard.dataset.isPrivate === 'true';
+	const isSnoozed = taskCard.dataset.isSnoozed === 'true';
 	const privacyText = isPrivate ? 'Make Public' : 'Make Private';
-	const privacyIcon = isPrivate 
+	const privacyIcon = isPrivate
 		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
@@ -945,6 +954,13 @@ function showTaskActionsMenu(buttonEl) {
 			</svg>
 			<span>Duplicate Task</span>
 		</button>
+		
+		<button class="task-action-btn" data-action="${isSnoozed ? 'unsnooze' : 'snooze'}">
+		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+			${isSnoozed ? '<path d="M6 2l3 3.5L12 2l3 3.5L18 2"/><path d="M6 16.5l3-3.5 3 3.5 3-3.5 3 3.5"/><polyline points="6 12 12 6 18 12"/>' : '<circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L3 5"></path><path d="M19 3l2 2"></path>'}
+			</svg>
+				<span>${isSnoozed ? 'Remove Snooze' : 'Snooze Task'}</span>
+			</button>
 		<button class="task-action-btn" data-action="delete">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -1588,6 +1604,7 @@ function createTaskCard(taskData) {
 
 	const isCompleted = taskData.classification === 'completed';
 	const isPrivate = taskData.is_private;
+	const isSnoozed = taskData.is_snoozed || taskData.snoozed_until;
 	let classificationClass = '';
 	if (!isCompleted) {
 		const classification = taskData.classification === 'noise' ? 'backlog' : taskData.classification;
@@ -1626,6 +1643,24 @@ function createTaskCard(taskData) {
 			`;
 		}
 		
+		let snoozeIndicator = '';
+		if (taskData.snoozed_until && !isCompleted) {
+			const wakeDate = new Date(taskData.snoozed_until + 'T00:00:00Z');
+			const wakeDateFormatted = wakeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			snoozeIndicator = `
+				<span class="task-indicator indicator-shortcut snooze-indicator" title="Snoozed until: ${wakeDateFormatted}">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="13" r="8"></circle>
+						<path d="M12 9v4l2 2"></path>
+						<path d="M5 3L3 5"></path>
+						<path d="M19 3l2 2"></path>
+					</svg>
+					<span class="snooze-date-text">${wakeDateFormatted}</span>
+				</span>
+			`;
+		}
+		
+		
 		let attachmentsIndicator = '';
 		if (taskData.attachments_count && taskData.attachments_count > 0) {
 			attachmentsIndicator = `
@@ -1639,6 +1674,7 @@ function createTaskCard(taskData) {
 		footerHTML = `
 			<div class="task-card-footer">
 				${attachmentsIndicator}
+				${snoozeIndicator}
 				${notesIndicator}
 				${dueDateIndicator}
 			</div>
@@ -1646,8 +1682,8 @@ function createTaskCard(taskData) {
 	}
 
 	return `
-		<div 
-			class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''}" 
+	<div 
+		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''}"
 			data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
@@ -1657,6 +1693,9 @@ function createTaskCard(taskData) {
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"
 			data-attachments-count="${taskData.attachments_count || 0}"
+			data-snoozed-until="${taskData.snoozed_until || ''}"
+			data-snoozed-at="${taskData.snoozed_at || ''}"
+			data-is-snoozed="${taskData.is_snoozed || false}"
 			draggable="true">
 			<div class="task-card-main">
 				<div class="task-status-band"></div>
@@ -2163,6 +2202,175 @@ function exitMoveMode() {
 	taskToMoveId = null;
 }
 
+/**
+ * Opens the snooze modal for a given task card and handles the result.
+ */
+async function openSnoozeModalForTask(taskCard) {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const taskId = taskCard.dataset.taskId;
+		const snoozeDate = await showSnoozeModal();
+
+		if (snoozeDate !== null) {
+			const result = await snoozeTask(taskId, snoozeDate);
+			if (result) {
+				taskCard.dataset.isSnoozed = 'true';
+				taskCard.dataset.snoozedUntil = result.snoozed_until || '';
+				taskCard.dataset.classification = 'backlog';
+				rerenderTaskCard(taskCard);
+				sortTasksInColumn(taskCard.closest('.column-body'));
+				showToast({ message: 'Task snoozed successfully.', type: 'success' });
+			}
+		}
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Sends a request to snooze a task until a specified date.
+ */
+async function snoozeTask(taskId, snoozeDate) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'snoozeTask',
+			task_id: taskId,
+			duration_type: snoozeDate.startsWith('custom:') ? 'custom' : snoozeDate,
+			custom_date: snoozeDate.startsWith('custom:') ? snoozeDate.substring(7) : null
+		});
+		if (result.status === 'success') {
+			return result.data;
+		} else {
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
+			return false;
+		}
+	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
+		console.error('Snooze task error:', error);
+		return false;
+	}
+}
+
+/**
+ * Shows a modal for selecting snooze duration and returns the selected date.
+ * @returns {Promise<string|null>} ISO date string or null if cancelled
+ */
+async function showSnoozeModal() {
+	return new Promise((resolve) => {
+		const modal = document.createElement('div');
+		modal.className = 'modal-overlay';
+		modal.innerHTML = `
+			<div class="modal-content snooze-modal">
+				<div class="modal-header">
+					<h3>Snooze Task</h3>
+					<button class="modal-close-btn" type="button">&times;</button>
+				</div>
+				<div class="modal-body">
+					<p>Select when this task should wake up:</p>
+					<div class="snooze-options">
+						<button class="snooze-preset-btn" data-duration="week">1 Week</button>
+						<button class="snooze-preset-btn" data-duration="month">1 Month</button>
+						<button class="snooze-preset-btn" data-duration="quarter">1 Quarter</button>
+						<button class="snooze-custom-btn">Custom Date...</button>
+					</div>
+					<div class="custom-date-section" style="display: none;">
+						<label for="snooze-custom-date">Wake Date:</label>
+						<input type="date" id="snooze-custom-date" />
+						<button class="btn-confirm-custom">Confirm</button>
+					</div>
+				</div>
+			</div>
+		`;
+
+		document.body.appendChild(modal);
+		setTimeout(() => modal.classList.add('visible'), 10);
+
+		const closeModal = (result) => {
+			modal.remove();
+			resolve(result);
+		};
+
+		// Calculate preset dates
+		const calculateSnoozeDate = (duration) => {
+			const date = new Date();
+			date.setHours(9, 0, 0, 0); // 9 AM wake time per spec
+			
+			switch (duration) {
+				case 'week':
+					date.setDate(date.getDate() + 7);
+					break;
+				case 'month':
+					date.setMonth(date.getMonth() + 1);
+					break;
+				case 'quarter':
+					date.setMonth(date.getMonth() + 3);
+					break;
+			}
+			return date.toISOString().split('T')[0];
+		};
+
+		modal.addEventListener('click', (e) => {
+			if (e.target === modal || e.target.matches('.modal-close-btn')) {
+				closeModal(null);
+			} else if (e.target.matches('.snooze-preset-btn')) {
+				const duration = e.target.dataset.duration;
+				const durationMap = { 'week': '1week', 'month': '1month', 'quarter': '1quarter' };
+				closeModal(durationMap[duration]);
+			} else if (e.target.matches('.snooze-custom-btn')) {
+				const customSection = modal.querySelector('.custom-date-section');
+				const dateInput = modal.querySelector('#snooze-custom-date');
+				customSection.style.display = 'block';
+				dateInput.focus();
+			} else if (e.target.matches('.btn-confirm-custom')) {
+				const dateInput = modal.querySelector('#snooze-custom-date');
+				const selectedDate = dateInput.value;
+				if (selectedDate) {
+					closeModal(`custom:${selectedDate}`);
+				}
+			}
+		});
+
+		// ESC key handler
+		const handleEsc = (e) => {
+			if (e.key === 'Escape') {
+				document.removeEventListener('keydown', handleEsc);
+				closeModal(null);
+			}
+		};
+		document.addEventListener('keydown', handleEsc);
+	});
+}
+
+/**
+ * Sends a request to unsnooze (wake up) a snoozed task.
+ */
+async function unsnoozeTask(taskId, taskCard) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'unsnoozeTask',
+			task_id: taskId
+		});
+		if (result.status === 'success') {
+			taskCard.dataset.snoozedUntil = '';
+			taskCard.dataset.snoozedAt = '';
+			taskCard.dataset.isSnoozed = 'false';
+			rerenderTaskCard(taskCard);
+			showToast({ message: 'Task unsnoozed successfully.', type: 'success' });
+			return true;
+		} else {
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
+			return false;
+		}
+	} catch (error) {
+		showToast({ message: error.message, type: 'error' });
+		console.error('Unsnooze task error:', error);
+		return false;
+	}
+}
 
 // Initial load
 document.addEventListener('DOMContentLoaded', initTasksView);

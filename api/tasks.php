@@ -152,10 +152,179 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_delete_attachment($pdo, $userId, $data);
 			}
 			break;
-
+		// Modified for Snooze Feature
+		case 'snoozeTask':
+			if ($method === 'POST') {
+				handle_snooze_task($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'unsnoozeTask':
+			if ($method === 'POST') {
+				handle_unsnooze_task($pdo, $userId, $data);
+			}
+			break;
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
+	}
+}
+
+// Modified for Snooze Feature
+/**
+ * Snoozes a task with specified duration or custom date, auto-classifies to backlog.
+ */
+function handle_snooze_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$durationType = $data['duration_type'] ?? null;
+	$customDate = $data['custom_date'] ?? null;
+
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+
+	if (empty($durationType) || !in_array($durationType, ['1week', '1month', '1quarter', 'custom'])) {
+		send_json_response(['status' => 'error', 'message' => 'Valid duration_type is required (1week, 1month, 1quarter, custom).'], 400);
+		return;
+	}
+
+	if ($durationType === 'custom' && empty($customDate)) {
+		send_json_response(['status' => 'error', 'message' => 'custom_date is required when duration_type is custom.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Verify task ownership
+		$stmt = $pdo->prepare("SELECT classification FROM tasks WHERE task_id = :taskId AND user_id = :userId AND deleted_at IS NULL");
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt->fetch();
+
+		if ($task === false) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
+			return;
+		}
+
+		// Calculate wake time (9 AM user local time, stored as UTC)
+		$wakeTimeUtc = null;
+		if ($durationType === 'custom') {
+			// For custom date, validate format and set to 9 AM UTC on that date
+			if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $customDate)) {
+				$pdo->rollBack();
+				send_json_response(['status' => 'error', 'message' => 'Invalid custom_date format. Use YYYY-MM-DD.'], 400);
+				return;
+			}
+			// Set wake time to 9 AM UTC on the specified date
+			$wakeTimeUtc = $customDate . ' 09:00:00';
+		} else {
+			// Calculate preset durations from current UTC time
+			$now = new DateTime('now', new DateTimeZone('UTC'));
+			
+			switch ($durationType) {
+				case '1week':
+					$now->add(new DateInterval('P7D'));
+					break;
+				case '1month':
+					$now->add(new DateInterval('P1M'));
+					break;
+				case '1quarter':
+					$now->add(new DateInterval('P3M'));
+					break;
+			}
+			
+			// Set to 9 AM on the calculated day
+			$now->setTime(9, 0, 0);
+			$wakeTimeUtc = $now->format('Y-m-d H:i:s');
+		}
+
+		// Update task: snooze it and set classification to backlog
+		$stmt = $pdo->prepare(
+			"UPDATE tasks 
+			 SET snoozed_until = :wakeTime, snoozed_at = UTC_TIMESTAMP(), 
+				 classification = 'backlog', updated_at = UTC_TIMESTAMP()
+			 WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt->execute([
+			':wakeTime' => $wakeTimeUtc,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		$pdo->commit();
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'task_id' => $taskId,
+				'snoozed_until' => $wakeTimeUtc,
+				'classification' => 'backlog'
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message("Error in handle_snooze_task: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while snoozing the task.'], 500);
+	}
+}
+
+
+// Modified for Snooze Feature
+/**
+ * Manually unsnoozes a task (wakes it up early).
+ */
+function handle_unsnooze_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Verify task ownership and that it's currently snoozed
+		$stmt = $pdo->prepare(
+			"SELECT snoozed_until FROM tasks 
+			 WHERE task_id = :taskId AND user_id = :userId AND deleted_at IS NULL 
+			 AND snoozed_until IS NOT NULL"
+		);
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt->fetch();
+
+		if ($task === false) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Task not found, permission denied, or task is not snoozed.'], 404);
+			return;
+		}
+
+		// Clear snooze fields
+		$stmt = $pdo->prepare(
+			"UPDATE tasks 
+			 SET snoozed_until = NULL, snoozed_at = NULL, updated_at = UTC_TIMESTAMP()
+			 WHERE task_id = :taskId AND user_id = :userId"
+		);
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+
+		$pdo->commit();
+
+		send_json_response([
+			'status' => 'success',
+			'data' => ['task_id' => $taskId]
+		], 200);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message("Error in handle_unsnooze_task: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while unsnoozing the task.'], 500);
 	}
 }
 
@@ -504,6 +673,27 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$userPrefs = json_decode($userData['preferences'] ?? '{}', true);
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 
+		// Modified for Snooze Feature: Check for awakened tasks
+		$stmtAwakened = $pdo->prepare(
+			"SELECT COUNT(*) FROM tasks 
+			 WHERE user_id = :userId AND deleted_at IS NULL 
+			 AND snoozed_until IS NOT NULL AND snoozed_until <= UTC_TIMESTAMP()"
+		);
+		$stmtAwakened->execute([':userId' => $userId]);
+		$awakenedCount = (int)$stmtAwakened->fetchColumn();
+		$hasAwakenedTasks = $awakenedCount > 0;
+		
+		// If there are awakened tasks, clear their snooze status automatically
+		if ($hasAwakenedTasks) {
+			$stmtClearAwakened = $pdo->prepare(
+				"UPDATE tasks 
+				 SET snoozed_until = NULL, snoozed_at = NULL, updated_at = UTC_TIMESTAMP()
+				 WHERE user_id = :userId AND deleted_at IS NULL 
+				 AND snoozed_until IS NOT NULL AND snoozed_until <= UTC_TIMESTAMP()"
+			);
+			$stmtClearAwakened->execute([':userId' => $userId]);
+		}
+
 		$stmtColumns = $pdo->prepare(
 			"SELECT column_id, column_name, position, is_private 
 			 FROM `columns` 
@@ -523,7 +713,8 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
-				t.updated_at, t.due_date, COUNT(ta.attachment_id) as attachments_count
+				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, 
+				COUNT(ta.attachment_id) as attachments_count
 			 FROM tasks t
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
 			 WHERE t.user_id = :userId AND t.deleted_at IS NULL
@@ -536,6 +727,8 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			if (isset($columnMap[$task['column_id']])) {
 				$encryptedData = json_decode($task['encrypted_data'], true);
 				$task['has_notes'] = !empty($encryptedData['notes']);
+				// Modified for Snooze Feature: Add snooze status indicator
+				$task['is_snoozed'] = !empty($task['snoozed_until']);
 				$columnMap[$task['column_id']]['tasks'][] = $task;
 			}
 		}
@@ -545,7 +738,9 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			'data' => [
 				'board' => $boardData,
 				'user_prefs' => $userPrefs,
-				'user_storage' => ['used' => $storageUsed, 'quota' => USER_STORAGE_QUOTA_BYTES]
+				'user_storage' => ['used' => $storageUsed, 'quota' => USER_STORAGE_QUOTA_BYTES],
+				// Modified for Snooze Feature: Include wake notification flag
+				'wake_notification' => $hasAwakenedTasks
 			]
 		], 200);
 
@@ -619,7 +814,9 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 			'data' => [
 				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $encryptedData,
 				'position' => $position, 'classification' => 'support', 'is_private' => false,
-				'due_date' => null, 'has_notes' => false, 'attachments_count' => 0
+				'due_date' => null, 'has_notes' => false, 'attachments_count' => 0,
+				// Modified for Snooze Feature: Add snooze fields
+				'snoozed_until' => null, 'snoozed_at' => null, 'is_snoozed' => false
 			]
 		], 201);
 	} catch (Exception $e) {
@@ -937,6 +1134,8 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $originalTask['encrypted_data'],
 				'position' => $newPosition, 'classification' => $originalTask['classification'], 'due_date' => $originalTask['due_date'],
 				'has_notes' => !empty($encryptedDataDecoded['notes']), 'attachments_count' => 0, 'is_private' => false,
+				// Modified for Snooze Feature: Duplicated tasks are not snoozed
+				'snoozed_until' => null, 'snoozed_at' => null, 'is_snoozed' => false
 			]
 		], 201);
 	} catch (Exception $e) {

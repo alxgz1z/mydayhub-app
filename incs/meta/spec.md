@@ -81,8 +81,10 @@
   [RDY] togglePrivacy (in tasks.php)
   [RDY] restoreItem (in tasks.php)	  
   [RDY] moveTask
-  [FIX] requestPasswordReset (in auth.php)
-  [WIP] performPasswordReset (in auth.php)
+  [RDY] snoozeTask (in tasks.php)
+  [RDY] unsnoozeTask (in tasks.php)
+  [RDY] requestPasswordReset (in auth.php)
+  [RDY] performPasswordReset (in auth.php)
   [RDY] changePassword (in users.php)
   [FUT] shareTask / revokeShare
   
@@ -118,6 +120,10 @@
   [WIP] Settings slider panel
   [RDY] Change Password modal
   [WIP] Forgot Password page & flow
+  [FIX] Task Snooze Modal (preset durations and custom date picker)
+  [FIX] Snooze Visual Indicators (purple badge with wake date)
+  [FIX] Dynamic Snooze/Unsnooze Menu State
+  [FIX] Snoozed Task Visual Styling (opacity and grayscale effects)
   [FUT] Sharing UI
 
 
@@ -244,6 +250,14 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 
 * **Accessibility:** Move Mode announces entry via `aria-live` and traps focus to Cancel. Drop-zones and banner controls meet 44–48px touch target guidelines.
 
+#### Snooze Functionality
+* **Snooze Options:** Actions menu provides "Snooze 1 week," "Snooze 1 month," "Snooze 1 quarter," and "Snooze until..." (custom date picker)
+* **Auto-Classification:** Snoozed tasks automatically receive 'backlog' classification
+* **Visual Styling:** Snoozed tasks display with opacity 0.65 and grayscale(0.3) filter for muted appearance
+* **Wake Indicator:** Purple badge with clock icon and formatted wake date (e.g., "Sep 20") appears in task footer
+* **Menu State:** Actions menu shows "Remove Snooze" option for currently snoozed tasks instead of "Snooze Task"
+* **Wake Behavior:** Tasks automatically unsnooze at 9 AM local time on scheduled date with notification requirement per spec
+
 #### Completion Celebration
 * **Animation Sequence:** 1.5-second multi-effect celebration on task completion
   * Rainbow glow expanding outward from card
@@ -289,6 +303,8 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * Sorting enforced on status change.  
 * Persisted instantly.
 
+Snoozed tasks are shown/hidden via a "Show Snoozed" filter. When visible, they are merged into the backlog group for each column, immediately after other non-snoozed backlog tasks, sorted by wake date.
+
 Users can change classification either by **clicking the status band** on the
 card or via **Actions → Cycle Classification**; the enforced order remains
 Signal > Support > Noise > Completed.
@@ -301,6 +317,7 @@ Signal > Support > Noise > Completed.
 * Move ← opens Move Mode 2.0 (wiggle + banner + drop-zones)
 * Share
 * Toggle Private
+* Snooze (sub-menu: 1 week, 1 month, 1 quarter, until date…, Clear -if task is snoozed-)
 * Cycle Classification  ← alternate to clicking the status band
 
 The 'Delete' action for both tasks and columns now triggers a non-blocking toast notification with a temporary 'Undo' option, allowing for immediate action reversal. This replaces the previous blocking confirmation modal.
@@ -386,7 +403,17 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 /api/api.php as gateway; validates CSRF, content type, session. Dispatches to handlers.  
 
 ### Frontend Architecture
-/uix holds SPA modules. crypto.js = encryption boundary.  
+/uix holds SPA modules. crypto.js = encryption boundary. 
+
+#### Visual Styling for Snoozed Tasks:
+* Apply opacity: 0.65 and filter: grayscale(0.3) to the card.
+* Maintain orange backlog status band, but reduce saturation visually.
+* Insert snooze SVG icon in the card’s footer, styled with a readable background badge.
+* When acknowledged by user, remove wake notification and return styling to standard backlog.
+
+#### Mobile & Accessibility:
+* Ensure snooze menu touch targets are minimum 44px.
+* Wake notifications are ARIA-live announced; focus is trapped until toast is acknowledged.
 
 #### Drag & Drop Visual Feedback System
 * Unified styling for both column and task dragging operations
@@ -398,6 +425,9 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 #### Global API Functions
 * `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
 * All task operations must use `window.apiFetch` to maintain security consistency
+* snoozeTask(task_id, duration_type, custom_date?) — Sets snoozed_until (per selected interval or custom date), sets classification to 'backlog', logs snoozed_at.
+*acknowledgeWokenTasks() — Clears the "wake notification" toast flag for the user.
+*Update getAll API: Excludes snoozed tasks unless filter active; checks for tasks that have woken since last fetch and includes their IDs in the payload for notification purposes.
 
 ### Security Model & Privacy
 * CSRF protection.  
@@ -492,6 +522,14 @@ Server-Side Debugging
 * Raw Response Logging: Temporary capability to log full server responses for JSON parsing issues
 * Error Correlation: Links client-side errors with server-side debug traces
 
+#### Snooze Feature Testing
+* Test all duration presets (1 week, 1 month, 1 quarter) for proper date calculation
+* Verify custom date selection and validation
+* Confirm snoozed task visual styling (opacity, grayscale, purple indicator)
+* Test menu state changes (Snooze → Remove Snooze) without page refresh
+* Validate backend persistence of snoozed_until and snoozed_at timestamps
+* Test unsnooze functionality and visual state restoration
+
 #### Debug Response Helper
 
 ~~~
@@ -561,7 +599,7 @@ function send_debug_response(array $data, int $http_code = 200): void {
 ### Database Schema
 * users: user_id, username, email, password_hash, preferences (JSON), created_at, storage_used_bytes
 * columns: column_id, user_id, column_name, position, is_private, created_at, updated_at
-* tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at
+* tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at, snoozed_until, snoozed_at
 * task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, created_at
 * password_resets: id, user_id, token_hash, expires_at, created_at
 
@@ -592,6 +630,7 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * Modal Window = Modal
 * Move Mode = mobile-friendly relocation workflow with banner, wiggle state, and drop-zones.
 * Drag Handle = the ≡ grip area on each task card to initiate touch DnD.
+* Snoozed Task: A task with a future schedule (snoozed_until); visually muted, backlog status, automatically re-awakens at 9 AM user’s local time, with toast notification required for acknowledgment.
 
 ---
 
@@ -734,6 +773,8 @@ function send_debug_response(array $data, int $http_code = 200): void {
 
 ### Application Icons
 Consistent SVGs for contextual menu, status, etc.  
+New snooze icon (SVG, square, stylized "z" and "Z" motif, sleeping effect) for footer display on snoozed tasks.
+Colors are muted/dark for contrast/legibility.
 
 ---
 
@@ -800,6 +841,12 @@ Consistent SVGs for contextual menu, status, etc.
 * Cross-Browser: Desktop Chrome/Firefox/Safari, Mobile Chrome/Safari
 * Responsive Design: Mobile layout, touch interactions, keyboard navigation
 * Performance: API response times, UI animation smoothness, large dataset handling
+
+#### Snnozed tasks
+* Snooze/Unsnooze: Verify correct movement to backlog and filter behavior.
+* Wake Time: Test time zone conversion, correct display, and wake notification.
+* Custom Date Picker: Confirm date selection, validation, and integration with snooze logic.
+* Accessibility: ARIA notifications, toast flows, and proper focus management.
 
 ---
 
