@@ -148,6 +148,13 @@
   
   7. Accessibility Polish
 	 * Colorblind/high-contrast tuning; ARIA announcements for Move Mode.
+	 
+	 
+#### Priority Roadmap Updates
+	 
+ * "Column Reordering (Drag & Drop)" completed
+ * "Debug/Observability Hardening" completed baed comprehensive backend testing results
+ * "Zero-Knowledge Baseline" priority based on stable foundation now established
 
 ---
 
@@ -381,6 +388,13 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 ### Frontend Architecture
 /uix holds SPA modules. crypto.js = encryption boundary.  
 
+#### Drag & Drop Visual Feedback System
+* Unified styling for both column and task dragging operations
+* Consistent visual language: accent-colored borders, elevated shadows, subtle rotation
+* Grab/grabbing cursor states to indicate draggable elements
+* Z-index management for proper layering during drag operations
+* Enhanced user feedback maintains design consistency across all board interactions
+
 #### Global API Functions
 * `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
 * All task operations must use `window.apiFetch` to maintain security consistency
@@ -535,6 +549,14 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * Composer add-on: SMTP runtime.  
 * Debugging: DEVMODE logs.  
 * Test accounts: alfa, delta, omega.
+
+#### Environment Variable Configuration (add this to .env)
+* APP_URL: Explicit base URL configuration per environment (replaces dynamic calculation)
+  * Local: `http://localhost` 
+  * Staging: `https://breveasy.com`
+  * Production: `https://mydayhub.com`
+* Eliminates server-dependent URL generation issues
+* Ensures consistent API routing across hosting environments
 
 ### Database Schema
 * users: user_id, username, email, password_hash, preferences (JSON), created_at, storage_used_bytes

@@ -284,9 +284,23 @@
 	background-color: var(--text-secondary); /* Gray */
 }
 
+/* With enhanced visual feedback similar to column dragging: */
 .task-card.dragging {
-	opacity: 0.5;
+	border: 2px solid var(--accent-color);
+	box-shadow: 0 8px 25px rgba(59, 130, 246, 0.3);
 	transform: rotate(2deg);
+	opacity: 0.9;
+	z-index: 1000;
+	background-color: var(--toolbar-bg);
+}
+
+.task-card.dragging .task-title {
+	color: var(--accent-color);
+	font-weight: 600;
+}
+
+.task-card.dragging .task-status-band {
+	background-color: var(--accent-color) !important;
 }
 
 /* Modified for Completion Animation */

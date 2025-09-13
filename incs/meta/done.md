@@ -988,3 +988,37 @@ Timestamp: 2025-09-12 14:22 - Regression: Task Completion Persistence & Animatio
 **3** **Backend Integration Testing:** Verify all API endpoints work correctly on production environment (Hostinger).
 **4** **Performance Optimization:** Review and optimize animation performance, especially on lower-end mobile devices.
 **5** **Accessibility Improvements:** Add ARIA announcements for task completion and screen reader support for animations.
+
+---
+
+# Timestamp: 2025-09-12 23:30 - Column Drag & Drop + Backend Integration Validation
+**Version**: Beta 6.7.2
+**Focus** Complete column drag-and-drop functionality with polished visual feedback and conduct comprehensive backend integration testing to validate production readiness.
+**Key work**
+* **Column Drag & Drop (Full Stack):**
+  * Implemented horizontal drag-and-drop for column headers with getColumnAfterElement() positioning logic
+  * Enhanced dragstart, dragend, and dragover handlers to support both task and column dragging
+  * Added draggable="true" to column titles and wired persistence through existing reorderColumns API
+  * Applied consistent visual feedback: accent-colored borders, elevated shadows, subtle rotation
+* **Visual Consistency Overhaul:**
+  * Updated task dragging styles to match column dragging: accent borders, shadows, highlighted text
+  * Added grab/grabbing cursors and hover effects to indicate draggable elements
+  * Enhanced .dragging and .dragging-column classes with z-index and opacity management
+* **Environment Configuration:**
+  * Refactored APP_URL from dynamic calculation to explicit .env variable for deployment reliability
+  * Updated local and staging environment configurations for consistent URL generation
+  * Fixed authentication API routing issues caused by server-dependent URL calculation
+* **Comprehensive Backend Testing:**
+  * Validated authentication system, API routing, and CSRF protection on staging environment
+  * Confirmed file upload functionality, storage quotas, and email delivery systems
+  * Tested all drag-and-drop operations, visual feedback, and data persistence
+  * Verified environment portability between local XAMPP and Hostinger production setups
+
+⠀**Status** Column and task drag-and-drop systems are feature-complete with unified visual feedback. Backend integration testing confirms production readiness. All core functionality validated on staging environment (breveasy.com) with successful deployment workflow.
+**Recommended next steps (priority order)**
+**1** **Zero-Knowledge Architecture Foundation:** Begin consolidating crypto operations to /uix/crypto.js and implement per-item DEKs with Master Key wrapping as specified in the roadmap
+**2** **Touch/Mobile Enhancements:** Restore and improve Mobile Move Mode 2.0 with enhanced cancel affordances and in-column reordering targets for better mobile UX
+**3** **Sharing Foundation:** Implement UI stubs for task/column sharing (add "Share" buttons to menus) to establish framework for larger sharing feature
+**4** **Performance Optimization:** Add loading states, optimize animations for lower-end devices, and implement basic offline capabilities
+**5** **Accessibility Polish:** Add ARIA announcements for drag operations, improve keyboard navigation, and enhance screen reader support
+
