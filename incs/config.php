@@ -75,11 +75,7 @@ if (DEVMODE) {
 
 // --- APPLICATION URL & VERSION ---
 define('APP_VER', 'Beta 6.7.0');
-$protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https" : "http";
-$host = $_SERVER['HTTP_HOST'];
-$script_name = str_replace(basename($_SERVER['SCRIPT_NAME']), '', $_SERVER['SCRIPT_NAME']);
-$base_url = rtrim(str_replace(DIRECTORY_SEPARATOR, '/', dirname($script_name)), '/');
-define('APP_URL', $protocol . '://' . $host . $base_url);
+define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---
 define('DB_HOST', getenv('DB_HOST'));
