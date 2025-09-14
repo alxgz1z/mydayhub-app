@@ -120,10 +120,11 @@
   [WIP] Settings slider panel
   [RDY] Change Password modal
   [WIP] Forgot Password page & flow
-  [FIX] Task Snooze Modal (preset durations and custom date picker)
-  [FIX] Snooze Visual Indicators (purple badge with wake date)
-  [FIX] Dynamic Snooze/Unsnooze Menu State
-  [FIX] Snoozed Task Visual Styling (opacity and grayscale effects)
+  [RDY] Task Snooze Modal (preset durations and custom date picker)
+  [RDY] Snooze Visual Indicators (purple badge with wake date)
+  [RDY] Dynamic Snooze/Unsnooze Menu State  
+  [RDY] Snoozed Task Visual Styling (opacity and grayscale effects)
+  [RDY] Show/Hide Snoozed Tasks Filter (bottom toolbar toggle with persistence)
   [FUT] Sharing UI
 
 
@@ -257,6 +258,12 @@ Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optim
 * **Wake Indicator:** Purple badge with clock icon and formatted wake date (e.g., "Sep 20") appears in task footer
 * **Menu State:** Actions menu shows "Remove Snooze" option for currently snoozed tasks instead of "Snooze Task"
 * **Wake Behavior:** Tasks automatically unsnooze at 9 AM local time on scheduled date with notification requirement per spec
+
+#### Snooze Implementation Status
+* **Current State**: Fully functional with all preset durations and custom date selection
+* **Visual Integration**: Purple indicators clickable for editing, consistent with other task metadata
+* **Filter Integration**: "Show Snoozed Tasks" toggle in bottom toolbar with user preference persistence
+* **Missing Component**: Wake notification system (tasks unsnooze silently at 9 AM without user notification)
 
 #### Completion Celebration
 * **Animation Sequence:** 1.5-second multi-effect celebration on task completion
@@ -522,13 +529,14 @@ Server-Side Debugging
 * Raw Response Logging: Temporary capability to log full server responses for JSON parsing issues
 * Error Correlation: Links client-side errors with server-side debug traces
 
-#### Snooze Feature Testing
-* Test all duration presets (1 week, 1 month, 1 quarter) for proper date calculation
-* Verify custom date selection and validation
-* Confirm snoozed task visual styling (opacity, grayscale, purple indicator)
-* Test menu state changes (Snooze → Remove Snooze) without page refresh
-* Validate backend persistence of snoozed_until and snoozed_at timestamps
-* Test unsnooze functionality and visual state restoration
+#### Completed Snooze Testing
+* ✅ All duration presets (1 week, 1 month, 1 quarter) calculate correctly
+* ✅ Custom date selection and validation working
+* ✅ Snoozed task visual styling (opacity, grayscale, purple indicator) implemented
+* ✅ Menu state changes (Snooze ↔ Remove Snooze) work without page refresh  
+* ✅ Backend persistence of snoozed_until and snoozed_at timestamps confirmed
+* ✅ Unsnooze functionality and visual state restoration working
+* ⚠️ Wake notification system not yet implemented (silent unsnooze at 9 AM)
 
 #### Debug Response Helper
 

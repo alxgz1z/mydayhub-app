@@ -14,7 +14,8 @@ let dragSourceColumn = null;
 
 let filterState = {
 	showCompleted: false,
-	showPrivate: false
+	showPrivate: false,
+	showSnoozed: false
 };
 
 let userStorage = { used: 0, quota: 50 * 1024 * 1024 }; 
@@ -297,6 +298,8 @@ function initEventListeners() {
 					const taskId = taskCard.dataset.taskId;
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
 					await openAttachmentsModal(taskId, taskTitle);
+				} else if (action === 'edit-snooze') {
+					await openSnoozeModalForTask(taskCard);
 				}
 				return;
 			}
@@ -739,22 +742,30 @@ function showFilterMenu() {
 	
 	const showCompletedChecked = filterState.showCompleted ? 'checked' : '';
 	const showPrivateChecked = filterState.showPrivate ? 'checked' : '';
+	const showSnoozedChecked = filterState.showSnoozed ? 'checked' : '';
 
 	menu.innerHTML = `
-		<div class="filter-item">
-			<span class="filter-label">Show Completed Tasks</span>
-			<label class="switch">
-				<input type="checkbox" data-filter="showCompleted" ${showCompletedChecked}>
-				<span class="slider round"></span>
-			</label>
-		</div>
-		<div class="filter-item">
-			<span class="filter-label">Show Private Items</span>
-			<label class="switch">
-				<input type="checkbox" data-filter="showPrivate" ${showPrivateChecked}>
-				<span class="slider round"></span>
-			</label>
-		</div>
+	<div class="filter-item">
+		<span class="filter-label">Show Completed Tasks</span>
+		<label class="switch">
+			<input type="checkbox" data-filter="showCompleted" ${showCompletedChecked}>
+			<span class="slider round"></span>
+		</label>
+	</div>
+	<div class="filter-item">
+		<span class="filter-label">Show Private Items</span>
+		<label class="switch">
+			<input type="checkbox" data-filter="showPrivate" ${showPrivateChecked}>
+			<span class="slider round"></span>
+		</label>
+	</div>
+	<div class="filter-item">
+		<span class="filter-label">Show Snoozed Tasks</span>
+		<label class="switch">
+			<input type="checkbox" data-filter="showSnoozed" ${showSnoozedChecked}>
+			<span class="slider round"></span>
+		</label>
+	</div>
 	`;
 
 	document.body.appendChild(menu);
@@ -774,7 +785,8 @@ function showFilterMenu() {
 			
 			const keyMap = {
 				showCompleted: 'filter_show_completed',
-				showPrivate: 'filter_show_private'
+				showPrivate: 'filter_show_private',
+				showSnoozed: 'filter_show_snoozed'
 			};
 			saveFilterPreference(keyMap[filter], value);
 		}
@@ -790,6 +802,7 @@ function applyAllFilters() {
 	allItems.forEach(item => {
 		const isCompleted = item.classList.contains('completed');
 		const isPrivate = item.classList.contains('private');
+		const isSnoozed = item.classList.contains('snoozed');
 		
 		let shouldBeVisible = true;
 
@@ -799,7 +812,10 @@ function applyAllFilters() {
 		if (isPrivate && !filterState.showPrivate) {
 			shouldBeVisible = false;
 		}
-
+		if (isSnoozed && !filterState.showSnoozed) {
+			shouldBeVisible = false;
+		}
+		
 		item.style.display = shouldBeVisible ? 'flex' : 'none';
 	});
 
@@ -1490,6 +1506,9 @@ async function fetchAndRenderBoard() {
 				if (typeof userPrefs.filter_show_private !== 'undefined') {
 					filterState.showPrivate = userPrefs.filter_show_private;
 				}
+				if (typeof userPrefs.filter_show_snoozed !== 'undefined') {
+					filterState.showSnoozed = userPrefs.filter_show_snoozed;
+				}
 				// Handle theme preferences
 				const highContrastToggle = document.getElementById('toggle-high-contrast');
 				const lightModeToggle = document.getElementById('toggle-light-mode');
@@ -1612,8 +1631,9 @@ function createTaskCard(taskData) {
 	}
 	
 	let footerHTML = '';
-	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0);
-
+	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator;
+	
 	if (hasIndicators) {
 		let notesIndicator = '';
 		if (taskData.has_notes) {
@@ -1645,11 +1665,16 @@ function createTaskCard(taskData) {
 		
 		let snoozeIndicator = '';
 		if (taskData.snoozed_until && !isCompleted) {
-			const wakeDate = new Date(taskData.snoozed_until + 'T00:00:00Z');
-			const wakeDateFormatted = wakeDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+			// Modified for Snooze Feature - Fixed date parsing for UTC timestamps
+			const wakeDate = new Date(taskData.snoozed_until);
+			const wakeDateFormatted = wakeDate.toLocaleDateString('en-US', { 
+				month: 'short', 
+				day: 'numeric',
+				timeZone: 'UTC' 
+			});
 			snoozeIndicator = `
-				<span class="task-indicator indicator-shortcut snooze-indicator" title="Snoozed until: ${wakeDateFormatted}">
-					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+			<span class="task-indicator indicator-shortcut snooze-indicator" data-action="edit-snooze" title="Click to edit snooze date">
+				<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<circle cx="12" cy="13" r="8"></circle>
 						<path d="M12 9v4l2 2"></path>
 						<path d="M5 3L3 5"></path>
@@ -2205,63 +2230,75 @@ function exitMoveMode() {
 /**
  * Opens the snooze modal for a given task card and handles the result.
  */
-async function openSnoozeModalForTask(taskCard) {
-	if (isModalOpening) return;
-	isModalOpening = true;
-
-	try {
+// Modified for Snooze Feature - Fixed modal workflow
+ async function openSnoozeModalForTask(taskCard) {
+	 if (isModalOpening) return;
+	 isModalOpening = true;
+ 
+	 try {
 		const taskId = taskCard.dataset.taskId;
-		const snoozeDate = await showSnoozeModal();
-
-		if (snoozeDate !== null) {
-			const result = await snoozeTask(taskId, snoozeDate);
-			if (result) {
-				taskCard.dataset.isSnoozed = 'true';
-				taskCard.dataset.snoozedUntil = result.snoozed_until || '';
-				taskCard.dataset.classification = 'backlog';
-				rerenderTaskCard(taskCard);
-				sortTasksInColumn(taskCard.closest('.column-body'));
-				showToast({ message: 'Task snoozed successfully.', type: 'success' });
-			}
-		}
-	} finally {
-		isModalOpening = false;
-	}
-}
+		const currentSnoozeDate = taskCard.dataset.snoozedUntil || null;
+		const snoozeSelection = await showSnoozeModal(currentSnoozeDate);
+ 
+		 if (snoozeSelection !== null) {
+			 const result = await snoozeTask(taskId, snoozeSelection);
+			 if (result) {
+				 // Task card is already updated in snoozeTask function
+				 const columnBody = taskCard.closest('.column-body');
+				 sortTasksInColumn(columnBody);
+				 showToast({ message: 'Task snoozed successfully.', type: 'success' });
+			 }
+		 }
+	 } finally {
+		 isModalOpening = false;
+	 }
+ }
 
 /**
  * Sends a request to snooze a task until a specified date.
  */
-async function snoozeTask(taskId, snoozeDate) {
-	try {
-		const result = await window.apiFetch({
-			module: 'tasks',
-			action: 'snoozeTask',
-			task_id: taskId,
-			duration_type: snoozeDate.startsWith('custom:') ? 'custom' : snoozeDate,
-			custom_date: snoozeDate.startsWith('custom:') ? snoozeDate.substring(7) : null
-		});
-		if (result.status === 'success') {
-			return result.data;
-		} else {
-			showToast({ message: `Error: ${result.message}`, type: 'error' });
-			return false;
-		}
-	} catch (error) {
-		showToast({ message: error.message, type: 'error' });
-		console.error('Snooze task error:', error);
-		return false;
-	}
-}
+// Modified for Snooze Feature - Fixed data synchronization
+ async function snoozeTask(taskId, snoozeDate) {
+	 try {
+		 const result = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'snoozeTask',
+			 task_id: taskId,
+			 duration_type: snoozeDate.startsWith('custom:') ? 'custom' : snoozeDate,
+			 custom_date: snoozeDate.startsWith('custom:') ? snoozeDate.substring(7) : null
+		 });
+		 if (result.status === 'success') {
+			 // Update task card datasets with backend response
+			 const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+			 if (taskCard) {
+				 taskCard.dataset.snoozedUntil = result.data.snoozed_until;
+				 taskCard.dataset.classification = result.data.classification;
+				 taskCard.dataset.isSnoozed = 'true';
+				 
+				 // Re-render the card to update visual state
+				 rerenderTaskCard(taskCard);
+			 }
+			 return result.data;
+		 } else {
+			 showToast({ message: `Error: ${result.message}`, type: 'error' });
+			 return false;
+		 }
+	 } catch (error) {
+		 showToast({ message: error.message, type: 'error' });
+		 console.error('Snooze task error:', error);
+		 return false;
+	 }
+ }
 
 /**
- * Shows a modal for selecting snooze duration and returns the selected date.
- * @returns {Promise<string|null>} ISO date string or null if cancelled
- */
-async function showSnoozeModal() {
+  * Shows a modal for selecting snooze duration and returns the selected date.
+  * @param {string|null} currentSnoozeDate - Current snooze date if editing existing snooze
+  * @returns {Promise<string|null>} ISO date string or null if cancelled
+  */
+ async function showSnoozeModal(currentSnoozeDate = null) {
 	return new Promise((resolve) => {
-		const modal = document.createElement('div');
-		modal.className = 'modal-overlay';
+	const modal = document.createElement('div');
+	modal.className = 'modal-overlay snooze-modal-overlay';
 		modal.innerHTML = `
 			<div class="modal-content snooze-modal">
 				<div class="modal-header">
@@ -2269,8 +2306,9 @@ async function showSnoozeModal() {
 					<button class="modal-close-btn" type="button">&times;</button>
 				</div>
 				<div class="modal-body">
-					<p>Select when this task should wake up:</p>
-					<div class="snooze-options">
+				${currentSnoozeDate ? `<p><strong>Currently snoozed until:</strong> ${new Date(currentSnoozeDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}</p><hr style="margin: 1rem 0; border-color: var(--border-color);">` : ''}
+				<p>Select when this task should wake up:</p>
+				<div class="snooze-options">
 						<button class="snooze-preset-btn" data-duration="week">1 Week</button>
 						<button class="snooze-preset-btn" data-duration="month">1 Month</button>
 						<button class="snooze-preset-btn" data-duration="quarter">1 Quarter</button>
@@ -2295,21 +2333,27 @@ async function showSnoozeModal() {
 
 		// Calculate preset dates
 		const calculateSnoozeDate = (duration) => {
-			const date = new Date();
-			date.setHours(9, 0, 0, 0); // 9 AM wake time per spec
-			
-			switch (duration) {
-				case 'week':
-					date.setDate(date.getDate() + 7);
-					break;
-				case 'month':
-					date.setMonth(date.getMonth() + 1);
-					break;
-				case 'quarter':
-					date.setMonth(date.getMonth() + 3);
-					break;
+		const date = new Date();
+		date.setHours(9, 0, 0, 0); // 9 AM wake time per spec
+		
+		switch (duration) {
+			case 'week':
+				date.setDate(date.getDate() + 7);
+				return '1week';
+			case 'month':
+				date.setMonth(date.getMonth() + 1);
+				return '1month';
+			case 'quarter':
+				// Fixed: Add 3 months properly handling year boundaries
+				const currentMonth = date.getMonth();
+				const newMonth = (currentMonth + 3) % 12;
+				const yearIncrement = Math.floor((currentMonth + 3) / 12);
+				date.setFullYear(date.getFullYear() + yearIncrement);
+				date.setMonth(newMonth);
+				return '1quarter';
+			default:
+				return duration;
 			}
-			return date.toISOString().split('T')[0];
 		};
 
 		modal.addEventListener('click', (e) => {
@@ -2347,30 +2391,37 @@ async function showSnoozeModal() {
 /**
  * Sends a request to unsnooze (wake up) a snoozed task.
  */
-async function unsnoozeTask(taskId, taskCard) {
-	try {
-		const result = await window.apiFetch({
-			module: 'tasks',
-			action: 'unsnoozeTask',
-			task_id: taskId
-		});
-		if (result.status === 'success') {
-			taskCard.dataset.snoozedUntil = '';
-			taskCard.dataset.snoozedAt = '';
-			taskCard.dataset.isSnoozed = 'false';
-			rerenderTaskCard(taskCard);
-			showToast({ message: 'Task unsnoozed successfully.', type: 'success' });
-			return true;
-		} else {
-			showToast({ message: `Error: ${result.message}`, type: 'error' });
-			return false;
-		}
-	} catch (error) {
-		showToast({ message: error.message, type: 'error' });
-		console.error('Unsnooze task error:', error);
-		return false;
-	}
-}
+// Modified for Snooze Feature - Fixed data synchronization
+ async function unsnoozeTask(taskId, taskCard) {
+	 try {
+		 const result = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'unsnoozeTask',
+			 task_id: taskId
+		 });
+		 if (result.status === 'success') {
+			 // Clear snooze data from task card datasets
+			 taskCard.dataset.snoozedUntil = '';
+			 taskCard.dataset.snoozedAt = '';
+			 taskCard.dataset.isSnoozed = 'false';
+			 taskCard.classList.remove('snoozed');
+			 
+			 // Re-render the card to update visual state and menu
+			 rerenderTaskCard(taskCard);
+			 sortTasksInColumn(taskCard.closest('.column-body'));
+			 
+			 showToast({ message: 'Task unsnoozed successfully.', type: 'success' });
+			 return true;
+		 } else {
+			 showToast({ message: `Error: ${result.message}`, type: 'error' });
+			 return false;
+		 }
+	 } catch (error) {
+		 showToast({ message: error.message, type: 'error' });
+		 console.error('Unsnooze task error:', error);
+		 return false;
+	 }
+ }
 
 // Initial load
 document.addEventListener('DOMContentLoaded', initTasksView);
