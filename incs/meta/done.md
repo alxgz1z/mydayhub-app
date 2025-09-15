@@ -1111,4 +1111,57 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 **4** **Settings Panel Enhancement**: Complete the Settings Panel with functional options like "High-Contrast Mode" toggle.
 **5** **Column Drag-and-Drop Polish**: Ensure column reordering drag-and-drop works seamlessly across all device types and screen sizes.
 
+---
+
+# # Timestamp: 2025-09-14 22:50 — Sharing (Foundation), CSRF Wiring & Error Surfacing
+**Version**: Beta 6.9.0-dev
+**Focus** Stand up the **task sharing foundation** (UI + API paths), align with CSRF rules, and make backend errors visible during bring-up.
+**Key work**
+* **UI**
+  * Added **Share** item to task actions menu.
+  * Implemented openShareModal(taskId) with:
+	* Recipient field (email or username) + permission (view/edit).
+	* “Current Access” table (lists existing shares; supports **Unshare**).
+	* Uses global window.apiFetch so CSRF header is injected automatically.
+* **Backend / Routing**
+  * In api/tasks.php, moved default: to the bottom so new actions are actually hit: ### shareTask, unshareTask, listTaskShares.
+  * In api/api.php, dev mode now returns explicit messages: ### Server error (api): <details>.
+* **Data**
+  * Created **beta** user; confirmed alfa→beta **trust** exists.
+* **Observations**
+  * First failure was **403 (Invalid/missing CSRF)** → fixed by using window.apiFetch.
+  * Current blocker is **500** on shareTask; UI still shows a native alert, not a toast.
+
+⠀**Status** **Partially working**. UI opens and calls the API with CSRF; “List” and “Add/Unshare” call paths are in place. Server still returns **HTTP 500** for shareTask and the error is not bubbled to a toast.
+**Repro (today)**
+1 Log in as **alfa**; open a task; Actions → **Share**.
+2 Enter beta (or jalexg+beta@gmail.com), choose **Edit**, click **Add**.
+3 Network shows POST /api/api.php → 500; page shows browser alert("Server error.").
+
+⠀**Likely fault lines (from code audit)**
+* The shareTask handler’s **activity log insert** or **upsert** to shared_items (e.g., JSON_OBJECT(...) on some MariaDB builds).
+* Handler catch paths not using the **debug response** helper, so FE only has a generic message.
+
+⠀**Recommended next steps (priority)**
+**1** **Make the precise error visible**
+	* In api/tasks.php, inside handle_share_task(...)/handle_unshare_task(...), change catch to: ### send_debug_response(['status'=>'error','message'=>'shareTask: '.$e->getMessage()], 500);
+	* Confirm send_debug_response() exists (per spec); if not, use send_json_response() but include the message during DEVMODE.
+**2** **Harden the log insert**
+	* Replace JSON_OBJECT('permission', :perm) with a **PHP-encoded** payload: ### $payload = json_encode(['permission'=>$permission], JSON_UNESCAPED_SLASHES);
+	* ... VALUES (..., :payload, UTC_TIMESTAMP())
+	*   
+**3** **Unify client error UX**
+	* Replace alert(...) in openShareModal with showToast(msg, 'error') to match app conventions.
+**4** **Schema/constraints check**
+	* Ensure shared_items has a **unique** (owner_id,recipient_id,item_type,item_id) and handler uses **INSERT…ON DUPLICATE KEY UPDATE**.
+**5** **Plumb “Shared with me”**
+	* Extend getAll to merge tasks where user is recipient_id with permission, gated by trust.
+**6** **Security audit**
+	* Verify **ownership** (alfa owns the task) and **trust acceptance** (alfa → beta, accepted) before creating a share.
+	* Confirm CSRF validation is active for all **write** routes.
+
+⠀**Exit criteria for this milestone**
+* Alfa can **add** beta (view/edit), **list** current access, and **unshare**, with toasts on success/fail.
+* getAll provides “shared with me” visibility (read-only unless **edit**).
+* No native alerts remain; all errors go through toasts and include server **debug[]** when DEVMODE=true.
 

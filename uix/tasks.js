@@ -417,6 +417,8 @@ function initEventListeners() {
 		});
 		
 		document.body.addEventListener('click', async (e) => {
+			// Guard: if click happens inside Share modal, ignore (prevents dataset null crash)
+			if (e.target.closest('#share-modal-overlay')) return;
 			const actionButton = e.target.closest('.task-action-btn');
 			if (!actionButton || isActionRunning) return;
 
@@ -449,6 +451,12 @@ function initEventListeners() {
 				} else if (action === 'attachments') {
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
 					await openAttachmentsModal(taskId, taskTitle);
+				} else if (action === 'share') {
+					if (taskId) {
+						// close the menu to avoid stray clicks under the modal
+						closeAllTaskActionMenus && closeAllTaskActionMenus();
+						await openShareModal(parseInt(taskId, 10));
+					}
 				} else if (action === 'delete') {
 					const success = await deleteTask(taskId);
 					if (success) {
@@ -970,13 +978,32 @@ function showTaskActionsMenu(buttonEl) {
 			</svg>
 			<span>Duplicate Task</span>
 		</button>
-		
+		<button class="task-action-btn" data-action="share">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+				 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+				<circle cx="18" cy="5" r="3"></circle>
+				<circle cx="6" cy="12" r="3"></circle>
+				<circle cx="18" cy="19" r="3"></circle>
+				<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+			</svg>
+			<span>Share</span>
+		</button>
 		<button class="task-action-btn" data-action="${isSnoozed ? 'unsnooze' : 'snooze'}">
 		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 			${isSnoozed ? '<path d="M6 2l3 3.5L12 2l3 3.5L18 2"/><path d="M6 16.5l3-3.5 3 3.5 3-3.5 3 3.5"/><polyline points="6 12 12 6 18 12"/>' : '<circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L3 5"></path><path d="M19 3l2 2"></path>'}
 			</svg>
 				<span>${isSnoozed ? 'Remove Snooze' : 'Snooze Task'}</span>
 			</button>
+		<!--button class="task-action-btn" data-action="share">
+			<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+				 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				<circle cx="18" cy="5" r="3"></circle>
+				<circle cx="6" cy="12" r="3"></circle>
+				<circle cx="18" cy="19" r="3"></circle>
+				<path d="M8.59 13.51l6.83 3.98M15.41 6.51L8.59 10.49"></path>
+			</svg>
+			<span>Share…</span>
+		</button-->
 		<button class="task-action-btn" data-action="delete">
 			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
 				<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
@@ -2421,6 +2448,130 @@ function exitMoveMode() {
 		 console.error('Unsnooze task error:', error);
 		 return false;
 	 }
+ }
+
+async function openShareModal(taskId) {
+	 // Single-instance guard
+	 const existing = document.getElementById('share-modal-overlay');
+	 if (existing) existing.remove();
+ 
+	 // 1) Load existing shares via the app's API wrapper (injects CSRF per spec)
+	 let shares = [];
+	 try {
+		 const res = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'listTaskShares',
+			 data: { task_id: taskId }
+		 });
+		 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+		 if (json?.status === 'success') shares = json.data?.shares || [];
+	 } catch (err) {
+		 console.warn('listTaskShares error', err);
+	 }
+ 
+	 // 2) Build overlay (styled by style.css / tasks.css)
+	 const overlay = document.createElement('div');
+	 overlay.id = 'share-modal-overlay';
+	 overlay.classList.add('hidden'); // enable fade-in if your CSS uses .hidden
+ 
+	 const rowsHtml = shares.map(s => `
+		 <tr data-user-id="${s.user_id}">
+			 <td>${s.username || ''}</td>
+			 <td>${s.email || ''}</td>
+			 <td>
+				 <select class="perm-select">
+					 <option value="view"${s.permission === 'view' ? ' selected' : ''}>View</option>
+					 <option value="edit"${s.permission === 'edit' ? ' selected' : ''}>Edit</option>
+				 </select>
+			 </td>
+			 <td><button class="btn-unshare" type="button" data-user-id="${s.user_id}">Unshare</button></td>
+		 </tr>
+	 `).join('');
+ 
+	 overlay.innerHTML = `
+		 <div id="share-modal-container" role="dialog" aria-modal="true" aria-label="Share Task">
+			 <button class="modal-close-btn" type="button" aria-label="Close">×</button>
+			 <h3>Share Task</h3>
+ 
+			 <div class="share-add">
+				 <label>Recipient (email or username)</label>
+				 <input type="text" id="share-ident" placeholder="user@example.com or username" />
+				 <label>Permission</label>
+				 <select id="share-perm">
+					 <option value="edit">Edit</option>
+					 <option value="view">View</option>
+				 </select>
+				 <button id="btn-share-add" type="button">Add</button>
+			 </div>
+ 
+			 <div class="share-list">
+				 <h4>Current Access</h4>
+				 <table class="table-shares">
+					 <thead><tr><th>User</th><th>Email</th><th>Permission</th><th></th></tr></thead>
+					 <tbody>${rowsHtml || '<tr><td colspan="4">No one else has access.</td></tr>'}</tbody>
+				 </table>
+			 </div>
+		 </div>
+	 `;
+ 
+	 document.body.appendChild(overlay);
+ 
+	 // Optional fade-in if your overlay uses .hidden transitions
+	 requestAnimationFrame(() => overlay.classList.remove('hidden'));
+ 
+	 // Close + bubble control (prevents body click handler from firing)
+	 const close = () => overlay.remove();
+	 overlay.addEventListener('click', close);
+	 const panel = overlay.querySelector('#share-modal-container');
+	 panel?.addEventListener('click', (ev) => ev.stopPropagation());
+	 overlay.querySelector('.modal-close-btn')?.addEventListener('click', close);
+ 
+	 // Add recipient
+	 overlay.querySelector('#btn-share-add')?.addEventListener('click', async () => {
+		 const recipient_identifier = overlay.querySelector('#share-ident')?.value.trim();
+		 const permission = overlay.querySelector('#share-perm')?.value === 'view' ? 'view' : 'edit';
+		 if (!recipient_identifier) return;
+ 
+try {
+			 const res = await window.apiFetch({
+				 module: 'tasks',
+				 action: 'shareTask',
+				 data: { task_id: taskId, recipient_identifier, permission }
+			 });
+			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+			 if (json?.status === 'success') {
+				 close();
+				 openShareModal(taskId); // refresh list
+			 } else {
+				 alert(json?.message || 'Failed to share.');
+			 }
+		 } catch {
+			 alert('Server error.');
+		 }	 });
+ 
+	 // Unshare via event delegation
+	 overlay.querySelector('.table-shares')?.addEventListener('click', async (e) => {
+		 const btn = e.target.closest('.btn-unshare');
+		 if (!btn) return;
+		 const recipient_user_id = parseInt(btn.dataset.userId, 10);
+		 if (!recipient_user_id) return;
+ 
+		 try {
+			 const res = await window.apiFetch({
+				 module: 'tasks',
+				 action: 'unshareTask',
+				 data: { task_id: taskId, recipient_user_id }
+			 });
+			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+			 if (json?.status === 'success') {
+				 btn.closest('tr')?.remove();
+			 } else {
+				 alert(json?.message || 'Failed to unshare.');
+			 }
+		 } catch {
+			 alert('Server error.');
+		 }
+	 });
  }
 
 // Initial load

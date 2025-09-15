@@ -463,6 +463,158 @@ body {
 }
 
 /* ==========================================================================
+   6b. SHARE MODAL
+   ========================================================================== */
+
+#share-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 1300;                 /* same layer as confirm/password modals */
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+#share-modal-overlay.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#share-modal-container {
+	background-color: var(--toolbar-bg);
+	padding: 1.5rem 1.5rem;
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	border: 1px solid var(--border-color);
+	width: 100%;
+	max-width: 520px;               /* slightly wider for the table */
+	transform: scale(1);
+	transition: transform 0.2s ease-in-out;
+}
+
+#share-modal-overlay.hidden #share-modal-container {
+	transform: scale(0.95);
+}
+
+#share-modal-container h3 {
+	margin: 0 0 1rem 0;
+	font-size: 1.15rem;
+	font-weight: 600;
+	text-align: left;
+}
+
+#share-modal-container .share-add {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	grid-template-rows: auto auto;
+	gap: 0.5rem 0.75rem;
+	align-items: center;
+	margin-bottom: 1rem;
+}
+
+#share-modal-container .share-add label {
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+}
+
+#share-modal-container #share-ident,
+#share-modal-container #share-perm {
+	width: 100%;
+	padding: 0.6rem 0.7rem;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	color: var(--text-primary);
+	border-radius: 6px;
+	font-size: 0.95rem;
+	box-sizing: border-box;
+}
+
+#share-modal-container #btn-share-add {
+	background-color: var(--accent-color);
+	color: var(--bg-color);
+	border: none;
+	padding: 0.6rem 0.9rem;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.95rem;
+	font-weight: 600;
+	justify-self: end;
+}
+
+#share-modal-container #btn-share-add:hover {
+	filter: brightness(0.95);
+}
+
+#share-modal-container .share-list h4 {
+	margin: 0.5rem 0;
+	font-size: 1rem;
+	font-weight: 500;
+}
+
+#share-modal-container .table-shares {
+	width: 100%;
+	border-collapse: collapse;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	overflow: hidden;
+}
+
+#share-modal-container .table-shares thead th {
+	text-align: left;
+	font-weight: 600;
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+	background: var(--toolbar-bg);
+	border-bottom: 1px solid var(--border-color);
+	padding: 8px 10px;
+}
+
+#share-modal-container .table-shares tbody td {
+	padding: 10px;
+	font-size: 0.95rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+#share-modal-container .table-shares tbody tr:last-child td {
+	border-bottom: none;
+}
+
+#share-modal-container .btn-unshare {
+	background: none;
+	border: 1px solid var(--btn-danger-bg);
+	color: var(--btn-danger-bg);
+	padding: 6px 10px;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.85rem;
+}
+
+#share-modal-container .btn-unshare:hover {
+	background: var(--btn-danger-bg);
+	color: #fff;
+}
+
+#share-modal-container .modal-close-btn {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	font-size: 1.2rem;
+	line-height: 1;
+	cursor: pointer;
+	position: absolute;
+	top: 10px;
+	right: 12px;
+	padding: 2px;
+}
+
+
+/* ==========================================================================
    7. FILTER MENU
    ========================================================================== */
 

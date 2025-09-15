@@ -120,3 +120,38 @@ _##################################################_
 	* Segment large features into tested blocks.
 	* Self-review before delivery.
 	* Supply ≤100-word commit messages on request.
+	
+	
+	_##################################################_
+	
+	
+	# Agreed — surgical precision, no unrelated edits, full-file drop-ins, and a complete audit afterward. I won’t touch anything until you upload the exact “as-is” file(s).
+	### Plan (goal + rationale — short)
+	**Goal:** Add Phase A sharing server endpoints (createTrustInvite / acceptTrustInvite / revokeTrust / listTrustedUsers) **and**the shareItem / revokeShare / listShares / markReadyForReview task-share handlers. **Rationale:** Keep sharing logic modular, enforce is_private==0 server-side, honor ownership/CSRF checks, and produce a single full-file drop-in that fits your API style and send_debug_response() pattern.
+	### What I will do once you upload the file(s)
+	1 Read the **exact as-is file(s)** you provide (no guessing).
+	2 Produce a **single full-file drop-in** (no partials) for the file you choose me to modify (I’ll not edit any other files).
+	3 Make only surgical edits/insertions strictly related to sharing. Every change will be marked with // Modified for sharing and contain explanatory comments.
+	4 Include robust server-side checks: session/auth, CSRF, is_private enforcement, ownership validation, trust existence, and writing to sharing_activity.
+	5 Provide a precise **test plan**, a ≤100-word commit message, and instructions to roll back.
+	6 Deliver a detailed **audit report** comparing your as-is file to the drop-in: char counts, added/removed/modified functions, exact lines changed, and an explicit confirmation that no unrelated code was altered/compressed/abridged.
+	
+	⠀Files I need from you right now (upload into this chat)
+	Please upload the **exact, current** versions of the following (pick the ones that exist in your repo; at minimum upload #1):
+	### 1 /api/tasks.php — (preferred) the current tasks API handler (this is where I’ll usually add task-related share endpoints if you want them colocated).
+	2 OR /api/shares.php — if you already created a shares handler and want me to extend it instead.
+	3 Any small helper files that the API uses and I’ll call (so I can match signatures): e.g. /inc/db.php, /inc/auth.php, or whatever file provides DB connection, current_user_id() or getSessionUser(), and send_debug_response()/api_response()helpers. Upload only those helper files referenced by the API handler.
+	4 If you have a specific coding/style preference (tabs vs spaces, PSR-12 usage), say so; otherwise I’ll follow the style used in the as-is file.
+	
+	⠀Preferences / decisions I’ll assume unless you tell me otherwise
+	* I will create **server-side endpoints** that follow your existing API pattern (POST JSON to /api/api.php or whichever your app uses) and will use send_debug_response() for errors when present. If your app uses a dispatch switch in tasks.php, I will add new case branches consistent with existing wiring.
+	* I will **not** add foreign-key SQL or DB migrations in this drop-in; DB is already applied per your earlier steps. I will only call the DB using your existing DB helper functions.
+	* By default I’ll create the share endpoints **inside the same file** you upload unless you explicitly ask for a new /api/shares.php file.
+	
+	⠀
+	When you upload the as-is file(s) I will:
+	* Confirm I can read them and list the exact symbols/helpers I’ll use.
+	* Ask no further clarifying questions unless absolutely necessary.
+	* Then produce the full-file drop-in and the promised audit.
+	
+	⠀Please upload the file(s) now.

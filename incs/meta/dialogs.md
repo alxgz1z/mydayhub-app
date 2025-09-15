@@ -1511,3 +1511,327 @@ Move Mode stays critical for mobile accuracy and for users who dislike drag.
 
 ⠀This fits your current architecture and matches the spec’s Tasks View and UI tracking (“Task DnD”, “Mobile ‘Move Mode’ for tasks”). 
 
+---
+
+## ON IMPLEMENTING SHARE _IMPORTANT BECAUSE THIS CHANGES PREVIOUS SCOPE_
+*Alex asked*
+# I have the app describer here: ***** APP DESCRIPTION***** From Beta 5 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this “tasks-first” approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration. ### APPLICATION DESCRIPTION **MyDayHub** is a next-generation productivity hub, built for focus, simplicity, and absolute privacy. We start with task management and plan to integrate Journal, Outlines, and Events later. The UI combines dark backgrounds, accent gradients, translucent overlays, and rounded cards. Typography is clean and scalable. Status bands and quick-action icons are always visible, supporting classification, privacy, attachments, and sharing. All content is encrypted end-to-end with zero-knowledge encryption. Plaintext is never stored or transmitted. * **Tasks:** Kanban board for flexible task tracking. * **Journal (Future):** Daily notes and reflections. * **Outlines (Future):** Hierarchical trees for structuring ideas. * **Events (Future):** Agenda planning with segments. ### CORE PHILOSOPHY * **Absolute Privacy:** True zero-knowledge encryption with per-item DEKs, encrypted by a Master Key derived on device via Argon2id from passphrase + salt. Master Key never leaves device. * **Fluid Experience:** Inline editing, drag-and-drop, single-page interactions. * **Modern & Minimalist:** Simplicity, clarity, comfortable dark theme (light optional). * **Work Anywhere:** Full offline support with sync resolution. * **Signal over Noise:** Classification ensures attention on mission-critical tasks. * **Accessibility:** WCAG color contrast, ARIA labels, keyboard navigation, font scaling, high-contrast mode. ### GENERAL REQUIREMENTS * **Aesthetics:** Rounded corners, sans-serif fonts, shadows, translucency, accent color highlights. * **Layout:** Responsive, touch-friendly, mobile-first. * **Privacy Switch:** Every item (column, task, entry, event, tree, branch, node) can be marked private. * **Sessions:** Multi-user sessions with last-writer control and ownership checks. * **Optimistic UI:** Animations with rollback if errors occur. * **Quotas:** Tiered storage/sharing limits, upgrade prompts. * **Telemetry:** CRUD, navigation, and sharing analytics. * **Import/Export:** JSON for migration and backup. * **Notifications:** Alerts for reminders, quota nearing, conflicts. * **Debugging:** DEVMODE=true logs to debug.log; curl/API tests; offline simulations. ### USER STORIES #### Privacy & Security * As a user, I want all of my content to be encrypted end-to-end so that no one else can read it. * As a user, I want to toggle privacy on any item so I can control who sees what. * As a user, I want to securely share items with other users, granting them view or edit access. #### Collaboration & Awareness * As a user, I want to notify others when I change a shared item, so they stay up to date. * As a user, I want to receive a notification when someone else modifies an item I shared with them. #### Productivity & Workflow * As a user, I want to drag and drop to manage my tasks (and later entries, nodes, and segments) for quick organization. * As a user, I want to classify tasks as Signal, Support, Noise, or Completed to stay focused on what matters. * As a user, I want to attach and manage images within tasks to keep related information in one place. * As a user, I want to email tasks directly into the app so I can capture work quickly. #### Mobility & Responsiveness * As a user, I want the app to work seamlessly on both desktop and mobile layouts. * As a user, I want to use the app effectively on my phone while on the go. #### Reliability & Offline * As a user, I want to edit offline and have changes auto-sync when I reconnect. #### Notifications & Limits * As a user, I want clear notifications for reminders, conflicts, and system alerts. * As a user, I want to be warned when I’m nearing my storage limit so I can manage my files. * As a user, I want to be prompted before my oldest attachments are deleted, so I can choose what to remove. ***** END OF APP DESCRIPTION **** And I have the code base attached with everything we have done so far. I’m Alex, an amateur developer modernizing a long-held productivity task system into a LAMP-based web app (MyDayHub). You are my expert coding copilot, a seasoned LAMP + UI/UX developer. You operate strictly guided by provided documentation and decisions made in real-time, always enforcing best practices and delivering production-ready code. Your Role * Provide step-by-step guidance with integrity and clarity. * Always review as-is code, spec.md, and done.md before proposing solutions. * If no active issue is in scope, recommend the next logical step and explain why before coding. * Enforce spec compliance, code quality, and security guardrails at all times. I want the add the sharing feature described below to this app and I want you honest opinion about the approach, no sugar coating, and most specially about your capacity to help me add that feature. Also tell me the top steps to follow should you take the challenge to develop the feature. Here's what I want as discussed with another LLM: Next feature to implement is sharing. For this function the user needs to be capable to select from other users which of them will be recipients of the shared task or column. (Is recipient the right term or is it better to call them trusted or something else?). So users should be able to exchange some type of private token they give to those they agree to receive shared items. Si then app will need a way to keep track of those trust links. I’m still undecided about having this feature be 1:1 vs 1:many. Recipients should be able to edit the items shared, and when they are done with their part, they should be able to mark as “ready for review” or similar so the owner knows the item needs to be reviews. Items can be unshared. I’m not sure yet if I want to share entire columns or just tasks. Sharing columns is useful for agility. But can I share a whole column to only one user and inside that could can I share a task to more than one user? Maybe we can do in stages and start 1:1 tasks only. Private items aren’t visible to recipients, even if they are shared, they won’t be viewed by recipients. And obviously sharing can be revoked. We need a filter to show/hide shared, or to show only shared and hide everything else. Finally, for recipients shared tasks appear in a special column for shared items. Everything shared has a distinct styling, making it clear those are different items. The philosophy of this feature is to have a running task list between a team leader and team members. The sharing feature you've outlined presents several architectural challenges that need careful consideration before implementation. Let me break down the key design decisions and technical implications. Terminology & Scope Clarification "Recipients" is appropriate terminology - it's clear and matches the owner/recipient model you're describing. "Trusted users" could work but implies a broader trust relationship beyond just task sharing. Your staged approach is sound: start with 1:1 task sharing only. This establishes the foundation without the complexity of nested permissions (shared columns containing individually-shared tasks). Critical Design Questions 1. Trust Relationship Model You mentioned "private tokens" for establishing trust links. Key decisions: Invitation-based: Owner generates shareable codes/links that recipients accept Mutual consent: Both parties must approve the connection Revocable: Either party can break the trust link Scope: Trust for sharing any item, or item-specific permissions? 2. Zero-Knowledge Architecture Impact This feature has major implications for your encryption model: Currently: each task encrypted with user's Master Key With sharing: shared tasks need encryption keys both parties can access Fundamental question: Does sharing break zero-knowledge for shared items? 3. Data Model Implications Several new database structures needed: user_trusts table for managing trust relationships shared_items table linking tasks to recipients sharing_activity for status tracking ("ready for review") Modifications to existing task queries to handle shared visibility Technical Implementation Challenges Frontend Complexity Recipient selector UI: Search/browse trusted users Shared items column: Special column that can't be deleted/renamed Visual distinction: Consistent styling for shared vs owned items Permission indicators: Clear UI showing what recipients can/cannot do Filter system: Show owned, shared-to-me, shared-by-me views Backend Security Ownership validation: Ensuring only owners can share their items Permission enforcement: Recipients can edit but not delete/share further Privacy boundaries: Private items remain invisible even when shared Audit trail: Tracking all sharing-related actions Encryption Strategy Options Break zero-knowledge for shared items: Shared tasks encrypted with shared keys stored server-side Asymmetric sharing: Each user has public/private key pairs, shared items encrypted to multiple public keys Hybrid approach: Master Key encrypts a sharing key that's used for shared content Recommended Implementation Phases Phase 1: Foundation (No Encryption Changes) Trust relationship management (invites, acceptance, revocation) Basic UI for managing trusted users Database schema for sharing without encryption considerations Phase 2: Basic Task Sharing 1:1 task sharing with simple server-side encryption Shared items column for recipients Status tracking ("ready for review") Visual styling for shared items Phase 3: Encryption & Security Hardening Implement proper cryptographic sharing model Zero-knowledge preservation or documented security trade-offs Full audit trail and permission enforcement Phase 4: Advanced Features 1:many sharing, column sharing, nested permissions Concerns & Recommendations Privacy vs Collaboration Tension: Your zero-knowledge architecture fundamentally conflicts with sharing. You need to decide: Accept that shared items are less private (server can decrypt them) Implement complex client-side key exchange (significantly more difficult) Document the security trade-offs clearly for users UI Complexity: The sharing feature adds significant interface complexity. Consider: User testing early in development Progressive disclosure (hide sharing UI until users have trusted contacts) Clear onboarding flow explaining the sharing model Start Simple: I recommend beginning with a basic server-side encrypted sharing model, clearly documented as a security trade-off, then evolving toward better encryption if needed. Would you like me to design the specific database schema and API endpoints for Phase 1, or do you want to discuss the encryption model decisions first? Can you hear me? Hey. Can you hear me? Yes, I can hear you clearly! I see you've switched to voice chat. We were just discussing the sharing feature implementation for your MyDayHub project - specifically the architecture decisions around trust relationships, encryption models, and the phased approach for 1:1 task sharing. Did you want to continue that conversation, or did you have something else you wanted to discuss? Project Context MyDayHub task sharing feature Database schema design needed Encryption vs sharing trade-offs Phase 1 implementation planning Zero-knowledge architecture impact Yes. I want to continue the conversation. Let's dive into the specific implementation decisions for the sharing feature. Based on your requirements, I think we need to make some key architectural choices upfront. For the trust relationship model, I'd recommend starting with invitation-based connections. An owner generates a shareable invite code, the recipient enters it, and both parties can see the active connection. This is simpler than mutual consent flows and matches how most collaboration tools work. The encryption question is the biggest decision point. Your current zero-knowledge model means each user's data is encrypted with their personal Master Key. Sharing fundamentally breaks this - you need some way for both parties to decrypt shared content. Here are your realistic options: First, accept that shared items use server-side encryption with documented security trade-offs. Second, implement asymmetric key pairs where shared content gets encrypted to multiple public keys. The first option is much simpler to implement but less secure. The second preserves zero-knowledge but adds significant complexity. Which approach feels right for your use case? Are you willing to accept reduced security for shared items to keep the implementation manageable, or is maintaining zero-knowledge worth the additional complexity? Key Decisions Needed Trust model: invitation-based vs mutual Encryption: server-side vs asymmetric Database schema design UI complexity Okay. I've been medicating about what you told me. And I can hear you started to say something about medicating - did you mean "meditating" on what I told you? I want to make sure I understand correctly before you continue with your thoughts on the sharing feature implementation. Clarification Needed Medicating vs meditating Sharing feature decisions Implementation approach Architecture choices we we have tried to create this, Yeah. I I was talking about magitating. Not medicating. Got it - you were meditating on the sharing feature decisions. What conclusions did you come to after thinking it through? I'm curious to hear your thoughts on the trade-offs between security and implementation complexity we discussed. Sharing Feature Decisions Encryption vs simplicity trade-offs Trust relationship model Implementation complexity Zero-knowledge boundaries Well, I believe we can we can leverage the concept of privacy we already have. That's an interesting approach - using the existing privacy system as a foundation for sharing. Can you elaborate on how you're thinking that would work? Currently, your privacy system marks items as private or public within a user's own data. Are you thinking that sharing could build on this by having different privacy levels, or that shared items automatically become non-private, or something else entirely? I want to understand your concept better before we dive into the technical implications. Privacy-Based Sharing Existing privacy system Shared vs private distinction Technical architecture Implementation approach Yeah. What I was thinking is that the trade office and privacy is being an inhibitor of being able to show, meaning that only private items will be encrypted. Ah, I see what you're getting at! So you're proposing a hybrid encryption model where: Private items: Fully encrypted with zero-knowledge (user's Master Key) Non-private items: Either unencrypted or encrypted with a simpler server-side method Shared items: Must be non-private by definition, so they can use the simpler encryption This creates a clear boundary - users understand that marking something as "private" keeps it completely secure and unshared, while non-private items can be shared but with reduced encryption guarantees. This approach has some compelling benefits. It leverages your existing privacy toggle UI, gives users clear control over what can be shared, and avoids the complexity of asymmetric key exchange. However, there's a potential issue: currently, users might expect non-private items to still be encrypted from the server. This model would change that assumption. Would you be comfortable with non-private items being readable server-side, or would you still want some level of server-side encryption for non-private content? Hybrid Encryption Model Private = zero-knowledge encrypted Non-private = server-readable Sharing requires non-private Clear user boundary I am trying to be practical in the implementation. That's the right mindset - practical implementation that you can actually ship is better than perfect architecture that never gets finished. Your hybrid model makes sense from this perspective. You keep zero-knowledge for truly sensitive data while enabling collaboration for work items. The privacy toggle becomes a clear user control: "Do I want this encrypted and unshared, or available for collaboration?" This approach gives you a clear implementation path. You can start with non-private shared items using simple server-side encryption or even plaintext, get the sharing workflows built and tested, then optimize the encryption later if needed. Should we sketch out the database schema for this approach? We'd need tables for trust relationships, shared items, and probably some kind of activity tracking for the "ready for review" status changes. Next Steps Database schema design Trust relationship tables Sharing workflow implementation Privacy toggle boundaries I think the trade off is precisely that none private items are actually yes. Go ahead and schedule out this email. I understand the trade-off - non-private items are server-readable, which enables practical sharing implementation. Let me sketch out the database schema for this approach: sql -- Trust relationships between users CREATE TABLE user_trusts ( id INT PRIMARY KEY AUTO_INCREMENT, requester_id INT NOT NULL, trusted_user_id INT NOT NULL, status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending', created_at TIMESTAMP DEFAULT UTC_TIMESTAMP, accepted_at TIMESTAMP NULL, UNIQUE KEY unique_trust (requester_id, trusted_user_id) ); -- Shared items tracking CREATE TABLE shared_items ( id INT PRIMARY KEY AUTO_INCREMENT, owner_id INT NOT NULL, recipient_id INT NOT NULL, item_type ENUM('task', 'column') DEFAULT 'task', item_id INT NOT NULL, status ENUM('active', 'ready_for_review', 'revoked') DEFAULT 'active', created_at TIMESTAMP DEFAULT UTC_TIMESTAMP, updated_at TIMESTAMP DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP ); For the UI, you'd need a "Share Task" action in the task menu that opens a modal showing trusted users. Recipients would see shared tasks in a special "Shared with Me" column. The key insight is that your privacy toggle becomes the encryption boundary - private items stay zero-knowledge, non-private items can be shared with simpler server-side handling. Should we start implementing the trust relationship management first? Database Schema user_trusts table for relationships shared_items for tracking shares Privacy toggle = encryption boundary Trust management first step Special shared column for recipients
+
+**ChatGPT said:**
+
+Thought for 5s
+Great — thanks for the clear context and the app description. Below I’ll be blunt and practical: I’ll evaluate the approach you sketched (hybrid privacy = private = ZK, non-private = server-readable so shareable), say whether I can help and how well, and give you a precise, safe, phased plan (DB, APIs, UI, security, tests) you can follow to implement sharing as a production-ready feature on MyDayHub.
+
+# Short verdict — honest, no sugar
+* **Your hybrid approach is pragmatic and realistic.** Treating *private* as the strict ZK boundary and allowing *non-private* items to be server-readable makes sharing implementable quickly while preserving absolute privacy where it matters.
+* **Trade-off:** sharing will *not* be end-to-end private initially. You must *document and communicate that explicitly to users*. If you accept that trade-off, proceed. If not — and you insist on ZK-preserving sharing — expect a large, complex cryptography & UX project (client-side key exchange, public keys per user, encrypted DEKs for multiple recipients).
+* **My capacity to help:** I can design the schema, APIs, UI flows, and deliver production-ready drop-in code (full-file replacements) across PHP (handlers), JS (uix/tasks.js + small UI components), and spec docs. I will enforce CSRF/ownership, telemetry, undo flows, and DEVMODE logging. **Limitations to note:** I cannot run or deploy your app; I can’t access your remote environments to run tests. I’ll produce code and a test plan you run locally (or CI) and I’ll iterate on issues you paste back.
+
+⠀If you want me to implement the feature, I’ll work in **phases** so we ship safely and test incrementally.
+
+# High-level design decision (recommended)
+**Adopt your hybrid model, staged rollout:**
+**1** **Phase A (safe foundation):** Build *trust relationships* (invite/accept/revoke) and UI for managing trusted users. No changes to encryption or task storage yet — server treats shared items as readable only if is_private = 0. This gives immediate collaborators the ability to share without cryptography changes.
+**2** **Phase B (1:1 task sharing MVP):** Implement shared_items (owner→recipient) + UI for "Share Task" modal, recipient special column, basic permission rules (recipient can edit task content except toggle privacy/share/revoke). Track status states and audit.
+**3** **Phase C (hardening & telemetry):** Add notifications, audit trail, server-side checks, quotas, undo/revoke reliability, and tests. Document user-facing security trade-offs.
+**4** **Phase D (optional, longer):** Implement cryptographic sharing (E2E) — asymmetric key exchange & DEK wrapping — only if you want to restore zero-knowledge for shared items. This is a larger project and should be planned as a separate initiative.
+
+⠀Reason: this path is incremental, keeps current ZK for private items, and delivers collaboration quickly.
+
+# Concrete data model (SQL snippets — Phase A/B)
+Add these tables (with indexes & ownership checks). I keep fields minimal and extendable.
+### -- Phase A: Trust relationships (invites)
+### CREATE TABLE user_trusts (
+###   id INT AUTO_INCREMENT PRIMARY KEY,
+###   owner_user_id INT NOT NULL,        -- who initiated / owns the trust relationship
+###   trusted_user_id INT NOT NULL,      -- the other user
+###   status ENUM('pending','accepted','revoked','rejected') NOT NULL DEFAULT 'pending',
+###   invite_code VARCHAR(64) DEFAULT NULL,  -- short share code if used
+###   created_at TIMESTAMP DEFAULT UTC_TIMESTAMP,
+###   accepted_at TIMESTAMP NULL,
+###   revoked_at TIMESTAMP NULL,
+###   UNIQUE KEY ux_user_trust (owner_user_id, trusted_user_id),
+###   INDEX ix_trusted_user (trusted_user_id)
+### );
+
+### -- Phase B: Shared items
+### CREATE TABLE shared_items (
+###   id INT AUTO_INCREMENT PRIMARY KEY,
+###   owner_id INT NOT NULL,             -- original owner of item
+###   recipient_id INT NOT NULL,         -- recipient (one per row — 1:1 for now)
+###   item_type ENUM('task','column') NOT NULL DEFAULT 'task',
+###   item_id INT NOT NULL,              -- task_id or column_id
+###   permission ENUM('edit','view') NOT NULL DEFAULT 'edit',
+###   status ENUM('active','ready_for_review','revoked') NOT NULL DEFAULT 'active',
+###   created_at TIMESTAMP DEFAULT UTC_TIMESTAMP,
+###   updated_at TIMESTAMP DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
+###   UNIQUE KEY ux_share (owner_id, recipient_id, item_type, item_id),
+###   INDEX ix_recipient (recipient_id),
+###   INDEX ix_owner (owner_id)
+### );
+
+### -- Audit / activity log (append-only)
+### CREATE TABLE sharing_activity (
+###   id INT AUTO_INCREMENT PRIMARY KEY,
+###   shared_item_id INT NOT NULL,
+###   actor_user_id INT NOT NULL,        -- who performed the action (owner or recipient)
+###   action ENUM('created','accepted','revoked','updated','marked_ready') NOT NULL,
+###   payload JSON NULL,
+###   created_at TIMESTAMP DEFAULT UTC_TIMESTAMP,
+###   INDEX ix_shared_item (shared_item_id)
+### );
+Notes:
+* Start 1:1 per row (owner→recipient). 1:many later by adding multiple rows for multiple recipients.
+* permission set to edit for your described workflow (recipients can edit).
+* Keep is_private field on tasks — you must *disallow* sharing if is_private = 1 (server validation).
+* Use sharing_activity to provide an audit trail and notifications.
+
+⠀
+# API endpoints (gateway wiring & contracts)
+Add these API actions in /api/tasks.php (or separate /api/shares.php if you want modularity). Keep send_debug_response() used on errors.
+**Suggested endpoints (Phase A/B):**
+### 1 shareItem — owner only Request: { module: 'tasks', action: 'shareItem', item_type:'task', item_id:123, recipient_user_id: 456, permission:'edit' } Server checks: session_user is owner && task.is_private==0 && recipient exists && trust link exists or allow ad-hoc shares (your policy). Creates shared_items row, logs sharing_activity. Returns success + shared item.
+### 2 revokeShare — owner only Request: { module:'tasks', action:'revokeShare', shared_item_id: 789 } Server checks ownership, mark status='revoked', record activity.
+### 3 listSharesForUser — returns shares owned-by / shares-to-me Request: { module:'tasks', action:'listShares', filter:'to_me'|'by_me' } Response: lists shared_items with joined task (decrypted server-side for non-private).
+### 4 acceptTrustInvite / createTrustInvite / revokeTrust — trust management
+	* createTrustInvite(owner=>generate invite_code or join via username/email)
+	* acceptTrustInvite (recipient provides invite code)
+	* revokeTrust (either party can revoke if policy allows)
+### 5 markReadyForReview — recipient toggles status='ready_for_review' — notify owner.
+### 6 sharedItemUpdate — when recipient edits shared task content, reuse existing saveTaskDetails/renameTaskTitle but server MUST check permission: if the user is recipient, allow edits; if not owner and not recipient, deny.
+
+⠀**Security checks** (must be enforced server-side on every request):
+* Ownership check for shareItem, revokeShare.
+* Privacy check: task.is_private === 0 to allow sharing.
+* Permission check on edits: recipient vs owner.
+* CSRF token validation for all mutating requests.
+* Rate limits and quota checks for sharing volume.
+
+⠀
+# UI/UX requirements and flows (Phase A/B)
+Keep flows tight and mobile-first (fits app philosophy).
+# 1) Trust Management UI
+* **Where:** Settings Slider → Sharing / Trusted Users section; or a dedicated modal from header.
+* **Actions:**
+  * Create invite code (copy link) or search user by username/email (auto-suggest).
+  * List of trusted users with status (pending / accepted / revoked) and a Revoke button.
+* **Policy:** When owner creates invite, recipient must accept it to become trusted. Alternatively allow one-click share by selecting any existing user (but require the recipient to accept the shared item on first access).
+
+⠀2) Share Task modal (per-task)
+* **Trigger:** Task Actions → Share
+* **Contents:** Search/select trusted users; permission (edit/view); share button.
+* **UX:** Once shared, task card shows a "shared" badge + small avatar stack. Also show owner/recipients in details pane.
+* **Constraints:** If is_private is true, disable share button and show tooltip "Make public to share."
+
+⠀3) Recipient Experience
+* **Shared items column:** A system column (read-only name, e.g., "Shared with me") appears in board for recipients. Alternatively a filter view "Shared with me".
+* **Styling:** Distinct left status band (e.g., dotted border or palette) and a small label "shared — owner: ALFA".
+* **Actions allowed:** Edit content (title, notes, due date, attachments?), mark ready for review — but *do not* allow toggling is_private, re-sharing, or revoking. Owner-only actions are disabled.
+
+⠀4) Owner Experience
+* See list of recipients and status, revoke share, receive notification when recipient marks "ready for review".
+
+⠀5) Filters
+* Footer filters: toggle "Show Shared" | "Show Shared to me only". Persist in user preferences.
+
+⠀
+# Permission & privacy rules (must be enforced)
+* **No sharing of private items:** Server must reject share attempts on is_private=1 with a clear error code/message.
+* **Recipient cannot change privacy or share again.**
+* **Owner retains ultimate control and can revoke share** — when revoked, recipient’s local UI must remove the task and if they had offline edits, server should reconcile (conflict resolution).
+* **Editing concurrency:** last-writer-wins as current policy; include an optional updated_at check to detect overwrites and surface conflict warnings.
+* **Attachments:** If attachments are allowed on shared tasks, they must follow quotas and be readable by both parties (server-readable per hybrid model).
+
+⠀
+# Notifications & telemetry
+* When share created: notify recipient (in-app, optional email).
+* When recipient marks ready_for_review: notify owner.
+* When share revoked: notify recipient.
+* Add telemetry events: share_created, share_revoked, share_edited, share_ready.
+
+⠀
+# Error handling & edge cases
+* **Race conditions:** When owner revokes while recipient is editing → mark shared_items.status='revoked' and record sharing_activity; recipient’s next save should fail and trigger UI rollback/refetch.
+* **Offline edits:** Recipient offline edits a shared task, re-sync may conflict; handle with LWW and notify owner if content drifted.
+* **Orphan shared items:** If owner deletes task, decide policy: either cascade revoke (remove shared_items rows) or prevent delete while active shares exist (recommend cascade + notify).
+* **Privacy changes while shared:** If owner toggles is_private=1 after sharing, you must decide: force unshare (recommended) or keep share with warning (not recommended).
+
+⠀
+# Minimal testing plan (Phase A/B)
+Every change must be regression-tested (automatable later).
+**1** **Unit/Integration server-side tests** (PHP):
+	* shareItem success when is_private=0.
+	* shareItem fails for is_private=1.
+	* recipient cannot share or revoke.
+	* revokeShare properly updates shared_items and sharing_activity.
+**2** **API contract tests (curl/js)**:
+	* listShares returns correct by_me and to_me lists.
+	* CSRF header required on all mutating requests.
+**3** **UI tests (manual / Puppeteer)**:
+	* Owner: share modal → choose recipient → shared badge appears.
+	* Recipient: "Shared with me" column shows item; edit is possible; toggle privacy disabled.
+	* Revoke flow: owner revoke → recipient UI updates (item removed or greyed).
+	* Mark "ready for review": owner receives notification.
+**4** **Security test checklist**:
+	* Ownership checks (attempt malicious share by non-owner).
+	* XSS/SQL injection tests on sharing inputs (usernames, notes).
+	* Quota enforcement tests for attachments.
+
+⠀
+# Migration & deployment notes
+* Add DB migrations (transactional) to avoid downtime.
+* Provide a maintenance window for adding columns and ensure backup.
+* Add admin query to detect orphaned shared_items (if tasks deleted).
+* Add send_debug_response() instrumentation to new API actions.
+
+⠀
+# Phase-by-phase implementation checklist (what I will deliver if you want me to build it)
+# Phase A: Trust management (deliverables)
+* DB migration for user_trusts.
+* Backend endpoints:
+  * createTrustInvite (owner): generate invite_code.
+  * acceptTrustInvite (recipient).
+  * listTrustedUsers (owner/recipient).
+  * revokeTrust.
+* Frontend:
+  * Settings pane UI, modal for invites, accept UX.
+* Tests: unit + manual scenario checklist.
+
+⠀Phase B: 1:1 Task sharing MVP (deliverables)
+* DB migration for shared_items and sharing_activity.
+* Backend endpoints:
+  * shareItem (validate is_private, trust exists).
+  * revokeShare.
+  * listShares (to_me / by_me).
+  * markReadyForReview.
+* Changes to existing server handlers: modify getAll to include shared_items relevant to current user (for recipients).
+* Frontend:
+  * Task Actions → Share modal, trusted-user selector.
+  * Recipient View: "Shared with me" column or filter and shared-item styling.
+  * Owner UI: share badges + revoke actions + activity feed.
+* Tests: API + UI flows, revoke/permissions.
+
+⠀Phase C: Notifications / telemetry / polish
+* Implement notification dispatch (in-app & optional email).
+* Add telemetry events and analytics.
+* Add robust error messages & user education UI about privacy trade-offs.
+
+⠀Phase D (optional): Crypto-hardening (E2E sharing)
+* Deliverable only if you want to continue:
+  * Implement asymmetric key generation on client (public key stored server-side).
+  * Rework crypto.js to create per-shared-item wrapping of DEK for each recipient (DEK encrypted with recipient public key).
+  * Update sharing flow to exchange encrypted DEKs (requires client-side changes and migration path).
+  * This is a major change: heavy testing, UX for key management, recovery integration.
+
+⠀
+# UX naming note (terminology)
+* Use **“recipient”** for people you share items with — clear and conventional.
+* “Trusted user” fits the invite/trust relationship UI. Keep both: **trusted users** = stable trust link; **recipient** = user that currently has a share row for an item. That distinction is helpful.
+
+⠀
+# Example of a concrete next action I can deliver right away
+If you want me to start coding now, I suggest we ship **Phase A** first. I will deliver a **full drop-in** for:
+1 DB migration SQL file for user_trusts.
+### 2 /api/shares.php handler (full file) implementing createTrustInvite, acceptTrustInvite, revokeTrust, listTrustedUsers using your send_debug_response() and CSRF checks consistent with the spec.
+3 Frontend UI file snippets (full file drop-ins where appropriate) for the Settings Slider section UI and a compact modal UI (pure JS/CSS in /uix/sharing.js and a small template injection in index.php or settings partial). All code will be:
+	* Marked with // Modified for sharing where changes occur,
+	* Have generous comments and a test plan,
+	* Include server-side ownership & privacy checks.
+
+⠀Tell me: **Do you want me to implement Phase A now (trust-management)?** If yes, I’ll:
+* Announce the goal and rationale (plan-first).
+* Produce the full files (SQL, PHP handler, JS UI) as drop-ins in one turn.
+* Provide a short ≤100-word commit message you can use.
+
+⠀If you’re not ready for code yet, I’ll produce the exact SQL + sample API JSON contracts + the precise HTML snippets to paste into your existing Settings panel — so you can review before I touch code.
+
+# Closing / final recommendation
+* Proceed with the **hybrid model** and **phase the feature**. Start with trust management and 1:1 task sharing (Phase A/B). This yields a working collaboration feature quickly and keeps private items fully ZK-protected.
+* Be explicit in the app UI and onboarding copy that *shared items are not end-to-end private* unless/until you implement E2E key exchange later. This avoids user surprise.
+* I can implement everything end-to-end in incremental, testable drop-ins. If you want the Phase A deliverables now, say “Ship Phase A” and I’ll return: SQL migration, PHP handler (full file), new frontend JS (full file), and test plan — all labeled and ready to drop into your repo.
+
+⠀Which do you want me to produce next — the Phase A code drop-in, or the precise API/SQL/HTML snippets for review?
+
+**You said:**
+a little running the sql for the schema: CREATE TABLE shared_items ( id INT AUTO_INCREMENT PRIMARY KEY, owner_id INT NOT NULL, -- original owner of item recipient_id INT NOT NULL, -- recipient (one per row — 1:1 for now) item_type ENUM('task','column') NOT NULL DEFAULT 'task', item_id INT NOT NULL, -- task_id or column_id permission ENUM('edit','view') NOT NULL DEFAULT 'edit', status ENUM('active','ready_for_review','revoked') NOT NULL DEFAULT 'active', created_at TIMESTAMP DEFAULT UTC_TIMESTAMP, updated_at TIMESTAMP DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP, UNIQUE KEY ux_share (owner_id, recipient_id, item_type, item_id), INDEX ix_recipient (recipient_id), INDEX ix_owner (owner_id) ); MySQL said: Documentation #1064 - You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near 'UTC_TIMESTAMP, UNIQUE KEY ux_share (owner_id, recipient_id, item_type, ite...' at line 10
+
+**ChatGPT said:**
+
+Thought for 16s
+Nice repro — thanks for pasting the SQL and the error. Two likely causes in that CREATE statement:
+### 1 UTC_TIMESTAMP as a column DEFAULT is unsupported in many MySQL/MariaDB versions — use CURRENT_TIMESTAMP instead (or set server timezone to UTC).
+2 Inline -- comments can break SQL in some clients (they require a space after -- and vary by UI). I removed those to be safe.
+
+⠀Below are two corrected, ready-to-run CREATE TABLE statements (pick the one that best matches your server):
+
+### Recommended (portable) — usesDATETIME + CURRENT_TIMESTAMP (safe)
+### CREATE TABLE IF NOT EXISTS `shared_items` (
+###   `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+###   `owner_id` INT NOT NULL,
+###   `recipient_id` INT NOT NULL,
+###   `item_type` ENUM('task','column') NOT NULL DEFAULT 'task',
+###   `item_id` INT NOT NULL,
+###   `permission` ENUM('edit','view') NOT NULL DEFAULT 'edit',
+###   `status` ENUM('active','ready_for_review','revoked') NOT NULL DEFAULT 'active',
+###   `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+###   `updated_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+###   UNIQUE KEY `ux_share` (`owner_id`,`recipient_id`,`item_type`,`item_id`),
+###   KEY `ix_recipient` (`recipient_id`),
+###   KEY `ix_owner` (`owner_id`)
+### ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+### Alternative (if you preferTIMESTAMP) — older-style timestamps
+### CREATE TABLE IF NOT EXISTS `shared_items` (
+###   `id` INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+###   `owner_id` INT NOT NULL,
+###   `recipient_id` INT NOT NULL,
+###   `item_type` ENUM('task','column') NOT NULL DEFAULT 'task',
+###   `item_id` INT NOT NULL,
+###   `permission` ENUM('edit','view') NOT NULL DEFAULT 'edit',
+###   `status` ENUM('active','ready_for_review','revoked') NOT NULL DEFAULT 'active',
+###   `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+###   `updated_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+###   UNIQUE KEY `ux_share` (`owner_id`,`recipient_id`,`item_type`,`item_id`),
+###   KEY `ix_recipient` (`recipient_id`),
+###   KEY `ix_owner` (`owner_id`)
+### ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+# Why this fixes your error
+* UTC_TIMESTAMP caused the syntax complaint — CURRENT_TIMESTAMP is the portable function to use as a column default. If you *must* store UTC values, set MySQL/MariaDB server timezone to UTC (SET GLOBAL time_zone = '+00:00';) or normalize on read/write with UTC_TIMESTAMP() in queries.
+* Removing inline -- comments and using standard SQL style avoids client parsing quirks.
+
+⠀Next quick checks / test steps
+1 Run the chosen CREATE statement in your MySQL client (phpMyAdmin, MySQL CLI, or Adminer).
+2 Verify table created:
+
+⠀
+SHOW CREATE TABLE shared_items\G
+SELECT COUNT(*) FROM shared_items;
+3 Insert a test row:
+
+⠀
+INSERT INTO shared_items (owner_id, recipient_id, item_type, item_id)
+VALUES (1, 2, 'task', 123);
+
+SELECT * FROM shared_items LIMIT 10;
+# Optional: add foreign keys (only ifusers, tasks, columns tables exist and you want referential integrity)
+### ALTER TABLE shared_items
+###   ADD CONSTRAINT fk_shared_owner FOREIGN KEY (owner_id) REFERENCES users(user_id) ON DELETE CASCADE,
+###   ADD CONSTRAINT fk_shared_recipient FOREIGN KEY (recipient_id) REFERENCES users(user_id) ON DELETE CASCADE;
+Be careful: run this only if your users.user_id column name matches and you want cascade deletes.
+# Migrations & deployment tips
+* Wrap in a migration script and run in a transaction if your DB/migration tool supports it. Example pattern:
+
+⠀
+START TRANSACTION;
+-- create table ...
+COMMIT;
+* Backup DB before running in production.
+* If your app intends to store timestamps in UTC (recommended), set MySQL default-time-zone in my.cnf:
+
+⠀
+[mysqld]
+default-time-zone = '+00:00'
+then restart the DB.
+
+

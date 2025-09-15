@@ -86,7 +86,9 @@
   [RDY] requestPasswordReset (in auth.php)
   [RDY] performPasswordReset (in auth.php)
   [RDY] changePassword (in users.php)
-  [FUT] shareTask / revokeShare
+  [WIP] shareTask (in tasks.php)
+  [WIP] unshareTask (revokeShare) (in tasks.php)
+  [WIP] listTaskShares (in tasks.php)
   
   *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
   
@@ -125,7 +127,7 @@
   [RDY] Dynamic Snooze/Unsnooze Menu State  
   [RDY] Snoozed Task Visual Styling (opacity and grayscale effects)
   [RDY] Show/Hide Snoozed Tasks Filter (bottom toolbar toggle with persistence)
-  [FUT] Sharing UI
+  [WIP] Sharing UI (Share modal, Current Access list, Unshare)
 
 
 ### Priority Roadmap (Beta 6.6+)
@@ -325,7 +327,9 @@ Signal > Support > Noise > Completed.
 * Share
 * Toggle Private
 * Snooze (sub-menu: 1 week, 1 month, 1 quarter, until date…, Clear -if task is snoozed-)
-* Cycle Classification  ← alternate to clicking the status band
+* Share → opens modal. Recipient = email or username. Permission = view | edit.
+	Preconditions: Owner only; recipient must be in trusted list (owner→recipient, status accepted).
+	Unshare removes access; activity logged.
 
 The 'Delete' action for both tasks and columns now triggers a non-blocking toast notification with a temporary 'Undo' option, allowing for immediate action reversal. This replaces the previous blocking confirmation modal.
 
@@ -435,6 +439,8 @@ LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).
 * snoozeTask(task_id, duration_type, custom_date?) — Sets snoozed_until (per selected interval or custom date), sets classification to 'backlog', logs snoozed_at.
 *acknowledgeWokenTasks() — Clears the "wake notification" toast flag for the user.
 *Update getAll API: Excludes snoozed tasks unless filter active; checks for tasks that have woken since last fetch and includes their IDs in the payload for notification purposes.
+* CSRF enforcement is active in /api/api.php; missing/invalid tokens return 403.
+* Sharing is metadata-only at this phase. Zero-knowledge boundaries remain intact; no DEK/key exchange yet. Recipients see only metadata the owner opts to expose (full E2E sharing comes later).
 
 ### Security Model & Privacy
 * CSRF protection.  
@@ -509,11 +515,24 @@ Standard Password Reset (Pre-Zero-Knowledge)
   * User requests reset → receives email with reset link
   * Reset page requires answering security questions + new password
   * Client derives Recovery Key, decrypts Master Key copy, re-encrypts all data with new Master Key
+* Zero-Knowledge Architecture & Sharing Roadmap
+  * Reiterate phases already listed; add explicit note:
+  * Phase 0 (current): permissioned metadata sharing; content remains private (no DEK exchange).
+  * Phase 1+: introduce E2E sharing with per-recipient DEK wrapping.
 
 #### Security Considerations
 * Threat Model: Protects against server compromise, but recovery questions reduce overall security
 * User Education: Clear documentation about security trade-offs and importance of strong, memorable answers
 * Attack Vectors: Social engineering of security questions, but better than alternative of total data loss
+
+#### Error/Toast UX Standard
+* State: No native alerts in production flows. Errors must display via showToast(message, 'error').
+* In DEVMODE, toasts should include first error cause from response.debug[] when present.
+
+#### Zero-Knowledge Architecture & Sharing Roadmap
+* Reiterate phases already listed; add explicit note:
+* Phase 0 (current): permissioned metadata sharing; content remains private (no DEK exchange).
+* Phase 1+: introduce E2E sharing with per-recipient DEK wrapping.
 
 
 ### Development Debugging Infrastructure
@@ -544,15 +563,14 @@ Server-Side Debugging
 php
 function send_debug_response(array $data, int $http_code = 200): void {
 	global $__DEBUG_MESSAGES__;
-	if (DEVMODE && !empty($__DEBUG_MESSAGES__)) {
-		$data['debug'] = $__DEBUG_MESSAGES__;
-	}
+	if (DEVMODE && !empty($__DEBUG_MESSAGES__)) $data['debug'] = $__DEBUG_MESSAGES__;
 	http_response_code($http_code);
 	header('Content-Type: application/json');
 	echo json_encode($data);
 	exit();
 }
 ~~~
+* Require all error paths in new sharing handlers to call send_debug_response(...) so FE toasts can show exact causes.
 
 #### PHPMailer Debug Handling
 * Issue: SMTP debug output corrupts JSON responses in development mode
@@ -610,6 +628,11 @@ function send_debug_response(array $data, int $http_code = 200): void {
 * tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at, snoozed_until, snoozed_at
 * task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, created_at
 * password_resets: id, user_id, token_hash, expires_at, created_at
+* shared_items id, owner_id, recipient_id, item_type ENUM('task','column'), item_id, permission ENUM('view','edit'), status ENUM('active','revoked'), created_at UTC, updated_at UTC
+Unique: (owner_id, recipient_id, item_type, item_id)
+* sharing_activity
+id PK, shared_item_id FK, actor_user_id FK, action ENUM('created','updated','revoked'), payload JSON/TEXT, created_at UTC
+Payload stored as PHP-encoded JSON string to avoid JSON_OBJECT(...) portability issues.
 
 ---
 

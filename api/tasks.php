@@ -164,6 +164,23 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_unsnooze_task($pdo, $userId, $data);
 			}
 			break;
+		case 'shareTask':
+			if ($method === 'POST') {
+				handle_share_task($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'unshareTask':
+			if ($method === 'POST') {
+				handle_unshare_task($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'listTaskShares':
+			if ($method === 'POST' || $method === 'GET') {
+				handle_list_task_shares($pdo, $userId, $data);
+			}
+			break;
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
@@ -963,7 +980,7 @@ function handle_delete_column(PDO $pdo, int $userId, ?array $data): void {
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) $pdo->rollBack();
 		log_debug_message('Error in tasks.php handle_delete_column(): ' . $e->getMessage());
-		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
+		send_json_response(['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()], 500);
 	}
 }
 
@@ -1018,6 +1035,27 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 			return;
 		}
 		$columnId = $task['column_id'];
+
+		// BLOCK DELETION IF SHARED (owner must unshare first)
+		$checkShare = $pdo->prepare("
+			SELECT 1
+			FROM shared_items
+			WHERE owner_id = :owner
+			  AND item_type = 'task'
+			  AND item_id = :tid
+			  AND status <> 'revoked'
+			LIMIT 1
+		");
+		$checkShare->execute([':owner' => $userId, ':tid' => $taskId]);
+		if ($checkShare->fetchColumn()) {
+			$pdo->rollBack();
+			send_json_response([
+				'status'  => 'error',
+				'message' => 'This task is shared. Unshare it first before deleting.'
+			], 409);
+			return;
+		}
+
 
 		$stmt_delete = $pdo->prepare(
 			"UPDATE tasks SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
@@ -1306,5 +1344,185 @@ function handle_get_attachments(PDO $pdo, int $userId): void {
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_get_attachments: ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+	}
+}
+
+/**
+ * Share a task with another user.
+ * Requires: data.task_id, data.recipient_identifier (email or username), data.permission ('edit'|'view')
+ * Policy: only the owner can share. Uses shared_items (item_type='task').
+ */
+function handle_share_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$recipientIdent = trim((string)($data['recipient_identifier'] ?? ''));
+	$permission = ($data['permission'] ?? 'edit') === 'view' ? 'view' : 'edit';
+
+	if ($taskId <= 0 || $recipientIdent === '') {
+		send_json_response(['status'=>'error','message'=>'Invalid input.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+		$__step = 'tx_started';
+		// 1) Confirm caller owns the task
+		$own = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :tid AND deleted_at IS NULL");
+		$own->execute([':tid'=>$taskId]);
+		$row = $own->fetch(PDO::FETCH_ASSOC);
+		$__step = 'owner_ok';
+		if (!$row || (int)$row['user_id'] !== $userId) {
+			$pdo->rollBack();
+			send_json_response(['status'=>'error','message'=>'Not found or no permission.'], 404);
+			return;
+		}
+
+		// 2) Resolve recipient by email OR username
+		$uStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = :ident OR username = :ident LIMIT 1");
+		$uStmt->execute([':ident'=>$recipientIdent]);
+		$u = $uStmt->fetch(PDO::FETCH_ASSOC);
+		$__step = 'recipient_ok';
+		if (!$u) {
+			$pdo->rollBack();
+			send_json_response(['status'=>'error','message'=>'Recipient not found.'], 404);
+			return;
+		}
+		$recipientId = (int)$u['user_id'];
+		if ($recipientId === $userId) {
+			$pdo->rollBack();
+			send_json_response(['status'=>'error','message'=>'Cannot share with yourself.'], 400);
+			return;
+		}
+
+		// 3) Optional trust gate via user_trusts (accepted)
+		$trust = $pdo->prepare("
+			SELECT 1 FROM user_trusts 
+			WHERE owner_user_id = :owner AND trusted_user_id = :rec AND status = 'accepted' LIMIT 1
+		");
+		$trust->execute([':owner'=>$userId, ':rec'=>$recipientId]);
+		$__step = 'trust_ok';
+		if (!$trust->fetchColumn()) {
+			$pdo->rollBack();
+			send_json_response(['status'=>'error','message'=>'Recipient is not trusted/accepted.'], 403);
+			return;
+		}
+
+		// 4) Upsert into shared_items
+		$ins = $pdo->prepare("
+			INSERT INTO shared_items (owner_id, recipient_id, item_type, item_id, permission, status, created_at, updated_at)
+			VALUES (:owner, :rec, 'task', :tid, :perm, 'active', UTC_TIMESTAMP(), UTC_TIMESTAMP())
+			ON DUPLICATE KEY UPDATE permission = VALUES(permission), status='active', updated_at = UTC_TIMESTAMP()
+		");
+		$ins->execute([':owner'=>$userId, ':rec'=>$recipientId, ':tid'=>$taskId, ':perm'=>$permission]);
+		$__step = 'upsert_ok';
+		
+		// 5) Log activity (best-effort; payload encoded in PHP for DB compatibility)
+		$payload = json_encode(['permission' => $permission], JSON_UNESCAPED_SLASHES);
+		$logStmt = $pdo->prepare("
+		  INSERT INTO sharing_activity (shared_item_id, actor_user_id, action, payload, created_at)
+		  VALUES (
+			(SELECT id FROM shared_items WHERE owner_id=:o AND recipient_id=:r AND item_type='task' AND item_id=:t LIMIT 1),
+			:actor, 'created', :payload, UTC_TIMESTAMP()
+		  )
+		");
+		$logStmt->execute([
+		  ':o' => $userId,
+		  ':r' => $recipientId,
+		  ':t' => $taskId,
+		  ':actor' => $userId,
+		  ':payload' => $payload
+		]);
+
+		$pdo->commit();
+		send_json_response(['status'=>'success','message'=>'Task shared.'], 200);
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('shareTask error: '.$e->getMessage());
+		send_json_response(['status'=>'error','message'=>'Server error (shareTask @ ' . ($__step ?? 'start') . '): ' . $e->getMessage()], 500);
+	}
+}
+
+/**
+ * Unshare a task (owner only).
+ * Requires: data.task_id, data.recipient_user_id
+ */
+function handle_unshare_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$recipientId = isset($data['recipient_user_id']) ? (int)$data['recipient_user_id'] : 0;
+
+	if ($taskId <= 0 || $recipientId <= 0) {
+		send_json_response(['status'=>'error','message'=>'Invalid input.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		$own = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :tid AND deleted_at IS NULL");
+		$own->execute([':tid'=>$taskId]);
+		$row = $own->fetch(PDO::FETCH_ASSOC);
+		if (!$row || (int)$row['user_id'] !== $userId) {
+			$pdo->rollBack();
+			send_json_response(['status'=>'error','message'=>'Not found or no permission.'], 404);
+			return;
+		}
+
+		$revoke = $pdo->prepare("
+			UPDATE shared_items
+			SET status='revoked', updated_at = UTC_TIMESTAMP()
+			WHERE owner_id = :owner AND recipient_id = :rec AND item_type='task' AND item_id = :tid AND status <> 'revoked'
+		");
+		$revoke->execute([':owner'=>$userId, ':rec'=>$recipientId, ':tid'=>$taskId]);
+
+		$pdo->prepare("
+			INSERT INTO sharing_activity (shared_item_id, actor_user_id, action, payload, created_at)
+			VALUES (
+				(SELECT id FROM shared_items WHERE owner_id=:o AND recipient_id=:r AND item_type='task' AND item_id=:t LIMIT 1),
+				:actor, 'revoked', NULL, UTC_TIMESTAMP()
+			)
+		")->execute([':o'=>$userId, ':r'=>$recipientId, ':t'=>$taskId, ':actor'=>$userId]);
+
+		$pdo->commit();
+		send_json_response(['status'=>'success','message'=>'Unshared.'], 200);
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('unshareTask error: '.$e->getMessage());
+		send_json_response(['status'=>'error','message'=>'Server error.'], 500);
+	}
+}
+
+/**
+ * List active shares for a task (owner only).
+ * Requires: data.task_id
+ */
+function handle_list_task_shares(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	if ($taskId <= 0) {
+		send_json_response(['status'=>'error','message'=>'Invalid Task ID.'], 400);
+		return;
+	}
+
+	try {
+		$own = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :tid AND deleted_at IS NULL");
+		$own->execute([':tid'=>$taskId]);
+		$row = $own->fetch(PDO::FETCH_ASSOC);
+		if (!$row || (int)$row['user_id'] !== $userId) {
+			send_json_response(['status'=>'error','message'=>'Not found or no permission.'], 404);
+			return;
+		}
+
+		$q = $pdo->prepare("
+			SELECT si.recipient_id AS user_id, u.username, u.email, si.permission, si.status
+			FROM shared_items si
+			JOIN users u ON u.user_id = si.recipient_id
+			WHERE si.owner_id = :owner AND si.item_type='task' AND si.item_id = :tid AND si.status <> 'revoked'
+			ORDER BY u.username ASC
+		");
+		$q->execute([':owner'=>$userId, ':tid'=>$taskId]);
+		$rows = $q->fetchAll(PDO::FETCH_ASSOC);
+
+		send_json_response(['status'=>'success','data'=>['shares'=>$rows]], 200);
+	} catch (Exception $e) {
+		log_debug_message('listTaskShares error: '.$e->getMessage());
+		send_json_response(['status'=>'error','message'=>'Server error.'], 500);
 	}
 }

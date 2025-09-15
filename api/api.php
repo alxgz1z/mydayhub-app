@@ -96,5 +96,6 @@ try {
 } catch (Exception $e) {
 	// Modified for In-Browser Debugging: Log the exception before sending the response.
 	log_debug_message("API Gateway Exception: " . $e->getMessage());
-	send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+	send_json_response(['status' => 'error', 'message' => 'Server error (api): ' . $e->getMessage()], 500);
+
 }
