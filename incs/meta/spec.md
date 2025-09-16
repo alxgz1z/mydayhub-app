@@ -1,768 +1,1122 @@
-# MYDAYHUB
+# MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 6.7.0 
+**Version:** Beta 6.7.0  
 **Audience:** Internal Development & Project Management  
-
----
-
-## WHY ARE WE DOING THIS
-
-* To collaborate effectively with a small team and promote productivity on activities that matter.  
-* To experiment with AI code assistance and agents, putting myself in the shoes of my team.  
-* To channel my creativity and passion for development.  
+**Last Updated:** September 15, 2025
 
 ---
 
 ## Table of Contents
 
-**1 Vision & Scope**  
-* Application Scope  
-* Application Description  
-* Core Philosophy  
-* General Requirements  
-* User Stories & Use Cases  
-
-**2 Functional Specification**  
-* Tasks View  
-* Journal View (Future)  
-* Outlines View (Future)  
-* Events View (Agenda Planner) (Future)  
-* Unified Note Editor  
-* Settings Slider & Calendar Overlays  
-
-**3 Technical Specification**  
-* Technical Architecture
-* API Gateway and Contracts
-* Frontend Architecture
-* Zero-Knowledge Architecture & Recovery Systems
-* Password Reset & Security Model
-* Development Debugging Infrastructure
-* Environment Setup & Workflow
-
-**4 Appendices**  
-* Glossary  
-* Wireframe Mockups  
-* Application Icons  
-* Environments  
-* File Locations  
-* Status Legends  
-* Versioning and Workflow  
-* Debug and Testing Patterns  
+1. [Introduction](#1-introduction)
+2. [Implementation Tracking](#2-implementation-tracking)
+3. [Vision & Scope](#3-vision--scope)
+4. [Functional Specification](#4-functional-specification)
+5. [Technical Specification](#5-technical-specification)
+6. [Appendices](#6-appendices)
 
 ---
-## 1. IMPLEMENTATION TRACKING
-**Legends**
-* **[RDY]** Feature complete, matches spec intent
-* **[WIP]** Under construction, present but evolving
-* **[FIX]** Implemented, needs refactoring/bug fixes
-* **[FUT]** Scheduled for future milestone
-* **[CNS]** Under consideration, not yet scheduled
 
-### API IMPLEMENTATION TRACKING
-  [RDY] register (in auth.php)
-  [RDY] login (in auth.php)
-  [RDY] getAll (in tasks.php)
-  [RDY] createColumn (in tasks.php)
-  [RDY] createTask (in tasks.php)
-  [RDY] toggleComplete (in tasks.php) 
-  [RDY] reorderTasks (in tasks.php)
-  [RDY] toggleClassification (in tasks.php)
-  [RDY] renameColumn (in tasks.php)
-  [RDY] deleteColumn (in tasks.php)
-  [RDY] reorderColumns (in tasks.php)
-  [RDY] deleteTask (in tasks.php)
-  [RDY] renameTaskTitle (in tasks.php)
-  [RDY] duplicateTask (in tasks.php)
-  [RDY] saveTaskDetails (in tasks.php)
-  [RDY] saveUserPreference (in users.php)
-  [RDY] getAttachments (in tasks.php)
-  [RDY] uploadAttachment (in tasks.php)
-  [RDY] deleteAttachment (in tasks.php)
-  [RDY] togglePrivacy (in tasks.php)
-  [RDY] restoreItem (in tasks.php)	  
-  [RDY] moveTask
-  [RDY] snoozeTask (in tasks.php)
-  [RDY] unsnoozeTask (in tasks.php)
-  [RDY] requestPasswordReset (in auth.php)
-  [RDY] performPasswordReset (in auth.php)
-  [RDY] changePassword (in users.php)
-  [WIP] shareTask (in tasks.php)
-  [WIP] unshareTask (revokeShare) (in tasks.php)
-  [WIP] listTaskShares (in tasks.php)
-  
-  *Note: `deleteTask` and `deleteColumn` actions now perform a soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this.*
-  
-  *Architectura fix: Confirm all API endpoints using window.apiFetch are properly documented*
-		  
-### UI Implementation tracking
-  [RDY] User Registration page
-  [RDY] User Login page
-  [RDY] Responsive board layout (desktop/mobile)
-  [RDY] Board rendering from getAll API
-  [RDY] Create Column (inline form)
-  [RDY] Rename Column (double-click)
-  [RDY] Delete Column (hover button with confirmation)
-  [RDY] Reorder Columns (hover buttons)
-  [RDY] Create Task (footer input)
-  [RDY] Rename Task Title (double-click)
-  [RDY] Toggle Task Completion (checkbox) with enhanced animation.
-  [RDY] Task Completion Celebration Animation (enhanced multi-effect sequence)
-  [RDY] Task Drag-and-Drop (within and between columns)
-  [WIP] Task Classification (clicking status band)
-  [RDY] Enforced Task Sorting by classification
-  [RDY] Task Actions Menu (⋮ button)
-  [RDY] Delete Task (from actions menu with confirmation)
-  [RDY] Custom modals/toasts to replace native alerts
-  [RDY] Due Date picker (custom modal)
-  [RDY] Task Attachments UI (drop zone, gallery)
-  [RDY] Bottom toolbar with filters
-  [RDY] Privacy toggles
-  [RDY] Mobile 'Move Mode' for tasks
-  [RDY] Task Notes integration (Unified Editor)
-  [WIP] Settings slider panel
-  [RDY] Change Password modal
-  [WIP] Forgot Password page & flow
-  [RDY] Task Snooze Modal (preset durations and custom date picker)
-  [RDY] Snooze Visual Indicators (purple badge with wake date)
-  [RDY] Dynamic Snooze/Unsnooze Menu State  
-  [RDY] Snoozed Task Visual Styling (opacity and grayscale effects)
-  [RDY] Show/Hide Snoozed Tasks Filter (bottom toolbar toggle with persistence)
-  [WIP] Sharing UI (Share modal, Current Access list, Unshare)
+## 1. Introduction
 
+### 1.1 Why Are We Doing This
 
-### Priority Roadmap (Beta 6.6+)
-  
-  1. Debug/Observability Hardening — TOP
-	 * Ensure all API handlers funnel responses through `send_debug_response()`
-	   when `DEVMODE=true`, and that `/debug.log` is writable and populated.
-	 * Client logs: standardize toast + console structures; correlate client
-	   errors with server `debug[]` payloads.
-  
-  2. Touch Moves: Mobile Move Mode 2.0 + Touch DnD
-	 * Restore/upgrade Move Mode with clear CANCEL affordances and in-column
-	   reordering targets; long-press/handle for touch DnD.
-  
-  3. Zero-Knowledge Baseline (encryption boundary only)
-	 * Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and
-	   wrapping model; defer key-sharing.
-  
-  4. Recovery (Security-Questions) for ZK Password Reset
-	 * Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset.
-  
-  5. Sharing (foundation)
-	 * UI + API stubs (shareTask / revokeShare) without E2E key exchange yet.
-  
-  6. Offline MVP (defer)
-	 * Service Worker app-shell, IndexedDB mirror, write queue (LWW).
-  
-  7. Accessibility Polish
-	 * Colorblind/high-contrast tuning; ARIA announcements for Move Mode.
-	 
-	 
+MyDayHub represents more than just another productivity application—it's an experiment in building a truly private, focused, and collaborative workspace for small teams. The project serves three critical purposes:
+
+- **Collaborate effectively** with a small team and promote productivity on activities that matter
+- **Experiment with AI code assistance** and agents, putting ourselves in the shoes of our team members
+- **Channel creativity and passion** for development while creating something genuinely useful
+
+The application embodies a philosophy of "signal over noise," helping users distinguish between work that advances their mission and work that merely keeps them busy. In an era where data privacy concerns are mounting and productivity tools often become productivity obstacles, MyDayHub aims to be different.
+
+### 1.2 Project Context & Learning Goals
+
+This project serves as a practical laboratory for exploring modern development practices, particularly AI-assisted coding workflows. By building a real-world application with genuine users, we gain authentic insights into how AI tools can accelerate development without sacrificing code quality or security.
+
+The focus on privacy-first architecture challenges us to think beyond conventional patterns, implementing zero-knowledge encryption while maintaining the collaborative features teams need. This balance between absolute privacy and practical collaboration represents one of the most interesting technical challenges in modern web development.
+
+---
+
+## 2. Implementation Tracking
+
+### 2.1 Status Legends
+
+- **[RDY]** Feature complete, matches spec intent and is production-ready
+- **[WIP]** Under construction, present but evolving with active development
+- **[FIX]** Implemented but needs refactoring or bug fixes before release
+- **[FUT]** Scheduled for future milestone, planned but not yet started
+- **[CNS]** Under consideration, not yet scheduled or committed
+
+### 2.2 API Implementation Tracking
+
+The backend API follows a single-gateway pattern with modular handlers, ensuring consistent security, logging, and error handling across all endpoints.
+
+#### Authentication & User Management
+- **[RDY]** `register` (in auth.php) - Complete user registration with password hashing
+- **[RDY]** `login` (in auth.php) - Session-based authentication with CSRF protection
+- **[RDY]** `requestPasswordReset` (in auth.php) - Secure email-based password reset
+- **[RDY]** `performPasswordReset` (in auth.php) - Token validation and password update
+- **[RDY]** `changePassword` (in users.php) - Authenticated password changes
+
+#### Core Task Management
+- **[RDY]** `getAll` (in tasks.php) - Comprehensive board data with tasks, columns, and metadata
+- **[RDY]** `createColumn` (in tasks.php) - New column creation with position management
+- **[RDY]** `createTask` (in tasks.php) - Task creation with auto-positioning and classification
+- **[RDY]** `toggleComplete` (in tasks.php) - Task completion with celebration triggers
+- **[RDY]** `reorderTasks` (in tasks.php) - Drag-and-drop persistence with position compaction
+- **[RDY]** `toggleClassification` (in tasks.php) - Signal/Support/Backlog status cycling
+- **[RDY]** `renameColumn` (in tasks.php) - Inline column title editing
+- **[RDY]** `deleteColumn` (in tasks.php) - Soft delete with undo capability
+- **[RDY]** `reorderColumns` (in tasks.php) - Column positioning for drag-and-drop
+- **[RDY]** `deleteTask` (in tasks.php) - Soft delete with toast-based undo
+- **[RDY]** `renameTaskTitle` (in tasks.php) - Inline task title editing
+- **[RDY]** `duplicateTask` (in tasks.php) - Task duplication with smart positioning
+- **[RDY]** `saveTaskDetails` (in tasks.php) - Notes persistence from Unified Editor
+- **[RDY]** `restoreItem` (in tasks.php) - Undo functionality for soft-deleted items
+- **[RDY]** `moveTask` (in tasks.php) - Cross-column moves with Mobile Move Mode
+- **[RDY]** `snoozeTask` (in tasks.php) - Preset and custom date snoozing
+- **[RDY]** `unsnoozeTask` (in tasks.php) - Manual and automatic task wake-up
+
+#### Advanced Features
+- **[RDY]** `saveUserPreference` (in users.php) - Settings persistence (filters, UI state)
+- **[RDY]** `getAttachments` (in tasks.php) - File listing with metadata
+- **[RDY]** `uploadAttachment` (in tasks.php) - Multi-format file upload with quotas
+- **[RDY]** `deleteAttachment` (in tasks.php) - File deletion with storage recalculation
+- **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
+
+#### Collaboration (Foundation)
+- **[WIP]** `shareTask` (in tasks.php) - Task sharing with permission management
+- **[WIP]** `unshareTask` (revokeShare) (in tasks.php) - Share revocation with audit trail
+- **[WIP]** `listTaskShares` (in tasks.php) - Share enumeration for UI display
+
+> **Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
+
+> **Architecture Note:** All API endpoints using `window.apiFetch` are properly documented and include CSRF protection, ownership validation, and debug logging when `DEVMODE=true`.
+
+### 2.3 UI Implementation Tracking
+
+The frontend follows a mobile-first, progressive enhancement approach with a focus on touch-friendly interactions and accessibility.
+
+#### Foundation & Authentication
+- **[RDY]** User Registration page - Clean, minimal design with validation
+- **[RDY]** User Login page - Session management with "Forgot Password" flow
+- **[RDY]** Responsive board layout (desktop/mobile) - Adaptive column stacking
+
+#### Core Board Functionality
+- **[RDY]** Board rendering from getAll API - Real-time data synchronization
+- **[RDY]** Create Column (inline form) - Progressive disclosure pattern
+- **[RDY]** Rename Column (double-click) - In-place editing with validation
+- **[RDY]** Delete Column (hover button with confirmation) - Soft delete with undo
+- **[RDY]** Reorder Columns (hover buttons + drag-and-drop) - Both mobile and desktop patterns
+- **[RDY]** Create Task (footer input) - Context-aware task creation
+- **[RDY]** Rename Task Title (double-click) - Consistent editing pattern
+- **[RDY]** Toggle Task Completion (checkbox) - With celebration animation
+- **[RDY]** Task Completion Celebration Animation - Multi-effect 1.5-second sequence
+- **[RDY]** Task Drag-and-Drop - Within and between columns with visual feedback
+
+#### Task Classification & Management
+- **[RDY]** Task Classification (status band popover) - Signal/Support/Backlog selection
+- **[RDY]** Enforced Task Sorting by classification - Automatic hierarchy maintenance
+- **[RDY]** Task Actions Menu (⋮ button) - Context-sensitive action disclosure
+- **[RDY]** Delete Task (from actions menu) - Non-blocking confirmation with undo
+- **[RDY]** Custom modals/toasts - Unified notification system replacing native alerts
+- **[RDY]** Due Date picker (custom modal) - Clean date selection interface
+- **[RDY]** Task Attachments UI (drop zone, gallery) - Multi-format file support
+- **[RDY]** Bottom toolbar with filters - Persistent filter state management
+- **[RDY]** Privacy toggles - Item-level privacy with visual indicators
+- **[RDY]** Mobile Move Mode - Button-based cross-column movement for touch
+
+#### Advanced UI Features
+- **[RDY]** Task Notes integration (Unified Editor) - Full-featured editing experience
+- **[RDY]** Quick Notes (card flip) - 3D animation for short note editing
+- **[WIP]** Settings slider panel - Global preferences with light/dark mode
+- **[RDY]** Change Password modal - Secure password update workflow
+- **[RDY]** Forgot Password page & flow - Email-based reset with security
+- **[RDY]** Task Snooze Modal - Preset durations and custom date picker
+- **[RDY]** Snooze Visual Indicators - Purple badge with wake date display
+- **[RDY]** Dynamic Snooze/Unsnooze Menu State - Context-aware action menus
+- **[RDY]** Snoozed Task Visual Styling - Opacity and grayscale effects
+- **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
+
+#### Collaboration UI (Foundation)
+- **[WIP]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
+
+### 2.4 Priority Roadmap (Beta 6.7+)
+
+The roadmap prioritizes stability, core feature completion, and foundational architecture for future advanced features.
+
+#### Immediate Priorities (Sprint 1-2)
+1. **Debug/Observability Hardening** - Ensure all API handlers funnel responses through `send_debug_response()` when `DEVMODE=true`, and that `/debug.log` is writable and populated. Client logs should standardize toast + console structures and correlate client errors with server `debug[]` payloads.
+
+2. **Touch Moves: Mobile Move Mode 2.0 + Touch DnD** - Restore/upgrade Move Mode with clear CANCEL affordances and in-column reordering targets; implement long-press/handle for touch DnD to provide native mobile interaction patterns.
+
+3. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
+
+#### Medium-term Features (Sprint 3-4)
+4. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
+
+5. **Sharing (foundation)** - UI + API stubs (shareTask / revokeShare) without E2E key exchange yet, providing basic collaboration without compromising the zero-knowledge architecture.
+
+#### Long-term Features (Sprint 5+)
+6. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
+
+7. **Accessibility Polish** - Colorblind/high-contrast tuning; ARIA announcements for Move Mode; keyboard navigation improvements.
+
 #### Priority Roadmap Updates
-	 
- * "Column Reordering (Drag & Drop)" completed
- * "Debug/Observability Hardening" completed baed comprehensive backend testing results
- * "Zero-Knowledge Baseline" priority based on stable foundation now established
+
+Recent completions have shifted focus toward advanced user experience and collaboration:
+- "Column Reordering (Drag & Drop)" completed with both button and drag interfaces
+- "Debug/Observability Hardening" completed based on comprehensive backend testing results  
+- "Zero-Knowledge Baseline" priority increased based on stable foundation now established
 
 ---
 
-## 2. VISION & SCOPE
+## 3. Vision & Scope
 
-### APPLICATION SCOPE
-From Beta 5 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this “tasks-first” approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration.  
+### 3.1 Application Scope
 
-### APPLICATION DESCRIPTION
-**MyDayHub** is a next-generation productivity hub, built for focus, simplicity, and absolute privacy. We start with task management and plan to integrate Journal, Outlines, and Events later. The UI combines dark backgrounds, accent gradients, translucent overlays, and rounded cards. Typography is clean and scalable. Status bands and quick-action icons are always visible, supporting classification, privacy, attachments, and sharing.  
+From Beta 5 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this "tasks-first" approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration.
 
-All content is encrypted end-to-end with zero-knowledge encryption. Plaintext is never stored or transmitted.  
+This focused approach allows us to create an exceptionally polished task management experience rather than a mediocre multi-purpose tool. By mastering one domain completely, we establish patterns and architecture that will scale elegantly when we expand scope.
 
-* **Tasks:** Kanban board for flexible task tracking.  
-* **Journal (Future):** Daily notes and reflections.  
-* **Outlines (Future):** Hierarchical trees for structuring ideas.  
-* **Events (Future):** Agenda planning with segments.  
+### 3.2 Application Description
 
-### CORE PHILOSOPHY
-* **Absolute Privacy:** True zero-knowledge encryption with per-item DEKs, encrypted by a Master Key derived on device via Argon2id from passphrase + salt. Master Key never leaves device.  
-* **Fluid Experience:** Inline editing, drag-and-drop, single-page interactions.  
-* **Modern & Minimalist:** Simplicity, clarity, comfortable dark theme (light optional).  
-* **Work Anywhere:** Full offline support with sync resolution.  
-* **Signal over Noise:** Classification ensures attention on mission-critical tasks.  
-* **Accessibility:** WCAG color contrast, ARIA labels, keyboard navigation, font scaling, high-contrast mode.  
+**MyDayHub** is a next-generation productivity hub, built for focus, simplicity, and absolute privacy. We start with task management and plan to integrate Journal, Outlines, and Events later. The UI combines dark backgrounds, accent gradients, translucent overlays, and rounded cards. Typography is clean and scalable. Status bands and quick-action icons are always visible, supporting classification, privacy, attachments, and sharing.
 
-### GENERAL REQUIREMENTS
-* **Aesthetics:** Rounded corners, sans-serif fonts, shadows, translucency, accent color highlights.  
-* **Layout:** Responsive, touch-friendly, mobile-first.  
-* **Privacy Switch:** Every item (column, task, entry, event, tree, branch, node) can be marked private.  
-* **Sessions:** Multi-user sessions with last-writer control and ownership checks.  
-* **Optimistic UI:** Animations with rollback if errors occur.  
-* **Quotas:** Tiered storage/sharing limits, upgrade prompts.  
-* **Telemetry:** CRUD, navigation, and sharing analytics.  
-* **Import/Export:** JSON for migration and backup.  
-* **Notifications:** Alerts for reminders, quota nearing, conflicts.  
-* **Debugging:** DEVMODE=true logs to `debug.log`; curl/API tests; offline simulations.  
+All content is encrypted end-to-end with zero-knowledge encryption. Plaintext is never stored or transmitted.
 
-### USER STORIES
+#### Current Features
+- **Tasks:** Kanban board for flexible task tracking with Signal/Support/Backlog classification
+
+#### Future Features  
+- **Journal (Future):** Daily notes and reflections with timeline navigation
+- **Outlines (Future):** Hierarchical trees for structuring ideas and projects
+- **Events (Future):** Agenda planning with segments for meeting management
+
+### 3.3 Core Philosophy
+
+The application is built on six foundational principles that guide every design and technical decision:
+
+#### Absolute Privacy
+True zero-knowledge encryption with per-item DEKs, encrypted by a Master Key derived on device via Argon2id from passphrase + salt. Master Key never leaves device. This ensures that even if our servers are compromised, user data remains completely private.
+
+#### Fluid Experience  
+Inline editing, drag-and-drop, single-page interactions with optimistic UI updates. Every action should feel immediate and responsive, with animations providing feedback and rollback capabilities for error handling.
+
+#### Modern & Minimalist
+Simplicity, clarity, comfortable dark theme (light optional). The interface should disappear, allowing users to focus entirely on their work without UI friction or visual clutter.
+
+#### Work Anywhere
+Full offline support with sync resolution. Users should be able to work productively regardless of network connectivity, with intelligent conflict resolution when multiple devices sync.
+
+#### Signal over Noise
+Classification ensures attention on mission-critical tasks. The system actively helps users distinguish between work that advances their goals and work that merely keeps them busy.
+
+#### Accessibility
+WCAG color contrast, ARIA labels, keyboard navigation, font scaling, high-contrast mode. The application must be usable by everyone, regardless of ability or preferred interaction method.
+
+### 3.4 General Requirements
+
+These requirements apply across all features and ensure consistency in user experience:
+
+#### Visual Design
+- **Aesthetics:** Rounded corners, sans-serif fonts, shadows, translucency, accent color highlights
+- **Layout:** Responsive, touch-friendly, mobile-first design patterns
+- **Theming:** Dark theme primary, light theme optional, high-contrast mode available
 
 #### Privacy & Security
-* As a user, I want all of my content to be encrypted end-to-end so that no one else can read it.
-* As a user, I want to toggle privacy on any item so I can control who sees what.
-* As a user, I want to securely share items with other users, granting them view or edit access.
-#### Collaboration & Awareness
-* As a user, I want to notify others when I change a shared item, so they stay up to date.
-* As a user, I want to receive a notification when someone else modifies an item I shared with them.
-#### Productivity & Workflow
-* As a user, I want to drag and drop to manage my tasks (and later entries, nodes, and segments) for quick organization.
-* As a user, I want to classify tasks as Signal, Support, Noise, or Completed to stay focused on what matters.
-* As a user, I want to attach and manage images within tasks to keep related information in one place.
-* As a user, I want to email tasks directly into the app so I can capture work quickly.
-#### Mobility & Responsiveness
-* As a user, I want the app to work seamlessly on both desktop and mobile layouts.
-* As a user, I want to use the app effectively on my phone while on the go.
-#### Reliability & Offline
-* As a user, I want to edit offline and have changes auto-sync when I reconnect.
-#### Notifications & Limits
-* As a user, I want clear notifications for reminders, conflicts, and system alerts.
-* As a user, I want to be warned when I’m nearing my storage limit so I can manage my files.
-* As a user, I want to be prompted before my oldest attachments are deleted, so I can choose what to remove.
+- **Privacy Switch:** Every item (column, task, entry, event, tree, branch, node) can be marked private
+- **Sessions:** Multi-user sessions with last-writer control and ownership checks  
+- **Encryption:** Client-side encryption with server-side validation of permissions
+
+#### User Experience
+- **Optimistic UI:** Animations with rollback if errors occur
+- **Progressive Disclosure:** Features appear when needed, hide when not
+- **Non-blocking Feedback:** Toast notifications instead of blocking alerts
+
+#### System Features
+- **Quotas:** Tiered storage/sharing limits, upgrade prompts for resource management
+- **Telemetry:** CRUD, navigation, and sharing analytics for product improvement
+- **Import/Export:** JSON for migration and backup capabilities
+- **Notifications:** Alerts for reminders, quota nearing, conflicts, and collaboration
+- **Debugging:** DEVMODE=true logs to debug.log; curl/API tests; offline simulations
+
+### 3.5 User Stories
+
+The following user stories capture the core value propositions and guide feature development:
+
+#### 3.5.1 Privacy & Security
+- As a user, I want all of my content to be encrypted end-to-end so that no one else can read it
+- As a user, I want to toggle privacy on any item so I can control who sees what  
+- As a user, I want to securely share items with other users, granting them view or edit access
+
+#### 3.5.2 Collaboration & Awareness
+- As a user, I want to notify others when I change a shared item, so they stay up to date
+- As a user, I want to receive a notification when someone else modifies an item I shared with them
+
+#### 3.5.3 Productivity & Workflow  
+- As a user, I want to drag and drop to manage my tasks (and later entries, nodes, and segments) for quick organization
+- As a user, I want to classify tasks as Signal, Support, Backlog, or Completed to stay focused on what matters
+- As a user, I want to attach and manage images within tasks to keep related information in one place
+- As a user, I want to email tasks directly into the app so I can capture work quickly
+
+#### 3.5.4 Mobility & Responsiveness
+- As a user, I want the app to work seamlessly on both desktop and mobile layouts
+- As a user, I want to use the app effectively on my phone while on the go
+
+#### 3.5.5 Reliability & Offline
+- As a user, I want to edit offline and have changes auto-sync when I reconnect
+
+#### 3.5.6 Notifications & Limits
+- As a user, I want clear notifications for reminders, conflicts, and system alerts
+- As a user, I want to be warned when I'm nearing my storage limit so I can manage my files  
+- As a user, I want to be prompted before my oldest attachments are deleted, so I can choose what to remove
 
 ---
 
-## 3. FUNCTIONAL SPECIFICATION
+## 4. Functional Specification
 
-### TASKS VIEW
-Kanban layout with horizontal scroll on desktop, vertical stack on mobile. Optimistic updates with rollback on error.  
+### 4.1 Tasks View
 
-#### Columns
-* **Header:** Title (inline edit), live task count, actions (delete/move), privacy switch.  
-* **Body:** Displays task cards or placeholder text if empty.  
-* **Footer:** Quick-add input field; supports “Move here.”  
+The Tasks View serves as the application's primary interface, implementing a Kanban-style board with horizontal scroll on desktop and vertical stack on mobile. All interactions use optimistic updates with rollback on error.
 
-#### Task Cards
-* **Display:** Title (inline edit), drag-and-drop, metadata footer (notes, due date).  
-* **Delegation & Sharing:** Distinct styling + share icon.  
-* **Status Bands:** Status Bands: Signal (green), Support (blue), Backlog (orange), Completed (gray).  
-* **Privacy & Attachments:** Icons always visible.  
-* **UX:**  
-  * Desktop: click-to-edit and mouse drag-and-drop.  
-  * Mobile/Tablet: two complementary options:  
-	1. **Touch DnD:** Long-press (~350ms) or drag-handle (≡) to lift a task; supports cross-column moves and same-column reordering.  
-	2. **Move Mode 2.0:** Actions → Move puts the task in wiggle state, shows a banner “Move [Task] • Cancel,” and activates footers (“Move here”) plus inter-card drop-zones for precise placement.  
+#### 4.1.1 Column Structure
 
-* **Abort Move Mode:** User can cancel by tapping the Cancel banner button, tapping backdrop, pressing Esc (if keyboard present), or device Back button. All abort paths restore normal state without changes.  
+**Header Components:**
+- Title (inline edit via double-click)
+- Live task count with classification breakdown
+- Privacy toggle with visual indicator  
+- Actions menu (delete/move/settings)
 
-* **Accessibility:** Move Mode announces entry via `aria-live` and traps focus to Cancel. Drop-zones and banner controls meet 44–48px touch target guidelines.
+**Body Layout:**
+- Displays task cards with enforced sorting
+- Placeholder text for empty columns
+- Drag-and-drop targets for cross-column moves
 
-#### Snooze Functionality
-* **Snooze Options:** Actions menu provides "Snooze 1 week," "Snooze 1 month," "Snooze 1 quarter," and "Snooze until..." (custom date picker)
-* **Auto-Classification:** Snoozed tasks automatically receive 'backlog' classification
-* **Visual Styling:** Snoozed tasks display with opacity 0.65 and grayscale(0.3) filter for muted appearance
-* **Wake Indicator:** Purple badge with clock icon and formatted wake date (e.g., "Sep 20") appears in task footer
-* **Menu State:** Actions menu shows "Remove Snooze" option for currently snoozed tasks instead of "Snooze Task"
-* **Wake Behavior:** Tasks automatically unsnooze at 9 AM local time on scheduled date with notification requirement per spec
+**Footer Interface:**
+- Quick-add input field for new tasks
+- Transforms to "Move here" button during Mobile Move Mode
+- Context-sensitive interaction patterns
 
-#### Snooze Implementation Status
-* **Current State**: Fully functional with all preset durations and custom date selection
-* **Visual Integration**: Purple indicators clickable for editing, consistent with other task metadata
-* **Filter Integration**: "Show Snoozed Tasks" toggle in bottom toolbar with user preference persistence
-* **Missing Component**: Wake notification system (tasks unsnooze silently at 9 AM without user notification)
+#### 4.1.2 Task Card Architecture
 
-#### Completion Celebration
-* **Animation Sequence:** 1.5-second multi-effect celebration on task completion
-  * Rainbow glow expanding outward from card
-  * Multi-colored confetti burst (12 particles)
-  * Bouncing checkmark overlay on checkbox
-  * Subtle card shake for haptic-like feedback
-  * Brightness/saturation boost for visual impact
-* **Filter Integration:** Animation completes before filter hiding takes effect
-* **Mobile Optimization:** Scaled appropriately for touch devices
+**Display Elements:**
+- Title (inline edit via double-click)
+- Classification status band (clickable popover)
+- Checkbox for completion with celebration animation
+- Metadata footer (notes indicator, due date, attachments, privacy)
 
-#### Touch Drag-and-Drop (Mobile/Tablet)
-* **Start gesture:** Long-press (~350 ms) on the card **handle (≡)** to lift.
-* **During drag:** Card shows elevated shadow; columns auto-scroll when
-  near edges; valid targets highlight.
-* **Behavior:** Same-column reordering and cross-column moves are allowed.
+**Interactive Features:**
+- Drag-and-drop handle (≡) for desktop reordering
+- Actions menu (⋮) for context-sensitive operations  
+- Quick Notes card flip for short note editing
+- Status band popover for classification changes
 
-#### Move Mode 2.0 (Mobile-first, precise placement)
-* **Enter:** Actions menu → **Move**. The task enters a subtle **wiggle** state
-  and a top banner appears: “Move ‘Title’ • Cancel”.
-* **Destinations:** 
-  * Column footers switch from “+ New Task” to **“Move here”**.
-  * **In-column drop-zones** appear **between cards** and at top/bottom
-	(↑ Move above • Move below ↓) to support fine reordering without drag.
-* **Exit / Abort:** Tap **Cancel** in the banner, tap the backdrop, press **Esc**
-  (if keyboard present), or use the device **Back** button. Any of these restore
-  normal state with no changes.
-* **A11y:** `aria-live="polite"` on entry: “Move mode on. Choose a destination or
-  Cancel.” Focus starts on the Cancel button in the banner.
+**Visual States:**
+- **Normal:** Full opacity, standard styling
+- **Completed:** Celebration animation, then filtered visibility based on user preference
+- **Snoozed:** Opacity 0.65, grayscale(0.3) filter, purple wake indicator
+- **Private:** Diagonal line pattern overlay
+- **Shared:** Distinct styling with recipient badges
 
-#### Attachments
-* **Methods:** File picker, drag-drop, paste.  
-* **Formats:** JPEG, PNG, GIF, WebP. Max 5MB/file.  
-* **Quota:** Example 50MB per user.  
-* **Policy:**  
-  * If quota exceeded, system prompts with **Manage Attachments** modal.  
-  * Default suggestion: delete oldest files.  
-  * Modal shows full list (name, date, size).  
-  * User may delete other files to free space before proceeding.  
+#### 4.1.3 Task Classification System
 
-#### Sorting & Persistence
-* Group order: Signal > Support > Noise > Completed.  
-* Manual drag/drop allowed within groups.  
-* Sorting enforced on status change.  
-* Persisted instantly.
+The classification system implements the core "Signal over Noise" philosophy:
 
-Snoozed tasks are shown/hidden via a "Show Snoozed" filter. When visible, they are merged into the backlog group for each column, immediately after other non-snoozed backlog tasks, sorted by wake date.
+**Classification Types:**
+- **Signal (Green):** Directly advances the mission - highest priority
+- **Support (Blue):** Enables Signal tasks indirectly - medium priority  
+- **Backlog (Orange):** Important but not time-sensitive - lower priority
+- **Completed (Gray):** Finished tasks - archived at bottom
 
-Users can change classification either by **clicking the status band** on the
-card or via **Actions → Cycle Classification**; the enforced order remains
-Signal > Support > Noise > Completed.
+**Sorting Rules:**
+- Enforced hierarchy: Signal > Support > Backlog > Completed
+- Manual ordering preserved within each classification group
+- Automatic re-sorting on classification changes and drag-and-drop
+- Cross-column moves maintain classification priority
 
-#### Actions Menu
-* Notes  
-* Due Date  
-* Duplicate  
-* Delete (with Undo)
-* Move ← opens Move Mode 2.0 (wiggle + banner + drop-zones)
-* Share
-* Toggle Private
-* Snooze (sub-menu: 1 week, 1 month, 1 quarter, until date…, Clear -if task is snoozed-)
-* Share → opens modal. Recipient = email or username. Permission = view | edit.
-	Preconditions: Owner only; recipient must be in trusted list (owner→recipient, status accepted).
-	Unshare removes access; activity logged.
+**User Interface:**
+- Status band click opens classification popover
+- Direct selection instead of cycling through options
+- Visual feedback with color-coded left border
+- Accessibility patterns for colorblind users
 
-The 'Delete' action for both tasks and columns now triggers a non-blocking toast notification with a temporary 'Undo' option, allowing for immediate action reversal. This replaces the previous blocking confirmation modal.
+#### 4.1.4 Mobile & Touch Interactions
 
+The application provides dual interaction patterns optimized for different device types:
 
----
+**Touch Drag & Drop (Mobile/Tablet):**
+- Long-press (~350ms) on card handle (≡) to initiate drag
+- Visual feedback: elevated shadow, target highlighting
+- Support for same-column reordering and cross-column moves
+- Automatic scroll when dragging near screen edges
 
-### JOURNAL VIEW (Future)
-Chronological daily layout with 1-day, 3-day (default), or 5-day modes. Weekends styled differently.  
+**Mobile Move Mode 2.0 (Enhanced):**
+- Enter via Actions → Move, card enters wiggle state
+- Top banner appears: "Move 'Task Title' • Cancel"
+- Column footers transform to "Move here" buttons
+- In-column drop-zones appear between cards for precise positioning
+- Multiple abort options: Cancel button, backdrop tap, Esc key, back button
 
-* **Header:** Date label, nav buttons.  
-* **Footer:** Quick-add entry.  
-* **Cards:** Title, notes editor, drag/drop to new date.  
-* **Indicators:** Notes icon, privacy pattern, decorative bar.  
-* **Menu:** Notes, privacy toggle, duplicate, delete, move, share.  
-* **Animations:** Hover lift, smooth scrolling.  
-* **Future Integration:** Journal entries may link to Outlines.  
+**Accessibility Features:**
+- ARIA live regions announce mode changes
+- Focus management during Move Mode
+- Touch targets meet 44-48px minimum size requirements
+- High contrast mode available for improved visibility
 
----
+#### 4.1.5 Snooze Functionality
 
-### OUTLINES VIEW (Future)
-Hierarchical tree of nodes for structured ideas.  
+Tasks can be temporarily hidden with scheduled wake-up times:
 
-* **Structure:** Expand/collapse branches, infinite nesting.  
-* **Node Display:** Title, child count, privacy indicator.  
-* **Actions:** Add child, promote/demote, fold/unfold, privacy toggle, duplicate, delete, **Link (stub)**.  
-* **Drag/Drop:** Nodes and branches repositionable.  
-* **Future Integration:** Planned linking to Tasks and Journal entries.  
+**Snooze Options:**
+- Preset durations: 1 week, 1 month, 1 quarter
+- Custom date selection with date picker
+- "Snooze until..." for specific deadlines
 
----
+**Visual Implementation:**
+- Snoozed tasks receive 'backlog' classification automatically
+- Styling: opacity 0.65, grayscale(0.3) filter for muted appearance
+- Purple indicator badge with clock icon and wake date
+- Clickable indicators for direct snooze editing
 
-### EVENTS VIEW (Future)
-Planner for multi-day events.  
+**Behavior:**
+- Tasks automatically unsnooze at 9 AM local time on scheduled date
+- Filter toggle: "Show Snoozed Tasks" in bottom toolbar
+- Persistent user preference for filter state
+- Wake notification system (implementation pending)
 
-* **Setup:** Event = Title + Start/End date. Placeholder lists for participants, assets, and locations (concept-only).  
-* **Layout:** Horizontally scrollable columns; vertical timeline.  
-* **Segments:** Title, time/duration, no overlap. Supports leads, presenters, attendees, location, assets.  
-* **Actions:** Notes, linked tasks, privacy, share, duplicate, delete.  
-* **UI/UX:** Drag/drop rescheduling, hover lift, resize by dragging edge.  
+#### 4.1.6 Task Actions & Quick Operations
 
----
-### UNIFIED NOTE EDITOR
-Universal modal for tasks, entries, segments, nodes.  
+**Actions Menu (⋮):**
+- Notes (opens Unified Editor or Quick Notes flip)
+- Due Date (custom modal with date picker)
+- Duplicate (creates copy at column end)
+- Delete (soft delete with toast-based undo)
+- Move (enters Mobile Move Mode with enhanced cancel options)
+- Share (opens sharing modal for collaboration)
+- Toggle Private (privacy flag with visual feedback)
+- Snooze (sub-menu with duration options and custom picker)
+- Cycle Classification (alternative to status band popover)
 
-* **Plain Text + Markdown**, with preview toggle.  
-* **Autosave** on pause and on close.  
-* **Header:** Context title, export/print/save.  
-* **Toolbar:** Tabs (Format, Find & Replace, Add Task, Search).  
-* **Text Area:** Scrollable, with line numbers.  
-* **Status Bar:** Word/char/line counters + last saved timestamp.  
-* **Tools:** Case conversion, formatting, font resize, calculator.  
-* **Search:** Cross-note search opens results list, enabling seamless switching.
+**Completion Workflow:**
+- Checkbox click triggers multi-effect celebration animation
+- 1.5-second sequence: rainbow glow, confetti burst, bouncing checkmark
+- Automatic classification change to 'completed'
+- Respects "Hide Completed" filter timing
 
----
+#### 4.1.7 Attachments System
 
-### SETTINGS SLIDER & CALENDAR OVERLAYS
-**Settings Slider**
-**Settings Slider**
-* Slider accessible from title bar.
-* **Display Mode:** Light Mode toggle.
-* **High-Contrast/Colorblind Mode:** increases separation for icons, status
-  bands, and accents. **Mutually exclusive with Light Mode.**
-* Change Password (opens modal).
-* (Planned) Automatic Logout.
-* (Planned) Import/Export, Help.
+**File Support:**
+- Image formats: JPEG, PNG, GIF, WebP
+- Document format: PDF  
+- Maximum file size: 5MB per file
+- Storage quota: Configurable per user tier
 
-**Calendar Overlays (App-Wide Feature):**  
-* User defines overlays by entering **labels tied to specific calendar dates**.
-* Types: Fiscal, Holidays, Birthdays, Custom.  
-* Privacy: public or private overlays as indicated by the user, other users can opt-in to public calendars.  
-* **Display:** Badges shown in bottom toolbar next to today’s date. Multiple badges shown if overlapping.  
-* **Manager Modal:** CRUD for overlays, with import/export.  
-* Applies across all views.  
+**Upload Methods:**
+- File picker dialog ("Browse Files...")
+- Drag-and-drop to attachment modal
+- Paste from clipboard (images)
+
+**Quota Management:**
+- Real-time storage usage indicator
+- Automatic oldest-file deletion when quota exceeded
+- User confirmation before automatic deletions
+- "Manage Attachments" modal for manual file management
+
+**Viewing Experience:**
+- Images: In-app modal viewer with natural sizing
+- PDFs: Opens in new browser tab for full functionality
+- Gallery view with file metadata and deletion options
+
+#### 4.1.8 Privacy & Filtering
+
+**Privacy Implementation:**
+- Per-task and per-column privacy toggles
+- Visual indicator: diagonal line pattern for private items
+- Privacy flag enforcement: private items cannot be shared
+- Filter persistence across sessions
+
+**Filter System:**
+- Bottom toolbar with filter menu
+- "Show Completed" toggle with persistence
+- "Show Private Items" toggle with visual feedback
+- "Show Snoozed Tasks" toggle with state management
+- Future: "Show Shared Items" and "Show Only My Items"
 
 ---
 
-## 4. TECHNICAL SPECIFICATION
+### 4.2 Unified Note Editor
 
-### Technical Architecture
-LAMP stack (PHP 8.2, MySQL, Apache). SPA frontend (JS/CSS).  
+The Unified Note Editor provides a full-featured writing environment accessible from any task's note field, with support for both quick edits and extended writing sessions.
 
-### API Gateway & Contracts
-/api/api.php as gateway; validates CSRF, content type, session. Dispatches to handlers.  
+#### 4.2.1 Editor Interface
 
-### Frontend Architecture
-/uix holds SPA modules. crypto.js = encryption boundary. 
+**Modal Structure:**
+- Header: Context title, export/print/save buttons
+- Toolbar: Format tools, find & replace, search functionality  
+- Text Area: Scrollable textarea with line numbers
+- Status Bar: Word/character/line counters, last saved timestamp
 
-#### Visual Styling for Snoozed Tasks:
-* Apply opacity: 0.65 and filter: grayscale(0.3) to the card.
-* Maintain orange backlog status band, but reduce saturation visually.
-* Insert snooze SVG icon in the card’s footer, styled with a readable background badge.
-* When acknowledged by user, remove wake notification and return styling to standard backlog.
+**Editing Features:**
+- Plain text + Markdown support with preview toggle
+- Auto-save on pause and explicit save on close
+- Font size adjustment (A-/A+) with user preference persistence
+- Tab/Shift+Tab for indentation control
+- Case conversion tools (UPPER, lower, Title Case)
 
-#### Mobile & Accessibility:
-* Ensure snooze menu touch targets are minimum 44px.
-* Wake notifications are ARIA-live announced; focus is trapped until toast is acknowledged.
+#### 4.2.2 Quick Notes Integration
 
-#### Drag & Drop Visual Feedback System
-* Unified styling for both column and task dragging operations
-* Consistent visual language: accent-colored borders, elevated shadows, subtle rotation
-* Grab/grabbing cursor states to indicate draggable elements
-* Z-index management for proper layering during drag operations
-* Enhanced user feedback maintains design consistency across all board interactions
+For short notes (under 250 characters), tasks feature a "Quick Notes" mode:
 
-#### Global API Functions
-* `window.apiFetch`: Secure API wrapper with CSRF token injection, available globally from app.js
-* All task operations must use `window.apiFetch` to maintain security consistency
-* snoozeTask(task_id, duration_type, custom_date?) — Sets snoozed_until (per selected interval or custom date), sets classification to 'backlog', logs snoozed_at.
-*acknowledgeWokenTasks() — Clears the "wake notification" toast flag for the user.
-*Update getAll API: Excludes snoozed tasks unless filter active; checks for tasks that have woken since last fetch and includes their IDs in the payload for notification purposes.
-* CSRF enforcement is active in /api/api.php; missing/invalid tokens return 403.
-* Sharing is metadata-only at this phase. Zero-knowledge boundaries remain intact; no DEK/key exchange yet. Recipients see only metadata the owner opts to expose (full E2E sharing comes later).
+**3D Card Flip Animation:**
+- Smooth CSS transform-based flip effect
+- Front: Standard task card layout
+- Back: Simple textarea with Save/Cancel/Expand controls
 
-### Security Model & Privacy
-* CSRF protection.  
-* Ownership checks enforced server-side.  
-* Multi-user sessions with renewal + token.  
-* Per-item privacy flags.  
+**Smart Editor Selection:**
+- Short notes: Trigger card flip for in-context editing
+- Long notes: Open full Unified Editor for extended workspace
+- Seamless transition between modes with data preservation
 
-#### Zero-Knowledge Architecture & Recovery Systems
-* Core Encryption Model
-	* Encryption Boundary: All cryptographic operations handled by /uix/crypto.js module
-	* Per-Item Encryption: Each item (task, column, entry) encrypted with unique Data Encryption Key (DEK)
-	* Master Key: User-specific key derived on-device using Argon2id from passphrase + salt
-	* Key Wrapping: DEKs encrypted with user's Master Key before storage
-	* Server Blindness: Server never sees plaintext data or Master Key
+#### 4.2.3 Auto-save & Persistence
 
-* Security Questions Recovery System
-  * Purpose: Enables password reset without data loss in zero-knowledge system
-  * Implementation:
-	* User creates 3-5 custom security questions during initial setup
-	* Question answers hash to derive a Recovery Key using PBKDF2
-	* Recovery Key encrypts a copy of the Master Key (Recovery Envelope)
-	* Server stores: question text (plaintext), answer hashes (irreversible), encrypted Recovery Envelope
-  * Recovery Process:
-	* User provides correct answers to security questions
-	* Client derives Recovery Key from answers
-	* Recovery Key decrypts Master Key copy
-	* New password generates new Master Key
-	* All user data re-encrypted with new Master Key
-  * Security Trade-offs:
-	* Reduces security compared to pure zero-knowledge (recovery answers could be compromised)
-	* Provides reasonable balance between security and usability
-	* Users who lose both password AND security answers permanently lose data (by design)
+**Auto-save Behavior:**
+- Debounced auto-save after typing stops (configurable interval)
+- Explicit save on close and mode transitions
+- Visual feedback for save states and conflicts
 
-#### Zero-Knowledge Enablement Phases
-	1. **Baseline ZK (no sharing):** Consolidate all crypto into `/uix/crypto.js`.
-	   Use per-item DEKs wrapped by a Master Key (derived via Argon2id). Server
-	   stores only ciphertext and wrapped DEKs.
-	2. **Recovery Ready:** Require users to set security questions, derive a
-	   Recovery Key (PBKDF2), and store a **Recovery Envelope** (Master Key copy
-	   encrypted by Recovery Key) before enabling ZK password resets.
-	3. **Sharing Foundation:** Introduce UI and API stubs to designate shared tasks,
-	   leaving key exchange/E2E sharing for a later milestone.
-	4. **E2E Sharing:** Implement asymmetric wrapping of DEKs to recipients’
-	   public keys; sender does not lose local ZK guarantees.
-	
-	**Blocking dependency:** E2E sharing is blocked until **(1) Baseline ZK** and
-	**(2) Recovery Ready** are complete.
+**Data Integrity:**
+- Optimistic updates with rollback on failure
+- Conflict detection for multi-device editing
+- Last-writer-wins resolution with user notification
 
-#### Crypto Module Architecture
+---
 
-/uix/crypto.js Structure:
-├── Key Derivation (password + salt → Master Key)
-├── DEK Management (generate, wrap, unwrap DEKs)
-├── Symmetric Operations (encrypt/decrypt user data)
-└── Recovery System (questions → Recovery Key → Master Key)
+### 4.3 Settings Panel & Global Preferences
 
-### Password Reset & Security Model
-Standard Password Reset (Pre-Zero-Knowledge)
-* Current Implementation: Traditional email-based reset with secure tokens
-* Token Security: SHA-256 hashed tokens, 1-hour expiration, single-use
-* Email Delivery: PHPMailer with SMTP, styled HTML templates
-* Database: Dedicated password_resets table with cleanup policies
+The Settings Panel provides access to application-wide preferences and user account management.
 
-#### Zero-Knowledge Password Reset (Future Implementation)
-* Fundamental Challenge: Password resets incompatible with zero-knowledge unless recovery mechanism exists
-* User Warning: Clear notification that password reset without recovery questions = permanent data loss
-* Migration Strategy:
-  * Phase 1: Implement security questions for new users
-  * Phase 2: Prompt existing users to set up recovery questions
-  * Phase 3: Enforce recovery questions for all users before enabling zero-knowledge mode
-* Recovery Flow:
-  * User requests reset → receives email with reset link
-  * Reset page requires answering security questions + new password
-  * Client derives Recovery Key, decrypts Master Key copy, re-encrypts all data with new Master Key
-* Zero-Knowledge Architecture & Sharing Roadmap
-  * Reiterate phases already listed; add explicit note:
-  * Phase 0 (current): permissioned metadata sharing; content remains private (no DEK exchange).
-  * Phase 1+: introduce E2E sharing with per-recipient DEK wrapping.
+#### 4.3.1 Display Settings
 
-#### Security Considerations
-* Threat Model: Protects against server compromise, but recovery questions reduce overall security
-* User Education: Clear documentation about security trade-offs and importance of strong, memorable answers
-* Attack Vectors: Social engineering of security questions, but better than alternative of total data loss
+**Theme Management:**
+- Light Mode toggle (default: dark theme)
+- High-Contrast Mode toggle (mutually exclusive with Light Mode)
+- Font scaling options for accessibility
+- Color-blind friendly patterns and indicators
 
-#### Error/Toast UX Standard
-* State: No native alerts in production flows. Errors must display via showToast(message, 'error').
-* In DEVMODE, toasts should include first error cause from response.debug[] when present.
+**UI Preferences:**
+- Filter state persistence (completed, private, snoozed items)
+- Editor font size with cross-device synchronization
+- Animation preferences and reduced motion support
 
-#### Zero-Knowledge Architecture & Sharing Roadmap
-* Reiterate phases already listed; add explicit note:
-* Phase 0 (current): permissioned metadata sharing; content remains private (no DEK exchange).
-* Phase 1+: introduce E2E sharing with per-recipient DEK wrapping.
+#### 4.3.2 Account Management
 
+**Security Settings:**
+- Change Password modal with validation
+- Security Questions setup for password recovery
+- Session management and device logout
+- Two-factor authentication (future)
 
-### Development Debugging Infrastructure
-Server-Side Debugging
-* Debug Message Collection: Global $__DEBUG_MESSAGES__ array in /incs/config.php
-* Function: log_debug_message($message) appends timestamped entries
-* Integration: All API responses include debug array when DEVMODE=true
-* File Logging: Fallback to /debug.log for persistent logging
+**Data Management:**
+- Storage usage overview with quota indicators
+- Import/Export functionality for data portability
+- Account deletion with data retention policies
 
-#### Client-Side Debug Display
-* Browser Console Integration: JavaScript automatically extracts and displays server debug messages
-* Format: Clearly marked debug sections with consistent formatting
-* Raw Response Logging: Temporary capability to log full server responses for JSON parsing issues
-* Error Correlation: Links client-side errors with server-side debug traces
+---
 
-#### Completed Snooze Testing
-* ✅ All duration presets (1 week, 1 month, 1 quarter) calculate correctly
-* ✅ Custom date selection and validation working
-* ✅ Snoozed task visual styling (opacity, grayscale, purple indicator) implemented
-* ✅ Menu state changes (Snooze ↔ Remove Snooze) work without page refresh  
-* ✅ Backend persistence of snoozed_until and snoozed_at timestamps confirmed
-* ✅ Unsnooze functionality and visual state restoration working
-* ⚠️ Wake notification system not yet implemented (silent unsnooze at 9 AM)
+### 4.4 Collaboration & Sharing (Foundation)
 
-#### Debug Response Helper
+The sharing system enables controlled collaboration while maintaining the zero-knowledge encryption model for private content.
 
-~~~
-php
-function send_debug_response(array $data, int $http_code = 200): void {
-	global $__DEBUG_MESSAGES__;
-	if (DEVMODE && !empty($__DEBUG_MESSAGES__)) $data['debug'] = $__DEBUG_MESSAGES__;
-	http_response_code($http_code);
-	header('Content-Type: application/json');
-	echo json_encode($data);
-	exit();
+#### 4.4.1 Sharing Model
+
+**Privacy Boundary:**
+- Only non-private items can be shared
+- Clear user education about encryption trade-offs
+- Visual indicators for shared vs. private content
+
+**Permission Levels:**
+- View: Read-only access to shared items
+- Edit: Full modification rights except sharing/privacy changes
+- Owner retains ultimate control and revocation rights
+
+#### 4.4.2 Sharing Workflow
+
+**Share Management:**
+- Share modal with recipient selection
+- Email or username-based user identification  
+- Permission assignment and modification
+- Current access list with individual revocation
+
+**Recipient Experience:**
+- Shared items appear in dedicated "Shared with Me" column
+- Distinct visual styling with owner attribution
+- Edit capabilities based on assigned permissions
+- "Ready for Review" status for workflow completion
+
+---
+
+### 4.5 Future Views (Deferred)
+
+While current development focuses exclusively on Tasks, the architecture supports planned expansion:
+
+#### 4.5.1 Journal View (Future)
+- Chronological daily layout with 1-day, 3-day, 5-day modes
+- Entry cards with timeline navigation
+- Integration with task attachments and due dates
+
+#### 4.5.2 Outlines View (Future)  
+- Hierarchical tree structure for idea organization
+- Expand/collapse functionality with infinite nesting
+- Linking integration with tasks and journal entries
+
+#### 4.5.3 Events View (Future)
+- Multi-day event planning with timeline visualization
+- Segment management with participant tracking
+- Resource allocation and location management
+
+---
+
+## 5. Technical Specification
+
+### 5.1 System Architecture
+
+MyDayHub follows a modern LAMP stack architecture optimized for security, performance, and maintainability.
+
+#### 5.1.1 Technology Stack
+
+**Backend:**
+- PHP 8.2+ with modern language features
+- MySQL 8.0+ with JSON column support
+- Apache 2.4+ with mod_rewrite
+- Composer for dependency management
+
+**Frontend:**
+- Vanilla JavaScript ES6+ for maximum performance
+- CSS Grid and Flexbox for responsive layouts
+- Progressive Web App capabilities via Service Worker
+- No framework dependencies for minimal overhead
+
+**Security:**
+- CSRF protection on all mutating operations
+- Session-based authentication with secure tokens
+- Input validation and output encoding
+- SQL injection prevention via prepared statements
+
+### 5.2 API Gateway & Architecture
+
+#### 5.2.1 Single Gateway Pattern
+
+All API requests flow through `/api/api.php`, providing:
+- Centralized CSRF validation for security
+- Consistent error handling and logging
+- Request routing to appropriate handlers
+- Debug response formatting when DEVMODE=true
+
+**Request Format:**
+```json
+{
+  "module": "tasks",
+  "action": "createTask",
+  "data": {
+	"column_id": 123,
+	"title": "New task title"
+  }
 }
-~~~
-* Require all error paths in new sharing handlers to call send_debug_response(...) so FE toasts can show exact causes.
+```
 
-#### PHPMailer Debug Handling
-* Issue: SMTP debug output corrupts JSON responses in development mode
-* Solution: $mail->SMTPDebug = 0 always, regardless of DEVMODE
-* Alternative: Server debug messages provide email sending visibility without response corruption
+**Response Format:**
+```json
+{
+  "success": true,
+  "data": { /* response payload */ },
+  "debug": [ /* debug messages when DEVMODE=true */ ]
+}
+```
 
+#### 5.2.2 Module Handlers
 
-#### Animation & Filter Integration Testing
-* Test task completion with "Hide Completed" filter enabled
-* Verify full animation sequence plays before task hiding
-* Confirm celebration effects are visible on various screen sizes
-* Test double-click prevention on rapid checkbox interactions
+**Authentication (`/api/auth.php`):**
+- User registration with password hashing
+- Login with session creation
+- Password reset via secure email tokens
+- Logout with session cleanup
 
+**Task Management (`/api/tasks.php`):**
+- Complete CRUD operations for tasks and columns
+- Drag-and-drop position management
+- Classification and privacy controls
+- Attachment upload and management
 
-#### Hardening Checklist (must-pass before new features ship)
-* All mutating API routes call `send_debug_response()`; no raw `echo/json_encode`
-  on error paths.
-* `/debug.log` exists, is writable by the web user, and receives timestamps.
-* Client extracts `debug[]` from responses when `DEVMODE=true` and logs to
-  console under a consistent namespace.
-* SMTP debug is **always off** (`$mail->SMTPDebug = 0`); rely on server logs.
-* UI uses toasts (non-blocking) for errors; confirmations use custom modal,
-  never native `alert/confirm`.
-* Guard repeated actions with an **isActionRunning** debounce flag to prevent
-  double-fires in modals/menus.
+**User Preferences (`/api/users.php`):**
+- Settings persistence in JSON format
+- Cross-device preference synchronization
+- Account management operations
 
-### Offline Support
-* Service Worker caches app shell.  
-* IndexedDB mirrors lists.  
-* Write queue flushes on reconnect.  
-* Conflict resolution: last-write-wins, UI prompt for conflicts.  
-* Stale-while-revalidate strategy.  
-* **Future:** Background sync + retry policy layered onto Service Worker queue.  
+### 5.3 Database Schema
 
-### Environment Setup & Workflow
-* Production: mydayhub.com (Beta 3).  
-* Development: localhost (Beta 5 and on).  
-* Online Test: breaveasy.com (Beta 5 and on).  
-* Isolated DBs/files.  
-* Composer add-on: SMTP runtime.  
-* Debugging: DEVMODE logs.  
-* Test accounts: alfa, delta, omega.
+#### 5.3.1 User Management
 
-#### Environment Variable Configuration (add this to .env)
-* APP_URL: Explicit base URL configuration per environment (replaces dynamic calculation)
-  * Local: `http://localhost` 
-  * Staging: `https://breveasy.com`
-  * Production: `https://mydayhub.com`
-* Eliminates server-dependent URL generation issues
-* Ensures consistent API routing across hosting environments
+**users table:**
+```sql
+CREATE TABLE users (
+  user_id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  preferences JSON DEFAULT '{}',
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  storage_used_bytes BIGINT DEFAULT 0
+);
+```
 
-### Database Schema
-* users: user_id, username, email, password_hash, preferences (JSON), created_at, storage_used_bytes
-* columns: column_id, user_id, column_name, position, is_private, created_at, updated_at
-* tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, delegated_to, created_at, updated_at, snoozed_until, snoozed_at
-* task_attachments: attachment_id, task_id, user_id. filename_on_server, original_filename, filesize_bytes, mime_type, created_at
-* password_resets: id, user_id, token_hash, expires_at, created_at
-* shared_items id, owner_id, recipient_id, item_type ENUM('task','column'), item_id, permission ENUM('view','edit'), status ENUM('active','revoked'), created_at UTC, updated_at UTC
-Unique: (owner_id, recipient_id, item_type, item_id)
-* sharing_activity
-id PK, shared_item_id FK, actor_user_id FK, action ENUM('created','updated','revoked'), payload JSON/TEXT, created_at UTC
-Payload stored as PHP-encoded JSON string to avoid JSON_OBJECT(...) portability issues.
+**password_resets table:**
+```sql
+CREATE TABLE password_resets (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  token_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+#### 5.3.2 Task Management
+
+**columns table:**
+```sql
+CREATE TABLE columns (
+  column_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  column_name VARCHAR(255) NOT NULL,
+  position INT NOT NULL,
+  is_private BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
+  deleted_at DATETIME NULL,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+**tasks table:**
+```sql
+CREATE TABLE tasks (
+  task_id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  column_id INT NOT NULL,
+  encrypted_data JSON NOT NULL, -- Contains title, notes in encrypted format
+  position INT NOT NULL,
+  classification ENUM('signal', 'support', 'backlog', 'completed') DEFAULT 'support',
+  is_private BOOLEAN DEFAULT FALSE,
+  due_date DATE NULL,
+  snoozed_until DATETIME NULL,
+  snoozed_at DATETIME NULL,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
+  deleted_at DATETIME NULL,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (column_id) REFERENCES columns(column_id) ON DELETE CASCADE
+);
+```
+
+#### 5.3.3 File Attachments
+
+**task_attachments table:**
+```sql
+CREATE TABLE task_attachments (
+  attachment_id INT AUTO_INCREMENT PRIMARY KEY,
+  task_id INT NOT NULL,
+  user_id INT NOT NULL,
+  filename_on_server VARCHAR(255) NOT NULL,
+  original_filename VARCHAR(255) NOT NULL,
+  filesize_bytes INT NOT NULL,
+  mime_type VARCHAR(100) NOT NULL,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+#### 5.3.4 Collaboration (Foundation)
+
+**shared_items table:**
+```sql
+CREATE TABLE shared_items (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  owner_id INT NOT NULL,
+  recipient_id INT NOT NULL,
+  item_type ENUM('task', 'column') NOT NULL DEFAULT 'task',
+  item_id INT NOT NULL,
+  permission ENUM('edit', 'view') NOT NULL DEFAULT 'edit',
+  status ENUM('active', 'ready_for_review', 'revoked') NOT NULL DEFAULT 'active',
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
+  UNIQUE KEY ux_share (owner_id, recipient_id, item_type, item_id),
+  INDEX ix_recipient (recipient_id),
+  INDEX ix_owner (owner_id)
+);
+```
+
+**sharing_activity table:**
+```sql
+CREATE TABLE sharing_activity (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  shared_item_id INT NOT NULL,
+  actor_user_id INT NOT NULL,
+  action ENUM('created', 'updated', 'revoked', 'marked_ready') NOT NULL,
+  payload JSON NULL,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  INDEX ix_shared_item (shared_item_id)
+);
+```
+
+### 5.4 Frontend Architecture
+
+#### 5.4.1 Module Structure
+
+**Core Application (`/uix/app.js`):**
+- Global utilities and state management
+- Toast notification system  
+- CSRF token management
+- API communication via `window.apiFetch`
+
+**Task Management (`/uix/tasks.js`):**
+- Board rendering and interaction logic
+- Drag-and-drop implementation  
+- Task CRUD operations
+- Mobile Move Mode functionality
+
+**Unified Editor (`/uix/editor.js`):**
+- Full-featured text editing
+- Auto-save functionality
+- Font size preference management
+- Modal lifecycle management
+
+**Authentication (`/uix/auth.js`):**
+- Login/registration form handling
+- Password reset workflow
+- Session management
+
+#### 5.4.2 CSS Architecture
+
+**Base Styles (`/uix/style.css`):**
+- CSS custom properties for theming
+- Responsive grid and flexbox utilities
+- Animation and transition definitions
+- Accessibility support (high contrast, reduced motion)
+
+**View-Specific Styles:**
+- `/uix/tasks.css` - Task board and card styling
+- `/uix/editor.css` - Unified Editor interface  
+- `/uix/attachments.css` - File management UI
+- `/uix/settings.css` - Settings panel styling
+
+#### 5.4.3 Progressive Web App Features
+
+**Service Worker Implementation:**
+- Application shell caching for offline access
+- Background sync for offline operations
+- Push notification support
+- Update management and cache versioning
+
+**IndexedDB Integration:**
+- Local data mirroring for offline work
+- Conflict resolution for multi-device editing
+- Write queue for offline operations
+- Sync status management
+
+### 5.5 Security Model & Privacy Architecture
+
+#### 5.5.1 Zero-Knowledge Encryption
+
+**Encryption Boundary:**
+All cryptographic operations handled by `/uix/crypto.js` module with clear separation between encrypted and plaintext data flows.
+
+**Key Management:**
+- Master Key derived on-device using Argon2id from passphrase + salt
+- Per-item Data Encryption Keys (DEKs) for granular access control
+- DEKs encrypted with user's Master Key before storage
+- Server never sees plaintext data or Master Key
+
+**Recovery System:**
+- User-generated security questions during setup
+- Question answers hash to derive Recovery Key using PBKDF2
+- Recovery Key encrypts a copy of the Master Key (Recovery Envelope)
+- Password reset requires answering questions to decrypt Master Key copy
+
+#### 5.5.2 Sharing & Collaboration Security
+
+**Privacy Boundaries:**
+- Only non-private items can be shared (clear user control)
+- Shared items use server-side encryption (documented trade-off)
+- Private items remain zero-knowledge encrypted
+- Future: Asymmetric key exchange for end-to-end sharing
+
+**Permission Enforcement:**
+- Server-side ownership validation on all operations
+- CSRF protection on all mutating requests
+- Session-based authentication with secure tokens
+- Audit trail for all sharing activities
+
+### 5.6 Password Reset & Recovery
+
+#### 5.6.1 Standard Password Reset (Current)
+
+**Implementation:**
+- Email-based reset with secure tokens
+- SHA-256 hashed tokens with 1-hour expiration
+- Single-use tokens prevent replay attacks
+- PHPMailer with SMTP for reliable delivery
+
+**Security Considerations:**
+- Tokens stored as hashes, never plaintext
+- Automatic cleanup of expired tokens
+- Rate limiting to prevent abuse
+- Secure token generation using cryptographically secure random bytes
+
+#### 5.6.2 Zero-Knowledge Password Reset (Future)
+
+**Challenge:**
+Traditional password resets incompatible with zero-knowledge encryption without recovery mechanism.
+
+**Solution:**
+- Security questions for recovery key derivation
+- Recovery envelope containing encrypted Master Key copy
+- User education about trade-offs between security and recoverability
+- Clear warnings about data loss if both password and recovery answers are lost
+
+### 5.7 Development & Debugging Infrastructure
+
+#### 5.7.1 Debug System
+
+**Server-Side Debugging:**
+- Global debug message collection in `/incs/config.php`
+- Automatic debug array inclusion when DEVMODE=true
+- File logging fallback to `/debug.log`
+- Comprehensive error tracing with context
+
+**Client-Side Integration:**
+- Automatic server debug message extraction
+- Browser console logging with consistent formatting
+- Error correlation between client and server
+- Performance monitoring and optimization insights
+
+#### 5.7.2 API Testing
+
+**Automated Testing:**
+- CURL command validation for all endpoints
+- Authentication flow testing
+- CRUD operation verification
+- File upload and quota testing
+
+**Manual Testing:**
+- Cross-browser compatibility validation
+- Mobile responsiveness testing
+- Performance testing under load
+- Security penetration testing
+
+### 5.8 Environment Configuration
+
+#### 5.8.1 Environment Variables
+
+**Required Configuration (`.env`):**
+```
+DB_HOST=localhost
+DB_NAME=mydayhub
+DB_USER=username
+DB_PASS=password
+
+SMTP_HOST=smtp.server.com
+SMTP_PORT=587
+SMTP_USER=email@domain.com
+SMTP_PASS=password
+SMTP_FROM=noreply@mydayhub.com
+
+APP_URL=https://mydayhub.com
+DEV_MODE=false
+```
+
+#### 5.8.2 Deployment Environments
+
+**Development:** `localhost` with XAMPP/MAMP
+- Full debugging enabled
+- File logging active
+- SMTP testing via local mail catcher
+
+**Staging:** `breveasy.com` 
+- Production-like configuration
+- Limited debugging
+- Real SMTP for testing
+
+**Production:** `mydayhub.com`
+- Debugging disabled
+- Performance optimization enabled
+- Monitoring and alerting active
+
+### 5.9 Performance & Optimization
+
+#### 5.9.1 Frontend Optimization
+
+**Asset Management:**
+- CSS/JS minification for production
+- Image optimization and lazy loading
+- Font loading optimization
+- Critical path CSS prioritization
+
+**JavaScript Performance:**
+- Debounced user input handling
+- Virtual scrolling for large lists
+- Efficient DOM manipulation patterns
+- Memory leak prevention
+
+#### 5.9.2 Backend Optimization
+
+**Database Performance:**
+- Proper indexing on query patterns
+- Query optimization and profiling
+- Connection pooling and management
+- Caching layer implementation
+
+**API Efficiency:**
+- Batch operations where possible
+- Pagination for large datasets
+- Response compression
+- Rate limiting and throttling
 
 ---
 
-## 5. APPENDICES
+## 6. Appendices
 
-### Glossary
-* Task card = task
-* Journal entry card = entry
-* Event plan = event
-* Event plan segment = segment
-* Outlines tree = tree
-* Tree branch = branch
-* Branch node = node
-* Signal task = directly advances the mission
-* Support task = indirectly enables Signal
-* Backlog task = does not require immediate attention; candidate for deferral to a later time.
-* Completed task = finished item, archived at bottom
-* Master Key = user-specific encryption key derived on-device, never transmitted
-* DEK = Data Encryption Key, unique per item, wrapped with Master Key
-* Recovery Envelope = Master Key copy encrypted with Recovery Key
-* Recovery Key = key derived from security question answers
-* hostinger hosted environment = web-env
-* local hosted environment = loc-env
-* Drag-and-Drop = DnD
-* Toast Notification = Toast
-* Modal Window = Modal
-* Move Mode = mobile-friendly relocation workflow with banner, wiggle state, and drop-zones.
-* Drag Handle = the ≡ grip area on each task card to initiate touch DnD.
-* Snoozed Task: A task with a future schedule (snoozed_until); visually muted, backlog status, automatically re-awakens at 9 AM user’s local time, with toast notification required for acknowledgment.
+### 6.1 Glossary
 
----
+**Application Components:**
+- **Task card** = Individual task item in a column
+- **Journal entry card** = Daily note item (future feature)
+- **Event plan** = Meeting or event container (future feature)
+- **Event plan segment** = Time block within an event (future feature)
+- **Outlines tree** = Hierarchical structure (future feature)
+- **Tree branch** = Section within an outline (future feature)
+- **Branch node** = Individual item in outline (future feature)
 
-### Wireframe Mockups
+**Task Classifications:**
+- **Signal task** = Directly advances the mission; highest priority work
+- **Support task** = Indirectly enables Signal tasks; important but secondary
+- **Backlog task** = Important but not time-sensitive; can be deferred
+- **Completed task** = Finished item, archived at bottom of column
 
-#### TASKS VIEW
-┌───────────────────────────────────────────────────────────────────────────┐
+**Encryption & Security:**
+- **Master Key** = User-specific encryption key derived on-device, never transmitted
+- **DEK** = Data Encryption Key, unique per item, wrapped with Master Key
+- **Recovery Envelope** = Master Key copy encrypted with Recovery Key
+- **Recovery Key** = Key derived from security question answers
+- **Zero-Knowledge** = Server cannot read user data even if compromised
+
+**User Interface:**
+- **Drag-and-Drop** = DnD - Desktop interaction for reordering items
+- **Toast Notification** = Non-blocking popup message for feedback
+- **Modal Window** = Focused overlay window for specific tasks
+- **Move Mode** = Mobile-friendly relocation workflow with visual guides
+- **Drag Handle** = The ≡ grip area on task cards for touch DnD initiation
+- **Popover** = Small contextual menu (e.g., classification selector)
+
+**System States:**
+- **Snoozed Task** = Task with future schedule; visually muted until wake time
+- **Private Item** = Content marked private; encrypted and hideable
+- **Shared Item** = Content shared with other users with specific permissions
+
+**Environment Types:**
+- **hostinger hosted environment** = web-env (production hosting)
+- **local hosted environment** = loc-env (development setup)
+
+### 6.2 Wireframe Mockups
+
+#### 6.2.1 Tasks View (Primary Interface)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
 │[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Column]  │
-└───────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘
 ┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
-│ Column A ⓹ … > │ │ < Column B ⓶ … > │ │ < Column C ⓺ … │
+│ Column A ▹ … > │ │ < Column B ▶ … > │ │ < Column C ► … │
 │─────────────────│ │──────────────────│ │─────────────────│
-│□ Monday         │ │□ Blue            │ │□ Black          │
-│□ Tuesday        │ │□ White           │ │□ Red            │
-│□ Wednesday      │ │                  │ │□ Wash car       │
-│□ Friday         │ │                  │ │□ Mow lawn       │
-│☑ Thursday       │ │                  │ │□ Water plant    │
-│                 │ │                  │ │□ Garbage out    │
+│☐ Monday         │ │☐ Blue            │ │☐ Black          │
+│☐ Tuesday        │ │☐ White           │ │☐ Red            │
+│☐ Wednesday      │ │                  │ │☐ Wash car       │
+│☐ Friday         │ │                  │ │☐ Mow lawn       │
+│☑ Thursday       │ │                  │ │☐ Water plant    │
+│                 │ │                  │ │☐ Garbage out    │
 │─────────────────│ │──────────────────│ │─────────────────│
 │ + New Task      │ │ + New Task       │ │ + New Task      │
 └─────────────────┘ └──────────────────┘ └─────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
+┌─────────────────────────────────────────────────────────────────────────────┐
 │ 19.Aug.25, Tuesday                [FILTERS]                        [alfa] │
-└───────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
+*Visual Elements:*
+- Colored status bands on left edge of each task card
+- Privacy indicators (diagonal lines for private items)
+- Attachment and due date icons in task footer
+- Drag handles (≡) visible on hover/mobile
 
-* In every task card representation, show a colored status band at the left for classification.
-* Add a clear visual switch for per-card and per-column privacy.
-* Status cycling and privacy actions are always reachable via quick controls.
+#### 6.2.2 Mobile Layout (Responsive)
 
+```
+┌─────────────────────┐
+│ [≡] MyDayHub   [⚙] │
+├─────────────────────┤
+│ Column A        [⋮] │
+│─────────────────────│
+│ ☐ Monday            │
+│ ☐ Tuesday           │
+│ ☑ Thursday          │
+│─────────────────────│
+│ + New Task          │
+├─────────────────────┤
+│ Column B        [⋮] │
+│─────────────────────│
+│ ☐ Blue              │
+│ ☐ White             │
+│─────────────────────│
+│ + New Task          │
+├─────────────────────┤
+│ [FILTERS] [username]│
+└─────────────────────┘
+```
 
-#### JOURNAL VIEW (Future)
-┌───────────────────────────────────────────────────────────────────────────┐
-│[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]                      │
-└───────────────────────────────────────────────────────────────────────────┘
-┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
-│ 18.Aug.25, Mon      … │ │ 19.Aug.25, Tue      … │ │ 20.Aug.25, Wed      … │
-│───────────────────────│ │───────────────────────│ │───────────────────────│
-│  Meeting notes        │ │ VISUAL LANGUAGE NOTE  │ │  Progress summary     │
-│  Project kickoff      │ │ Milestone feedback    │ │                       │
-│  Daily reflection     │ │                       │ │                       │
-│                       │ │                       │ │                       │
-│───────────────────────│ │───────────────────────│ │───────────────────────│
-│ + New Entry           │ │ + New Entry           │ │ + New Entry           │
-└───────────────────────┘ └───────────────────────┘ └───────────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
-│ 19.Aug.25, Tuesday  [<<][<] [>][>>] View [1][3][5] Days [Wrap-up]   (alfa)│
-└───────────────────────────────────────────────────────────────────────────┘
+*Mobile Adaptations:*
+- Vertical column stacking
+- Touch-friendly targets (44px minimum)
+- Hamburger menu for navigation
+- Bottom toolbar for filters and user info
 
-#### OUTLINES VIEW (Future)
-┌───────────────────────────────────────────────────────────────────────────┐
-│[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Outline] │
-└───────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────┐  ┌─────────────────────────────┐
-│ Project Outline           … │  │ Node editor                 │
-│─────────────────────────────│  │─────────────────────────────│
-│ ▸ Main Goal                 │  │                             │
-│    ├─ Research phase        │  │                             │
-│    │   └─ Gather articles   │  │                             │
-│    ├─ Development           │  │                             │
-│    │   ├─ Design UI         │  │                             │
-│    │   └─ Implement backend │  │                             │
-│    └─ Testing               │  │                             │
-│        ├─ Unit tests        │  │                             │
-│        └─ QA review         │  │                             │
-│            ├─ Preview       │  │                             │
-│            └─ Final report  │  │                             │         
-│                             │  │                             │
-│─────────────────────────────│  │                             │
-│ + Add Child Under Selected  │  │                             │
-└─────────────────────────────┘  └─────────────────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
-│ 19.Aug.25, Tuesday       [Promote] [Demote] [Fold] [Unfold]        (alfa) │
-└───────────────────────────────────────────────────────────────────────────┘
+#### 6.2.3 Task Actions Menu
 
-#### EVENTS VIEW (Future)
-┌───────────────────────────────────────────────────────────────────────────┐
-│[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]       [+ New Event]  │
-└───────────────────────────────────────────────────────────────────────────┘
-┌───────────────────────┐ ┌───────────────────────┐ ┌───────────────────────┐
-│ AUG.21 Thur         … │ │ AUG.22 Fri          … │ │ AUG.23 Sat          … │
-│───────────────────────│ │───────────────────────│ │───────────────────────│
-│ 08:00 Breakfast       │ │ 08:00 Workshop        │ │ 08:00 Team breakfast  │
-│ 09:00 Kickoff Meeting │ │ 09:00 Presentations   │ │ 09:00 Check-out       │
-│ 10:30 Session A       │ │ 11:00 Networking      │ │                       │
-│ 12:00 Lunch Break     │ │                       │ │                       │
-│───────────────────────│ │───────────────────────│ │───────────────────────│
-│ + Add Segment         │ │ + Add Segment         │ │ + Add Segment         │
-└───────────────────────┘ └───────────────────────┘ └───────────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
-│ 19.Aug.25, Tuesday       Filters: [Rooms] [Assets] [People]         (alfa)│
-└───────────────────────────────────────────────────────────────────────────┘
+```
+┌─────────────────────┐
+│ ☐ Task Title    [⋮] │ ← Click ⋮ opens menu
+│─────────────────────│
+│     [📝] Notes      │
+│     [📅] Due Date   │
+│     [📎] Share      │
+│     [👁] Private    │
+│     [⏰] Snooze     │
+│     [📋] Duplicate  │
+│     [🗑] Delete     │
+└─────────────────────┘
+```
 
-#### NOTES EDITOR VIEW (MAXIMIZED)
-┌───────────────────────────────────────────────────────────────────────────┐
-│ Editing a task's note                                            [▫] [×]  │
-└───────────────────────────────────────────────────────────────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
+#### 6.2.4 Unified Editor (Modal)
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ Editing a task's note                                            [□] [×]  │
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
 │ [Format] [Find & Replace] [Search] [Add Task]                           … │
 │ [AA] [Aa] [aa] [[]] 🔢  [A-] [A+]                                         │
-│───────────────────────────────────────────────────────────────────────────│
+│─────────────────────────────────────────────────────────────────────────────│
 │ 1│                                                                        │
 │ 2│  LOREM IPSUM DOLOR                                                     │
 │ 4│                                                                        │
@@ -776,120 +1130,256 @@ Payload stored as PHP-encoded JSON string to avoid JSON_OBJECT(...) portability 
 │12│  Suspendisse dapibus ante ac eros bindum, vel laoreet massa cursus...  │
 │  │                                                                        │
 │  │                                                                        │
-└───────────────────────────────────────────────────────────────────────────┘
-┌───────────────────────────────────────────────────────────────────────────┐
+└─────────────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
 │ Words: 231  Chars: 1664  Lines: 12                      Last saved: Never │
-└───────────────────────────────────────────────────────────────────────────┘
+└─────────────────────────────────────────────────────────────────────────────┘
+```
 
-#### NOTES EDITOR VIEW (REDUCED, OVERLAY)
-┌─────────────────────────────────────────────┐
-│ Editing a task's note                [□][×] │
-└─────────────────────────────────────────────┘
-┌─────────────────────────────────────────────┐
-│ [Format] [Find & Replace]                 … │
-│ [AA] [Aa] [aa] [U] [|] [🔢] [A-] [A+]       │
-│─────────────────────────────────────────────│
-│                                             │
-│ LOREM IPSUM DOLOR                           │
-│ ───────────────                             │
-│ Lorem ipsum dolor sit amet, consectetur     │
-│                                             │
-└─────────────────────────────────────────────┘
-┌─────────────────────────────────────────────┐
-│ W: 231  Ch: 1664  L: 12   Last saved: Never │
-└─────────────────────────────────────────────┘
+#### 6.2.5 Quick Notes (Card Flip)
 
+```
+Front Side:                    Back Side (Flipped):
+┌─────────────────────┐       ┌─────────────────────┐
+│ ☐ Task Title    [⋮] │  →    │ Quick Note:         │
+│ 📝 🗓️ 📎 👁          │       │ ┌─────────────────┐ │
+│─────────────────────│       │ │                 │ │
+│ [Signal] [Support]  │       │ │ Type here...    │ │
+└─────────────────────┘       │ │                 │ │
+							  │ └─────────────────┘ │
+							  │ [Save] [Cancel]     │
+							  │      [Expand]       │
+							  └─────────────────────┘
+```
+
+### 6.3 Application Icons & Visual System
+
+#### 6.3.1 Icon Standards
+
+**Format:** SVG with `currentColor` for theme consistency
+**Size:** 16x16px base, scalable to 24x24px for touch targets
+**Style:** Minimal, consistent stroke width, rounded corners where appropriate
+
+**Core Icons:**
+- 📝 Notes (edit/document symbol)
+- 📅 Due Date (calendar symbol)  
+- 📎 Attachments (paperclip symbol)
+- 👁 Privacy (eye symbol with strikethrough for private)
+- 🔄 Share (interconnected nodes)
+- ⏰ Snooze (clock with Z symbol)
+- ⋮ Actions (vertical ellipsis)
+- ≡ Drag Handle (hamburger icon rotated)
+
+**Status Indicators:**
+- ✓ Completed (checkmark in circle)
+- ▶ Signal (right-pointing triangle, green)
+- ◆ Support (diamond, blue with stripes for accessibility)
+- ⬣ Backlog (hexagon, orange)
+- 🔒 Private (lock symbol)
+- 👥 Shared (people symbol)
+
+### 6.4 Color System & Theming
+
+#### 6.4.1 Primary Palette
+
+**Accent Color:** `#3B82F6` (Blue 500)
+- Primary interactive elements
+- Focus rings and selection states
+- Link colors and call-to-action buttons
+
+**Classification Colors:**
+- **Signal:** `#10B981` (Green 500) - High priority, mission-critical
+- **Support:** `#3B82F6` (Blue 500) - Important, enables Signal tasks  
+- **Backlog:** `#F59E0B` (Orange 500) - Deferred, not time-sensitive
+- **Completed:** `#6B7280` (Gray 500) - Archived, finished work
+
+#### 6.4.2 Dark Theme (Primary)
+
+**Background Hierarchy:**
+- App Background: `#0F172A` (Slate 900)
+- Card Background: `#1E293B` (Slate 800)  
+- Interactive Background: `#334155` (Slate 700)
+- Border Color: `#475569` (Slate 600)
+
+**Text Hierarchy:**
+- Primary Text: `#F8FAFC` (Slate 50)
+- Secondary Text: `#CBD5E1` (Slate 300)
+- Muted Text: `#94A3B8` (Slate 400)
+
+#### 6.4.3 Light Theme (Optional)
+
+**Background Hierarchy:**
+- App Background: `#FFFFFF` (White)
+- Card Background: `#F8FAFC` (Slate 50)
+- Interactive Background: `#F1F5F9` (Slate 100)
+- Border Color: `#E2E8F0` (Slate 200)
+
+**Text Hierarchy:**
+- Primary Text: `#0F172A` (Slate 900)
+- Secondary Text: `#475569` (Slate 600)
+- Muted Text: `#64748B` (Slate 500)
+
+#### 6.4.4 High Contrast Mode
+
+Enhanced contrast ratios for accessibility compliance:
+- Minimum 4.5:1 for normal text
+- Minimum 3:1 for large text and UI components
+- Enhanced border contrast for better element definition
+- Alternative visual patterns for color-dependent information
+
+### 6.5 File Organization
+
+#### 6.5.1 Project Structure
+
+```
+mydayhub-app/
+├── index.php                  # Main application entry point
+├── .env                       # Environment configuration (not in git)
+├── .gitignore                 # Git exclusion rules
+├── debug.log                  # Development debugging output
+├── .htaccess                  # Apache URL rewriting rules
+├── composer.json              # PHP dependency management
+├── composer.lock              # Locked dependency versions
+├── vendor/                    # Composer dependencies (not in git)
+│
+├── api/                       # Backend API gateway and handlers
+│   ├── api.php               # Main API gateway with routing
+│   ├── auth.php              # Authentication endpoints
+│   ├── tasks.php             # Task management endpoints
+│   └── users.php             # User preference endpoints
+│
+├── uix/                       # Frontend user interface
+│   ├── app.js                # Global utilities and state management
+│   ├── auth.js               # Authentication form handling
+│   ├── editor.js             # Unified Editor functionality
+│   ├── tasks.js              # Task board interaction logic
+│   ├── style.css             # Global styles and theme variables
+│   ├── tasks.css             # Task-specific styling
+│   ├── editor.css            # Editor interface styling
+│   ├── attachments.css       # File management styling
+│   └── settings.css          # Settings panel styling
+│
+├── media/                     # Static assets and uploads
+│   ├── imgs/                 # User-uploaded attachments (organized by user)
+│   └── icons/                # Application icons and graphics
+│
+├── incs/                      # Backend includes and utilities
+│   ├── config.php            # Application configuration
+│   ├── db.php                # Database connection management
+│   ├── mailer.php            # Email sending utilities
+│   └── meta/                 # Documentation and specifications
+│       ├── spec.md           # This specification document
+│       ├── done.md           # Development progress log
+│       └── dialogs.md        # Design decision discussions
+│
+└── login/                     # Authentication pages
+	├── login.php             # User login form
+	├── register.php          # User registration form
+	├── logout.php            # Session termination
+	├── forgot-password.php   # Password reset request
+	└── reset-password.php    # Password reset completion
+```
+
+### 6.6 Development Workflow & Testing
+
+#### 6.6.1 Development Process
+
+**Code Standards:**
+- PHP 8.2+ features and type declarations
+- ESLint configuration for JavaScript consistency
+- CSS naming conventions (BEM methodology)
+- Comprehensive inline documentation
+
+**Version Control:**
+- Git with atomic commits (≤120 words)
+- Descriptive commit messages with scope/files explicit
+- Feature branches for major changes
+- Pull request reviews for quality assurance
+
+**Testing Strategy:**
+- Unit tests for critical business logic
+- Integration tests for API endpoints
+- Manual testing checklist for UI interactions
+- Cross-browser compatibility validation
+
+#### 6.6.2 Debugging & Observability
+
+**Development Mode Features:**
+- `DEVMODE=true` enables comprehensive logging
+- Debug message collection in global array
+- Browser console integration for server messages
+- File logging fallback to `/debug.log`
+
+**Production Monitoring:**
+- Error tracking and alerting
+- Performance monitoring and optimization
+- User analytics for feature usage
+- Security audit logging
+
+#### 6.6.3 API Testing Patterns
+
+**CURL Testing Examples:**
+```bash
+# Test user registration
+curl -X POST http://localhost/api/api.php \
+  -H "Content-Type: application/json" \
+  -d '{"module":"auth","action":"register","data":{"username":"test","email":"test@example.com","password":"password123"}}'
+
+# Test task creation with CSRF
+curl -X POST http://localhost/api/api.php \
+  -H "Content-Type: application/json" \
+  -H "X-CSRF-Token: your-token-here" \
+  -d '{"module":"tasks","action":"createTask","data":{"column_id":1,"title":"Test Task"}}'
+```
+
+### 6.7 Deployment & Environment Management
+
+#### 6.7.1 Environment Configuration
+
+**Local Development:**
+- XAMPP/MAMP for rapid iteration
+- File-based debugging enabled
+- Hot reload for frontend changes
+- Full error reporting active
+
+**Staging Environment:**
+- Production-like configuration
+- Limited debugging for security
+- Real email delivery testing
+- Performance profiling enabled
+
+**Production Deployment:**
+- Optimized asset delivery
+- Comprehensive monitoring
+- Automated backup systems
+- Zero-downtime deployment process
+
+#### 6.7.2 Performance Benchmarks
+
+**Target Performance:**
+- Initial page load: <2 seconds
+- Task operations: <200ms response time
+- File uploads: <5 seconds for 5MB files
+- Drag operations: 60fps smooth animation
+
+**Scalability Targets:**
+- 1000+ tasks per user without performance degradation
+- 100+ concurrent users per server
+- 99.9% uptime with load balancing
+- Automatic scaling based on demand
 
 ---
 
-### Application Icons
-Consistent SVGs for contextual menu, status, etc.  
-New snooze icon (SVG, square, stylized "z" and "Z" motif, sleeping effect) for footer display on snoozed tasks.
-Colors are muted/dark for contrast/legibility.
+## Conclusion
+
+MyDayHub represents a comprehensive approach to privacy-focused productivity software, balancing the complexity of zero-knowledge encryption with the simplicity users expect from modern applications. The specification outlined above provides a roadmap for building not just a task management tool, but a foundation for the future of private, collaborative software.
+
+The focus on the Tasks View as the primary interface allows for deep optimization and polish in a single domain, while the underlying architecture remains flexible enough to support the planned expansion into Journal, Outlines, and Events views. This focused approach ensures that users receive immediate value while establishing patterns and infrastructure that will scale elegantly.
+
+The technical architecture prioritizes security, performance, and maintainability, with clear separation of concerns between client-side encryption and server-side collaboration features. The hybrid approach to privacy—where users control what content is encrypted versus what can be shared—provides a practical balance between absolute privacy and team collaboration needs.
+
+As development continues, this specification will evolve to reflect lessons learned, user feedback, and emerging best practices in privacy-focused application development. The goal remains constant: to create software that empowers users to focus on what matters while maintaining absolute control over their private information.
 
 ---
 
-### Environments
-* **Production:** mydayhub.com (Beta 3)  
-* **Development:** localhost (Beta 5 and on)  
-* **Online Test:** breaveasy.com (Beta 5 and on)  
-* All environments use isolated DBs and files.  
-
----
-
-### File Locations
-* site root 	index.php, .env, .gitignore, debug.log, .htaccess, composer.*
-* \api\			api.php, auth.php, tasks.php, users.php
-* \uix\			app.js, auth.js, editor.js, tasks.js, style.css, editor.css, tasks.css, attachments.css, settings.css, login.css
-* \media\		sounds, images, icons and all other app ui files, no subdirectories except \media.
-* \media\imgs\	images attached to tacks are stored here (with file name coded for each user), no subdirectories.
-* \incs\		config.php, db.php, mailer.php
-* incs\meta		markdown documents describing the app.
-* \login\		login.php, register.php, logout.php, forgot-password.php, reset-password.php
-
----
-
-### Versioning
-* GitHub with atomic commits (≤120 words), scope/files explicit.
-* Source files tagged.
-
----
-
-### Debug & Testing Patterns
-#### Development Mode Debugging
-* DEVMODE=true Logging: Comprehensive debug message collection and browser display
-* Server-to-Client Pipeline: Debug messages automatically included in API responses
-* Browser Console Integration: JavaScript extracts and displays server debug traces
-* Response Debugging: Temporary capability to log raw server responses for JSON parsing issues
-* PHPMailer Handling: SMTP debug output disabled to prevent JSON corruption
-
-#### API Testing
-* CURL Commands: Direct API endpoint testing with proper CSRF tokens
-* Authentication Testing: Registration, login, password reset flows
-* CRUD Operations: All task and column operations with ownership verification
-* File Upload Testing: Attachment handling, quota enforcement, MIME validation
-
-#### UI Testing Patterns
-* Drag & Drop: Cross-column moves, within-column reordering, mobile Move Mode
-* Classification: Status band interactions, sorting enforcement, popover functionality
-* Privacy Toggles: Item-level privacy, filter visibility, sharing restrictions
-* Quota Management: Storage limits, pruning policies, user notifications
-* Offline Simulation: Network drop scenarios, write queue behavior, sync resolution
-
-#### Encryption Testing (Future)
-* Crypto Module Boundaries: Ensure no plaintext leaks, proper key derivation
-* Recovery System: Security question setup, Master Key recovery, data re-encryption
-* Zero-Knowledge Verification: Server blindness testing, client-side encryption validation
-
-#### Security Testing
-* CSRF Protection: Token validation on all mutations
-* Session Management: Authentication enforcement, ownership checks
-* Input Validation: SQL injection prevention, XSS protection, file upload security
-* Password Reset: Token security, expiration handling, single-use enforcement
-
-#### Regression Testing
-* After New Features: Confirm prior workflows remain intact
-* Cross-Browser: Desktop Chrome/Firefox/Safari, Mobile Chrome/Safari
-* Responsive Design: Mobile layout, touch interactions, keyboard navigation
-* Performance: API response times, UI animation smoothness, large dataset handling
-
-#### Snnozed tasks
-* Snooze/Unsnooze: Verify correct movement to backlog and filter behavior.
-* Wake Time: Test time zone conversion, correct display, and wake notification.
-* Custom Date Picker: Confirm date selection, validation, and integration with snooze logic.
-* Accessibility: ARIA notifications, toast flows, and proper focus management.
-
----
-
-### Touch Interaction Rules
-* **Scrolling vs dragging:** Cards scroll the page by default; dragging
-  requires touching the **handle** (≡) or entering **Move Mode**.
-* **Long-press delay:** ~350 ms before lift; provide subtle haptic cue where
-  available.
-* **Target sizes:** Drop-zones are ≥44 px high; banner buttons are ≥48 px.
-* **Abort affordances:** Cancel button, backdrop tap, Esc key (if present),
-  and device Back button must all exit Move Mode without side effects.
-
-***************
-**END OF SPEC**
-***************
+*This document serves as the definitive specification for MyDayHub development. All implementation decisions should reference this document, and any deviations or additions should be documented through updates to maintain accuracy and team alignment.*

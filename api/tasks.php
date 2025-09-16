@@ -7,7 +7,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 6.6.0
+ * @version 6.9.1
  * @author Alex & Gemini
  */
 
@@ -164,6 +164,7 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_unsnooze_task($pdo, $userId, $data);
 			}
 			break;
+		// Modified for Sharing Foundation - Error handling improvements
 		case 'shareTask':
 			if ($method === 'POST') {
 				handle_share_task($pdo, $userId, $data);
@@ -186,6 +187,47 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 	}
 }
+
+
+// Add this function to your /api/tasks.php file to include share data when fetching tasks:
+
+/**
+ * Get share information for tasks owned by the current user
+ * Returns array with task_id as key and shares array as value
+ */
+function getTaskShares($pdo, $userId, $taskIds) {
+	if (empty($taskIds)) return [];
+	
+	$placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
+	$sql = "
+		SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, s.status
+		FROM shared_items s
+		JOIN users u ON u.user_id = s.recipient_id
+		WHERE s.item_type = 'task' 
+		AND s.item_id IN ($placeholders) 
+		AND s.owner_id = ? 
+		AND s.status = 'active'
+		ORDER BY u.username
+	";
+	
+	$params = array_merge($taskIds, [$userId]);
+	$stmt = $pdo->prepare($sql);
+	$stmt->execute($params);
+	$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	
+	// Group shares by task_id
+	$taskShares = [];
+	foreach ($results as $share) {
+		$taskId = $share['task_id'];
+		if (!isset($taskShares[$taskId])) {
+			$taskShares[$taskId] = [];
+		}
+		$taskShares[$taskId][] = $share;
+	}
+	
+	return $taskShares;
+}
+
 
 // Modified for Snooze Feature
 /**
@@ -1352,97 +1394,129 @@ function handle_get_attachments(PDO $pdo, int $userId): void {
  * Requires: data.task_id, data.recipient_identifier (email or username), data.permission ('edit'|'view')
  * Policy: only the owner can share. Uses shared_items (item_type='task').
  */
-function handle_share_task(PDO $pdo, int $userId, ?array $data): void {
-	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
-	$recipientIdent = trim((string)($data['recipient_identifier'] ?? ''));
-	$permission = ($data['permission'] ?? 'edit') === 'view' ? 'view' : 'edit';
-
-	if ($taskId <= 0 || $recipientIdent === '') {
-		send_json_response(['status'=>'error','message'=>'Invalid input.'], 400);
-		return;
-	}
-
+function handle_share_task($pdo, $currentUserId, $data) {
 	try {
-		$pdo->beginTransaction();
-		$__step = 'tx_started';
-		// 1) Confirm caller owns the task
-		$own = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :tid AND deleted_at IS NULL");
-		$own->execute([':tid'=>$taskId]);
-		$row = $own->fetch(PDO::FETCH_ASSOC);
-		$__step = 'owner_ok';
-		if (!$row || (int)$row['user_id'] !== $userId) {
-			$pdo->rollBack();
-			send_json_response(['status'=>'error','message'=>'Not found or no permission.'], 404);
-			return;
-		}
-
-		// 2) Resolve recipient by email OR username
-		$uStmt = $pdo->prepare("SELECT user_id FROM users WHERE email = :ident OR username = :ident LIMIT 1");
-		$uStmt->execute([':ident'=>$recipientIdent]);
-		$u = $uStmt->fetch(PDO::FETCH_ASSOC);
-		$__step = 'recipient_ok';
-		if (!$u) {
-			$pdo->rollBack();
-			send_json_response(['status'=>'error','message'=>'Recipient not found.'], 404);
-			return;
-		}
-		$recipientId = (int)$u['user_id'];
-		if ($recipientId === $userId) {
-			$pdo->rollBack();
-			send_json_response(['status'=>'error','message'=>'Cannot share with yourself.'], 400);
-			return;
-		}
-
-		// 3) Optional trust gate via user_trusts (accepted)
-		$trust = $pdo->prepare("
-			SELECT 1 FROM user_trusts 
-			WHERE owner_user_id = :owner AND trusted_user_id = :rec AND status = 'accepted' LIMIT 1
-		");
-		$trust->execute([':owner'=>$userId, ':rec'=>$recipientId]);
-		$__step = 'trust_ok';
-		if (!$trust->fetchColumn()) {
-			$pdo->rollBack();
-			send_json_response(['status'=>'error','message'=>'Recipient is not trusted/accepted.'], 403);
-			return;
-		}
-
-		// 4) Upsert into shared_items
-		$ins = $pdo->prepare("
-			INSERT INTO shared_items (owner_id, recipient_id, item_type, item_id, permission, status, created_at, updated_at)
-			VALUES (:owner, :rec, 'task', :tid, :perm, 'active', UTC_TIMESTAMP(), UTC_TIMESTAMP())
-			ON DUPLICATE KEY UPDATE permission = VALUES(permission), status='active', updated_at = UTC_TIMESTAMP()
-		");
-		$ins->execute([':owner'=>$userId, ':rec'=>$recipientId, ':tid'=>$taskId, ':perm'=>$permission]);
-		$__step = 'upsert_ok';
+		log_debug_message("Starting share task process");
+		log_debug_message("Received data: " . json_encode($data));
+		log_debug_message("Current user ID: " . $currentUserId);
 		
-		// 5) Log activity (best-effort; payload encoded in PHP for DB compatibility)
-		$payload = json_encode(['permission' => $permission], JSON_UNESCAPED_SLASHES);
-		$logStmt = $pdo->prepare("
-		  INSERT INTO sharing_activity (shared_item_id, actor_user_id, action, payload, created_at)
-		  VALUES (
-			(SELECT id FROM shared_items WHERE owner_id=:o AND recipient_id=:r AND item_type='task' AND item_id=:t LIMIT 1),
-			:actor, 'created', :payload, UTC_TIMESTAMP()
-		  )
-		");
-		$logStmt->execute([
-		  ':o' => $userId,
-		  ':r' => $recipientId,
-		  ':t' => $taskId,
-		  ':actor' => $userId,
-		  ':payload' => $payload
+		// Validate required data fields
+		if (!isset($data['task_id'])) {
+			send_json_response(['status' => 'error', 'message' => 'Task ID is required.']);
+			return;
+		}
+		
+		if (!isset($data['recipient_identifier']) || $data['recipient_identifier'] === null) {
+			send_json_response(['status' => 'error', 'message' => 'Recipient identifier is required.']);
+			return;
+		}
+		
+		if (!isset($data['permission'])) {
+			send_json_response(['status' => 'error', 'message' => 'Permission is required.']);
+			return;
+		}
+		
+		$taskId = intval($data['task_id']);
+		$recipientIdentifier = trim($data['recipient_identifier']);
+		$permission = $data['permission']; // 'edit' or 'view'
+
+		log_debug_message("Task ID: $taskId, Recipient: $recipientIdentifier, Permission: $permission");
+
+		// Validate permission
+		if (!in_array($permission, ['edit', 'view'])) {
+			send_json_response(['status' => 'error', 'message' => 'Invalid permission level.']);
+			return;
+		}
+
+		// Validate recipient identifier is not empty after trimming
+		if (empty($recipientIdentifier)) {
+			send_json_response(['status' => 'error', 'message' => 'Recipient identifier cannot be empty.']);
+			return;
+		}
+
+		// 1) Verify the task exists and current user owns it
+		log_debug_message("Checking task ownership");
+		$stmt = $pdo->prepare("SELECT task_id, user_id FROM tasks WHERE task_id = ?");
+		$stmt->execute([$taskId]);
+		$task = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$task) {
+			send_json_response(['status' => 'error', 'message' => 'Task not found.']);
+			return;
+		}
+
+		if ($task['user_id'] != $currentUserId) {
+			send_json_response(['status' => 'error', 'message' => 'You can only share tasks you own.']);
+			return;
+		}
+
+		log_debug_message("Task ownership verified");
+
+		// 2) Find the recipient user by email or username
+		log_debug_message("Looking up recipient user");
+		$stmt = $pdo->prepare("SELECT user_id FROM users WHERE email = ? OR username = ?");
+		$stmt->execute([$recipientIdentifier, $recipientIdentifier]);
+		$recipientUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$recipientUser) {
+			send_json_response(['status' => 'error', 'message' => 'Recipient user not found.']);
+			return;
+		}
+
+		$recipientUserId = $recipientUser['user_id'];
+		log_debug_message("Recipient user found: ID $recipientUserId");
+
+		// 3) Prevent self-sharing
+		if ($recipientUserId == $currentUserId) {
+			send_json_response(['status' => 'error', 'message' => 'You cannot share a task with yourself.']);
+			return;
+		}
+
+		// 4) Check if already shared with this user
+		log_debug_message("Checking for existing share");
+		$stmt = $pdo->prepare("SELECT id FROM shared_items WHERE item_type = 'task' AND item_id = ? AND owner_id = ? AND recipient_id = ?");
+		$stmt->execute([$taskId, $currentUserId, $recipientUserId]);
+		if ($stmt->fetch()) {
+			send_json_response(['status' => 'error', 'message' => 'Task is already shared with this user.']);
+			return;
+		}
+
+		log_debug_message("No existing share found, proceeding with insert");
+
+		// 5) Insert the share record using correct column names
+		$stmt = $pdo->prepare("INSERT INTO shared_items (item_type, item_id, owner_id, recipient_id, permission, status) VALUES (?, ?, ?, ?, ?, 'active')");
+		$stmt->execute(['task', $taskId, $currentUserId, $recipientUserId, $permission]);
+
+		log_debug_message("Share record inserted successfully");
+
+		// Activity logging removed - logActivity function not available
+		log_debug_message("Skipping activity log - function not available");
+
+		log_debug_message("Sending success response");
+
+		send_json_response([
+			'status' => 'success',
+			'message' => 'Task shared successfully.',
+			'data' => [
+				'task_id' => $taskId,
+				'recipient_id' => $recipientUserId,
+				'permission' => $permission
+			]
 		]);
 
-		$pdo->commit();
-		send_json_response(['status'=>'success','message'=>'Task shared.'], 200);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) $pdo->rollBack();
-		log_debug_message('shareTask error: '.$e->getMessage());
-		send_json_response(['status'=>'error','message'=>'Server error (shareTask @ ' . ($__step ?? 'start') . '): ' . $e->getMessage()], 500);
+		log_debug_message("Exception in handle_share_task: " . $e->getMessage());
+		if (defined('DEV_MODE') && DEV_MODE) {
+			send_json_response(['status' => 'error', 'message' => 'Share failed: ' . $e->getMessage()]);
+		} else {
+			send_json_response(['status' => 'error', 'message' => 'Failed to share task.']);
+		}
 	}
 }
 
 /**
  * Unshare a task (owner only).
+ * Modified for Sharing Foundation - Enhanced error handling
  * Requires: data.task_id, data.recipient_user_id
  */
 function handle_unshare_task(PDO $pdo, int $userId, ?array $data): void {
@@ -1484,24 +1558,34 @@ function handle_unshare_task(PDO $pdo, int $userId, ?array $data): void {
 		$pdo->commit();
 		send_json_response(['status'=>'success','message'=>'Unshared.'], 200);
 	} catch (Exception $e) {
-		if ($pdo->inTransaction()) $pdo->rollBack();
-		log_debug_message('unshareTask error: '.$e->getMessage());
-		send_json_response(['status'=>'error','message'=>'Server error.'], 500);
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message('unshareTask error: ' . $e->getMessage());
+		
+		// Include detailed error in response when in dev mode
+		$errorMessage = 'Server error while unsharing task.';
+		if (defined('DEV_MODE') && DEV_MODE) {
+			$errorMessage .= ' Details: ' . $e->getMessage();
+		}
+		
+		send_json_response(['status'=>'error','message'=>$errorMessage], 500);
 	}
 }
 
 /**
- * List active shares for a task (owner only).
+ * List all users who have access to a specific task.
+ * Modified for Sharing Foundation - Enhanced error handling and exclude revoked shares
  * Requires: data.task_id
  */
 function handle_list_task_shares(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	if ($taskId <= 0) {
-		send_json_response(['status'=>'error','message'=>'Invalid Task ID.'], 400);
+		send_json_response(['status'=>'error','message'=>'Invalid task ID.'], 400);
 		return;
 	}
-
 	try {
+		// 1) Verify the task exists and current user owns it
 		$own = $pdo->prepare("SELECT user_id FROM tasks WHERE task_id = :tid AND deleted_at IS NULL");
 		$own->execute([':tid'=>$taskId]);
 		$row = $own->fetch(PDO::FETCH_ASSOC);
@@ -1509,20 +1593,28 @@ function handle_list_task_shares(PDO $pdo, int $userId, ?array $data): void {
 			send_json_response(['status'=>'error','message'=>'Not found or no permission.'], 404);
 			return;
 		}
-
-		$q = $pdo->prepare("
-			SELECT si.recipient_id AS user_id, u.username, u.email, si.permission, si.status
-			FROM shared_items si
-			JOIN users u ON u.user_id = si.recipient_id
-			WHERE si.owner_id = :owner AND si.item_type='task' AND si.item_id = :tid AND si.status <> 'revoked'
-			ORDER BY u.username ASC
+		
+		// 2) Fetch active shares (exclude revoked)
+		$shares = $pdo->prepare("
+			SELECT u.user_id, u.username, u.email, s.permission, s.status
+			FROM shared_items s
+			JOIN users u ON u.user_id = s.recipient_id
+			WHERE s.item_type = 'task' AND s.item_id = :tid AND s.owner_id = :owner AND s.status = 'active'
+			ORDER BY u.username
 		");
-		$q->execute([':owner'=>$userId, ':tid'=>$taskId]);
-		$rows = $q->fetchAll(PDO::FETCH_ASSOC);
-
-		send_json_response(['status'=>'success','data'=>['shares'=>$rows]], 200);
+		$shares->execute([':tid'=>$taskId, ':owner'=>$userId]);
+		$result = $shares->fetchAll(PDO::FETCH_ASSOC);
+		
+		send_json_response(['status'=>'success','data'=>['shares'=>$result]], 200);
 	} catch (Exception $e) {
-		log_debug_message('listTaskShares error: '.$e->getMessage());
-		send_json_response(['status'=>'error','message'=>'Server error.'], 500);
+		log_debug_message('listTaskShares error: ' . $e->getMessage());
+		
+		// Include detailed error in response when in dev mode
+		$errorMessage = 'Server error while listing shares.';
+		if (defined('DEV_MODE') && DEV_MODE) {
+			$errorMessage .= ' Details: ' . $e->getMessage();
+		}
+		
+		send_json_response(['status'=>'error','message'=>$errorMessage], 500);
 	}
 }

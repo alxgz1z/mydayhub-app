@@ -11,39 +11,50 @@
  */
 
 /**
- * A global wrapper for the fetch API that automatically includes the CSRF token.
- * @param {object} bodyPayload - The JSON payload to send.
- * @returns {Promise<any>} - The JSON response from the server.
- */
+  * A global wrapper for the fetch API that automatically includes the CSRF token.
+  * @param {object} bodyPayload - The JSON payload to send.
+  * @returns {Promise<any>} - The JSON response from the server.
+  */
 async function apiFetch(bodyPayload = {}) {
-	const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-	if (!csrfToken) {
-		throw new Error('CSRF token not found. Please refresh the page.');
-	}
-
-	const headers = {
-		'Content-Type': 'application/json',
-		'X-CSRF-TOKEN': csrfToken,
-	};
-
-	const appURL = window.MyDayHub_Config?.appURL || '';
-	const response = await fetch(`${appURL}/api/api.php`, {
-		method: 'POST',
-		headers,
-		body: JSON.stringify(bodyPayload),
-	});
-
-	if (!response.ok) {
-		let errorData;
-		try {
-			errorData = await response.json();
-		} catch (e) {
-			throw new Error(response.statusText || `HTTP error! Status: ${response.status}`);
-		}
-		throw new Error(errorData.message || 'An unknown API error occurred.');
-	}
-
-	return response.json();
+	 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+	 if (!csrfToken) {
+		 throw new Error('CSRF token not found. Please refresh the page.');
+	 }
+	 const headers = {
+		 'Content-Type': 'application/json',
+		 'X-CSRF-TOKEN': csrfToken,
+	 };
+	 const appURL = window.MyDayHub_Config?.appURL || '';
+	 const response = await fetch(`${appURL}/api/api.php`, {
+		 method: 'POST',
+		 headers,
+		 body: JSON.stringify(bodyPayload),
+	 });
+	 
+	 // Get the raw response text for debugging
+	 const responseText = await response.text();
+	 console.log('Raw server response:', responseText);
+	 
+	 if (!response.ok) {
+		 let errorData;
+		 try {
+			 errorData = JSON.parse(responseText);
+		 } catch (e) {
+			 // Server returned HTML/text instead of JSON
+			 console.error('Server returned non-JSON response:', responseText);
+			 throw new Error(`Server error: ${response.status} - Check console for details`);
+		 }
+		 throw new Error(errorData.message || 'An unknown API error occurred.');
+	 }
+	 
+	 // Try to parse the response as JSON
+	 try {
+		 return JSON.parse(responseText);
+	 } catch (parseError) {
+		 console.error('JSON Parse Error:', parseError);
+		 console.error('Server returned HTML/text instead of JSON:', responseText);
+		 throw new Error('Server returned invalid JSON response. Check console for details.');
+	 }
 }
 
 // Modified for Global apiFetch Architecture Fix

@@ -6,7 +6,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 6.7.1
+ * @version 6.9.1
  * @author Alex & Gemini
  */
 
@@ -307,6 +307,17 @@ function initEventListeners() {
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
 				showClassificationPopover(taskCard);
+				return;
+			}
+			
+			// Handle share badge specifically (for the task-share-badge class)
+			const shareBadge = e.target.closest('.task-share-badge');
+			if (shareBadge) {
+				const taskCard = shareBadge.closest('.task-card');
+				const taskId = taskCard.dataset.taskId;
+				if (taskId) {
+					await openShareModal(parseInt(taskId, 10));
+				}
 				return;
 			}
 			
@@ -709,7 +720,6 @@ function initEventListeners() {
 		});
 	}
 }
-
 
 /**
  * Closes the filter menu if it's open.
@@ -1362,12 +1372,6 @@ function showClassificationPopover(taskCard) {
 	const popover = document.createElement('div');
 	popover.id = 'classification-popover';
 	popover.innerHTML = `
-		<button class="classification-option" data-value="signal">
-			<span class="swatch classification-signal"></span> Signal
-		</button>
-		<button class="classification-option" data-value="support">
-			<span class="swatch classification-support"></span> Support
-		</button>
 		<button class="classification-option" data-value="backlog">
 			<span class="swatch classification-backlog"></span> Backlog
 		</button>
@@ -1659,7 +1663,8 @@ function createTaskCard(taskData) {
 	
 	let footerHTML = '';
 	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
-	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator;
+	const hasSharedIndicator = taskData.shares && taskData.shares.length > 0;
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator;
 	
 	if (hasIndicators) {
 		let notesIndicator = '';
@@ -1712,7 +1717,6 @@ function createTaskCard(taskData) {
 			`;
 		}
 		
-		
 		let attachmentsIndicator = '';
 		if (taskData.attachments_count && taskData.attachments_count > 0) {
 			attachmentsIndicator = `
@@ -1723,12 +1727,36 @@ function createTaskCard(taskData) {
 			`;
 		}
 
+		let shareIndicator = '';
+		if (taskData.shares && taskData.shares.length > 0) {
+			// Get first recipient info for badge display
+			const firstShare = taskData.shares[0];
+			const recipientDisplay = (firstShare.username || firstShare.email || 'user').substring(0, 6);
+			const shareCount = taskData.shares.length;
+			const shareTitle = shareCount === 1 
+				? `Shared with ${firstShare.username || firstShare.email}`
+				: `Shared with ${shareCount} users`;
+			
+			shareIndicator = `
+				<span class="task-indicator task-share-badge" data-action="open-share-modal" title="${shareTitle}">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="18" cy="5" r="3"></circle>
+						<circle cx="6" cy="12" r="3"></circle>
+						<circle cx="18" cy="19" r="3"></circle>
+						<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+					</svg>
+					<span class="share-recipient-text">${recipientDisplay}</span>
+				</span>
+			`;
+		}
+
 		footerHTML = `
 			<div class="task-card-footer">
 				${attachmentsIndicator}
 				${snoozeIndicator}
 				${notesIndicator}
 				${dueDateIndicator}
+				${shareIndicator}
 			</div>
 		`;
 	}
@@ -1748,6 +1776,7 @@ function createTaskCard(taskData) {
 			data-snoozed-until="${taskData.snoozed_until || ''}"
 			data-snoozed-at="${taskData.snoozed_at || ''}"
 			data-is-snoozed="${taskData.is_snoozed || false}"
+			data-shares='${JSON.stringify(taskData.shares || [])}'
 			draggable="true">
 			<div class="task-card-main">
 				<div class="task-status-band"></div>
@@ -2450,6 +2479,7 @@ function exitMoveMode() {
 	 }
  }
 
+// Modified for Sharing Foundation - Enhanced error handling with toast notifications
 async function openShareModal(taskId) {
 	 // Single-instance guard
 	 const existing = document.getElementById('share-modal-overlay');
@@ -2526,28 +2556,58 @@ async function openShareModal(taskId) {
 	 panel?.addEventListener('click', (ev) => ev.stopPropagation());
 	 overlay.querySelector('.modal-close-btn')?.addEventListener('click', close);
  
-	 // Add recipient
+	 // Add recipient - REPLACE this section in openShareModal()
 	 overlay.querySelector('#btn-share-add')?.addEventListener('click', async () => {
 		 const recipient_identifier = overlay.querySelector('#share-ident')?.value.trim();
 		 const permission = overlay.querySelector('#share-perm')?.value === 'view' ? 'view' : 'edit';
 		 if (!recipient_identifier) return;
- 
-try {
+	 
+		 try {
+			 console.log('Attempting to share task:', { task_id: taskId, recipient_identifier, permission });
+			 
 			 const res = await window.apiFetch({
 				 module: 'tasks',
 				 action: 'shareTask',
 				 data: { task_id: taskId, recipient_identifier, permission }
 			 });
-			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+			 
+			 console.log('Raw apiFetch response:', res);
+			 
+			 // Check if res is already parsed JSON or needs parsing
+			 let json;
+			 if (res && typeof res.json === 'function') {
+				 // res is a Response object, parse it
+				 const responseText = await res.text();
+				 console.log('Raw response text:', responseText);
+				 try {
+					 json = JSON.parse(responseText);
+				 } catch (parseError) {
+					 console.error('JSON Parse Error:', parseError);
+					 console.error('Server returned HTML/text instead of JSON:', responseText);
+					 showToast({ message: 'Server returned invalid response. Check console for details.', type: 'error' });
+					 return;
+				 }
+			 } else {
+				 // res is already parsed JSON
+				 json = res;
+			 }
+			 
+			 console.log('Parsed JSON response:', json);
+			 
 			 if (json?.status === 'success') {
 				 close();
 				 openShareModal(taskId); // refresh list
+				 showToast({ message: 'Task shared successfully.', type: 'success' });
 			 } else {
-				 alert(json?.message || 'Failed to share.');
+				 // Modified for Sharing Foundation - Replace alert with toast
+				 showToast({ message: json?.message || 'Failed to share task.', type: 'error' });
 			 }
-		 } catch {
-			 alert('Server error.');
-		 }	 });
+		 } catch (err) {
+			 // Modified for Sharing Foundation - Replace alert with toast
+			 showToast({ message: 'Server error while sharing task.', type: 'error' });
+			 console.error('Share task error:', err);
+		 }
+	 });
  
 	 // Unshare via event delegation
 	 overlay.querySelector('.table-shares')?.addEventListener('click', async (e) => {
@@ -2565,11 +2625,15 @@ try {
 			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
 			 if (json?.status === 'success') {
 				 btn.closest('tr')?.remove();
+				 showToast({ message: 'Access removed successfully.', type: 'success' });
 			 } else {
-				 alert(json?.message || 'Failed to unshare.');
+				 // Modified for Sharing Foundation - Replace alert with toast
+				 showToast({ message: json?.message || 'Failed to remove access.', type: 'error' });
 			 }
-		 } catch {
-			 alert('Server error.');
+		 } catch (err) {
+			 // Modified for Sharing Foundation - Replace alert with toast
+			 showToast({ message: 'Server error while removing access.', type: 'error' });
+			 console.error('Unshare task error:', err);
 		 }
 	 });
  }
