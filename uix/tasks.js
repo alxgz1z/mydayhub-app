@@ -1371,7 +1371,14 @@ function showClassificationPopover(taskCard) {
 
 	const popover = document.createElement('div');
 	popover.id = 'classification-popover';
+	// Modified for Classification Regression Fix - Added missing Signal and Support options
 	popover.innerHTML = `
+		<button class="classification-option" data-value="signal">
+			<span class="swatch classification-signal"></span> Signal
+		</button>
+		<button class="classification-option" data-value="support">
+			<span class="swatch classification-support"></span> Support
+		</button>
 		<button class="classification-option" data-value="backlog">
 			<span class="swatch classification-backlog"></span> Backlog
 		</button>
@@ -1761,10 +1768,12 @@ function createTaskCard(taskData) {
 		`;
 	}
 
+	const isShared = taskData.shares && taskData.shares.length > 0;
+	
 	return `
 	<div 
-		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''}"
-			data-task-id="${taskData.task_id}" 
+		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''} ${isShared ? 'shared' : ''}"
+		data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
 			data-classification="${taskData.classification}"
@@ -2479,11 +2488,15 @@ function exitMoveMode() {
 	 }
  }
 
-// Modified for Sharing Foundation - Enhanced error handling with toast notifications
-async function openShareModal(taskId) {
-	 // Single-instance guard
+// Modified for Sharing Foundation - Lightweight task card updates without full board reload
+ async function openShareModal(taskId) {
+	 // Single-instance guard - Enhanced to prevent duplication
 	 const existing = document.getElementById('share-modal-overlay');
-	 if (existing) existing.remove();
+	 if (existing) {
+		 existing.remove();
+		 // Small delay to ensure cleanup completes
+		 await new Promise(resolve => setTimeout(resolve, 50));
+	 }
  
 	 // 1) Load existing shares via the app's API wrapper (injects CSRF per spec)
 	 let shares = [];
@@ -2502,7 +2515,7 @@ async function openShareModal(taskId) {
 	 // 2) Build overlay (styled by style.css / tasks.css)
 	 const overlay = document.createElement('div');
 	 overlay.id = 'share-modal-overlay';
-	 overlay.classList.add('hidden'); // enable fade-in if your CSS uses .hidden
+	 overlay.classList.add('hidden');
  
 	 const rowsHtml = shares.map(s => `
 		 <tr data-user-id="${s.user_id}">
@@ -2545,71 +2558,123 @@ async function openShareModal(taskId) {
 	 `;
  
 	 document.body.appendChild(overlay);
- 
-	 // Optional fade-in if your overlay uses .hidden transitions
 	 requestAnimationFrame(() => overlay.classList.remove('hidden'));
  
-	 // Close + bubble control (prevents body click handler from firing)
+	 // Helper function to update only the specific task card's share data
+	 const updateTaskCardShares = async () => {
+		 try {
+			 // Fetch fresh share data for just this task
+			 const res = await window.apiFetch({
+				 module: 'tasks',
+				 action: 'listTaskShares', 
+				 data: { task_id: taskId }
+			 });
+			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+			 const freshShares = json?.status === 'success' ? (json.data?.shares || []) : [];
+			 
+			 // Update the task card's dataset and re-render just that card
+			 const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+			 if (taskCard) {
+				 // Modified for Share Badge Fix - Ensure shares data is properly updated
+				 taskCard.dataset.shares = JSON.stringify(freshShares);
+				 
+				 // Force re-render by updating the task data object used by getTaskDataFromElement
+				 const currentTaskData = getTaskDataFromElement(taskCard);
+				 currentTaskData.shares = freshShares; // Add the fresh shares data
+				 
+				 // Create new task card HTML with updated data
+				 const tempDiv = document.createElement('div');
+				 tempDiv.innerHTML = createTaskCard(currentTaskData);
+				 const newCardEl = tempDiv.firstElementChild;
+				 
+				 // Replace the old card with the new one
+				 taskCard.replaceWith(newCardEl);
+			 }
+		 } catch (err) {
+			 console.error('Failed to update task card shares:', err);
+		 }
+	 };
+ 
+	 // Close + bubble control
 	 const close = () => overlay.remove();
 	 overlay.addEventListener('click', close);
 	 const panel = overlay.querySelector('#share-modal-container');
 	 panel?.addEventListener('click', (ev) => ev.stopPropagation());
 	 overlay.querySelector('.modal-close-btn')?.addEventListener('click', close);
  
-	 // Add recipient - REPLACE this section in openShareModal()
+	 // Modified for Lightweight Updates - Share handler without full reload
 	 overlay.querySelector('#btn-share-add')?.addEventListener('click', async () => {
 		 const recipient_identifier = overlay.querySelector('#share-ident')?.value.trim();
 		 const permission = overlay.querySelector('#share-perm')?.value === 'view' ? 'view' : 'edit';
 		 if (!recipient_identifier) return;
-	 
+ 
 		 try {
-			 console.log('Attempting to share task:', { task_id: taskId, recipient_identifier, permission });
-			 
 			 const res = await window.apiFetch({
 				 module: 'tasks',
 				 action: 'shareTask',
 				 data: { task_id: taskId, recipient_identifier, permission }
 			 });
 			 
-			 console.log('Raw apiFetch response:', res);
-			 
-			 // Check if res is already parsed JSON or needs parsing
 			 let json;
 			 if (res && typeof res.json === 'function') {
-				 // res is a Response object, parse it
 				 const responseText = await res.text();
-				 console.log('Raw response text:', responseText);
 				 try {
 					 json = JSON.parse(responseText);
 				 } catch (parseError) {
 					 console.error('JSON Parse Error:', parseError);
-					 console.error('Server returned HTML/text instead of JSON:', responseText);
-					 showToast({ message: 'Server returned invalid response. Check console for details.', type: 'error' });
+					 showToast({ message: 'Server returned invalid response.', type: 'error' });
 					 return;
 				 }
 			 } else {
-				 // res is already parsed JSON
 				 json = res;
 			 }
 			 
-			 console.log('Parsed JSON response:', json);
-			 
 			 if (json?.status === 'success') {
-				 close();
-				 openShareModal(taskId); // refresh list
+				 // Update task card without full reload
+				 await updateTaskCardShares();
+				 
+				 // Clear the input and refresh the modal list
+				 overlay.querySelector('#share-ident').value = '';
+				 
+				 // Refresh just the modal's share list
+				 const freshRes = await window.apiFetch({
+					 module: 'tasks',
+					 action: 'listTaskShares',
+					 data: { task_id: taskId }
+				 });
+				 const freshJson = (freshRes && typeof freshRes.json === 'function') ? await freshRes.json() : freshRes;
+				 const freshShares = freshJson?.status === 'success' ? (freshJson.data?.shares || []) : [];
+				 
+				 // Update the table body
+				 const tbody = overlay.querySelector('.table-shares tbody');
+				 if (tbody) {
+					 const newRowsHtml = freshShares.map(s => `
+						 <tr data-user-id="${s.user_id}">
+							 <td>${s.username || ''}</td>
+							 <td>${s.email || ''}</td>
+							 <td>
+								 <select class="perm-select">
+									 <option value="view"${s.permission === 'view' ? ' selected' : ''}>View</option>
+									 <option value="edit"${s.permission === 'edit' ? ' selected' : ''}>Edit</option>
+								 </select>
+							 </td>
+							 <td><button class="btn-unshare" type="button" data-user-id="${s.user_id}">Unshare</button></td>
+						 </tr>
+					 `).join('');
+					 tbody.innerHTML = newRowsHtml || '<tr><td colspan="4">No one else has access.</td></tr>';
+				 }
+				 
 				 showToast({ message: 'Task shared successfully.', type: 'success' });
 			 } else {
-				 // Modified for Sharing Foundation - Replace alert with toast
 				 showToast({ message: json?.message || 'Failed to share task.', type: 'error' });
 			 }
 		 } catch (err) {
-			 // Modified for Sharing Foundation - Replace alert with toast
 			 showToast({ message: 'Server error while sharing task.', type: 'error' });
 			 console.error('Share task error:', err);
 		 }
 	 });
  
-	 // Unshare via event delegation
+	 // Modified for Lightweight Updates - Unshare handler without modal duplication
 	 overlay.querySelector('.table-shares')?.addEventListener('click', async (e) => {
 		 const btn = e.target.closest('.btn-unshare');
 		 if (!btn) return;
@@ -2623,15 +2688,28 @@ async function openShareModal(taskId) {
 				 data: { task_id: taskId, recipient_user_id }
 			 });
 			 const json = (res && typeof res.json === 'function') ? await res.json() : res;
+			 
 			 if (json?.status === 'success') {
+				 // Remove the row from the current modal immediately
 				 btn.closest('tr')?.remove();
+				 
+				 // Update the task card without closing the modal
+				 await updateTaskCardShares();
+				 
+				 // Check if table is now empty and update accordingly
+				 const remainingRows = overlay.querySelectorAll('.btn-unshare').length;
+				 if (remainingRows === 0) {
+					 const tbody = overlay.querySelector('.table-shares tbody');
+					 if (tbody) {
+						 tbody.innerHTML = '<tr><td colspan="4">No one else has access.</td></tr>';
+					 }
+				 }
+				 
 				 showToast({ message: 'Access removed successfully.', type: 'success' });
 			 } else {
-				 // Modified for Sharing Foundation - Replace alert with toast
 				 showToast({ message: json?.message || 'Failed to remove access.', type: 'error' });
 			 }
 		 } catch (err) {
-			 // Modified for Sharing Foundation - Replace alert with toast
 			 showToast({ message: 'Server error while removing access.', type: 'error' });
 			 console.error('Unshare task error:', err);
 		 }

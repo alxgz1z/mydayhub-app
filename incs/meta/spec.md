@@ -85,9 +85,10 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
 
 #### Collaboration (Foundation)
-- **[WIP]** `shareTask` (in tasks.php) - Task sharing with permission management
-- **[WIP]** `unshareTask` (revokeShare) (in tasks.php) - Share revocation with audit trail
-- **[WIP]** `listTaskShares` (in tasks.php) - Share enumeration for UI display
+- **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
+- **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
+- **[RDY]** `listTaskShares` (in tasks.php) - Share enumeration for modal display
+- **[WIP]** Permission-based action restrictions for shared task recipients
 
 > **Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
 
@@ -126,6 +127,14 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Privacy toggles - Item-level privacy with visual indicators
 - **[RDY]** Mobile Move Mode - Button-based cross-column movement for touch
 
+#### Collaboration UI (Foundation)
+- **[RDY]** Share Modal (recipient input, permission selection, current access list)
+- **[RDY]** "Shared with Me" virtual column with automatic population
+- **[RDY]** Shared task visual styling (border, gradient, badges)
+- **[RDY]** Lightweight share badge updates without board reload
+- **[WIP]** Permission-based task action menu filtering
+- **[FUT]** Mobile share workflow optimization
+
 #### Advanced UI Features
 - **[RDY]** Task Notes integration (Unified Editor) - Full-featured editing experience
 - **[RDY]** Quick Notes (card flip) - 3D animation for short note editing
@@ -146,21 +155,24 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 The roadmap prioritizes stability, core feature completion, and foundational architecture for future advanced features.
 
 #### Immediate Priorities (Sprint 1-2)
-1. **Debug/Observability Hardening** - Ensure all API handlers funnel responses through `send_debug_response()` when `DEVMODE=true`, and that `/debug.log` is writable and populated. Client logs should standardize toast + console structures and correlate client errors with server `debug[]` payloads.
+#### Immediate Priorities (Sprint 1-2)
+1. **Recipient Permission System** - Implement action menu filtering and interaction restrictions based on share permissions (`view`/`edit` vs owner rights)
 
-2. **Touch Moves: Mobile Move Mode 2.0 + Touch DnD** - Restore/upgrade Move Mode with clear CANCEL affordances and in-column reordering targets; implement long-press/handle for touch DnD to provide native mobile interaction patterns.
+2. **Sharing Workflow Polish** - Complete mobile UX testing, refine modal interactions, and add permission-based visual cues
 
-3. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
+3. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
+
+4. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
 
 #### Medium-term Features (Sprint 3-4)
-4. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
+5. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
 
-5. **Sharing (foundation)** - UI + API stubs (shareTask / revokeShare) without E2E key exchange yet, providing basic collaboration without compromising the zero-knowledge architecture.
+6. **Sharing (foundation)** - UI + API stubs (shareTask / revokeShare) without E2E key exchange yet, providing basic collaboration without compromising the zero-knowledge architecture.
 
 #### Long-term Features (Sprint 5+)
-6. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
+7. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
 
-7. **Accessibility Polish** - Colorblind/high-contrast tuning; ARIA announcements for Move Mode; keyboard navigation improvements.
+8. **Accessibility Polish** - Colorblind/high-contrast tuning; ARIA announcements for Move Mode; keyboard navigation improvements.
 
 #### Priority Roadmap Updates
 
@@ -539,6 +551,20 @@ The sharing system enables controlled collaboration while maintaining the zero-k
 - View: Read-only access to shared items
 - Edit: Full modification rights except sharing/privacy changes
 - Owner retains ultimate control and revocation rights
+
+**Hard Delete Model:**
+The sharing system uses direct record deletion rather than status-based soft deletes to eliminate state inconsistencies. When a share is revoked, the `shared_items` record is permanently removed, ensuring clean state management between frontend and backend.
+
+**Virtual Column Approach:**
+Recipients see shared tasks in a "Shared with Me" virtual column that appears automatically when shares exist. This column is generated server-side during the `getAll` response and provides clear separation between owned and shared content.
+
+**Permission Enforcement (Pending):**
+- `view` permission: Read-only access to task content, no modification capabilities
+- `edit` permission: Full modification rights except ownership actions (delete, share, privacy)
+- Owner retains exclusive rights: delete, duplicate, share management, privacy settings
+
+**Zero-Knowledge Boundary:**
+Shared tasks use server-side encryption to enable collaboration, representing a documented trade-off from pure zero-knowledge architecture. Private tasks cannot be shared, maintaining the encryption boundary for sensitive content.
 
 #### 4.4.2 Sharing Workflow
 

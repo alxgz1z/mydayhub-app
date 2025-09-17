@@ -899,3 +899,42 @@ left: -6px;
 .snooze-modal-overlay.visible {
 	opacity: 1;
 }
+
+/* ==========================================================================
+   13. VISUAL STYLING THAT INDICATES WHEN A TASK IS SHARED
+   ========================================================================== */
+
+/* Modified for Shared Task Styling - Visual indicators for shared tasks */
+.task-card.shared {
+	border-left: 3px solid var(--accent-color);
+	background: linear-gradient(135deg, rgba(59, 130, 246, 0.05), rgba(59, 130, 246, 0.02));
+}
+
+.task-card.shared .task-card-main {
+	position: relative;
+}
+
+.task-card.shared .task-card-main::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	right: 0;
+	width: 0;
+	height: 0;
+	border-left: 8px solid transparent;
+	border-top: 8px solid var(--accent-color);
+	opacity: 0.7;
+}
+
+/* Enhanced share badge styling */
+.task-share-badge {
+	background: rgba(59, 130, 246, 0.1);
+	border: 1px solid rgba(59, 130, 246, 0.3);
+	border-radius: 3px;
+	color: var(--accent-color);
+}
+
+.task-share-badge:hover {
+	background: rgba(59, 130, 246, 0.15);
+	border-color: rgba(59, 130, 246, 0.5);
+}
