@@ -54,23 +54,25 @@ function initTasksView() {
  * Helper function to reconstruct a task data object from a DOM element.
  */
 function getTaskDataFromElement(taskCardEl) {
-	return {
-		task_id: taskCardEl.dataset.taskId,
-		encrypted_data: JSON.stringify({
-			title: decodeURIComponent(taskCardEl.dataset.title),
-			notes: decodeURIComponent(taskCardEl.dataset.notes)
-		}),
-		classification: taskCardEl.dataset.classification,
-		is_private: taskCardEl.dataset.isPrivate === 'true',
-		due_date: taskCardEl.dataset.dueDate || null,
-		has_notes: taskCardEl.dataset.hasNotes === 'true',
-		attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
-		updated_at: taskCardEl.dataset.updatedAt,
-		snoozed_until: taskCardEl.dataset.snoozedUntil || null,
-		snoozed_at: taskCardEl.dataset.snoozedAt || null,
-		is_snoozed: taskCardEl.dataset.isSnoozed === 'true'
-	};
-}
+	 return {
+		 task_id: taskCardEl.dataset.taskId,
+		 encrypted_data: JSON.stringify({
+			 title: decodeURIComponent(taskCardEl.dataset.title),
+			 notes: decodeURIComponent(taskCardEl.dataset.notes)
+		 }),
+		 classification: taskCardEl.dataset.classification,
+		 is_private: taskCardEl.dataset.isPrivate === 'true',
+		 due_date: taskCardEl.dataset.dueDate || null,
+		 has_notes: taskCardEl.dataset.hasNotes === 'true',
+		 attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
+		 updated_at: taskCardEl.dataset.updatedAt,
+		 snoozed_until: taskCardEl.dataset.snoozedUntil || null,
+		 snoozed_at: taskCardEl.dataset.snoozedAt || null,
+		 is_snoozed: taskCardEl.dataset.isSnoozed === 'true',
+		 access_type: taskCardEl.dataset.accessType || 'owner',
+		 ready_for_review: taskCardEl.dataset.readyForReview === 'true'
+	 };
+ }
 
 /**
  * Re-renders a single task card in place. Preserves scroll position.
@@ -270,10 +272,20 @@ function initEventListeners() {
 			if (e.target.matches('.task-checkbox')) {
 				// Prevent double firing
 				if (e.target.dataset.processing) return;
-				e.target.dataset.processing = 'true';
 				
 				const checkbox = e.target;
 				const taskCard = checkbox.closest('.task-card');
+				
+				// Modified for Sharing Foundation - Prevent recipients from changing completion status
+				const accessType = taskCard.dataset.accessType || 'owner';
+				if (accessType !== 'owner') {
+					// Revert checkbox state and show message
+					checkbox.checked = !checkbox.checked;
+					showToast({ message: 'Only task owners can mark tasks as complete.', type: 'error' });
+					return;
+				}
+				
+				e.target.dataset.processing = 'true';
 				const taskId = taskCard.dataset.taskId;
 		
 				if (taskId) {
@@ -286,23 +298,49 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('click', async (e) => {
-			const shortcut = e.target.closest('.indicator-shortcut');
-			if (shortcut) {
-				const taskCard = shortcut.closest('.task-card');
-				const action = shortcut.dataset.action;
-				if (action === 'open-notes') {
-					openNotesEditorForTask(taskCard);
-				} else if (action === 'open-due-date') {
-					await openDueDateModalForTask(taskCard);
-				} else if (action === 'open-attachments') {
-					const taskId = taskCard.dataset.taskId;
-					const taskTitle = decodeURIComponent(taskCard.dataset.title);
-					await openAttachmentsModal(taskId, taskTitle);
-				} else if (action === 'edit-snooze') {
-					await openSnoozeModalForTask(taskCard);
+		const shortcut = e.target.closest('.indicator-shortcut');
+		if (shortcut) {
+			const taskCard = shortcut.closest('.task-card');
+			const action = shortcut.dataset.action;
+			if (action === 'open-notes') {
+				openNotesEditorForTask(taskCard);
+			} else if (action === 'open-due-date') {
+				await openDueDateModalForTask(taskCard);
+			} else if (action === 'open-attachments') {
+				const taskId = taskCard.dataset.taskId;
+				const taskTitle = decodeURIComponent(taskCard.dataset.title);
+				await openAttachmentsModal(taskId, taskTitle);
+			} else if (action === 'edit-snooze') {
+				await openSnoozeModalForTask(taskCard);
+			}
+			return;
+		}
+		
+			// Modified for Ready for Review - Add handler for status indicator
+			const statusIndicator = e.target.closest('.task-status-indicator[data-action="toggle-ready"]');
+			if (statusIndicator) {
+				const taskCard = statusIndicator.closest('.task-card');
+				const taskId = taskCard?.dataset.taskId;
+				
+				// Add debugging
+				if (window.MyDayHub_Config?.DEV_MODE) {
+					console.log('=== Status indicator clicked ===');
+					console.log('Task card found:', !!taskCard);
+					console.log('Task ID:', taskId);
+					console.log('Current ready state:', taskCard?.dataset.readyForReview);
+					console.log('isActionRunning:', isActionRunning);
+					console.log('Task card element:', taskCard);
+				}
+				
+				if (taskId && taskCard) {
+					await toggleReadyForReview(taskId, taskCard);
+				} else {
+					if (window.MyDayHub_Config?.DEV_MODE) {
+						console.log('Missing taskId or taskCard - aborting');
+					}
 				}
 				return;
-			}
+		}
 			
 			if (e.target.matches('.task-status-band')) {
 				const taskCard = e.target.closest('.task-card');
@@ -519,119 +557,131 @@ function initEventListeners() {
 		});
 
 		boardContainer.addEventListener('dblclick', (e) => {
-			if (e.target.matches('.column-title')) {
-				const titleEl = e.target;
-				const columnEl = titleEl.closest('.task-column');
-				const columnId = columnEl.dataset.columnId;
-				const originalTitle = titleEl.textContent;
-
-				const input = document.createElement('input');
-				input.type = 'text';
-				input.value = originalTitle;
-				input.className = 'inline-edit-input';
-
-				titleEl.replaceWith(input);
-				input.focus();
-				input.select();
-
-				let finalized = false;
-
-				const commitChange = async () => {
-					if (finalized) return;
-					finalized = true;
-					
-					const newTitle = input.value.trim();
-
-					if (newTitle === '' || newTitle === originalTitle) {
-						input.replaceWith(titleEl);
-						return;
-					}
-
-					titleEl.textContent = newTitle;
-					input.replaceWith(titleEl);
-
-					const success = await renameColumn(columnId, newTitle);
-
-					if (success) {
-						showToast({ message: 'Column renamed.', type: 'success' });
-					} else {
-						titleEl.textContent = originalTitle;
-						showToast({ message: 'Error: Could not rename column.', type: 'error' });
-					}
-				};
-
-				input.addEventListener('blur', commitChange);
-				input.addEventListener('keydown', (e) => {
-					if (e.key === 'Enter') {
-						commitChange();
-					} else if (e.key === 'Escape') {
-						finalized = true;
-						input.replaceWith(titleEl);
-					}
-				});
-			} 
-			else if (e.target.matches('.task-title')) {
-				const titleEl = e.target;
-				const taskCard = titleEl.closest('.task-card');
-				const taskId = taskCard.dataset.taskId;
-				const originalTitle = titleEl.textContent;
-
-				const input = document.createElement('input');
-				input.type = 'text';
-				input.value = originalTitle;
-				input.className = 'inline-edit-input';
-
-				titleEl.replaceWith(input);
-				input.focus();
-				input.select();
-
-				let finalized = false;
-
-				const commitChange = async () => {
-					if (finalized) return;
-					finalized = true;
-					
-					const newTitle = input.value.trim();
-
-					if (newTitle === '' || newTitle === originalTitle) {
-						input.replaceWith(titleEl);
-						return;
-					}
-
-					titleEl.textContent = newTitle;
-					input.replaceWith(titleEl);
-
-					const success = await renameTaskTitle(taskId, newTitle);
-
-					if (success) {
-						showToast({ message: 'Task renamed.', type: 'success' });
-					} else {
-						titleEl.textContent = originalTitle;
-						showToast({ message: 'Error: Could not rename task.', type: 'error' });
-					}
-				};
-
-				input.addEventListener('blur', commitChange);
-				input.addEventListener('keydown', (e) => {
-					if (e.key === 'Enter') {
-						commitChange();
-					} else if (e.key === 'Escape') {
-						finalized = true;
-						input.replaceWith(titleEl);
-					}
-				});
+		if (e.target.matches('.column-title')) {
+			const titleEl = e.target;
+			const columnEl = titleEl.closest('.task-column');
+			const columnId = columnEl.dataset.columnId;
+			
+			// Modified for Sharing Foundation - Prevent editing virtual "Shared with Me" column
+			if (columnId === 'shared-with-me') {
+				return;
 			}
+			
+			const originalTitle = titleEl.textContent;
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = originalTitle;
+			input.className = 'inline-edit-input';
+			titleEl.replaceWith(input);
+			input.focus();
+			input.select();
+			let finalized = false;
+			const commitChange = async () => {
+				if (finalized) return;
+				finalized = true;
+				
+				const newTitle = input.value.trim();
+				if (newTitle === '' || newTitle === originalTitle) {
+					input.replaceWith(titleEl);
+					return;
+				}
+				titleEl.textContent = newTitle;
+				input.replaceWith(titleEl);
+				const success = await renameColumn(columnId, newTitle);
+				if (success) {
+					showToast({ message: 'Column renamed.', type: 'success' });
+				} else {
+					titleEl.textContent = originalTitle;
+					showToast({ message: 'Error: Could not rename column.', type: 'error' });
+				}
+			};
+			input.addEventListener('blur', commitChange);
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					commitChange();
+				} else if (e.key === 'Escape') {
+					finalized = true;
+					input.replaceWith(titleEl);
+				}
+			});
+		}
+		else if (e.target.matches('.task-title.editable')) {
+			const titleEl = e.target;
+			const taskCard = titleEl.closest('.task-card');
+			
+			// Modified for Sharing Foundation - Prevent recipients from renaming tasks
+			const accessType = taskCard.dataset.accessType || 'owner';
+			if (accessType !== 'owner') {
+				showToast({ message: 'Only task owners can rename tasks.', type: 'error' });
+				return;
+			}
+			
+			const taskId = taskCard.dataset.taskId;
+			const originalTitle = titleEl.textContent;
+		
+			const input = document.createElement('input');
+			input.type = 'text';
+			input.value = originalTitle;
+			input.className = 'inline-edit-input';
+		
+			titleEl.replaceWith(input);
+			input.focus();
+			input.select();
+		
+			let finalized = false;
+		
+			const commitChange = async () => {
+				if (finalized) return;
+				finalized = true;
+				
+				const newTitle = input.value.trim();
+		
+				if (newTitle === '' || newTitle === originalTitle) {
+					input.replaceWith(titleEl);
+					return;
+				}
+		
+				titleEl.textContent = newTitle;
+				input.replaceWith(titleEl);
+		
+				const success = await renameTaskTitle(taskId, newTitle);
+		
+				if (success) {
+					showToast({ message: 'Task renamed.', type: 'success' });
+				} else {
+					titleEl.textContent = originalTitle;
+					showToast({ message: 'Error: Could not rename task.', type: 'error' });
+				}
+			};
+		
+			input.addEventListener('blur', commitChange);
+			input.addEventListener('keydown', (e) => {
+				if (e.key === 'Enter') {
+					commitChange();
+				} else if (e.key === 'Escape') {
+					finalized = true;
+					input.replaceWith(titleEl);
+				}
+			});
+		}
 		});
 
 		// Modified for Column Drag & Drop - Task drag handlers
 		boardContainer.addEventListener('dragstart', (e) => {
 			const taskCard = e.target.closest('.task-card');
 			if (taskCard) {
+				// Modified for Sharing Foundation - Prevent recipients from dragging tasks
+				const accessType = taskCard.dataset.accessType || 'owner';
+				if (accessType !== 'owner') {
+					e.preventDefault();
+					return;
+				}
+				
 				taskCard.classList.add('dragging');
 				dragSourceColumn = taskCard.closest('.task-column');
 				return;
 			}
-
+		
 			// Modified for Column Drag & Drop - Column drag handlers
 			const columnHeader = e.target.closest('.column-header');
 			if (columnHeader && e.target.matches('.column-title')) {
@@ -720,6 +770,79 @@ function initEventListeners() {
 		});
 	}
 }
+
+
+
+/**
+ * Toggles the ready-for-review status for a shared task recipient.
+ * Modified for Ready for Review - Fixed UI state update after toggle
+ */
+async function toggleReadyForReview(taskId, taskCard) {
+	 if (window.MyDayHub_Config?.DEV_MODE) {
+		 console.log('=== toggleReadyForReview called ===');
+		 console.log('Function params - taskId:', taskId, 'taskCard:', !!taskCard);
+		 console.log('isActionRunning check:', isActionRunning);
+	 }
+	 
+	 if (isActionRunning) {
+		 if (window.MyDayHub_Config?.DEV_MODE) {
+			 console.log('Action blocked - isActionRunning is true');
+		 }
+		 return;
+	 }
+	 isActionRunning = true;
+ 
+	 try {
+		 const currentReady = taskCard.dataset.readyForReview === 'true';
+		 const newReady = !currentReady;
+		 
+		 if (window.MyDayHub_Config?.DEV_MODE) {
+			 console.log('Current ready state:', currentReady);
+			 console.log('New ready state will be:', newReady);
+			 console.log('About to call API...');
+		 }
+ 
+		 const result = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'toggleReadyForReview',
+			 task_id: taskId,
+			 ready_for_review: newReady
+		 });
+ 
+		 if (window.MyDayHub_Config?.DEV_MODE) {
+			 console.log('API result:', result);
+		 }
+ 
+		 if (result.status === 'success') {
+			 // Update task card dataset with new ready status
+			 taskCard.dataset.readyForReview = newReady;
+			 
+			 // Update the task data object used by getTaskDataFromElement
+			 const taskData = getTaskDataFromElement(taskCard);
+			 taskData.ready_for_review = newReady;
+			 
+			 // Create new task card HTML with updated data
+			 const tempDiv = document.createElement('div');
+			 tempDiv.innerHTML = createTaskCard(taskData);
+			 const newCardEl = tempDiv.firstElementChild;
+			 
+			 // Replace the old card with the new one
+			 taskCard.replaceWith(newCardEl);
+			 
+			 const message = newReady ? 'Marked as ready for review' : 'Unmarked as ready for review';
+			 showToast({ message: message, type: 'success' });
+		 } else {
+			 showToast({ message: result.message || 'Failed to update status', type: 'error' });
+		 }
+	 } catch (error) {
+		 showToast({ message: error.message, type: 'error' });
+		 console.error('Toggle ready for review error:', error);
+	 } finally {
+		 isActionRunning = false;
+	 }
+ }
+
+
 
 /**
  * Closes the filter menu if it's open.
@@ -935,103 +1058,155 @@ function closeAllTaskActionMenus() {
 /**
  * Creates and displays the task actions menu.
  */
-function showTaskActionsMenu(buttonEl) {
-	closeAllTaskActionMenus(); 
-	const taskCard = buttonEl.closest('.task-card');
-	if (!taskCard) {
-		return;
-	}
-
-	const menu = document.createElement('div');
-	menu.className = 'task-actions-menu';
-	menu.dataset.taskId = taskCard.dataset.taskId;
-
-	const isPrivate = taskCard.dataset.isPrivate === 'true';
-	const isSnoozed = taskCard.dataset.isSnoozed === 'true';
-	const privacyText = isPrivate ? 'Make Public' : 'Make Private';
-	const privacyIcon = isPrivate
-		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
-		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
-
-	menu.innerHTML = `
-		<button class="task-action-btn" data-action="edit-notes">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-			<span>Edit Notes</span>
-		</button>
-		<button class="task-action-btn" data-action="set-due-date">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-				<line x1="16" y1="2" x2="16" y2="6"></line>
-				<line x1="8" y1="2" x2="8" y2="6"></line>
-				<line x1="3" y1="10" x2="21" y2="10"></line>
-			</svg>
-			<span>Set Due Date</span>
-		</button>
-		<button class="task-action-btn" data-action="toggle-privacy">
-			${privacyIcon}
-			<span>${privacyText}</span>
-		</button>
-		<button class="task-action-btn" data-action="move-task">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline>
-			</svg>
-			<span>Move Task</span>
-		</button>
-		<button class="task-action-btn" data-action="attachments">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
-			<span>Attachments</span>
-		</button>
-		<button class="task-action-btn" data-action="duplicate">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-				<path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-			</svg>
-			<span>Duplicate Task</span>
-		</button>
-		<button class="task-action-btn" data-action="share">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-				 stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-				<circle cx="18" cy="5" r="3"></circle>
-				<circle cx="6" cy="12" r="3"></circle>
-				<circle cx="18" cy="19" r="3"></circle>
-				<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
-			</svg>
-			<span>Share</span>
-		</button>
-		<button class="task-action-btn" data-action="${isSnoozed ? 'unsnooze' : 'snooze'}">
-		<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-			${isSnoozed ? '<path d="M6 2l3 3.5L12 2l3 3.5L18 2"/><path d="M6 16.5l3-3.5 3 3.5 3-3.5 3 3.5"/><polyline points="6 12 12 6 18 12"/>' : '<circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L3 5"></path><path d="M19 3l2 2"></path>'}
-			</svg>
-				<span>${isSnoozed ? 'Remove Snooze' : 'Snooze Task'}</span>
-			</button>
-		<!--button class="task-action-btn" data-action="share">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none"
-				 stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<circle cx="18" cy="5" r="3"></circle>
-				<circle cx="6" cy="12" r="3"></circle>
-				<circle cx="18" cy="19" r="3"></circle>
-				<path d="M8.59 13.51l6.83 3.98M15.41 6.51L8.59 10.49"></path>
-			</svg>
-			<span>Share…</span>
-		</button-->
-		<button class="task-action-btn" data-action="delete">
-			<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-				<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-				<line x1="10" y1="11" x2="10" y2="17"/>
-				<line x1="14" y1="11" x2="14" y2="17"/>
-			</svg>
-			<span>Delete Task</span>
-		</button>
-	`;
-
-	document.body.appendChild(menu);
-
-	const btnRect = buttonEl.getBoundingClientRect();
-	menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
-	menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
-
-	setTimeout(() => menu.classList.add('visible'), 10);
-}
+/**
+  * Creates and displays the task actions menu.
+  * Modified for Sharing Foundation - Permission-based action restrictions
+  */
+ function showTaskActionsMenu(buttonEl) {
+	 closeAllTaskActionMenus(); 
+	 const taskCard = buttonEl.closest('.task-card');
+	 if (!taskCard) {
+		 return;
+	 }
+ 
+	 const menu = document.createElement('div');
+	 menu.className = 'task-actions-menu';
+	 menu.dataset.taskId = taskCard.dataset.taskId;
+ 
+	 // Modified for Sharing Foundation - Permission-based action restrictions
+	 const accessType = taskCard.dataset.accessType || 'owner';
+	 const isRecipient = accessType === 'view' || accessType === 'edit';
+	 const isViewOnly = accessType === 'view';
+	 const isOwner = accessType === 'owner';
+ 
+	 const isPrivate = taskCard.dataset.isPrivate === 'true';
+	 const isSnoozed = taskCard.dataset.isSnoozed === 'true';
+	 const privacyText = isPrivate ? 'Make Public' : 'Make Private';
+	 const privacyIcon = isPrivate
+		 ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+		 : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+ 
+	 // Build menu buttons based on permissions
+	 let menuHTML = '';
+ 
+	 // Edit Notes - Available to all users (view and edit recipients can add notes)
+	 menuHTML += `
+		 <button class="task-action-btn" data-action="edit-notes">
+			 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+			 <span>${isViewOnly ? 'View Notes' : 'Edit Notes'}</span>
+		 </button>
+	 `;
+ 
+	 // Set Due Date - Only for edit permission and owners
+	 if (!isViewOnly) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="set-due-date">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					 <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+					 <line x1="16" y1="2" x2="16" y2="6"></line>
+					 <line x1="8" y1="2" x2="8" y2="6"></line>
+					 <line x1="3" y1="10" x2="21" y2="10"></line>
+				 </svg>
+				 <span>Set Due Date</span>
+			 </button>
+		 `;
+	 }
+ 
+	 // Privacy Toggle - Owner only (shared tasks cannot be made private)
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="toggle-privacy">
+				 ${privacyIcon}
+				 <span>${privacyText}</span>
+			 </button>
+		 `;
+	 }
+ 
+	 // Move Task - Owner only (recipients cannot move tasks between columns)
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="move-task">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					 <polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline>
+				 </svg>
+				 <span>Move Task</span>
+			 </button>
+		 `;
+	 }
+ 
+	 // Attachments - Available to all users
+	 menuHTML += `
+		 <button class="task-action-btn" data-action="attachments">
+			 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+			 <span>Attachments</span>
+		 </button>
+	 `;
+ 
+	 // Duplicate - Owner only
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="duplicate">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+					 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+				 </svg>
+				 <span>Duplicate Task</span>
+			 </button>
+		 `;
+	 }
+ 
+	 // Share - Owner only
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="share">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					 <circle cx="18" cy="5" r="3"></circle>
+					 <circle cx="6" cy="12" r="3"></circle>
+					 <circle cx="18" cy="19" r="3"></circle>
+					 <path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+				 </svg>
+				 <span>Share</span>
+			 </button>
+		 `;
+	 }
+ 
+	 // Snooze - Owner only
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="${isSnoozed ? 'unsnooze' : 'snooze'}">
+			 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+				 ${isSnoozed ? '<path d="M6 2l3 3.5L12 2l3 3.5L18 2"/><path d="M6 16.5l3-3.5 3 3.5 3-3.5 3 3.5"/><polyline points="6 12 12 6 18 12"/>' : '<circle cx="12" cy="13" r="8"></circle><path d="M12 9v4l2 2"></path><path d="M5 3L3 5"></path><path d="M19 3l2 2"></path>'}
+				 </svg>
+					 <span>${isSnoozed ? 'Remove Snooze' : 'Snooze Task'}</span>
+				 </button>
+		 `;
+	 }
+ 
+	 // Delete - Owner only
+	 if (isOwner) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="delete">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					 <path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+					 <line x1="10" y1="11" x2="10" y2="17"/>
+					 <line x1="14" y1="11" x2="14" y2="17"/>
+				 </svg>
+				 <span>Delete Task</span>
+			 </button>
+		 `;
+	 }
+ 
+	 menu.innerHTML = menuHTML;
+ 
+	 document.body.appendChild(menu);
+ 
+	 const btnRect = buttonEl.getBoundingClientRect();
+	 menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
+	 menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
+ 
+	 setTimeout(() => menu.classList.add('visible'), 10);
+ }
 
 
 /**
@@ -1359,6 +1534,7 @@ function closeClassificationPopover() {
 
 /**
  * Shows a popover menu to change a task's classification.
+ * Modified for Sharing Foundation - Prevent recipients from changing classification
  * @param {HTMLElement} taskCard - The task card element that was clicked.
  */
 function showClassificationPopover(taskCard) {
@@ -1366,6 +1542,12 @@ function showClassificationPopover(taskCard) {
 
 	const taskId = taskCard.dataset.taskId;
 	if (!taskId || taskCard.classList.contains('completed')) {
+		return;
+	}
+
+	// Modified for Sharing Foundation - Only owners can change classification
+	const accessType = taskCard.dataset.accessType || 'owner';
+	if (accessType !== 'owner') {
 		return;
 	}
 
@@ -1598,11 +1780,14 @@ function renderBoard(boardData) {
 
 /**
  * Creates the HTML element for a single column and its tasks.
+ * Modified for Sharing Foundation - Hide task input for virtual "Shared with Me" column
  */
 function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
 	const isPrivate = columnData.is_private;
-	columnEl.className = `task-column ${isPrivate ? 'private' : ''}`;
+	const isVirtualColumn = columnData.column_id === 'shared-with-me';
+	
+	columnEl.className = `task-column ${isPrivate ? 'private' : ''} ${isVirtualColumn ? 'virtual-column' : ''}`;
 	columnEl.dataset.columnId = columnData.column_id;
 	columnEl.dataset.isPrivate = isPrivate;
 
@@ -1610,7 +1795,9 @@ function createColumnElement(columnData) {
 	if (columnData.tasks && columnData.tasks.length > 0) {
 		tasksHTML = columnData.tasks.map(taskData => createTaskCard(taskData)).join('');
 	} else {
-		tasksHTML = '<p class="no-tasks-message">No tasks in this column.</p>';
+		tasksHTML = isVirtualColumn 
+			? '<p class="no-tasks-message">No shared tasks yet.</p>'
+			: '<p class="no-tasks-message">No tasks in this column.</p>';
 	}
 	
 	const privacyBtnTitle = isPrivate ? 'Make Public' : 'Make Private';
@@ -1618,37 +1805,54 @@ function createColumnElement(columnData) {
 		? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 		: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
+	// Modified for Sharing Foundation - Hide header controls for virtual column
+	const headerControlsHTML = isVirtualColumn ? '' : `
+		<div class="column-header-controls">
+			<button class="btn-move-column" data-direction="left" title="Move Left">&lt;</button>
+			<button class="btn-toggle-column-privacy" title="${privacyBtnTitle}">${privacyIcon}</button>
+			<button class="btn-delete-column" title="Delete Column">
+				<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+					<line x1="10" y1="11" x2="10" y2="17"/>
+					<line x1="14" y1="11" x2="14" y2="17"/>
+				</svg>
+			</button>
+			<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
+		</div>
+	`;
+
+	// Modified for Sharing Foundation - Hide task input for virtual column
+	const footerHTML = isVirtualColumn ? '' : `
+		<div class="column-footer">
+			<input type="text" class="new-task-input" placeholder="+ New Task" />
+		</div>
+	`;
+
 	columnEl.innerHTML = `
 		<div class="column-header">
-			<div class="column-header-controls">
-				<button class="btn-move-column" data-direction="left" title="Move Left">&lt;</button>
-				<button class="btn-toggle-column-privacy" title="${privacyBtnTitle}">${privacyIcon}</button>
-				<button class="btn-delete-column" title="Delete Column">
-					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M3 6h18m-2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
-						<line x1="10" y1="11" x2="10" y2="17"/>
-						<line x1="14" y1="11" x2="14" y2="17"/>
-					</svg>
-				</button>
-				<button class="btn-move-column" data-direction="right" title="Move Right">&gt;</button>
-			</div>
-			<h2 class="column-title" draggable="true">${columnData.column_name}</h2>
+			${headerControlsHTML}
+			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}</h2>
 			<span class="task-count">${columnData.tasks ? columnData.tasks.length : 0}</span>
 		</div>
 		<div class="column-body">
 			${tasksHTML}
 		</div>
-		<div class="column-footer">
-			<input type="text" class="new-task-input" placeholder="+ New Task" />
-		</div>
+		${footerHTML}
 	`;
 	return columnEl;
 }
 
 /**
  * Creates the HTML string for a single task card.
+ * Modified for Sharing Foundation - Added access_type data attribute and conditional UI elements
  */
 function createTaskCard(taskData) {
+	// Add this debug snippet here
+	if (window.MyDayHub_Config?.DEV_MODE) {
+		console.log('createTaskCard - ready_for_review value:', taskData.ready_for_review, 'type:', typeof taskData.ready_for_review);
+		console.log('Full taskData object:', taskData);
+	}
+
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
 	try {
@@ -1662,6 +1866,10 @@ function createTaskCard(taskData) {
 	const isCompleted = taskData.classification === 'completed';
 	const isPrivate = taskData.is_private;
 	const isSnoozed = taskData.is_snoozed || taskData.snoozed_until;
+	const accessType = taskData.access_type || 'owner';
+	const isOwner = accessType === 'owner';
+	const isReadyForReview = taskData.ready_for_review || false;
+	
 	let classificationClass = '';
 	if (!isCompleted) {
 		const classification = taskData.classification === 'noise' ? 'backlog' : taskData.classification;
@@ -1671,7 +1879,8 @@ function createTaskCard(taskData) {
 	let footerHTML = '';
 	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
 	const hasSharedIndicator = taskData.shares && taskData.shares.length > 0;
-	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator;
+	const hasReadyIndicator = isOwner && isReadyForReview && !isCompleted;
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator;
 	
 	if (hasIndicators) {
 		let notesIndicator = '';
@@ -1757,6 +1966,20 @@ function createTaskCard(taskData) {
 			`;
 		}
 
+		// Modified for Ready for Review - Owner notification badge
+		let readyIndicator = '';
+		if (hasReadyIndicator) {
+			readyIndicator = `
+				<span class="task-indicator ready-for-review-badge" title="Ready for review">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M9 11l3 3L22 4"></path>
+						<path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
+					</svg>
+					<span class="ready-text">Ready</span>
+				</span>
+			`;
+		}
+
 		footerHTML = `
 			<div class="task-card-footer">
 				${attachmentsIndicator}
@@ -1764,15 +1987,45 @@ function createTaskCard(taskData) {
 				${notesIndicator}
 				${dueDateIndicator}
 				${shareIndicator}
+				${readyIndicator}
 			</div>
 		`;
 	}
 
 	const isShared = taskData.shares && taskData.shares.length > 0;
 	
+	// Modified for Sharing Foundation - Conditional draggable attribute
+	const draggableAttr = isOwner ? 'draggable="true"' : '';
+	
+	// Modified for Ready for Review - Status indicator logic
+	let statusElement = '';
+	if (isOwner) {
+		statusElement = `<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>`;
+	} else {
+		// Recipients get interactive status indicator
+		const statusTitle = isCompleted 
+			? 'Completed' 
+			: isReadyForReview 
+				? 'Click to unmark as ready' 
+				: 'Click to mark ready for review';
+		
+		const statusIcon = isCompleted 
+			? '<polyline points="20 6 9 17 4 12"></polyline>' 
+			: isReadyForReview
+				? '<circle cx="12" cy="12" r="10" fill="currentColor"></circle><circle cx="12" cy="12" r="3" fill="white"></circle>'
+				: '<circle cx="12" cy="12" r="10"></circle>';
+
+		statusElement = `<span class="task-status-indicator ${isCompleted ? 'completed' : ''} ${isReadyForReview ? 'ready' : ''}" 
+			data-action="toggle-ready" title="${statusTitle}">
+			<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+				${statusIcon}
+			</svg>
+		</span>`;
+	}
+	
 	return `
 	<div 
-		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''} ${isShared ? 'shared' : ''}"
+		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''} ${isShared ? 'shared' : ''} ${!isOwner ? 'recipient' : ''} ${isReadyForReview ? 'ready-for-review' : ''}"
 		data-task-id="${taskData.task_id}" 
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
@@ -1786,11 +2039,13 @@ function createTaskCard(taskData) {
 			data-snoozed-at="${taskData.snoozed_at || ''}"
 			data-is-snoozed="${taskData.is_snoozed || false}"
 			data-shares='${JSON.stringify(taskData.shares || [])}'
-			draggable="true">
+			data-access-type="${accessType}"
+			data-ready-for-review="${taskData.ready_for_review || false}"
+			${draggableAttr}>
 			<div class="task-card-main">
-				<div class="task-status-band"></div>
-				<input type="checkbox" class="task-checkbox" ${isCompleted ? 'checked' : ''}>
-				<span class="task-title">${taskTitle}</span>
+				<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>
+				${statusElement}
+				<span class="task-title ${isOwner ? 'editable' : 'readonly'}">${taskTitle}</span>
 				<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 			</div>
 			${footerHTML}

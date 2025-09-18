@@ -1286,4 +1286,55 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 * Hard delete approach eliminates state inconsistency between frontend and backend
 * Virtual column approach for "Shared with Me" avoids database schema changes while providing clear UX separation
 
+---
+
+# # Timestamp: 2025-09-17 02:10 - Ready-for-Review Foundation (Partial Implementation)
+**Version**: Beta 6.9.1+ **Focus** Implement the "Ready for Review" functionality allowing shared task recipients to mark tasks as ready for owner review, establishing a workflow completion mechanism for collaborative tasks.
+**Key work**
+* **Backend API Foundation:**
+  * Added toggleReadyForReview action to /api/tasks.php with proper permission validation
+  * Enhanced shared_items table queries to include ready_for_review boolean field
+  * Fixed SQL parameter binding issues preventing recipients from editing notes
+  * Updated permission checking to allow recipients with edit access to modify task details
+* **Frontend UI Implementation:**
+  * Modified createTaskCard() to conditionally render UI elements based on access_type
+  * Replaced recipient checkboxes with interactive status indicators for ready-for-review workflow
+  * Added owner notification badges in task footer when tasks are marked ready
+  * Enhanced showTaskActionsMenu() with permission-based action filtering
+  * Implemented click handlers for status indicator toggle functionality
+* **Permission System Framework:**
+  * Updated event handlers to restrict actions based on recipient access level
+  * Added proper tooltips and visual feedback for recipient interactions
+  * Implemented conditional CSS classes for recipient vs owner task styling
+  * Enhanced drag-and-drop restrictions for shared task recipients
+* **Data Flow Integration:**
+  * Created toggleReadyForReview() function with API integration
+  * Updated getTaskDataFromElement() to include ready-for-review state
+  * Added backend query modifications to include ready_for_review field in shared task data
+
+⠀**Status** **CRITICAL ISSUES REMAINING:**
+* **Data Synchronization Bug**: Frontend status indicator defaulting to "false" regardless of database ready_for_reviewvalue, causing toggle logic to always attempt setting ready=true on first click
+* **Backend Query Gap**: ready_for_review field not properly included in shared task queries from handle_get_all_board_data
+* **UI State Management**: Task card data-ready-for-review attribute not being set correctly during initial render
+
+⠀**Functional Components:**
+* Backend API endpoints working correctly for permission validation
+* Frontend permission-based menu filtering operational
+* Visual styling and interaction patterns implemented
+* CSRF protection and ownership validation maintained
+
+⠀**Recommended next steps (priority order)**
+**1** **CRITICAL - Fix Data Synchronization**: Debug backend shared tasks query to ensure ready_for_review field is included in API response and properly set in frontend task card datasets
+**2** **Debug Toggle Logic**: Add comprehensive logging to track data flow from database → API response → frontend dataset → UI state
+**3** **Verify Backend Query**: Confirm handle_get_all_board_data includes COALESCE(s.ready_for_review, 0) as ready_for_review in shared tasks query
+**4** **Complete Permission Restrictions**: Implement remaining recipient restrictions (drag-and-drop, task completion, classification changes, column operations)
+**5** **Mobile UX Testing**: Validate ready-for-review workflow on touch devices and ensure proper visual feedback
+
+⠀**Technical Architecture Notes**
+* Ready-for-review status stored in shared_items.ready_for_review boolean field
+* Permission enforcement uses access_type data attribute: 'owner', 'edit', 'view'
+* Status indicator shows different states: empty circle (not ready), filled circle (ready), checkmark (completed by owner)
+* Zero-knowledge boundary maintained through permission-based API validation
+* Lightweight frontend updates prevent full board reload during status changes
+
 

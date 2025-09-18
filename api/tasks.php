@@ -182,6 +182,14 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_list_task_shares($pdo, $userId, $data);
 			}
 			break;
+			
+		// Modified for Ready for Review - New action for recipient status toggle
+		case 'toggleReadyForReview':
+			if ($method === 'POST') {
+				handle_toggle_ready_for_review($pdo, $userId, $data);
+			}
+			break;
+		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
@@ -628,11 +636,21 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		$stmt_find = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
-		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
+		// Check if user is owner or has edit permission
+		$stmt_find = $pdo->prepare("
+			SELECT t.encrypted_data, t.user_id,
+				   CASE WHEN t.user_id = ? THEN 'owner'
+						WHEN s.permission = 'edit' THEN 'edit'
+						ELSE 'view' END as access_level
+			FROM tasks t
+			LEFT JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task' AND s.recipient_id = ?
+			WHERE t.task_id = ? AND t.deleted_at IS NULL
+			AND (t.user_id = ? OR s.recipient_id = ?)
+		");
+		$stmt_find->execute([$userId, $userId, $taskId, $userId, $userId]);
 		$task = $stmt_find->fetch();
-
-		if ($task === false) {
+		
+		if ($task === false || $task['access_level'] === 'view') {
 			$pdo->rollBack();
 			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
@@ -807,6 +825,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at,
 				COUNT(ta.attachment_id) as attachments_count,
 				s.permission as access_type,
+				COALESCE(s.ready_for_review, 0) as ready_for_review,
 				u.username as owner_username
 			 FROM tasks t
 			 JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
@@ -1675,5 +1694,85 @@ function handle_list_task_shares(PDO $pdo, int $userId, ?array $data): void {
 		}
 		
 		send_json_response(['status'=>'error','message'=>$errorMessage], 500);
+	}
+}
+
+/**
+ * Toggle ready-for-review status for a shared task recipient.
+ * Modified for Ready for Review - Allow recipients to mark tasks as ready
+ */
+function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$readyForReview = isset($data['ready_for_review']) ? (bool)$data['ready_for_review'] : false;
+
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Verify this user has access to the task (either as owner or recipient)
+		$accessCheck = $pdo->prepare("
+			SELECT t.user_id as owner_id, s.permission, s.recipient_id
+			FROM tasks t
+			LEFT JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task' AND s.recipient_id = ?
+			WHERE t.task_id = ? AND t.deleted_at IS NULL
+			AND (t.user_id = ? OR s.recipient_id = ?)
+		");
+		$accessCheck->execute([$userId, $taskId, $userId, $userId]);
+		$access = $accessCheck->fetch(PDO::FETCH_ASSOC);
+
+		if (!$access) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Task not found or permission denied.'], 404);
+			return;
+		}
+
+		$isOwner = ($access['owner_id'] == $userId);
+		$isRecipient = ($access['recipient_id'] == $userId);
+
+		// Only recipients can toggle ready-for-review status
+		if (!$isRecipient) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Only shared task recipients can mark tasks as ready for review.'], 403);
+			return;
+		}
+
+		// Update the ready_for_review status in shared_items table
+		$updateShare = $pdo->prepare("
+			UPDATE shared_items 
+			SET ready_for_review = :readyStatus, updated_at = UTC_TIMESTAMP()
+			WHERE item_type = 'task' AND item_id = :taskId AND recipient_id = :userId
+		");
+		$updateResult = $updateShare->execute([
+			':readyStatus' => $readyForReview ? 1 : 0,
+			':taskId' => $taskId,
+			':userId' => $userId
+		]);
+
+		if (!$updateResult || $updateShare->rowCount() === 0) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Failed to update ready status.'], 500);
+			return;
+		}
+
+		$pdo->commit();
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'task_id' => $taskId,
+				'ready_for_review' => $readyForReview
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message("Error in handle_toggle_ready_for_review: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while updating ready status.'], 500);
 	}
 }

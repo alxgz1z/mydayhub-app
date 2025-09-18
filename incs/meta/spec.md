@@ -132,7 +132,8 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** "Shared with Me" virtual column with automatic population
 - **[RDY]** Shared task visual styling (border, gradient, badges)
 - **[RDY]** Lightweight share badge updates without board reload
-- **[WIP]** Permission-based task action menu filtering
+- **[WIP]** Ready-for-Review workflow (UI complete, data sync debugging required)
+- **[WIP]** Permission-based task action menu filtering (partial implementation)
 - **[FUT]** Mobile share workflow optimization
 
 #### Advanced UI Features
@@ -330,6 +331,11 @@ The Tasks View serves as the application's primary interface, implementing a Kan
 - **Snoozed:** Opacity 0.65, grayscale(0.3) filter, purple wake indicator
 - **Private:** Diagonal line pattern overlay
 - **Shared:** Distinct styling with recipient badges
+
+**Ready-for-Review States (Recipients):**
+- **Not Ready:** Empty circle indicator - recipient can mark ready
+- **Ready for Review:** Filled circle indicator - recipient marked ready, owner notified
+- **Completed by Owner:** Checkmark indicator - task completed, workflow complete
 
 #### 4.1.3 Task Classification System
 
@@ -580,6 +586,12 @@ Shared tasks use server-side encryption to enable collaboration, representing a 
 - Edit capabilities based on assigned permissions
 - "Ready for Review" status for workflow completion
 
+**Ready-for-Review Workflow:**
+- Recipients can mark tasks ready for owner review via interactive status indicator
+- Owner receives visual notification (badge) when tasks marked ready
+- Status persists across sessions and syncs between collaborators
+- Workflow completion tracked per recipient for multi-user shared tasks
+
 ---
 
 ### 4.5 Future Views (Deferred)
@@ -775,12 +787,13 @@ CREATE TABLE shared_items (
   item_type ENUM('task', 'column') NOT NULL DEFAULT 'task',
   item_id INT NOT NULL,
   permission ENUM('edit', 'view') NOT NULL DEFAULT 'edit',
-  status ENUM('active', 'ready_for_review', 'revoked') NOT NULL DEFAULT 'active',
+  ready_for_review BOOLEAN DEFAULT FALSE,  -- Add this line
   created_at DATETIME DEFAULT UTC_TIMESTAMP,
   updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
   UNIQUE KEY ux_share (owner_id, recipient_id, item_type, item_id),
   INDEX ix_recipient (recipient_id),
   INDEX ix_owner (owner_id)
+);NDEX ix_owner (owner_id)
 );
 ```
 
@@ -796,6 +809,8 @@ CREATE TABLE sharing_activity (
   INDEX ix_shared_item (shared_item_id)
 );
 ```
+
+
 
 ### 5.4 Frontend Architecture
 
