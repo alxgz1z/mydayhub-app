@@ -1337,4 +1337,52 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 * Zero-knowledge boundary maintained through permission-based API validation
 * Lightweight frontend updates prevent full board reload during status changes
 
+---
+
+# # 1. Commit Note
+**Fixed ready-for-review toggle bug and implemented owner pulsing notifications**
+* Fixed frontend state synchronization where ready-for-review defaulted to false regardless of database value
+* Updated createTaskCard to properly handle backend boolean/numeric values using !! coercion
+* Added pulsing orange notification badge for task owners when recipients mark tasks ready
+* Enhanced getTaskShares query to include ready_for_review status for proper frontend display
+* Removed completion status restriction from ready-for-review workflow per user preference
+
+⠀Maintains CSRF protection and ownership validation for all ready-for-review operations.
+# 2. Development Summary & Next Steps
+
+# Timestamp: 2025-09-18 23:30 - Ready-for-Review Workflow Complete & Owner Notifications
+**Version**: Beta 6.9.1+
+**Focus** Complete the "Ready for Review" functionality with proper state synchronization and implement visual owner notifications when shared task recipients mark tasks as ready for review.
+**Key work**
+* **Critical Bug Fix (Frontend State Sync):**
+  * Resolved data synchronization bug where data-ready-for-review attribute always defaulted to "false" string regardless of backend boolean value
+  * Updated createTaskCard() to use !!(taskData.ready_for_review) coercion for proper boolean-to-string conversion
+  * Fixed toggle logic that caused "double-click" behavior where users needed two clicks to turn off ready status
+* **Backend Share Data Enhancement:**
+  * Updated getTaskShares() function in /api/tasks.php to include COALESCE(s.ready_for_review, 0) as ready_for_review in SQL query
+  * Enhanced shared task queries to properly return ready-for-review status for each recipient
+  * Fixed data flow from database through API to frontend task card datasets
+* **Owner Notification System:**
+  * Added pulsing orange notification badge for task owners when any recipient marks their task ready for review
+  * Implemented hasReadyIndicator logic checking taskData.shares.some(share => share.ready_for_review)
+  * Created CSS animation with 2-second pulse cycle and reduced motion accessibility variant
+  * Used orange color (#f97316) for good contrast against existing blue accent theme
+* **Workflow Policy Decision:**
+  * Removed completion status restriction from ready-for-review workflow (Option B implementation)
+  * Ready-for-review badges now persist on completed tasks showing workflow history
+  * Provides complete audit trail of collaboration patterns
+* **UI Polish & Consistency:**
+  * Enhanced share badge styling with stronger opacity values for better visibility
+  * Improved shared task visual hierarchy with enhanced gradients and shadows
+  * Added subtle but noticeable pulsing effect that draws attention without being disruptive
+
+⠀**Status** Ready-for-review workflow is feature-complete and stable. Recipients can mark tasks ready via interactive status indicators, owners receive immediate pulsing notifications, and state persists correctly across sessions. All known data synchronization bugs resolved.
+**Recommended next steps (priority order)**
+**1** **Note History System (Simple Alternative):** Implement the simpler note versioning approach with task_note_historytable for audit trail without changing current single-note UX
+**2** **Permission-Based Action Restrictions:** Complete recipient permission system by filtering task action menus based on access level (view vs edit vs owner rights)
+**3** **Mobile Share Workflow Testing:** Comprehensive testing of sharing modal and ready-for-review interactions on touch devices
+**4** **Zero-Knowledge Architecture Foundation:** Begin consolidating crypto operations and implement per-item DEKs as next major architectural milestone
+**5** **Wake Notification System:** Implement missing automatic unsnooze notifications at 9 AM for snoozed tasks
+
+
 

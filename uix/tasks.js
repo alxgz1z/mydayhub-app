@@ -1879,7 +1879,8 @@ function createTaskCard(taskData) {
 	let footerHTML = '';
 	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
 	const hasSharedIndicator = taskData.shares && taskData.shares.length > 0;
-	const hasReadyIndicator = isOwner && isReadyForReview && !isCompleted;
+	const hasReadyIndicator = isOwner && taskData.shares && 
+		taskData.shares.some(share => share.ready_for_review);
 	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator;
 	
 	if (hasIndicators) {
@@ -1975,7 +1976,7 @@ function createTaskCard(taskData) {
 						<path d="M9 11l3 3L22 4"></path>
 						<path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"></path>
 					</svg>
-					<span class="ready-text">Ready</span>
+					<span class="ready-text">Review</span>
 				</span>
 			`;
 		}
@@ -2040,7 +2041,7 @@ function createTaskCard(taskData) {
 			data-is-snoozed="${taskData.is_snoozed || false}"
 			data-shares='${JSON.stringify(taskData.shares || [])}'
 			data-access-type="${accessType}"
-			data-ready-for-review="${taskData.ready_for_review || false}"
+			data-ready-for-review="${!!(taskData.ready_for_review)}"
 			${draggableAttr}>
 			<div class="task-card-main">
 				<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>

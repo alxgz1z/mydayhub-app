@@ -204,37 +204,37 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
  * Returns array with task_id as key and shares array as value
  */
 function getTaskShares($pdo, $userId, $taskIds) {
-	if (empty($taskIds)) return [];
-	
-	$placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
-	$sql = "
-		SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, s.status
-		FROM shared_items s
-		JOIN users u ON u.user_id = s.recipient_id
-		WHERE s.item_type = 'task' 
-		AND s.item_id IN ($placeholders) 
-		AND s.owner_id = ? 
-		AND s.status = 'active'
-		ORDER BY u.username
-	";
-	
-	$params = array_merge($taskIds, [$userId]);
-	$stmt = $pdo->prepare($sql);
-	$stmt->execute($params);
-	$results = $stmt->fetchAll(PDO::FETCH_ASSOC);
-	
-	// Group shares by task_id
-	$taskShares = [];
-	foreach ($results as $share) {
-		$taskId = $share['task_id'];
-		if (!isset($taskShares[$taskId])) {
-			$taskShares[$taskId] = [];
-		}
-		$taskShares[$taskId][] = $share;
-	}
-	
-	return $taskShares;
-}
+	 if (empty($taskIds)) return [];
+	 
+	 $placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
+	 $sql = "
+		 SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, s.status, COALESCE(s.ready_for_review, 0) as ready_for_review
+		 FROM shared_items s
+		 JOIN users u ON u.user_id = s.recipient_id
+		 WHERE s.item_type = 'task' 
+		 AND s.item_id IN ($placeholders) 
+		 AND s.owner_id = ? 
+		 AND s.status = 'active'
+		 ORDER BY u.username
+	 ";
+	 
+	 $params = array_merge($taskIds, [$userId]);
+	 $stmt = $pdo->prepare($sql);
+	 $stmt->execute($params);
+	 $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+	 
+	 // Group shares by task_id
+	 $taskShares = [];
+	 foreach ($results as $share) {
+		 $taskId = $share['task_id'];
+		 if (!isset($taskShares[$taskId])) {
+			 $taskShares[$taskId] = [];
+		 }
+		 $taskShares[$taskId][] = $share;
+	 }
+	 
+	 return $taskShares;
+ }
 
 
 // Modified for Snooze Feature
@@ -741,7 +741,7 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 
 /**
  * Fetches all columns, tasks, and user preferences.
- * Modified for Sharing Foundation - Include shared tasks in "Shared with Me" column
+ * Modified for Sharing Foundation - Include shared tasks in "Shared with Me" column only when shared tasks exist
  */
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
@@ -791,34 +791,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
-		// Modified for Sharing Foundation - Add "Shared with Me" virtual column
-		$sharedColumnId = 'shared-with-me';
-		$sharedColumn = [
-			'column_id' => $sharedColumnId,
-			'column_name' => 'Shared with Me',
-			'position' => 9999, // Place at the end
-			'is_private' => false,
-			'tasks' => []
-		];
-		$boardData[] = $sharedColumn;
-		$columnMap[$sharedColumnId] = &$boardData[count($boardData) - 1];
-
-		// Get user's own tasks
-		$stmtTasks = $pdo->prepare(
-			"SELECT 
-				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
-				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, 
-				COUNT(ta.attachment_id) as attachments_count,
-				'owner' as access_type
-			 FROM tasks t
-			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
-			 WHERE t.user_id = :userId AND t.deleted_at IS NULL
-			 GROUP BY t.task_id
-			 ORDER BY t.position ASC"
-		);
-		$stmtTasks->execute([':userId' => $userId]);
-
-		// Modified for Sharing Foundation - Get tasks shared with this user
+		// Modified for Virtual Column Fix - First check if shared tasks exist
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
@@ -836,6 +809,37 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 ORDER BY t.position ASC"
 		);
 		$stmtSharedTasks->execute([':userId' => $userId]);
+		$sharedTasks = $stmtSharedTasks->fetchAll();
+
+		// Modified for Virtual Column Fix - Only add "Shared with Me" column if shared tasks exist
+		$sharedColumnId = null;
+		if (!empty($sharedTasks)) {
+			$sharedColumnId = 'shared-with-me';
+			$sharedColumn = [
+				'column_id' => $sharedColumnId,
+				'column_name' => 'Shared with Me',
+				'position' => 9999, // Place at the end
+				'is_private' => false,
+				'tasks' => []
+			];
+			$boardData[] = $sharedColumn;
+			$columnMap[$sharedColumnId] = &$boardData[count($boardData) - 1];
+		}
+
+		// Get user's own tasks
+		$stmtTasks = $pdo->prepare(
+			"SELECT 
+				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
+				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, 
+				COUNT(ta.attachment_id) as attachments_count,
+				'owner' as access_type
+			 FROM tasks t
+			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
+			 WHERE t.user_id = :userId AND t.deleted_at IS NULL
+			 GROUP BY t.task_id
+			 ORDER BY t.position ASC"
+		);
+		$stmtTasks->execute([':userId' => $userId]);
 
 		// Process owned tasks
 		$taskIds = [];
@@ -850,8 +854,8 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			}
 		}
 
-		// Process shared tasks - add to "Shared with Me" column
-		while ($task = $stmtSharedTasks->fetch()) {
+		// Process shared tasks - add to "Shared with Me" column only if it exists
+		foreach ($sharedTasks as $task) {
 			$encryptedData = json_decode($task['encrypted_data'], true);
 			$task['has_notes'] = !empty($encryptedData['notes']);
 			$task['is_snoozed'] = !empty($task['snoozed_until']);

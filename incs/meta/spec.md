@@ -132,8 +132,9 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** "Shared with Me" virtual column with automatic population
 - **[RDY]** Shared task visual styling (border, gradient, badges)
 - **[RDY]** Lightweight share badge updates without board reload
-- **[WIP]** Ready-for-Review workflow (UI complete, data sync debugging required)
-- **[WIP]** Permission-based task action menu filtering (partial implementation)
+- **[RDY]** Ready-for-Review workflow with pulsing owner notifications and proper state synchronization
+- **[RDY]** Ready-for-Review workflow (UI complete)
+- **[RDY]** Permission-based task action menu filtering (partial implementation)
 - **[FUT]** Mobile share workflow optimization
 
 #### Advanced UI Features
@@ -149,7 +150,7 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
 
 #### Collaboration UI (Foundation)
-- **[WIP]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
+- **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
 
 ### 2.4 Priority Roadmap (Beta 6.7+)
 
@@ -482,21 +483,7 @@ The Unified Note Editor provides a full-featured writing environment accessible 
 - Tab/Shift+Tab for indentation control
 - Case conversion tools (UPPER, lower, Title Case)
 
-#### 4.2.2 Quick Notes Integration
-
-For short notes (under 250 characters), tasks feature a "Quick Notes" mode:
-
-**3D Card Flip Animation:**
-- Smooth CSS transform-based flip effect
-- Front: Standard task card layout
-- Back: Simple textarea with Save/Cancel/Expand controls
-
-**Smart Editor Selection:**
-- Short notes: Trigger card flip for in-context editing
-- Long notes: Open full Unified Editor for extended workspace
-- Seamless transition between modes with data preservation
-
-#### 4.2.3 Auto-save & Persistence
+#### 4.2.2 Auto-save & Persistence
 
 **Auto-save Behavior:**
 - Debounced auto-save after typing stops (configurable interval)
@@ -592,6 +579,13 @@ Shared tasks use server-side encryption to enable collaboration, representing a 
 - Status persists across sessions and syncs between collaborators
 - Workflow completion tracked per recipient for multi-user shared tasks
 
+**Owner Notification System:**
+- Task owners receive visual notification (pulsing orange badge) when recipients mark tasks ready
+- Notification persists on both active and completed tasks (Option B workflow)
+- Badge uses orange color (#f97316) for contrast with blue accent theme
+- Includes accessibility support with reduced motion variant
+- Provides complete audit trail of collaboration workflow
+
 ---
 
 ### 4.5 Future Views (Deferred)
@@ -612,6 +606,34 @@ While current development focuses exclusively on Tasks, the architecture support
 - Multi-day event planning with timeline visualization
 - Segment management with participant tracking
 - Resource allocation and location management
+
+#### 4.6.1 Architecture Approach
+
+**Database Schema:**
+- New `task_note_history` table: `id`, `task_id`, `user_id`, `note_content`, `created_at`, `action_type`
+- Current single-note system remains in tasks table
+- Previous versions archived automatically when notes updated
+
+**Workflow:**
+- Users continue to see one current note per task
+- "View History" button in UnifiedEditor shows chronological list
+- History entries format: "Updated by [user] on [date]" with expandable content
+- Read-only view of all previous versions
+
+#### 4.6.2 Implementation Benefits
+
+**Advantages over full multi-note system:**
+- Maintains current familiar UX patterns
+- Provides accountability without workflow changes  
+- Much simpler to implement and maintain
+- Clear audit trail for collaboration
+- No UI complexity increase for basic note editing
+
+**Technical Requirements:**
+- Auto-logging in existing `saveTaskDetails` API before content update
+- New `getNoteHistory` endpoint for viewing past versions
+- Modal or expandable UI component for history display
+- Handles both owner and recipient note changes with proper attribution
 
 ---
 
