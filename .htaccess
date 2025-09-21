@@ -19,10 +19,10 @@ RewriteEngine On
 # This is the crucial rule that was missing.
 # It tells the server that any request starting with "api/" that is NOT for a
 # real file (-f) or directory (-d) should be passed to our main gateway script.
+RewriteEngine On
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^api/(.*)$ api/api.php [L,QSA]
-
 
 # --- Security Headers ---
 

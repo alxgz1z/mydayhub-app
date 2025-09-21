@@ -2072,4 +2072,138 @@ WHERE u.id IS NULL;
 * Coverage: # of customers/use cases mapped after 30 days.
 * Insight yield: # of whitespace/opportunity views saved per week.
 
+---
 
+ON CRAZY HARD TROUBLESHOOTING AFTER REMOVING XAMPP
+
+# LAMP Stack Troubleshooting Guide - macOS Environment Issues
+
+## Problem: App worked before, stopped after server environment changes
+**Key principle: Prioritize environmental causes over code issues when codebase hasn't changed**
+
+## Step-by-Step Troubleshooting Process
+
+### 1. Check Apache Status and Configuration
+```bash
+# Check if Apache is running
+sudo apachectl status
+
+# Test configuration syntax
+sudo apachectl configtest
+
+# Check what's using port 80
+sudo lsof -i :80
+
+# Check Apache configuration for Listen directive
+grep -n "Listen" /etc/apache2/httpd.conf
+```
+
+### 2. Resolve Code Signing Issues (macOS specific)
+**Problem:** PHP module fails to load due to code signing requirements
+```bash
+# Error: "No code signing authority for module"
+# Solution: Comment out the problematic LoadModule line
+sudo nano /etc/apache2/httpd.conf
+# Add # before: LoadModule php_module /path/to/libphp.so
+```
+
+### 3. Configure PHP-FPM Integration
+```bash
+# Check if PHP-FPM is running
+brew services list | grep php
+
+# Add to httpd.conf:
+LoadModule proxy_module libexec/apache2/mod_proxy.so
+LoadModule proxy_fcgi_module libexec/apache2/mod_proxy_fcgi.so
+<FilesMatch "\.php$">
+	SetHandler "proxy:fcgi://127.0.0.1:9000"
+</FilesMatch>
+DirectoryIndex index.html index.php
+```
+
+### 4. Verify PHP Processing
+```bash
+# Create test file
+echo "<?php phpinfo(); ?>" | sudo tee /Library/WebServer/Documents/test.php
+
+# Test in browser: http://localhost/test.php
+# Should show PHP info page, not raw code
+```
+
+### 5. Check Project File Location
+```bash
+# Verify DocumentRoot matches your project location
+grep -n "DocumentRoot" /etc/apache2/httpd.conf
+
+# Check project files are in the right place
+ls -la /Library/WebServer/Documents/
+```
+
+### 6. Remove Problematic Debug Files
+**Problem:** Bootstrap or debug files with mixed PHP/HTML causing raw code display
+```bash
+# Remove files that aren't in production
+sudo rm /Library/WebServer/Documents/_bootstrap.php
+```
+
+### 7. Test API Endpoints Directly
+```bash
+# Test API calls directly to isolate issues
+curl -v "http://localhost/api/api.php?module=tasks&action=list"
+
+# Check browser Network tab for actual error responses
+```
+
+### 8. Fix MySQL SQL Mode Compatibility
+**Problem:** Local MySQL stricter than production server
+```bash
+# Check current SQL mode
+mysql -u root -p -e "SELECT @@sql_mode;"
+
+# Remove ONLY_FULL_GROUP_BY to match production
+mysql -u root -p -e "SET GLOBAL sql_mode = 'STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';"
+```
+
+## Common Issues and Solutions
+
+### Raw PHP Code Displayed
+- **Cause:** PHP not processing files, mixed PHP/HTML in includes
+- **Solution:** Fix PHP-FPM configuration, remove debug files
+
+### API 500 Errors
+- **Cause:** Usually database compatibility issues
+- **Solution:** Check MySQL sql_mode, compare with production
+
+### Connection Refused
+- **Cause:** Apache not listening on expected port
+- **Solution:** Check Listen directive, restart Apache
+
+### Module Loading Failures
+- **Cause:** macOS code signing requirements
+- **Solution:** Comment out problematic modules, use PHP-FPM instead
+
+## Key Diagnostic Commands
+
+```bash
+# Apache status and config
+sudo apachectl status
+sudo apachectl configtest
+
+# Port usage
+sudo lsof -i :80
+sudo lsof -i :9000
+
+# PHP services
+brew services list | grep php
+
+# Apache/PHP logs
+tail -f /var/log/apache2/error_log
+tail -f /usr/local/var/log/php-fpm.log
+```
+
+## Prevention Tips
+
+1. **Document your working configuration** before making changes
+2. **Compare production vs local environments** systematically
+3. **Test each layer separately:** Apache → PHP → Database → Application
+4. **Keep production and development environments aligned** for SQL modes and PHP versions

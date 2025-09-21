@@ -7,8 +7,8 @@
     ".nova"
   ],
   "index.use_scm_ignored_files" : true,
-  "workspace.color" : 1,
-  "workspace.name" : "mdh",
+  "workspace.color" : 3,
+  "workspace.name" : "lo",
   "workspace.preview_root" : ".",
   "workspace.preview_type" : "custom",
   "workspace.preview_url" : "localhost"
