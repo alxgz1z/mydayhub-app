@@ -1,6 +1,6 @@
 <?php
 // Code for /login/reset-password.php
-
+// Beta 7 
 // MyDayHub - Password Reset Page
 
 require_once __DIR__ . '/../incs/config.php';

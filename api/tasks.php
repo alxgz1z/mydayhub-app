@@ -189,6 +189,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_toggle_ready_for_review($pdo, $userId, $data);
 			}
 			break;
+			
+		case 'getAllUserAttachments':
+		if ($method === 'GET') {
+			handle_get_all_user_attachments($pdo, $userId);
+		}
+		break;
 		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
@@ -1778,5 +1784,83 @@ function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): vo
 		}
 		log_debug_message("Error in handle_toggle_ready_for_review: " . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred while updating ready status.'], 500);
+	}
+}
+
+
+
+/**
+ * Fetches all attachments for the current user across all tasks with sorting options.
+ * Modified for File Management Feature - New endpoint for global attachment management
+ */
+function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
+	$sortBy = $_GET['sort_by'] ?? 'date'; // 'date' or 'size'
+	$sortOrder = $_GET['sort_order'] ?? 'desc'; // 'asc' or 'desc'
+
+	// Validate sort parameters
+	if (!in_array($sortBy, ['date', 'size'])) {
+		$sortBy = 'date';
+	}
+	if (!in_array($sortOrder, ['asc', 'desc'])) {
+		$sortOrder = 'desc';
+	}
+
+	try {
+		// Get user's current storage usage
+		$storageStmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
+		$storageStmt->execute([':userId' => $userId]);
+		$storageUsed = (int)$storageStmt->fetchColumn();
+
+		// Build the ORDER BY clause based on sort parameters
+		$orderByClause = '';
+		if ($sortBy === 'size') {
+			$orderByClause = "ORDER BY ta.filesize_bytes {$sortOrder}";
+		} else { // date
+			$orderByClause = "ORDER BY ta.created_at {$sortOrder}";
+		}
+
+		// Get all attachments for the user with task information
+		$stmt = $pdo->prepare("
+			SELECT 
+				ta.attachment_id,
+				ta.task_id,
+				ta.filename_on_server,
+				ta.original_filename,
+				ta.filesize_bytes,
+				ta.mime_type,
+				ta.created_at,
+				t.encrypted_data,
+				t.column_id,
+				c.column_name
+			FROM task_attachments ta
+			JOIN tasks t ON t.task_id = ta.task_id
+			LEFT JOIN `columns` c ON c.column_id = t.column_id
+			WHERE ta.user_id = :userId
+			AND t.deleted_at IS NULL
+			{$orderByClause}
+		");
+		$stmt->execute([':userId' => $userId]);
+		$attachments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process attachments to include task titles
+		foreach ($attachments as &$attachment) {
+			$taskData = json_decode($attachment['encrypted_data'], true);
+			$attachment['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($attachment['encrypted_data']); // Remove encrypted data from response
+		}
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'attachments' => $attachments,
+				'storage_used' => $storageUsed,
+				'storage_quota' => USER_STORAGE_QUOTA_BYTES,
+				'total_count' => count($attachments)
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_all_user_attachments: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
 	}
 }

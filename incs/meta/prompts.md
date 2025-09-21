@@ -86,7 +86,7 @@ Step 1: Diff Preview
 	* Previous vs. new character count
 	* Added / removed / modified logic units
 	* Justify any character count change >400.
-  * Conformance Statement: “I confirm this output fully complies with the 4-Layer Safety Protocol and has passed the Conformance Check.”.
+  * Conformance Statement: “I confirm this output fully complies with the 4-Layer Safety Protocol and has passed the Conformance Check.”.
   * Explicit Verification Checklist:
 	* Confirm every change matches the approved diff
 	* Note if any discrepancies are detected
@@ -99,7 +99,7 @@ _oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo_
 
 # STOP
 
-You are tasked with producing clear, actionable documentation to capture the exact state of development at the close of this coding session. This record must allow a future session (with Gemini or another LLM) to resume smoothly without prior context.
+Please help me producing clear, actionable documentation to capture the exact state of development at the close of this coding session. This record must allow a future session (with Gemini or another LLM) to resume smoothly without prior context.
 
 ### Deliverables
 	1. Commit Note

@@ -15,6 +15,7 @@
 5. [Technical Specification](#5-technical-specification)
 6. [Appendices](#6-appendices)
 
+
 ---
 
 ## 1. Introduction
@@ -84,6 +85,9 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `deleteAttachment` (in tasks.php) - File deletion with storage recalculation
 - **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
 
+#### File Management
+- **[RDY]** `getAllUserAttachments` (in tasks.php) - Global file listing with sorting and task context
+
 #### Collaboration (Foundation)
 - **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
 - **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
@@ -148,40 +152,37 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Dynamic Snooze/Unsnooze Menu State - Context-aware action menus
 - **[RDY]** Snoozed Task Visual Styling - Opacity and grayscale effects
 - **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
+#### Advanced UI Features
+- **[RDY]** File Management Modal - Centralized attachment management with sorting, deletion, and storage tracking
+- **[RDY]** Settings Panel Polish - Consistent button styling and icon integration
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
 
-### 2.4 Priority Roadmap (Beta 6.7+)
+### 2.4 Priority Roadmap (Beta 7.x+)
 
 The roadmap prioritizes stability, core feature completion, and foundational architecture for future advanced features.
 
 #### Immediate Priorities (Sprint 1-2)
-#### Immediate Priorities (Sprint 1-2)
-1. **Recipient Permission System** - Implement action menu filtering and interaction restrictions based on share permissions (`view`/`edit` vs owner rights)
 
-2. **Sharing Workflow Polish** - Complete mobile UX testing, refine modal interactions, and add permission-based visual cues
+1. **Trust Management System** - User interface for viewing and managing all trust relationships and shared task recipients
 
-3. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
+2. **File Management Enhancements** - Bulk operations, search functionality, and storage analytics
 
-4. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
+3. **Permission System Completion** - Full recipient permission enforcement for shared task actions
+
+4. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
+
+5. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
 
 #### Medium-term Features (Sprint 3-4)
-5. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
-
-6. **Sharing (foundation)** - UI + API stubs (shareTask / revokeShare) without E2E key exchange yet, providing basic collaboration without compromising the zero-knowledge architecture.
+6. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
 
 #### Long-term Features (Sprint 5+)
 7. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
 
 8. **Accessibility Polish** - Colorblind/high-contrast tuning; ARIA announcements for Move Mode; keyboard navigation improvements.
 
-#### Priority Roadmap Updates
-
-Recent completions have shifted focus toward advanced user experience and collaboration:
-- "Column Reordering (Drag & Drop)" completed with both button and drag interfaces
-- "Debug/Observability Hardening" completed based on comprehensive backend testing results  
-- "Zero-Knowledge Baseline" priority increased based on stable foundation now established
 
 ---
 
@@ -446,6 +447,26 @@ Tasks can be temporarily hidden with scheduled wake-up times:
 - Images: In-app modal viewer with natural sizing
 - PDFs: Opens in new browser tab for full functionality
 - Gallery view with file metadata and deletion options
+
+#### 4.1.7.1 Global File Management
+
+**Centralized Management:**
+- "Manage Files" button in Settings panel provides access to all user attachments
+- Sort options: Newest First, Oldest First, Largest First, Smallest First
+- File context display: Shows originating task title and column name
+- Bulk operations: Individual file deletion with confirmation prompts
+
+**Storage Overview:**
+- Real-time quota usage with percentage display
+- File count and total storage consumption tracking
+- Immediate updates after upload/deletion operations
+- Visual progress bar for quota management
+
+**File Organization:**
+- Thumbnail display for images, icon display for PDFs
+- Metadata including file size, upload date, and task context
+- Integration with existing attachment viewer for file preview
+- Responsive design for desktop and mobile access
 
 #### 4.1.8 Privacy & Filtering
 
@@ -978,6 +999,10 @@ Traditional password resets incompatible with zero-knowledge encryption without 
 - Mobile responsiveness testing
 - Performance testing under load
 - Security penetration testing
+
+**Test file management endpoint**
+curl -X GET "http://localhost/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=size&sort_order=desc" \
+  -H "X-CSRF-Token: your-token-here"
 
 ### 5.8 Environment Configuration
 

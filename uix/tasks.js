@@ -2500,6 +2500,475 @@ function closeAttachmentViewer() {
 	isImageViewerOpen = false;
 }
 
+/**
+ * Opens the file management modal showing all user attachments.
+ * Modified for File Management Feature - New global attachment management interface
+ */
+async function openFileManagementModal() {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const modalOverlay = document.getElementById('file-management-modal-overlay');
+		const listContainer = document.getElementById('file-management-list');
+		const sortSelect = document.getElementById('file-management-sort');
+		const quotaBar = document.getElementById('file-management-quota-bar');
+		const quotaText = document.getElementById('file-management-quota-text');
+		
+		if (!modalOverlay || !listContainer) {
+			console.error('File management modal components are missing!');
+			return;
+		}
+
+		listContainer.innerHTML = '<p>Loading...</p>';
+		modalOverlay.classList.remove('hidden');
+
+		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
+				const result = await response.json();
+				
+				if (result.status === 'success') {
+					renderFileManagementList(result.data.attachments, listContainer);
+					updateFileManagementQuota(result.data.storage_used, result.data.storage_quota, quotaBar, quotaText);
+					
+					// Update total count display
+					const countDisplay = document.getElementById('file-management-count');
+					if (countDisplay) {
+						countDisplay.textContent = `${result.data.total_count} files`;
+					}
+				} else {
+					throw new Error(result.message || 'Failed to load files.');
+				}
+			} catch (error) {
+				listContainer.innerHTML = `<p class="error-message">Could not load files: ${error.message}</p>`;
+			}
+		};
+
+		await refreshFileList();
+
+		// Set up sort handler
+		if (sortSelect) {
+			sortSelect.addEventListener('change', async (e) => {
+				const [sortBy, sortOrder] = e.target.value.split('_');
+				await refreshFileList(sortBy, sortOrder);
+			});
+		}
+
+		// Set up close handlers
+		const closeButton = document.getElementById('file-management-close-btn');
+		const closeModalHandler = () => {
+			closeFileManagementModal();
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
+		};
+		
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+
+		// Set up delete handler
+		const handleDeleteClick = async (e) => {
+			const deleteBtn = e.target.closest('.btn-delete-file-management');
+			if (deleteBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const attachmentId = deleteBtn.dataset.attachmentId;
+				const filename = deleteBtn.dataset.filename;
+				const confirmed = await showConfirm(`Are you sure you want to permanently delete "${filename}"?`);
+				if (confirmed) {
+					const success = await deleteAttachment(attachmentId);
+					if (success) {
+						// Refresh the list after deletion
+						const sortValue = sortSelect ? sortSelect.value : 'date_desc';
+						const [sortBy, sortOrder] = sortValue.split('_');
+						await refreshFileList(sortBy, sortOrder);
+						showToast({ message: 'File deleted successfully.', type: 'success' });
+					}
+				}
+			}
+		};
+		
+		closeButton?.addEventListener('click', closeModalHandler);
+		listContainer.addEventListener('click', handleDeleteClick);
+		document.addEventListener('keydown', handleEscKey);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+
+		// Cleanup function
+		const cleanup = () => {
+			closeButton?.removeEventListener('click', closeModalHandler);
+			listContainer.removeEventListener('click', handleDeleteClick);
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+		};
+
+		// Store cleanup function for later use
+		modalOverlay._cleanup = cleanup;
+
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Closes the file management modal and cleans up event listeners.
+ * Modified for File Management Feature - Cleanup function for modal
+ */
+function closeFileManagementModal() {
+	const modalOverlay = document.getElementById('file-management-modal-overlay');
+	if (modalOverlay) {
+		// Run cleanup if it exists
+		if (modalOverlay._cleanup) {
+			modalOverlay._cleanup();
+			delete modalOverlay._cleanup;
+		}
+		modalOverlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Renders the list of all user attachments in the file management modal.
+ * Modified for File Management Feature - Render function for global file list
+ */
+function renderFileManagementList(attachments, container) {
+	container.innerHTML = '';
+	
+	if (attachments.length === 0) {
+		container.innerHTML = '<p class="no-files-message">No files uploaded yet.</p>';
+		return;
+	}
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+
+	attachments.forEach(att => {
+		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
+		const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+		
+		const itemEl = document.createElement('div');
+		itemEl.className = 'file-management-item';
+
+		const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+		const uploadDate = new Date(att.created_at).toLocaleDateString('en-US', { 
+			month: 'short', 
+			day: 'numeric',
+			year: 'numeric'
+		});
+		
+		let thumbnailHTML = '';
+		if (isPdf) {
+			thumbnailHTML = `
+				<div class="file-management-thumbnail-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+					</svg>
+				</div>
+			`;
+		} else {
+			thumbnailHTML = `<img src="${fileUrl}" class="file-management-thumbnail" alt="${att.original_filename}" />`;
+		}
+
+		itemEl.innerHTML = `
+			${thumbnailHTML}
+			<div class="file-management-info">
+				<div class="file-management-filename">${att.original_filename}</div>
+				<div class="file-management-details">
+					<span class="file-size">${fileSizeKB} KB</span>
+					<span class="upload-date">${uploadDate}</span>
+				</div>
+				<div class="file-management-task-info">
+					<span class="task-name">Task: ${att.task_title}</span>
+					<span class="column-name">Column: ${att.column_name || 'Unknown'}</span>
+				</div>
+			</div>
+			<button class="btn-delete-file-management" title="Delete File" 
+					data-attachment-id="${att.attachment_id}" 
+					data-filename="${att.original_filename}">&times;</button>
+		`;
+
+		// Add click handler for viewing (only for images)
+		if (!isPdf) {
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return; // Don't open viewer if delete button clicked
+				}
+				openAttachmentViewer(fileUrl, att.original_filename);
+			});
+			itemEl.style.cursor = 'pointer';
+		} else {
+			// For PDFs, make the whole item clickable to open in new tab
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return;
+				}
+				window.open(fileUrl, '_blank');
+			});
+			itemEl.style.cursor = 'pointer';
+		}
+		
+		container.appendChild(itemEl);
+	});
+}
+
+/**
+ * Updates the storage quota display in the file management modal.
+ * Modified for File Management Feature - Quota display for global view
+ */
+function updateFileManagementQuota(usedBytes, quotaBytes, progressBar, quotaText) {
+	if (!progressBar || !quotaText) return;
+	
+	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
+		usedBytes = 0;
+	}
+
+	const usedMB = (usedBytes / 1024 / 1024).toFixed(1);
+	const quotaMB = (quotaBytes / 1024 / 1024).toFixed(1);
+	const usedPercent = quotaBytes > 0 ? ((usedBytes / quotaBytes) * 100).toFixed(1) : 0;
+
+	progressBar.max = quotaBytes;
+	progressBar.value = usedBytes;
+	quotaText.textContent = `${usedMB} / ${quotaMB} MB (${usedPercent}%)`;
+}
+
+
+
+/**
+ * Opens the file management modal showing all user attachments.
+ * Modified for File Management Feature - New global attachment management interface
+ */
+async function openFileManagementModal() {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const modalOverlay = document.getElementById('file-management-modal-overlay');
+		const listContainer = document.getElementById('file-management-list');
+		const sortSelect = document.getElementById('file-management-sort');
+		const quotaBar = document.getElementById('file-management-quota-bar');
+		const quotaText = document.getElementById('file-management-quota-text');
+		
+		if (!modalOverlay || !listContainer) {
+			console.error('File management modal components are missing!');
+			return;
+		}
+
+		listContainer.innerHTML = '<p>Loading...</p>';
+		modalOverlay.classList.remove('hidden');
+
+		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
+				const result = await response.json();
+				
+				if (result.status === 'success') {
+					renderFileManagementList(result.data.attachments, listContainer);
+					updateFileManagementQuota(result.data.storage_used, result.data.storage_quota, quotaBar, quotaText);
+					
+					// Update total count display
+					const countDisplay = document.getElementById('file-management-count');
+					if (countDisplay) {
+						countDisplay.textContent = `${result.data.total_count} files`;
+					}
+				} else {
+					throw new Error(result.message || 'Failed to load files.');
+				}
+			} catch (error) {
+				listContainer.innerHTML = `<p class="error-message">Could not load files: ${error.message}</p>`;
+			}
+		};
+
+		await refreshFileList();
+
+		// Set up sort handler
+		if (sortSelect) {
+			sortSelect.addEventListener('change', async (e) => {
+				const [sortBy, sortOrder] = e.target.value.split('_');
+				await refreshFileList(sortBy, sortOrder);
+			});
+		}
+
+		// Set up close handlers
+		const closeButton = document.getElementById('file-management-close-btn');
+		const closeModalHandler = () => {
+			closeFileManagementModal();
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
+		};
+		
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+
+		// Set up delete handler
+		const handleDeleteClick = async (e) => {
+			const deleteBtn = e.target.closest('.btn-delete-file-management');
+			if (deleteBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const attachmentId = deleteBtn.dataset.attachmentId;
+				const filename = deleteBtn.dataset.filename;
+				const confirmed = await showConfirm(`Are you sure you want to permanently delete "${filename}"?`);
+				if (confirmed) {
+					const success = await deleteAttachment(attachmentId);
+					if (success) {
+						// Refresh the list after deletion
+						const sortValue = sortSelect ? sortSelect.value : 'date_desc';
+						const [sortBy, sortOrder] = sortValue.split('_');
+						await refreshFileList(sortBy, sortOrder);
+						showToast({ message: 'File deleted successfully.', type: 'success' });
+					}
+				}
+			}
+		};
+		
+		closeButton?.addEventListener('click', closeModalHandler);
+		listContainer.addEventListener('click', handleDeleteClick);
+		document.addEventListener('keydown', handleEscKey);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+
+		// Cleanup function
+		const cleanup = () => {
+			closeButton?.removeEventListener('click', closeModalHandler);
+			listContainer.removeEventListener('click', handleDeleteClick);
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+		};
+
+		// Store cleanup function for later use
+		modalOverlay._cleanup = cleanup;
+
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Closes the file management modal and cleans up event listeners.
+ * Modified for File Management Feature - Cleanup function for modal
+ */
+function closeFileManagementModal() {
+	const modalOverlay = document.getElementById('file-management-modal-overlay');
+	if (modalOverlay) {
+		// Run cleanup if it exists
+		if (modalOverlay._cleanup) {
+			modalOverlay._cleanup();
+			delete modalOverlay._cleanup;
+		}
+		modalOverlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Renders the list of all user attachments in the file management modal.
+ * Modified for File Management Feature - Render function for global file list
+ */
+function renderFileManagementList(attachments, container) {
+	container.innerHTML = '';
+	
+	if (attachments.length === 0) {
+		container.innerHTML = '<p class="no-files-message">No files uploaded yet.</p>';
+		return;
+	}
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+
+	attachments.forEach(att => {
+		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
+		const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+		
+		const itemEl = document.createElement('div');
+		itemEl.className = 'file-management-item';
+
+		const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+		const uploadDate = new Date(att.created_at).toLocaleDateString('en-US', { 
+			month: 'short', 
+			day: 'numeric',
+			year: 'numeric'
+		});
+		
+		let thumbnailHTML = '';
+		if (isPdf) {
+			thumbnailHTML = `
+				<div class="file-management-thumbnail-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+					</svg>
+				</div>
+			`;
+		} else {
+			thumbnailHTML = `<img src="${fileUrl}" class="file-management-thumbnail" alt="${att.original_filename}" />`;
+		}
+
+		itemEl.innerHTML = `
+			${thumbnailHTML}
+			<div class="file-management-info">
+				<div class="file-management-filename">${att.original_filename}</div>
+				<div class="file-management-details">
+					<span class="file-size">${fileSizeKB} KB</span>
+					<span class="upload-date">${uploadDate}</span>
+				</div>
+				<div class="file-management-task-info">
+					<span class="task-name">Task: ${att.task_title}</span>
+					<span class="column-name">Column: ${att.column_name || 'Unknown'}</span>
+				</div>
+			</div>
+			<button class="btn-delete-file-management" title="Delete File" 
+					data-attachment-id="${att.attachment_id}" 
+					data-filename="${att.original_filename}">&times;</button>
+		`;
+
+		// Add click handler for viewing (only for images)
+		if (!isPdf) {
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return; // Don't open viewer if delete button clicked
+				}
+				openAttachmentViewer(fileUrl, att.original_filename);
+			});
+			itemEl.style.cursor = 'pointer';
+		} else {
+			// For PDFs, make the whole item clickable to open in new tab
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return;
+				}
+				window.open(fileUrl, '_blank');
+			});
+			itemEl.style.cursor = 'pointer';
+		}
+		
+		container.appendChild(itemEl);
+	});
+}
+
+/**
+ * Updates the storage quota display in the file management modal.
+ * Modified for File Management Feature - Quota display for global view
+ */
+function updateFileManagementQuota(usedBytes, quotaBytes, progressBar, quotaText) {
+	if (!progressBar || !quotaText) return;
+	
+	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
+		usedBytes = 0;
+	}
+
+	const usedMB = (usedBytes / 1024 / 1024).toFixed(1);
+	const quotaMB = (quotaBytes / 1024 / 1024).toFixed(1);
+	const usedPercent = quotaBytes > 0 ? ((usedBytes / quotaBytes) * 100).toFixed(1) : 0;
+
+	progressBar.max = quotaBytes;
+	progressBar.value = usedBytes;
+	quotaText.textContent = `${usedMB} / ${quotaMB} MB (${usedPercent}%)`;
+}
+
+
 // --- Mobile Move Mode Functions ---
 
 /**

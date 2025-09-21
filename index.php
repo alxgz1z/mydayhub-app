@@ -123,7 +123,25 @@ $username = $_SESSION['username'] ?? 'User';
 				<div class="setting-item">
 					<span class="setting-label">Change Password</span>
 					<div class="setting-control">
-						<button id="btn-change-password" class="btn">Change</button>
+						<button id="btn-change-password" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+								<circle cx="12" cy="16" r="1"></circle>
+								<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+							</svg>
+							Change
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<span class="setting-label">Manage Files</span>
+					<div class="setting-control">
+						<button type="button" onclick="openFileManagementModal()" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+							</svg>
+							View
+						</button>
 					</div>
 				</div>
 			</div>
@@ -271,6 +289,38 @@ $username = $_SESSION['username'] ?? 'User';
 	<div id="attachment-viewer-modal-overlay" class="hidden">
 		<button id="attachment-viewer-close-btn" class="btn-icon">&times;</button>
 		<div id="attachment-viewer-content"></div>
+	</div>
+
+	<!-- File Management Modal -->
+	<!-- Modified for File Management Feature - Global attachment management interface -->
+	<div id="file-management-modal-overlay" class="hidden">
+		<div id="file-management-modal-container">
+			<div class="file-management-header">
+				<h4>File Management</h4>
+				<div class="file-management-header-controls">
+					<span id="file-management-count" class="file-management-count">Loading...</span>
+					<select id="file-management-sort">
+						<option value="date_desc">Newest First</option>
+						<option value="date_asc">Oldest First</option>
+						<option value="size_desc">Largest First</option>
+						<option value="size_asc">Smallest First</option>
+					</select>
+					<button id="file-management-close-btn" class="btn-icon" type="button">&times;</button>
+				</div>
+			</div>
+			<div id="file-management-body">
+				<div id="file-management-list">
+					<!-- File list will be populated by JavaScript -->
+				</div>
+			</div>
+			<div class="file-management-footer">
+				<div class="file-management-quota-info">
+					<span>Storage Used:</span>
+					<progress id="file-management-quota-bar" value="0" max="100"></progress>
+					<span id="file-management-quota-text">0 / 50 MB (0%)</span>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<script src="uix/app.js" defer></script>

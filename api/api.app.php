@@ -1,11 +1,19 @@
 <?php
 /**
- * Code for /api/api.php 
+ * Code for /api/api.app.php 
  *
  * MyDayHub - Main API Gateway
  *
  * This file is the single entry point for all data-related API calls.
  * It handles session security, request routing, and dispatches to module handlers.
+ * 
+ * This contains your actual API implementation:
+ * 
+ * - Handles authentication and session management
+ * - Processes CSRF tokens
+ * - Routes requests to appropriate modules (tasks, users)
+ * - Contains the core business logic
+ * - Includes all your module handlers
  *
  * @version 6.6.0
  * @author Alex & Gemini
