@@ -95,6 +95,63 @@ if (empty($_SESSION['csrf_token'])) {
 }
 
 
+// Modified for Session Timeout - Track activity and validate session age
+if (isset($_SESSION['user_id'])) {
+	$now = time();
+	
+	// Load user's timeout preference from database if not in session
+	if (!isset($_SESSION['session_timeout'])) {
+		$_SESSION['session_timeout'] = 1800; // Set safe default first
+		
+		try {
+			if (file_exists(__DIR__ . '/db.php')) {
+				require_once __DIR__ . '/db.php';
+				if (function_exists('get_pdo')) {
+					$pdo = get_pdo();
+					$stmt = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId");
+					$stmt->execute([':userId' => $_SESSION['user_id']]);
+					$result = $stmt->fetch(PDO::FETCH_ASSOC);
+					
+					if ($result && $result['preferences']) {
+						$prefs = json_decode($result['preferences'], true);
+						if (is_array($prefs) && isset($prefs['session_timeout'])) {
+							$_SESSION['session_timeout'] = (int)$prefs['session_timeout'];
+						}
+					}
+				}
+			}
+		} catch (Exception $e) {
+			// Silently fail with default timeout
+			if (DEVMODE) {
+				error_log('Session timeout preference load failed: ' . $e->getMessage());
+			}
+		}
+	}
+	
+	$timeoutSeconds = $_SESSION['session_timeout'];
+	
+	// Check if session has expired due to inactivity
+	if (isset($_SESSION['last_activity']) && ($now - $_SESSION['last_activity']) > $timeoutSeconds) {
+		// Session expired - destroy it and mark for redirect
+		session_unset();
+		session_destroy();
+		session_start();
+		$_SESSION['session_expired'] = true;
+	} else {
+		// Update last activity timestamp
+		$_SESSION['last_activity'] = $now;
+		
+		// Set initial activity time if not set
+		if (!isset($_SESSION['session_started'])) {
+			$_SESSION['session_started'] = $now;
+		}
+	}
+}
+
+	
+$timeoutSeconds = $_SESSION['session_timeout'];
+
+
 // --- SMTP (MAIL) SERVICE (from Environment Variables) --- //
 define('SMTP_HOST', getenv('SMTP_HOST'));
 define('SMTP_USER', getenv('SMTP_USER'));

@@ -84,6 +84,7 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `uploadAttachment` (in tasks.php) - Multi-format file upload with quotas
 - **[RDY]** `deleteAttachment` (in tasks.php) - File deletion with storage recalculation
 - **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
+- **[RDY]** Session timeout management - User-configurable timeout with database persistence and automatic logout
 
 #### File Management
 - **[RDY]** `getAllUserAttachments` (in tasks.php) - Global file listing with sorting and task context
@@ -733,6 +734,24 @@ All API requests flow through `/api/api.php`, providing:
 - Settings persistence in JSON format
 - Cross-device preference synchronization
 - Account management operations
+
+#### Session Management & Timeout
+**User-Configurable Timeout:**
+- Default 30-minute session timeout with user preference options (5min/30min/2hr/8hr)
+- Database persistence of timeout preference in users.preferences JSON field
+- Real-time activity tracking with automatic timer reset on user interaction
+- 5-minute warning notification before automatic logout
+
+**Session Security:**
+- Automatic redirect to logout.php on timeout for complete session cleanup
+- Activity events tracked: mousedown, mousemove, keypress, scroll, touchstart, click
+- Session preference loaded once per session and cached for performance
+- Graceful fallback to 30-minute default if database unavailable
+
+**Implementation:**
+- Backend: Session timeout validation in `/incs/config.php` with database preference loading
+- Frontend: JavaScript timeout system in `/uix/app.js` with activity tracking and warnings
+- Settings: Timeout configuration modal in Settings panel with persistent preference storage
 
 ### 5.3 Database Schema
 

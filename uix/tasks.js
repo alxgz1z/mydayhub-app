@@ -1717,18 +1717,20 @@ async function fetchAndRenderBoard() {
 
 			// Apply user preferences on load
 			if (userPrefs) {
-				if (userPrefs.editor_font_size) {
-					container.dataset.editorFontSize = userPrefs.editor_font_size;
-				}
-				if (typeof userPrefs.filter_show_completed !== 'undefined') {
-					filterState.showCompleted = userPrefs.filter_show_completed;
-				}
-				if (typeof userPrefs.filter_show_private !== 'undefined') {
-					filterState.showPrivate = userPrefs.filter_show_private;
-				}
-				if (typeof userPrefs.filter_show_snoozed !== 'undefined') {
-					filterState.showSnoozed = userPrefs.filter_show_snoozed;
-				}
+			if (userPrefs.editor_font_size) {
+				container.dataset.editorFontSize = userPrefs.editor_font_size;
+			}
+			if (typeof userPrefs.filter_show_completed !== 'undefined') {
+				filterState.showCompleted = userPrefs.filter_show_completed;
+			}
+			if (typeof userPrefs.filter_show_private !== 'undefined') {
+				filterState.showPrivate = userPrefs.filter_show_private;
+			}
+			// Modified for Session Timeout - Load user's timeout preference
+			if (userPrefs.session_timeout) {
+				// Update session timeout setting and button text
+				updateSessionTimeoutSetting(userPrefs.session_timeout);
+			}
 				// Handle theme preferences
 				const highContrastToggle = document.getElementById('toggle-high-contrast');
 				const lightModeToggle = document.getElementById('toggle-light-mode');
@@ -3440,6 +3442,112 @@ function exitMoveMode() {
 		 }
 	 });
  }
+
+// ==========================================================================
+ // --- SESSION TIMEOUT MANAGEMENT ---
+ // ==========================================================================
+ 
+ /**
+  * Updates the session timeout setting and UI elements.
+  */
+ function updateSessionTimeoutSetting(timeoutSeconds) {
+	 const button = document.getElementById('btn-session-timeout');
+	 if (button) {
+		 const timeoutText = formatTimeoutDuration(timeoutSeconds);
+		 button.innerHTML = `
+			 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+				 <circle cx="12" cy="12" r="10"></circle>
+				 <polyline points="12,6 12,12 16,14"></polyline>
+			 </svg>
+			 ${timeoutText}
+		 `;
+	 }
+	 
+	 // Update modal selection when it opens
+	 const modal = document.getElementById('session-timeout-modal-overlay');
+	 if (modal) {
+		 const radioButton = modal.querySelector(`input[value="${timeoutSeconds}"]`);
+		 if (radioButton) {
+			 radioButton.checked = true;
+		 }
+	 }
+	 
+	 // Initialize session timeout system
+	 if (typeof initSessionTimeout === 'function') {
+		 initSessionTimeout(timeoutSeconds);
+	 }
+ }
+ 
+ /**
+  * Formats timeout duration in seconds to human-readable text.
+  */
+ function formatTimeoutDuration(seconds) {
+	 switch (parseInt(seconds)) {
+		 case 300: return '5 minutes';
+		 case 1800: return '30 minutes';
+		 case 7200: return '2 hours';
+		 case 28800: return '8 hours';
+		 default: return '30 minutes';
+	 }
+ }
+ 
+ /**
+  * Saves session timeout preference to database and updates session.
+  */
+ async function saveSessionTimeout(timeoutSeconds) {
+	 try {
+		 await window.apiFetch({
+			 module: 'users',
+			 action: 'saveUserPreference',
+			 key: 'session_timeout',
+			 value: parseInt(timeoutSeconds)
+		 });
+		 
+		 // Update UI and reinitialize timeout system
+		 updateSessionTimeoutSetting(timeoutSeconds);
+		 
+		 showToast('Session timeout updated successfully', 'success');
+	 } catch (error) {
+		 console.error('Error saving session timeout:', error);
+		 showToast('Failed to save session timeout', 'error');
+	 }
+ }
+ 
+ // Initialize session timeout modal when DOM loads
+ document.addEventListener('DOMContentLoaded', () => {
+	 const timeoutButton = document.getElementById('btn-session-timeout');
+	 const timeoutModal = document.getElementById('session-timeout-modal-overlay');
+	 const saveButton = document.getElementById('btn-timeout-save');
+	 const cancelButton = document.getElementById('btn-timeout-cancel');
+	 
+	 if (timeoutButton && timeoutModal) {
+		 timeoutButton.addEventListener('click', () => {
+			 timeoutModal.classList.remove('hidden');
+		 });
+		 
+		 cancelButton?.addEventListener('click', () => {
+			 timeoutModal.classList.add('hidden');
+		 });
+		 
+		 saveButton?.addEventListener('click', () => {
+			 const selectedValue = timeoutModal.querySelector('input[name="timeout"]:checked')?.value;
+			 if (selectedValue) {
+				 saveSessionTimeout(selectedValue);
+				 timeoutModal.classList.add('hidden');
+			 }
+		 });
+		 
+		 // Close modal on overlay click
+		 timeoutModal.addEventListener('click', (e) => {
+			 if (e.target === timeoutModal) {
+				 timeoutModal.classList.add('hidden');
+			 }
+		 });
+	 }
+ });
+ 
+ // Initial load
+ document.addEventListener('DOMContentLoaded', initTasksView);
 
 // Initial load
 document.addEventListener('DOMContentLoaded', initTasksView);

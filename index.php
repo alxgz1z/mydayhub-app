@@ -134,6 +134,18 @@ $username = $_SESSION['username'] ?? 'User';
 					</div>
 				</div>
 				<div class="setting-item">
+					<span class="setting-label">Session Timeout</span>
+					<div class="setting-control">
+						<button id="btn-session-timeout" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="12" cy="12" r="10"></circle>
+								<polyline points="12,6 12,12 16,14"></polyline>
+							</svg>
+							30 minutes
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
 					<span class="setting-label">Manage Files</span>
 					<div class="setting-control">
 						<button type="button" onclick="openFileManagementModal()" class="btn">
@@ -323,6 +335,38 @@ $username = $_SESSION['username'] ?? 'User';
 		</div>
 	</div>
 
+	<!-- Session Timeout Modal -->
+	<div id="session-timeout-modal-overlay" class="hidden">
+		<div id="session-timeout-modal-container">
+			<h4>Session Timeout</h4>
+			<div id="session-timeout-content">
+				<p>Choose how long to keep you logged in during inactivity:</p>
+				<div class="timeout-options">
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="300">
+						<span>5 minutes</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="1800" checked>
+						<span>30 minutes (recommended)</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="7200">
+						<span>2 hours</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="28800">
+						<span>8 hours</span>
+					</label>
+				</div>
+			</div>
+			<div id="session-timeout-buttons">
+				<button id="btn-timeout-cancel" class="btn">Cancel</button>
+				<button id="btn-timeout-save" class="btn btn-primary">Save</button>
+			</div>
+		</div>
+	</div>
+	
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>

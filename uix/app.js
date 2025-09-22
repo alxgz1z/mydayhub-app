@@ -57,6 +57,78 @@ async function apiFetch(bodyPayload = {}) {
 	 }
 }
 
+// ==========================================================================
+// --- SESSION TIMEOUT SYSTEM ---
+// ==========================================================================
+
+let sessionWarningShown = false;
+let logoutTimer = null;
+let warningTimer = null;
+let currentTimeoutSeconds = 1800; // Default 30 minutes
+
+/**
+ * Initializes the session timeout system with user's preferred duration.
+ */
+function initSessionTimeout(timeoutSeconds = 1800) {
+	currentTimeoutSeconds = timeoutSeconds;
+	resetSessionTimer();
+	
+	// Track user activity to reset timers
+	const activityEvents = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
+	activityEvents.forEach(event => {
+		document.addEventListener(event, resetSessionTimer, true);
+	});
+}
+
+/**
+ * Resets session timeout timers on user activity.
+ */
+function resetSessionTimer() {
+	clearTimeout(logoutTimer);
+	clearTimeout(warningTimer);
+	sessionWarningShown = false;
+	
+	const WARNING_SECONDS = 300; // Warn 5 minutes before timeout
+	
+	// Set warning timer (5 minutes before logout)
+	if (currentTimeoutSeconds > WARNING_SECONDS) {
+		warningTimer = setTimeout(showSessionWarning, (currentTimeoutSeconds - WARNING_SECONDS) * 1000);
+	}
+	
+	// Set logout timer
+	logoutTimer = setTimeout(handleSessionTimeout, currentTimeoutSeconds * 1000);
+}
+
+/**
+ * Shows session timeout warning with option to extend.
+ */
+function showSessionWarning() {
+	if (!sessionWarningShown) {
+		sessionWarningShown = true;
+		showToast('Your session will expire in 5 minutes due to inactivity. Click anywhere to extend.', 'warning', {
+			duration: 10000,
+			action: 'Extend Session',
+			callback: resetSessionTimer
+		});
+	}
+}
+
+/**
+ * Handles automatic session timeout by redirecting to logout.
+ */
+function handleSessionTimeout() {
+	const appURL = window.MyDayHub_Config?.appURL || '';
+	window.location.href = `${appURL}/login/logout.php?reason=timeout`;
+}
+
+// Make session timeout functions globally available
+window.initSessionTimeout = initSessionTimeout;
+window.resetSessionTimer = resetSessionTimer;
+
+// Modified for Global apiFetch Architecture Fix
+// Make apiFetch globally available
+window.apiFetch = apiFetch;
+
 // Modified for Global apiFetch Architecture Fix
 // Make apiFetch globally available
 window.apiFetch = apiFetch;

@@ -1420,5 +1420,33 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 * UI patterns established for file management can be extended to other bulk management interfaces
 * Zero-knowledge boundary maintained through file metadata organization without content inspection
 
+---
+
+# # Timestamp: 2025-09-21 23:30 - Authentication System Overhaul & Session Timeout Implementation
+**Version**: Beta 6.7.0+
+**Focus** Complete the authentication and session management system with user-configurable timeout, automatic logout, and enhanced security. The primary goal was to move from hardcoded session management to a robust, user-controlled timeout system with database persistence.
+**Key work**
+* **Session Timeout System (Full Stack):**
+  * **Database Integration:** Modified /incs/config.php to load user's timeout preference from database on session start, with safe fallbacks and error handling.
+  * **Frontend JavaScript:** Implemented activity tracking, 5-minute warnings before logout, and automatic redirect to logout.php when session expires.
+  * **Settings Integration:** Added session timeout modal in Settings panel with 4 duration options (5min/30min/2hr/8hr) and persistent user preference storage.
+  * **User Experience:** Timeout preference loads on app start, updates button text to show current setting, and provides non-blocking warning toasts.
+* **Authentication Flow Stabilization:**
+  * **Mailer Integration:** Confirmed PHPMailer working correctly on Mac development environment via Composer installation.
+  * **Password Reset:** Verified complete "Forgot Password" email flow functioning end-to-end with secure token generation and delivery.
+  * **Password Change:** Validated existing change password functionality working correctly through Settings panel modal.
+  * **Session Management:** Enhanced logout process and session destruction for security.
+* **Environment Configuration:**
+  * **Local Development:** Successfully configured SMTP email sending on Mac using Composer and PHPMailer.
+  * **Cross-Platform:** Verified authentication system works consistently between local XAMPP and production Hostinger environments.
+  * **Security:** All authentication endpoints maintain CSRF protection and proper ownership validation.
+
+⠀**Status** The authentication and session management system is production-ready with user-configurable timeout. Session timeout works correctly (tested with 5-minute setting), automatically logs users out, and provides clear warnings. All authentication flows (login/register/password reset/change password) are functional and secure.
+**Recommended next steps (priority order)**
+**1** **Multiple Session Tracking**: Implement the discussed feature to show number of active sessions next to username in footer, helping users identify when they have multiple concurrent sessions that could cause conflicting modifications.
+**2** **Email Verification for Registration**: Add optional email confirmation step during account creation for enhanced security (currently accounts are created immediately).
+**3** **Session Activity Logging**: Track login times, device information, and session durations for security auditing.
+**4** **Enhanced Password Requirements**: Implement visual feedback for password strength during registration and password changes.
+**5** **Two-Factor Authentication Foundation**: Begin groundwork for optional 2FA using TOTP or email-based verification codes.
 
 
