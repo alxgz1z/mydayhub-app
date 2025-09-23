@@ -1,6 +1,6 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 6.7.0  
+**Version:** Beta 7.0  
 **Audience:** Internal Development & Project Management  
 **Last Updated:** September 15, 2025
 
@@ -53,7 +53,9 @@ The focus on privacy-first architecture challenges us to think beyond convention
 The backend API follows a single-gateway pattern with modular handlers, ensuring consistent security, logging, and error handling across all endpoints.
 
 #### Authentication & User Management
-- **[RDY]** `register` (in auth.php) - Complete user registration with password hashing
+- **[RDY]** sendVerificationCode (in auth.php) - Email-based registration with 6-digit verification codes
+- **[RDY]** verifyEmailCode (in auth.php) - Email verification and account creation with auto-login
+- **[RDY]** register (in auth.php) - Legacy registration endpoint (deprecated in favor of
 - **[RDY]** `login` (in auth.php) - Session-based authentication with CSRF protection
 - **[RDY]** `requestPasswordReset` (in auth.php) - Secure email-based password reset
 - **[RDY]** `performPasswordReset` (in auth.php) - Token validation and password update
@@ -484,6 +486,26 @@ Tasks can be temporarily hidden with scheduled wake-up times:
 - "Show Snoozed Tasks" toggle with state management
 - Future: "Show Shared Items" and "Show Only My Items"
 
+
+#### 4.1.9 Email Verification Registration
+**Two-Step Verification Process:**
+- User submits registration form → system sends 6-digit code to email
+- Same-page verification step → user enters code → account created with auto-login
+- No tab switching or external link dependencies
+
+**Security Features:**
+- SHA-256 hashed verification codes with 15-minute expiration
+- Automatic cleanup of expired pending registrations
+- Single-use codes prevent replay attacks
+- Auto-login after successful verification
+
+**User Experience:**
+- Form transforms to show verification input on same page
+- Clear email address display and resend functionality
+- Immediate feedback with status messages
+- Seamless transition from registration to authenticated session
+
+
 ---
 
 ### 4.2 Unified Note Editor
@@ -782,6 +804,19 @@ CREATE TABLE password_resets (
 );
 ```
 
+**pending_registrations table:**
+CREATE TABLE pending_registrations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  username VARCHAR(50) NOT NULL,
+  email VARCHAR(255) NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  code_hash VARCHAR(255) NOT NULL,
+  expires_at DATETIME NOT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX ix_email_code (email, code_hash),
+  INDEX ix_expires (expires_at)
+);
+
 #### 5.3.2 Task Management
 
 **columns table:**
@@ -1046,7 +1081,7 @@ DEV_MODE=false
 
 #### 5.8.2 Deployment Environments
 
-**Development:** `localhost` with XAMPP/MAMP
+**Development:** `localhost` with Apache, mySQL and PHP.
 - Full debugging enabled
 - File logging active
 - SMTP testing via local mail catcher
