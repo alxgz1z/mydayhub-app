@@ -7,8 +7,8 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 6.7.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 // --- FILE PATHS ---
@@ -74,7 +74,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Beta 6.7.0');
+define('APP_VER', 'Beta 7.0.0');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---

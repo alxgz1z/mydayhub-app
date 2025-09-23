@@ -4,8 +4,8 @@
  *
  * MyDayHub - Forgot Password Script
  *
- * @version 6.3.1
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 require_once __DIR__ . '/../incs/config.php';

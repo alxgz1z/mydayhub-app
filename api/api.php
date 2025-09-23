@@ -9,6 +9,9 @@
 * - Catches any throwable (including fatal errors, exceptions, etc.)
 * - Returns structured JSON error responses when something goes wrong
 * - Provides detailed error information including file/line numbers
+*
+* @version 7.0.0
+* @author Alex & Gemini & Claude
 */
 
 

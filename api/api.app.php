@@ -15,8 +15,8 @@
  * - Contains the core business logic
  * - Includes all your module handlers
  *
- * @version 6.6.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 declare(strict_types=1);

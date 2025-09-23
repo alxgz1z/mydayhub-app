@@ -7,8 +7,8 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 6.4.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 declare(strict_types=1);

@@ -6,8 +6,8 @@
  *
  * Handles user registration, login, and other authentication actions.
  *
- * @version 6.5.2-debug-complete
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 ini_set('display_errors', 1);
