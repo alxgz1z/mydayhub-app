@@ -129,6 +129,12 @@ function handle_admin_action(string $action, string $method, PDO $pdo, int $admi
 			}
 			break;
 			
+		case 'getAdminActions':
+		if ($method === 'GET') {
+			handle_get_admin_actions($pdo, $adminUserId);
+		}
+		break;
+			
 		default:
 			send_json_response(['status' => 'error', 'message' => "Admin action '{$action}' not found."], 404);
 			break;
