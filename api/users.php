@@ -158,3 +158,13 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while saving the preference.']);
 	}
 }
+
+// Add this function to check if current user is admin
+function handle_check_admin_status(PDO $pdo, int $userId): void {
+	$isAdmin = is_admin_user($userId);
+	
+	send_json_response([
+		'status' => 'success',
+		'data' => ['is_admin' => $isAdmin]
+	], 200);
+}

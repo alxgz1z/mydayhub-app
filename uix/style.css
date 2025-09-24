@@ -865,3 +865,34 @@ input:checked + .slider:before {
 #session-timeout-buttons .btn {
 	min-width: 80px;
 }
+
+/* ==========================================================================
+   9. ADMIN ACCESS ICON STYLING
+   ========================================================================== */
+
+/* Admin access icon styling */
+#admin-access-link {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem;
+	margin-right: 0.5rem;
+	border-radius: 0.25rem;
+	transition: all 0.2s ease;
+	text-decoration: none;
+}
+
+#admin-access-link:hover {
+	background: rgba(249, 115, 22, 0.1);
+	transform: scale(1.1);
+}
+
+#admin-access-link svg {
+	filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.5));
+}
+
+/* Ensure proper spacing in footer-left */
+.footer-left {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}

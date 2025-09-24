@@ -24,6 +24,9 @@ if (!isset($_SESSION['user_id'])) {
 
 $username = $_SESSION['username'] ?? 'User';
 
+// Check if current user is admin
+$isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION['user_id']) : false;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -77,6 +80,13 @@ $username = $_SESSION['username'] ?? 'User';
 
 		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>">
 			<div class="footer-left">
+				<?php if ($isCurrentUserAdmin): ?>
+				<a href="/admin/" id="admin-access-link" title="Admin Panel">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z"/>
+					</svg>
+				</a>
+				<?php endif; ?>
 				<span>[<?php echo htmlspecialchars($username); ?>]</span>
 				<span id="footer-date"></span>
 			</div>
@@ -85,8 +95,8 @@ $username = $_SESSION['username'] ?? 'User';
 					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
 					</svg>
-					</button>
-				</div>
+				</button>
+			</div>
 			<div class="footer-right">
 				<span><?php echo APP_VER; ?></span>
 				<a href="login/logout.php">Logout</a>
