@@ -159,3 +159,184 @@ define('SMTP_PASS', getenv('SMTP_PASS'));
 define('SMTP_PORT', getenv('SMTP_PORT'));
 define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL'));
 define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME'));
+
+
+// --- ADMIN CONFIGURATION ---
+define('ADMIN_EMAILS', array_map('trim', explode(',', getenv('ADMIN_EMAILS') ?: '')));
+
+// --- SUBSCRIPTION QUOTAS ---
+define('QUOTA_FREE_COLUMNS', 3);
+define('QUOTA_FREE_TASKS_PER_COLUMN', 10);
+define('QUOTA_FREE_STORAGE_MB', 10);
+define('QUOTA_FREE_SHARED_TASKS', 2);
+
+define('QUOTA_BASE_COLUMNS', 10);
+define('QUOTA_BASE_TASKS_PER_COLUMN', 50);
+define('QUOTA_BASE_STORAGE_MB', 100);
+define('QUOTA_BASE_SHARED_TASKS', 20);
+
+define('QUOTA_PRO_COLUMNS', 50);
+define('QUOTA_PRO_TASKS_PER_COLUMN', 200);
+define('QUOTA_PRO_STORAGE_MB', 500);
+define('QUOTA_PRO_SHARED_TASKS', 100);
+
+define('QUOTA_ELITE_COLUMNS', -1); // Unlimited
+define('QUOTA_ELITE_TASKS_PER_COLUMN', -1); // Unlimited
+define('QUOTA_ELITE_STORAGE_MB', 2048); // 2GB
+define('QUOTA_ELITE_SHARED_TASKS', -1); // Unlimited
+
+/**
+ * Check if the current user is an admin based on their email
+ */
+function is_admin_user(int $userId): bool {
+	if (empty(ADMIN_EMAILS)) return false;
+	
+	try {
+		// Make sure db.php is loaded
+		if (!function_exists('get_pdo')) {
+			require_once __DIR__ . '/db.php';
+		}
+		
+		$pdo = get_pdo();
+		$stmt = $pdo->prepare("SELECT email FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$userEmail = $stmt->fetchColumn();
+		
+		return $userEmail && in_array($userEmail, ADMIN_EMAILS);
+	} catch (Exception $e) {
+		return false;
+	}
+}
+
+/**
+ * Get user's subscription quota limits
+ */
+function get_user_quotas(string $subscriptionLevel): array {
+	switch ($subscriptionLevel) {
+		case 'base':
+			return [
+				'columns' => QUOTA_BASE_COLUMNS,
+				'tasks_per_column' => QUOTA_BASE_TASKS_PER_COLUMN,
+				'storage_bytes' => QUOTA_BASE_STORAGE_MB * 1024 * 1024,
+				'shared_tasks' => QUOTA_BASE_SHARED_TASKS
+			];
+		case 'pro':
+			return [
+				'columns' => QUOTA_PRO_COLUMNS,
+				'tasks_per_column' => QUOTA_PRO_TASKS_PER_COLUMN,
+				'storage_bytes' => QUOTA_PRO_STORAGE_MB * 1024 * 1024,
+				'shared_tasks' => QUOTA_PRO_SHARED_TASKS
+			];
+		case 'elite':
+			return [
+				'columns' => QUOTA_ELITE_COLUMNS,
+				'tasks_per_column' => QUOTA_ELITE_TASKS_PER_COLUMN,
+				'storage_bytes' => QUOTA_ELITE_STORAGE_MB * 1024 * 1024,
+				'shared_tasks' => QUOTA_ELITE_SHARED_TASKS
+			];
+		default: // 'free'
+			return [
+				'columns' => QUOTA_FREE_COLUMNS,
+				'tasks_per_column' => QUOTA_FREE_TASKS_PER_COLUMN,
+				'storage_bytes' => QUOTA_FREE_STORAGE_MB * 1024 * 1024,
+				'shared_tasks' => QUOTA_FREE_SHARED_TASKS
+			];
+	}
+}
+
+/**
+ * Check if user can perform an action based on their quota
+ */
+function check_user_quota(int $userId, string $action): array {
+	try {
+		$pdo = get_pdo();
+		
+		// Get user's subscription level and status
+		$stmt = $pdo->prepare("SELECT subscription_level, status FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$user = $stmt->fetch();
+		
+		if (!$user) {
+			return ['allowed' => false, 'reason' => 'User not found'];
+		}
+		
+		if ($user['status'] !== 'active') {
+			return ['allowed' => false, 'reason' => 'Account suspended'];
+		}
+		
+		$quotas = get_user_quotas($user['subscription_level']);
+		
+		switch ($action) {
+			case 'create_column':
+				if ($quotas['columns'] === -1) return ['allowed' => true];
+				
+				$stmt = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+				$stmt->execute([':userId' => $userId]);
+				$currentColumns = (int)$stmt->fetchColumn();
+				
+				if ($currentColumns >= $quotas['columns']) {
+					return [
+						'allowed' => false,
+						'reason' => "Column limit reached ({$quotas['columns']}). Upgrade your subscription for more columns."
+					];
+				}
+				break;
+				
+			case 'create_task':
+				if ($quotas['tasks_per_column'] === -1) return ['allowed' => true];
+				
+				// We'll pass column_id as a parameter when checking
+				$columnId = func_get_args()[2] ?? null;
+				if (!$columnId) return ['allowed' => true]; // Can't check without column
+				
+				$stmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = :userId AND column_id = :columnId AND deleted_at IS NULL");
+				$stmt->execute([':userId' => $userId, ':columnId' => $columnId]);
+				$currentTasks = (int)$stmt->fetchColumn();
+				
+				if ($currentTasks >= $quotas['tasks_per_column']) {
+					return [
+						'allowed' => false,
+						'reason' => "Task limit reached ({$quotas['tasks_per_column']} per column). Upgrade your subscription for more tasks."
+					];
+				}
+				break;
+				
+			case 'upload_attachment':
+				$fileSize = func_get_args()[2] ?? 0;
+				
+				$stmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
+				$stmt->execute([':userId' => $userId]);
+				$currentStorage = (int)$stmt->fetchColumn();
+				
+				if (($currentStorage + $fileSize) > $quotas['storage_bytes']) {
+					$maxMB = $quotas['storage_bytes'] / (1024 * 1024);
+					return [
+						'allowed' => false,
+						'reason' => "Storage limit reached ({$maxMB}MB). Upgrade your subscription for more storage."
+					];
+				}
+				break;
+				
+			case 'share_task':
+				if ($quotas['shared_tasks'] === -1) return ['allowed' => true];
+				
+				$stmt = $pdo->prepare("SELECT COUNT(*) FROM shared_items WHERE owner_id = :userId AND item_type = 'task'");
+				$stmt->execute([':userId' => $userId]);
+				$currentShares = (int)$stmt->fetchColumn();
+				
+				if ($currentShares >= $quotas['shared_tasks']) {
+					return [
+						'allowed' => false,
+						'reason' => "Sharing limit reached ({$quotas['shared_tasks']} shared tasks). Upgrade your subscription to share more tasks."
+					];
+				}
+				break;
+		}
+		
+		return ['allowed' => true];
+		
+	} catch (Exception $e) {
+		error_log('Quota check error: ' . $e->getMessage());
+		return ['allowed' => false, 'reason' => 'Error checking quota'];
+	}
+}

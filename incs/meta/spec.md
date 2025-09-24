@@ -101,6 +101,13 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 
 > **Architecture Note:** All API endpoints using `window.apiFetch` are properly documented and include CSRF protection, ownership validation, and debug logging when `DEVMODE=true`.
 
+#### Admin & Subscription Management
+- **[RDY]** `getAllUsers` (in admin.php) - User listing with subscription and usage data
+- **[RDY]** `updateUserSubscription` (in admin.php) - Subscription level assignment
+- **[RDY]** `updateUserStatus` (in admin.php) - User suspension/activation management
+- **[RDY]** `deleteUser` (in admin.php) - User deletion with data cleanup
+- **[RDY]** `getSystemStats` (in admin.php) - Global system usage statistics
+
 ### 2.3 UI Implementation Tracking
 
 The frontend follows a mobile-first, progressive enhancement approach with a focus on touch-friendly interactions and accessibility.
@@ -161,6 +168,14 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
+
+#### Admin Interface
+- **[RDY]** Admin Dashboard - User management with subscription controls
+- **[RDY]** User List with search and filtering - Subscription level, status, usage display
+- **[RDY]** Subscription Management Modal - Level assignment with quota enforcement
+- **[RDY]** User Status Controls - Suspend/activate/delete with confirmation
+- **[RDY]** System Statistics Dashboard - Global usage metrics and analytics
+- **[RDY]** Admin notes functionality for each use
 
 ### 2.4 Priority Roadmap (Beta 7.x+)
 
@@ -679,6 +694,122 @@ While current development focuses exclusively on Tasks, the architecture support
 - Modal or expandable UI component for history display
 - Handles both owner and recipient note changes with proper attribution
 
+### 4.9 Admin System & Subscription Management
+
+The admin system provides comprehensive user management, subscription control, and quota enforcement across the application.
+
+#### 4.9.1 Subscription Tiers
+
+**FREE Tier (Default):**
+- 10 MB storage quota
+- 3 columns maximum (excluding virtual "Shared with Me" column)
+- 60 tasks maximum (including completed tasks)
+- No sharing capabilities
+
+**BASE Tier:**
+- 10 MB storage quota
+- 5 columns maximum (excluding virtual columns)
+- 200 tasks maximum (including completed tasks)
+- Sharing enabled
+
+**PRO Tier:**
+- 50 MB storage quota
+- 10 columns maximum (excluding virtual columns)
+- 500 tasks maximum (including completed tasks)
+- Full sharing capabilities
+
+**ELITE Tier:**
+- 1 GB storage quota
+- Unlimited columns
+- Unlimited tasks
+- Full feature access
+
+#### 4.9.2 Admin Designation & Security
+
+**Admin Access Control:**
+- Admin users designated via `ADMIN_EMAILS` environment variable
+- Multiple admin emails supported: `ADMIN_EMAILS=admin@domain.com,admin2@domain.com`
+- Email-based authentication more secure than username-based systems
+- Role-based access control (RBAC) for admin functions
+
+**Security Features:**
+- Audit logging for all admin actions
+- Admin re-authentication required for destructive operations
+- Rate limiting on admin endpoints
+- Separate admin interface at `/admin/` (recommended)
+
+#### 4.9.3 User Status Management
+
+**User Status Types:**
+- **Active:** Normal user access with full functionality
+- **Suspended:** Login permitted for data export only, no modifications allowed
+- **Deleted:** Authentication completely blocked, credentials rejected
+
+**Suspension Policy:**
+- Suspended users retain data access for export purposes
+- 30-day grace period before automatic data deletion (industry standard)
+- Clear notification of suspension reason and appeal process
+- Data portability compliance (GDPR/CCPA alignment)
+
+#### 4.9.4 Quota Enforcement
+
+**Real-time Validation:**
+- File upload quota checks before processing
+- Task/column creation blocked when limits exceeded
+- Proactive UI prevention with clear messaging
+- "Manage Files" modal offered when storage quota reached
+
+**Quota Management:**
+- Per-user storage tracking in `users.storage_used_bytes`
+- Live quota calculation during file operations
+- Automatic oldest-file deletion warnings
+- User-controlled space management tools
+
+**Virtual Column Exclusion:**
+- "Shared with Me" column excluded from column limits
+- System-generated columns don't count toward user quotas
+- Clear distinction between user-created and system columns
+
+#### 4.9.5 Admin Interface Design
+
+**User Management Dashboard:**
+- Searchable/filterable user list
+- Subscription level and usage display
+- Quick status change controls
+- Bulk operation capabilities
+
+**System Analytics:**
+- Global usage statistics
+- Storage consumption trends
+- Subscription distribution metrics
+- Performance monitoring data
+
+**Audit Trail:**
+- Complete log of admin actions
+- User status change history
+- Subscription modification tracking
+- Data deletion records
+
+#### 4.9.6 Admin Notes System
+
+**Support Annotation Framework:**
+- Private text notes for each user account accessible only to admin staff
+- Large textarea editor for detailed support interactions and account history
+- Complete audit trail with admin attribution and timestamps
+- Use cases: support ticket history, account flags, migration notes, billing annotations
+
+**Implementation:**
+- admin_notes TEXT field in users table for flexible note storage
+- Modal-based editing interface with save/cancel workflow
+- Notes display in user detail view when notes exist
+- All notes changes logged in admin_actions table for accountability
+
+**Workflow Integration:**
+- Notes button available in all user detail modals
+- Pre-populated content when editing existing notes
+- Professional formatting with placeholder examples
+- Version history through admin_actions audit trail
+
 ---
 
 ## 5. Technical Specification
@@ -706,6 +837,14 @@ MyDayHub follows a modern LAMP stack architecture optimized for security, perfor
 - Session-based authentication with secure tokens
 - Input validation and output encoding
 - SQL injection prevention via prepared statements
+
+**Development Environment**
+- Local development takes place on a Mac mini M4 with macOS 26, running the native Apache 2.4.62 (Unix), PHP 8.2.29, MySQL 9.4.0 via Homebrew, and PHPMailer 6.10 (localhost / jagmac.local).
+- A parallel environment runs on a Hostinger web server (breveasy.com), mirroring both codebase and database schema with the local setup.
+- Both environments serve development purposes: localhost delivers greater speed and flexibility, while breveasy.com verifies full compatibility with the production hosting stack.
+- GitHub integration ensures source control and code parity across both systems, with environment-specific settings handled via unique .env files.
+- Attachments and user-uploaded files remain local to each environment and are not synced through GitHub, so each instance hosts its own user data.
+- No infrastructure (database or server) is shared between the two, occasionally resulting in minor functional discrepancies.
 
 ### 5.2 API Gateway & Architecture
 
@@ -790,6 +929,32 @@ CREATE TABLE users (
   created_at DATETIME DEFAULT UTC_TIMESTAMP,
   storage_used_bytes BIGINT DEFAULT 0
 );
+
+ALTER TABLE users ADD COLUMN admin_notes TEXT NULL AFTER suspended_reason;
+```
+
+**admin_actions table:**
+```sql
+-- Create admin actions audit table
+CREATE TABLE admin_actions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_user_id INT NOT NULL,
+  target_user_id INT NOT NULL,
+  action_type ENUM('subscription_change', 'status_change', 'user_delete', 'data_export') NOT NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  reason TEXT NULL,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (admin_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  INDEX ix_admin_actions_admin (admin_user_id),
+  INDEX ix_admin_actions_target (target_user_id),
+  INDEX ix_admin_actions_created (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+ALTER TABLE admin_actions 
+MODIFY COLUMN action_type ENUM('subscription_change', 'status_change', 'user_delete', 'data_export', 'notes_update') NOT NULL;
+
 ```
 
 **password_resets table:**
@@ -805,6 +970,7 @@ CREATE TABLE password_resets (
 ```
 
 **pending_registrations table:**
+```sql
 CREATE TABLE pending_registrations (
   id INT AUTO_INCREMENT PRIMARY KEY,
   username VARCHAR(50) NOT NULL,
@@ -816,6 +982,15 @@ CREATE TABLE pending_registrations (
   INDEX ix_email_code (email, code_hash),
   INDEX ix_expires (expires_at)
 );
+
+-- Add admin fields to existing users table
+ALTER TABLE users 
+ADD COLUMN subscription_level ENUM('free', 'base', 'pro', 'elite') DEFAULT 'free' AFTER storage_used_bytes,
+ADD COLUMN status ENUM('active', 'suspended', 'deleted') DEFAULT 'active' AFTER subscription_level,
+ADD COLUMN suspended_reason TEXT NULL AFTER status,
+ADD COLUMN suspended_at DATETIME NULL AFTER suspended_reason;
+
+```
 
 #### 5.3.2 Task Management
 
@@ -907,7 +1082,32 @@ CREATE TABLE sharing_activity (
 );
 ```
 
+#### 5.3.5 Admin & Subscription Management
 
+**users table modifications:**
+```sql
+ALTER TABLE users ADD COLUMN subscription_level ENUM('free', 'base', 'pro', 'elite') DEFAULT 'free';
+ALTER TABLE users ADD COLUMN status ENUM('active', 'suspended', 'deleted') DEFAULT 'active';
+ALTER TABLE users ADD COLUMN suspended_reason TEXT NULL;
+ALTER TABLE users ADD COLUMN suspended_at DATETIME NULL;
+
+
+CREATE TABLE admin_actions (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  admin_user_id INT NOT NULL,
+  target_user_id INT NOT NULL,
+  action_type ENUM('subscription_change', 'status_change', 'user_delete', 'data_export') NOT NULL,
+  old_value TEXT NULL,
+  new_value TEXT NULL,
+  reason TEXT NULL,
+  created_at DATETIME DEFAULT UTC_TIMESTAMP,
+  FOREIGN KEY (admin_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  FOREIGN KEY (target_user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  INDEX ix_admin_actions_admin (admin_user_id),
+  INDEX ix_admin_actions_target (target_user_id),
+  INDEX ix_admin_actions_created (created_at)
+);
+```
 
 ### 5.4 Frontend Architecture
 
@@ -1077,6 +1277,26 @@ SMTP_FROM=noreply@mydayhub.com
 
 APP_URL=https://mydayhub.com
 DEV_MODE=false
+
+# Admin Configuration
+ADMIN_EMAILS=jalexg@gmail.com,support@mydayhub.com
+
+# Subscription Quotas (can be overridden per environment)
+FREE_STORAGE_MB=10
+BASE_STORAGE_MB=10
+PRO_STORAGE_MB=50
+ELITE_STORAGE_GB=1
+
+FREE_COLUMN_LIMIT=3
+BASE_COLUMN_LIMIT=5
+PRO_COLUMN_LIMIT=10
+ELITE_COLUMN_LIMIT=999
+
+FREE_TASK_LIMIT=60
+BASE_TASK_LIMIT=200
+PRO_TASK_LIMIT=500
+ELITE_TASK_LIMIT=9999
+
 ```
 
 #### 5.8.2 Deployment Environments
