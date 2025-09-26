@@ -206,6 +206,12 @@ function initSettingsPanel() {
 	// Modified for Change Password
 	changePasswordBtn.addEventListener('click', openChangePasswordModal);
 	initPasswordModalListeners();
+	
+	// Modified for Usage Stats Modal
+	const usageStatsBtn = document.getElementById('btn-usage-stats');
+	if (usageStatsBtn) {
+		usageStatsBtn.addEventListener('click', openUsageStatsModal);
+	}
 }
 
 /**
@@ -513,3 +519,179 @@ function showDueDateModal(currentDate = '') {
 		}
 	});
 }
+
+// ==========================================================================
+// --- USAGE STATS MODAL SYSTEM ---
+// ==========================================================================
+
+/**
+ * Opens the usage stats modal and loads current subscription usage data.
+ */
+async function openUsageStatsModal() {
+	const overlay = document.getElementById('usage-stats-modal-overlay');
+	if (!overlay) {
+		console.error('Usage stats modal overlay not found');
+		return;
+	}
+	
+	overlay.classList.remove('hidden');
+	
+	// Initialize close button listener if not already done
+	const closeBtn = document.getElementById('usage-stats-close-btn');
+	if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
+		closeBtn.addEventListener('click', closeUsageStatsModal);
+		closeBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Initialize overlay click to close
+	overlay.addEventListener('click', (e) => {
+		if (e.target === overlay) {
+			closeUsageStatsModal();
+		}
+	});
+	
+	// Load usage data
+	try {
+		await fetchAndPopulateUsageStats();
+	} catch (error) {
+		console.error('Failed to load usage stats:', error);
+		showToast({
+			message: 'Failed to load usage statistics. Please try again.',
+			type: 'error'
+		});
+	}
+}
+
+/**
+ * Closes the usage stats modal.
+ */
+function closeUsageStatsModal() {
+	const overlay = document.getElementById('usage-stats-modal-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Fetches usage statistics from the API and populates the modal.
+ */
+async function fetchAndPopulateUsageStats() {
+	try {
+		const response = await window.apiFetch({
+			module: 'users',
+			action: 'getUserUsageStats'
+		});
+		
+		if (response.status === 'success') {
+			populateUsageStatsModal(response.data);
+		} else {
+			throw new Error(response.message || 'Failed to fetch usage statistics');
+		}
+	} catch (error) {
+		console.error('Error fetching usage stats:', error);
+		throw error;
+	}
+}
+
+/**
+ * Populates the usage stats modal with data from the API.
+ * @param {object} data - Usage statistics data from the API
+ */
+function populateUsageStatsModal(data) {
+	// Update subscription tier
+	const tierElement = document.getElementById('current-tier');
+	if (tierElement) {
+		tierElement.textContent = data.subscription_level;
+	}
+	
+	// Update tasks usage
+	updateUsageCategory('tasks', data.usage.tasks);
+	
+	// Update columns usage
+	updateUsageCategory('columns', data.usage.columns);
+	
+	// Update storage usage
+	updateStorageUsage(data.usage.storage);
+	
+	// Update sharing status
+	updateSharingStatus(data.features.sharing_enabled);
+}
+
+/**
+ * Updates a usage category (tasks or columns) with current data.
+ * @param {string} category - The category name ('tasks' or 'columns')
+ * @param {object} usage - Usage data with used, limit, and percentage properties
+ */
+function updateUsageCategory(category, usage) {
+	const textElement = document.getElementById(`${category}-usage-text`);
+	const fillElement = document.getElementById(`${category}-usage-fill`);
+	const percentageElement = document.getElementById(`${category}-usage-percentage`);
+	
+	if (textElement) {
+		textElement.textContent = `${usage.used} of ${usage.limit}`;
+	}
+	
+	if (fillElement) {
+		fillElement.style.width = `${usage.percentage}%`;
+		
+		// Apply color coding based on usage percentage
+		if (usage.percentage >= 95) {
+			fillElement.style.backgroundColor = 'var(--toast-error-bg)';
+		} else if (usage.percentage >= 80) {
+			fillElement.style.backgroundColor = '#f59e0b';
+		} else {
+			fillElement.style.backgroundColor = 'var(--accent-color)';
+		}
+	}
+	
+	if (percentageElement) {
+		percentageElement.textContent = `${usage.percentage}%`;
+	}
+}
+
+/**
+ * Updates storage usage display with formatted MB values.
+ * @param {object} storage - Storage usage data with used_mb, limit_mb, and percentage
+ */
+function updateStorageUsage(storage) {
+	const textElement = document.getElementById('storage-usage-text');
+	const fillElement = document.getElementById('storage-usage-fill');
+	const percentageElement = document.getElementById('storage-usage-percentage');
+	
+	if (textElement) {
+		textElement.textContent = `${storage.used_mb} MB of ${storage.limit_mb} MB`;
+	}
+	
+	if (fillElement) {
+		fillElement.style.width = `${storage.percentage}%`;
+		
+		// Apply color coding based on usage percentage
+		if (storage.percentage >= 95) {
+			fillElement.style.backgroundColor = 'var(--toast-error-bg)';
+		} else if (storage.percentage >= 80) {
+			fillElement.style.backgroundColor = '#f59e0b';
+		} else {
+			fillElement.style.backgroundColor = 'var(--accent-color)';
+		}
+	}
+	
+	if (percentageElement) {
+		percentageElement.textContent = `${storage.percentage}%`;
+	}
+}
+
+/**
+ * Updates the sharing status display.
+ * @param {boolean} enabled - Whether sharing is enabled for the current subscription
+ */
+function updateSharingStatus(enabled) {
+	const statusElement = document.getElementById('sharing-status');
+	if (statusElement) {
+		statusElement.textContent = enabled ? 'Available' : 'Not Available';
+		statusElement.style.color = enabled ? 'var(--toast-success-bg)' : 'var(--text-secondary)';
+	}
+}
+
+// Make usage stats functions globally available
+window.openUsageStatsModal = openUsageStatsModal;
+window.closeUsageStatsModal = closeUsageStatsModal;

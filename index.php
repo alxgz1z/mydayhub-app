@@ -166,6 +166,18 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						</button>
 					</div>
 				</div>
+				<div class="setting-item">
+					<span class="setting-label">Usage Stats</span>
+					<div class="setting-control">
+						<button type="button" id="btn-usage-stats" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M3 3v18h18"></path>
+								<path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+							</svg>
+							View
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -373,6 +385,68 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div id="session-timeout-buttons">
 				<button id="btn-timeout-cancel" class="btn">Cancel</button>
 				<button id="btn-timeout-save" class="btn btn-primary">Save</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Usage Stats Modal -->
+	<div id="usage-stats-modal-overlay" class="hidden">
+		<div id="usage-stats-modal-container">
+			<div class="usage-stats-header">
+				<h4>Subscription Usage</h4>
+				<button id="usage-stats-close-btn" class="btn-icon" type="button">&times;</button>
+			</div>
+			<div id="usage-stats-body">
+				<div class="subscription-info">
+					<div class="subscription-tier">
+						<span class="tier-label">Current Plan:</span>
+						<span id="current-tier" class="tier-value">Loading...</span>
+					</div>
+				</div>
+				<div class="usage-categories">
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Tasks</span>
+							<span id="tasks-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="tasks-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="tasks-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Columns</span>
+							<span id="columns-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="columns-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="columns-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Storage</span>
+							<span id="storage-usage-text" class="usage-text">0 MB of 0 MB</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="storage-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="storage-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Sharing</span>
+							<span id="sharing-status" class="usage-text">Loading...</span>
+						</div>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

@@ -387,12 +387,15 @@ function initEventListeners() {
 					if (success) {
 						columnEl.style.display = 'none';
 						updateMoveButtonVisibility();
-			
+						
+						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
+						updateQuotaStatusAfterOperation('column', false);
+					
 						const removalTimeout = setTimeout(() => {
 							columnEl.remove();
 							updateMoveButtonVisibility();
 						}, 7000);
-			
+					
 						showToast({
 							message: 'Column deleted.',
 							type: 'success',
@@ -402,6 +405,8 @@ function initEventListeners() {
 								callback: () => {
 									clearTimeout(removalTimeout);
 									restoreItem('column', columnId);
+									// Restore quota count on undo
+									updateQuotaStatusAfterOperation('column', true);
 								}
 							}
 						});
@@ -506,16 +511,25 @@ function initEventListeners() {
 						closeAllTaskActionMenus && closeAllTaskActionMenus();
 						await openShareModal(parseInt(taskId, 10));
 					}
+				} else if (action === 'show-share-upgrade') {
+					showToast({
+						message: `Sharing is not available with your ${window.quotaStatus?.subscription_level || 'FREE'} subscription. Upgrade to BASE or higher to share tasks.`,
+						type: 'info',
+						duration: 4000
+					});
 				} else if (action === 'delete') {
 					const success = await deleteTask(taskId);
 					if (success) {
 						taskCard.style.display = 'none';
 						updateColumnTaskCount(columnEl);
-
+						
+						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
+						updateQuotaStatusAfterOperation('task', false);
+					
 						const removalTimeout = setTimeout(() => {
 							taskCard.remove();
 						}, 7000);
-
+					
 						showToast({
 							message: 'Task deleted.',
 							type: 'success',
@@ -525,6 +539,8 @@ function initEventListeners() {
 								callback: () => {
 									clearTimeout(removalTimeout);
 									restoreItem('task', taskId);
+									// Restore quota count on undo
+									updateQuotaStatusAfterOperation('task', true);
 								}
 							}
 						});
@@ -1155,8 +1171,8 @@ function closeAllTaskActionMenus() {
 		 `;
 	 }
  
-	 // Share - Owner only
-	 if (isOwner) {
+	// Share - Owner only and subscription allows sharing
+	 if (isOwner && window.quotaStatus && window.quotaStatus.sharing_enabled) {
 		 menuHTML += `
 			 <button class="task-action-btn" data-action="share">
 				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1167,6 +1183,20 @@ function closeAllTaskActionMenus() {
 					 <path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
 				 </svg>
 				 <span>Share</span>
+			 </button>
+		 `;
+	 } else if (isOwner && window.quotaStatus && !window.quotaStatus.sharing_enabled) {
+		 // Show upgrade message instead of share button for FREE users
+		 menuHTML += `
+			 <button class="task-action-btn quota-restricted" data-action="show-share-upgrade" disabled>
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					 <circle cx="18" cy="5" r="3"></circle>
+					 <circle cx="6" cy="12" r="3"></circle>
+					 <circle cx="18" cy="19" r="3"></circle>
+					 <path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+				 </svg>
+				 <span>Share (Upgrade Required)</span>
 			 </button>
 		 `;
 	 }
@@ -1588,64 +1618,65 @@ function showClassificationPopover(taskCard) {
  * Displays an input form to add a new column in place of the button.
  */
 function showAddColumnForm() {
-	const container = document.getElementById('add-column-container');
-	if (!container || container.querySelector('#form-add-column')) {
-		return;
-	}
-	const originalButton = container.innerHTML;
-
-	container.innerHTML = `
-		<form id="form-add-column">
-			<input type="text" id="input-new-column-name" placeholder="Column Name..." required autofocus />
-		</form>
-	`;
-
-	const form = document.getElementById('form-add-column');
-	const input = document.getElementById('input-new-column-name');
-
-	const revertToButton = () => {
-		if (container.contains(form)) {
-			 container.innerHTML = originalButton;
-		}
-	};
-	
-	input.addEventListener('blur', revertToButton);
-
-	form.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		input.removeEventListener('blur', revertToButton);
-		const columnName = input.value.trim();
-		if (columnName) {
-			try {
-				const result = await window.apiFetch({
-					module: 'tasks',
-					action: 'createColumn',
-					column_name: columnName
-				});
-
-				if (result.status === 'success') {
-					const boardContainer = document.getElementById('task-board-container');
-					
-					const placeholder = boardContainer.querySelector('p');
-					if (placeholder && placeholder.textContent.startsWith('No columns found')) {
-						placeholder.remove();
-					}
-
-					const newColumnEl = createColumnElement(result.data);
-					boardContainer.appendChild(newColumnEl);
-					updateMoveButtonVisibility(); 
-					showToast({ message: 'Column created.', type: 'success' });
-				} else {
-					showToast({ message: `Error: ${result.message}`, type: 'error' });
-				}
-			} catch (error) {
-				showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
-				console.error('Create column error:', error);
-			}
-		}
-		container.innerHTML = originalButton;
-	});
-}
+	 const container = document.getElementById('add-column-container');
+	 if (!container || container.querySelector('#form-add-column')) {
+		 return;
+	 }
+	 const originalButton = container.innerHTML;
+	 container.innerHTML = `
+		 <form id="form-add-column">
+			 <input type="text" id="input-new-column-name" placeholder="Column Name..." required autofocus />
+		 </form>
+	 `;
+	 const form = document.getElementById('form-add-column');
+	 const input = document.getElementById('input-new-column-name');
+	 const revertToButton = () => {
+		 if (container.contains(form)) {
+			  container.innerHTML = originalButton;
+		 }
+	 };
+	 
+	 input.addEventListener('blur', revertToButton);
+	 form.addEventListener('submit', async (e) => {
+		 e.preventDefault();
+		 input.removeEventListener('blur', revertToButton);
+		 const columnName = input.value.trim();
+		 if (columnName) {
+			 try {
+				 const result = await window.apiFetch({
+					 module: 'tasks',
+					 action: 'createColumn',
+					 column_name: columnName
+				 });
+				 if (result.status === 'success') {
+					 const boardContainer = document.getElementById('task-board-container');
+					 
+					 const placeholder = boardContainer.querySelector('p');
+					 if (placeholder && placeholder.textContent.startsWith('No columns found')) {
+						 placeholder.remove();
+					 }
+					 const newColumnEl = createColumnElement(result.data);
+					 boardContainer.appendChild(newColumnEl);
+					 updateMoveButtonVisibility();
+					 
+					 // Modified for Subscription Quota Enforcement - Update quota tracking with debug
+					 console.log('About to update quota after column creation');
+					 console.log('Quota before update:', window.quotaStatus);
+					 updateQuotaStatusAfterOperation('column', true);
+					 console.log('Quota after update:', window.quotaStatus);
+					 
+					 showToast({ message: 'Column created.', type: 'success' });
+				 } else {
+					 showToast({ message: `Error: ${result.message}`, type: 'error' });
+				 }
+			 } catch (error) {
+				 showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
+				 console.error('Create column error:', error);
+			 }
+		 }
+		 container.innerHTML = originalButton;
+	 });
+ }
 
 /**
  * Sends a new task to the API and renders the response.
@@ -1669,6 +1700,10 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
+			
+			// Modified for Subscription Quota Enforcement - Update quota tracking
+			updateQuotaStatusAfterOperation('task', true);
+			
 			showToast({ message: 'Task created.', type: 'success' });
 		} else {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
@@ -1713,6 +1748,12 @@ async function fetchAndRenderBoard() {
 			
 			if (result.data.user_storage) {
 				userStorage = result.data.user_storage;
+			}
+			
+			// Modified for Subscription Quota Enforcement - Store quota status for proactive UI
+			if (result.data.quota_status) {
+				window.quotaStatus = result.data.quota_status;
+				updateQuotaAwareUI();
 			}
 
 			// Apply user preferences on load
@@ -3546,8 +3587,120 @@ function exitMoveMode() {
 	 }
  });
  
- // Initial load
- document.addEventListener('DOMContentLoaded', initTasksView);
+// ==========================================================================
+ // --- QUOTA-AWARE UI MANAGEMENT ---
+ // ==========================================================================
+ 
+ /**
+  * Updates UI elements based on current quota status to prevent failed actions
+  * Modified for Subscription Quota Enforcement - Proactive quota-aware interface
+  */
+ function updateQuotaAwareUI() {
+	 if (!window.quotaStatus) return;
+	 
+	 updateColumnCreationUI();
+	 updateTaskCreationUI();
+ }
+ 
+/**
+  * Updates the "New Column" button based on column quota status
+  */
+ function updateColumnCreationUI() {
+	 const addColumnBtn = document.getElementById('btn-add-column');
+	 if (!addColumnBtn || !window.quotaStatus) return;
+	 
+	 if (window.quotaStatus.columns.at_limit) {
+		 // Replace button with upgrade message
+		 addColumnBtn.textContent = `Upgrade (${window.quotaStatus.columns.used}/${window.quotaStatus.columns.limit} columns used)`;
+		 addColumnBtn.disabled = true;
+		 addColumnBtn.classList.add('quota-limited');
+		 addColumnBtn.title = `You've reached your column limit. Upgrade your ${window.quotaStatus.subscription_level} plan to create more columns.`;
+		 
+		 // Remove the existing click event listeners and replace with upgrade message handler
+		 const newBtn = addColumnBtn.cloneNode(true);
+		 addColumnBtn.parentNode.replaceChild(newBtn, addColumnBtn);
+		 newBtn.addEventListener('click', showColumnUpgradeMessage);
+	 } else {
+		 // Ensure normal functionality is restored
+		 addColumnBtn.textContent = '+ New Column';
+		 addColumnBtn.disabled = false;
+		 addColumnBtn.classList.remove('quota-limited');
+		 addColumnBtn.title = 'Add a new column';
+		 
+		 // Restore normal functionality by cloning button to remove all event listeners
+		 const newBtn = addColumnBtn.cloneNode(true);
+		 addColumnBtn.parentNode.replaceChild(newBtn, addColumnBtn);
+		 // The normal click handler will be re-added by the main event listener in initEventListeners()
+	 }
+ }
+ 
+ /**
+  * Updates task input fields based on task quota status
+  */
+ function updateTaskCreationUI() {
+	 const taskInputs = document.querySelectorAll('.new-task-input');
+	 if (!window.quotaStatus) return;
+	 
+	 taskInputs.forEach(input => {
+		 // Only check task limits - users can still add tasks to existing columns
+		 if (window.quotaStatus.tasks.at_limit) {
+			 input.placeholder = `Upgrade (${window.quotaStatus.tasks.used}/${window.quotaStatus.tasks.limit} tasks used)`;
+			 input.disabled = true;
+			 input.classList.add('quota-limited');
+			 input.title = `You've reached your task limit. Upgrade your ${window.quotaStatus.subscription_level} plan to create more tasks.`;
+			 
+			 // Add click handler to show upgrade message
+			 input.addEventListener('click', showTaskUpgradeMessage);
+		 } else {
+			 input.placeholder = '+ New Task';
+			 input.disabled = false;
+			 input.classList.remove('quota-limited');
+			 input.title = 'Add a new task';
+			 
+			 // Remove upgrade click handler
+			 input.removeEventListener('click', showTaskUpgradeMessage);
+		 }
+	 });
+ }
+ 
+ /**
+  * Shows upgrade message for column limits
+  */
+ function showColumnUpgradeMessage() {
+	 showToast({
+		 message: `You've reached your column limit (${window.quotaStatus.columns.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more columns.`,
+		 type: 'info',
+		 duration: 4000
+	 });
+ }
+ 
+ /**
+  * Shows upgrade message for task limits  
+  */
+ function showTaskUpgradeMessage() {
+	 showToast({
+		 message: `You've reached your task limit (${window.quotaStatus.tasks.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more tasks.`,
+		 type: 'info', 
+		 duration: 4000
+	 });
+ }
+ 
+ /**
+  * Updates quota status after successful operations and refreshes UI
+  */
+ function updateQuotaStatusAfterOperation(operation, increment = true) {
+	 if (!window.quotaStatus) return;
+	 
+	 if (operation === 'column') {
+		 window.quotaStatus.columns.used += increment ? 1 : -1;
+		 window.quotaStatus.columns.at_limit = window.quotaStatus.columns.used >= window.quotaStatus.columns.limit;
+	 } else if (operation === 'task') {
+		 window.quotaStatus.tasks.used += increment ? 1 : -1;
+		 window.quotaStatus.tasks.at_limit = window.quotaStatus.tasks.used >= window.quotaStatus.tasks.limit;
+	 }
+	 
+	 updateQuotaAwareUI();
+ }
 
 // Initial load
 document.addEventListener('DOMContentLoaded', initTasksView);

@@ -31,6 +31,87 @@ define('ALLOWED_MIME_TYPES', [
 	'application/pdf'
 ]);
 
+
+/**
+ * Modified for Subscription Quota Enforcement - Get user's subscription limits
+ */
+function getUserSubscriptionLimits(PDO $pdo, int $userId): array {
+	$stmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
+	$stmt->execute([':userId' => $userId]);
+	$subscriptionLevel = $stmt->fetchColumn() ?: 'free';
+	
+	// Define limits per subscription tier
+	$limits = [
+		'free' => [
+			'storage_mb' => 10,
+			'max_columns' => 3,
+			'max_tasks' => 60,
+			'sharing_enabled' => false
+		],
+		'base' => [
+			'storage_mb' => 10,
+			'max_columns' => 5,
+			'max_tasks' => 200,
+			'sharing_enabled' => true
+		],
+		'pro' => [
+			'storage_mb' => 50,
+			'max_columns' => 10,
+			'max_tasks' => 500,
+			'sharing_enabled' => true
+		],
+		'elite' => [
+			'storage_mb' => 1024, // 1GB
+			'max_columns' => 999,
+			'max_tasks' => 9999,
+			'sharing_enabled' => true
+		]
+	];
+	
+	return $limits[$subscriptionLevel] ?? $limits['free'];
+}
+
+/**
+ * Modified for Subscription Quota Enforcement - Check if user can create a new column
+ */
+function canCreateColumn(PDO $pdo, int $userId): array {
+	$limits = getUserSubscriptionLimits($pdo, $userId);
+	
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+	$stmt->execute([':userId' => $userId]);
+	$currentCount = (int)$stmt->fetchColumn();
+	
+	$canCreate = $currentCount < $limits['max_columns'];
+	
+	return [
+		'can_create' => $canCreate,
+		'current_count' => $currentCount,
+		'limit' => $limits['max_columns'],
+		'message' => $canCreate ? '' : "You've reached your column limit ({$limits['max_columns']}). Upgrade your subscription to create more columns."
+	];
+}
+
+/**
+ * Modified for Subscription Quota Enforcement - Check if user can create a new task
+ */
+function canCreateTask(PDO $pdo, int $userId): array {
+	$limits = getUserSubscriptionLimits($pdo, $userId);
+	
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = :userId AND deleted_at IS NULL");
+	$stmt->execute([':userId' => $userId]);
+	$currentCount = (int)$stmt->fetchColumn();
+	
+	$canCreate = $currentCount < $limits['max_tasks'];
+	
+	return [
+		'can_create' => $canCreate,
+		'current_count' => $currentCount,
+		'limit' => $limits['max_tasks'],
+		'message' => $canCreate ? '' : "You've reached your task limit ({$limits['max_tasks']}). Upgrade your subscription to create more tasks."
+	];
+}
+
+
 /**
  * Main router for all actions within the 'tasks' module.
  */
@@ -883,12 +964,41 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$task['column_id']]['tasks'][] = $task;
 		}
 
+		// Modified for Subscription Quota Enforcement - Include quota status for proactive UI
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		$storageQuotaBytes = $limits['storage_mb'] * 1024 * 1024;
+		
+		// Get current usage counts for quota status
+		$currentColumns = count($boardData) - (array_search('shared-with-me', array_column($boardData, 'column_id')) !== false ? 1 : 0);
+		$currentTasks = 0;
+		foreach ($boardData as $column) {
+			if ($column['column_id'] !== 'shared-with-me') {
+				$currentTasks += count($column['tasks'] ?? []);
+			}
+		}
+		
+		$quotaStatus = [
+			'columns' => [
+				'used' => $currentColumns,
+				'limit' => $limits['max_columns'],
+				'at_limit' => $currentColumns >= $limits['max_columns']
+			],
+			'tasks' => [
+				'used' => $currentTasks,
+				'limit' => $limits['max_tasks'],
+				'at_limit' => $currentTasks >= $limits['max_tasks']
+			],
+			'sharing_enabled' => $limits['sharing_enabled'],
+			'subscription_level' => strtoupper($subscriptionLevel ?? 'FREE')
+		];
+		
 		send_json_response([
 			'status' => 'success', 
 			'data' => [
 				'board' => $boardData,
 				'user_prefs' => $userPrefs,
-				'user_storage' => ['used' => $storageUsed, 'quota' => USER_STORAGE_QUOTA_BYTES],
+				'user_storage' => ['used' => $storageUsed, 'quota' => $storageQuotaBytes],
+				'quota_status' => $quotaStatus,
 				'wake_notification' => $hasAwakenedTasks
 			]
 		], 200);
@@ -907,6 +1017,20 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 		send_json_response(['status' => 'error', 'message' => 'Column name is required.'], 400);
 		return;
 	}
+	
+	// Modified for Subscription Quota Enforcement - Check column limits
+	$quotaCheck = canCreateColumn($pdo, $userId);
+	if (!$quotaCheck['can_create']) {
+		send_json_response([
+			'status' => 'error', 
+			'message' => $quotaCheck['message'],
+			'quota_exceeded' => true,
+			'current_count' => $quotaCheck['current_count'],
+			'limit' => $quotaCheck['limit']
+		], 403);
+		return;
+	}
+	
 	$columnName = trim($data['column_name']);
 
 	try {
@@ -944,6 +1068,20 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		send_json_response(['status' => 'error', 'message' => 'Column ID and task title are required.'], 400);
 		return;
 	}
+	
+	// Modified for Subscription Quota Enforcement - Check task limits
+	$quotaCheck = canCreateTask($pdo, $userId);
+	if (!$quotaCheck['can_create']) {
+		send_json_response([
+			'status' => 'error',
+			'message' => $quotaCheck['message'],
+			'quota_exceeded' => true,
+			'current_count' => $quotaCheck['current_count'],
+			'limit' => $quotaCheck['limit']
+		], 403);
+		return;
+	}
+	
 	$columnId = (int)$data['column_id'];
 	$taskTitle = trim($data['task_title']);
 
@@ -1353,7 +1491,11 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 		$stmt->execute([':userId' => $userId]);
 		$storageUsed = (int)$stmt->fetchColumn();
 
-		if (($storageUsed + $file['size']) > USER_STORAGE_QUOTA_BYTES) {
+		// Modified for Subscription Quota Enforcement - Use dynamic storage limits
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		$storageQuotaBytes = $limits['storage_mb'] * 1024 * 1024;
+
+		if (($storageUsed + $file['size']) > $storageQuotaBytes) {
 			$stmt = $pdo->prepare("SELECT attachment_id, filename_on_server, filesize_bytes FROM task_attachments WHERE user_id = :userId ORDER BY created_at ASC LIMIT 1");
 			$stmt->execute([':userId' => $userId]);
 			$oldest = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1394,7 +1536,7 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 			'data' => [
 				'attachment_id' => $newAttachmentId, 'task_id' => $taskId, 'filename_on_server' => $newFilename,
 				'original_filename' => $originalFilename, 'filesize_bytes' => $file['size'],
-				'user_storage_used' => $newStorageUsed, 'user_storage_quota' => USER_STORAGE_QUOTA_BYTES
+				'user_storage_used' => $newStorageUsed, 'user_storage_quota' => $storageQuotaBytes
 			]
 		], 201);
 	} catch (Exception $e) {
@@ -1540,6 +1682,16 @@ function handle_share_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		
 		log_debug_message("Task ownership verified");
+		
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		if (!$limits['sharing_enabled']) {
+			send_json_response([
+				'status' => 'error', 
+				'message' => 'Sharing is not available with your current subscription. Upgrade to BASE or higher to share tasks.',
+				'feature_restricted' => true
+			], 403);
+			return;
+		}
 		
 		// 2) Find the recipient user by email or username
 		log_debug_message("Looking up recipient user");

@@ -60,6 +60,8 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `requestPasswordReset` (in auth.php) - Secure email-based password reset
 - **[RDY]** `performPasswordReset` (in auth.php) - Token validation and password update
 - **[RDY]** `changePassword` (in users.php) - Authenticated password changes
+- **[RDY]** `getUserUsageStats` (in users.php) - "Fixed POST method mismatch, usage modal functional"
+- **[WIP]** Proactive quota-aware UI - Manual function calls work, auto-update timing needs debugging
 
 #### Core Task Management
 - **[RDY]** `getAll` (in tasks.php) - Comprehensive board data with tasks, columns, and metadata
@@ -632,6 +634,11 @@ Shared tasks use server-side encryption to enable collaboration, representing a 
 - Edit capabilities based on assigned permissions
 - "Ready for Review" status for workflow completion
 
+**Note Editing Capabilities:**
+Recipients can edit task notes regardless of view/edit permission level, enabling collaborative documentation. Note changes must persist to database with proper user attribution.
+
+**Known Issue**: Shared task note edits by recipients are currently not persisting to database - requires investigation of permission validation in saveTaskDetails API endpoint.
+
 **Ready-for-Review Workflow:**
 - Recipients can mark tasks ready for owner review via interactive status indicator
 - Owner receives visual notification (badge) when tasks marked ready
@@ -810,6 +817,28 @@ The admin system provides comprehensive user management, subscription control, a
 - Professional formatting with placeholder examples
 - Version history through admin_actions audit trail
 
+#### 4.9.7 Proactive Quota Enforcement
+
+**User Experience Philosophy:**
+Interface elements are disabled with upgrade messaging when quotas are reached, preventing failed attempts and user frustration. Quota-limited buttons and inputs display friendly blue gradient styling with clear benefit communication rather than blocking red error states.
+
+**Real-time Quota Tracking:**
+Quota status updates immediately after create/delete operations via `updateQuotaStatusAfterOperation()` function calls in success handlers. UI reflects current usage without requiring page refresh.
+
+**Visual Implementation:**
+- Column creation button shows "Upgrade (3/3 columns used)" when FREE limit reached
+- Task input fields display quota usage and upgrade prompt when task limit reached
+- Blue gradient styling with subtle animations replaces aggressive red error states
+- Share options hidden for FREE users with upgrade messaging in task menus
+
+### 4.10 Proactive User Experience Design
+
+#### 4.10.1 Quota Management UX Philosophy
+MyDayHub transforms subscription limits from barriers into conversion opportunities through proactive UI management. Rather than allowing users to attempt actions that will fail, the interface adapts to show upgrade messaging with friendly styling.
+
+#### 4.10.2 Visual Design Principles  
+Quota-limited elements use blue gradient styling (#3b82f6 to #6366f1) with subtle animations and clear benefit communication. This creates invitation rather than frustration, turning limitations into natural upgrade touchpoints.
+
 ---
 
 ## 5. Technical Specification
@@ -825,6 +854,7 @@ MyDayHub follows a modern LAMP stack architecture optimized for security, perfor
 - MySQL 8.0+ with JSON column support
 - Apache 2.4+ with mod_rewrite
 - Composer for dependency management
+- Single API gateway (/api/api.php) combining error handling and business logic
 
 **Frontend:**
 - Vanilla JavaScript ES6+ for maximum performance
