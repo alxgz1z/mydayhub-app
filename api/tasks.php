@@ -277,6 +277,18 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		}
 		break;
 		
+		case 'getTrustRelationships':
+		if ($method === 'GET' || $method === 'POST') {
+			handle_get_trust_relationships($pdo, $userId);
+		}
+		break;
+		
+		case 'leaveSharedTask':
+		if ($method === 'POST') {
+			handle_leave_shared_task($pdo, $userId, $data);
+		}
+		break;
+		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
@@ -295,13 +307,12 @@ function getTaskShares($pdo, $userId, $taskIds) {
 	 
 	 $placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
 	 $sql = "
-		 SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, s.status, COALESCE(s.ready_for_review, 0) as ready_for_review
+		 SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, COALESCE(s.ready_for_review, 0) as ready_for_review
 		 FROM shared_items s
 		 JOIN users u ON u.user_id = s.recipient_id
 		 WHERE s.item_type = 'task' 
 		 AND s.item_id IN ($placeholders) 
 		 AND s.owner_id = ? 
-		 AND s.status = 'active'
 		 ORDER BY u.username
 	 ";
 	 
@@ -820,11 +831,12 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
-		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes FROM users WHERE user_id = :userId");
+		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes, subscription_level FROM users WHERE user_id = :userId");
 		$stmtUser->execute([':userId' => $userId]);
 		$userData = $stmtUser->fetch(PDO::FETCH_ASSOC);
 		$userPrefs = json_decode($userData['preferences'] ?? '{}', true);
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
+		$subscriptionLevel = $userData['subscription_level'] ?? 'free';
 
 		// Modified for Snooze Feature: Check for awakened tasks
 		$stmtAwakened = $pdo->prepare(
@@ -989,7 +1001,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 				'at_limit' => $currentTasks >= $limits['max_tasks']
 			],
 			'sharing_enabled' => $limits['sharing_enabled'],
-			'subscription_level' => strtoupper($subscriptionLevel ?? 'FREE')
+			'subscription_level' => strtoupper($subscriptionLevel)
 		];
 		
 		send_json_response([
@@ -1313,7 +1325,6 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 			WHERE owner_id = :owner
 			  AND item_type = 'task'
 			  AND item_id = :tid
-			  AND status <> 'revoked'
 			LIMIT 1
 		");
 		$checkShare->execute([':owner' => $userId, ':tid' => $taskId]);
@@ -2014,5 +2025,169 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_get_all_user_attachments: ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+	}
+}
+
+/**
+ * Gets all trust relationships for the current user - both outgoing and incoming shares.
+ * Modified for Trust Management System - Comprehensive sharing relationship overview
+ */
+function handle_get_trust_relationships(PDO $pdo, int $userId): void {
+	try {
+		// Get outgoing shares (tasks I've shared with others)
+		$outgoingStmt = $pdo->prepare("
+			SELECT 
+				s.item_id as task_id,
+				s.recipient_id,
+				s.permission,
+				s.created_at as shared_at,
+				COALESCE(s.ready_for_review, 0) as ready_for_review,
+				t.encrypted_data,
+				c.column_name,
+				u.username as recipient_username,
+				u.email as recipient_email
+			FROM shared_items s
+			JOIN tasks t ON t.task_id = s.item_id
+			JOIN users u ON u.user_id = s.recipient_id
+			LEFT JOIN `columns` c ON c.column_id = t.column_id
+			WHERE s.item_type = 'task' 
+			AND s.owner_id = :userId 
+			AND t.deleted_at IS NULL
+			AND u.status = 'active'
+			ORDER BY s.created_at DESC
+		");
+		$outgoingStmt->execute([':userId' => $userId]);
+		$outgoingShares = $outgoingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process outgoing shares to include task titles
+		foreach ($outgoingShares as &$share) {
+			$taskData = json_decode($share['encrypted_data'], true);
+			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($share['encrypted_data']); // Remove from response
+		}
+
+		// Get incoming shares (tasks others have shared with me)
+		$incomingStmt = $pdo->prepare("
+			SELECT 
+				s.item_id as task_id,
+				s.owner_id,
+				s.permission,
+				s.created_at as shared_at,
+				COALESCE(s.ready_for_review, 0) as ready_for_review,
+				t.encrypted_data,
+				u.username as owner_username,
+				u.email as owner_email
+			FROM shared_items s
+			JOIN tasks t ON t.task_id = s.item_id
+			JOIN users u ON u.user_id = s.owner_id
+			WHERE s.item_type = 'task' 
+			AND s.recipient_id = :userId 
+			AND t.deleted_at IS NULL
+			AND u.status = 'active'
+			ORDER BY s.created_at DESC
+		");
+		$incomingStmt->execute([':userId' => $userId]);
+		$incomingShares = $incomingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process incoming shares to include task titles
+		foreach ($incomingShares as &$share) {
+			$taskData = json_decode($share['encrypted_data'], true);
+			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($share['encrypted_data']); // Remove from response
+		}
+
+		// Get summary statistics
+		$stats = [
+			'tasks_shared_by_me' => count($outgoingShares),
+			'tasks_shared_with_me' => count($incomingShares),
+			'unique_people_i_share_with' => count(array_unique(array_column($outgoingShares, 'recipient_id'))),
+			'unique_people_sharing_with_me' => count(array_unique(array_column($incomingShares, 'owner_id'))),
+			'ready_for_review_count' => count(array_filter($outgoingShares, function($share) {
+				return $share['ready_for_review'];
+			}))
+		];
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'outgoing_shares' => $outgoingShares,
+				'incoming_shares' => $incomingShares,
+				'statistics' => $stats
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_trust_relationships: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while fetching trust relationships.'], 500);
+	}
+}
+
+/**
+ * Allows a recipient to leave a shared task (remove themselves as recipient).
+ * Modified for Trust Management System - Complete recipient control over sharing relationships
+ */
+function handle_leave_shared_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Verify that the user is actually a recipient of this task
+		$checkStmt = $pdo->prepare("
+			SELECT s.owner_id, u.username as owner_username
+			FROM shared_items s
+			JOIN users u ON u.user_id = s.owner_id
+			WHERE s.item_type = 'task' 
+			AND s.item_id = :taskId 
+			AND s.recipient_id = :userId
+		");
+		$checkStmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$shareRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$shareRecord) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'You are not a recipient of this shared task.'], 404);
+			return;
+		}
+
+		// Delete the share record (hard delete for clean state management)
+		$deleteStmt = $pdo->prepare("
+			DELETE FROM shared_items 
+			WHERE item_type = 'task' 
+			AND item_id = :taskId 
+			AND recipient_id = :userId
+		");
+		$deleteResult = $deleteStmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+
+		if (!$deleteResult || $deleteStmt->rowCount() === 0) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Failed to leave shared task.'], 500);
+			return;
+		}
+
+		$pdo->commit();
+
+		log_debug_message("User $userId left shared task $taskId owned by {$shareRecord['owner_id']}");
+		
+		send_json_response([
+			'status' => 'success', 
+			'message' => 'You have left the shared task.',
+			'data' => [
+				'task_id' => $taskId,
+				'owner_username' => $shareRecord['owner_username']
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message("Error in handle_leave_shared_task: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while leaving the shared task.'], 500);
 	}
 }

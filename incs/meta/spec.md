@@ -98,6 +98,8 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
 - **[RDY]** `listTaskShares` (in tasks.php) - Share enumeration for modal display
 - **[WIP]** Permission-based action restrictions for shared task recipients
+- **[RDY]** `getTrustRelationships` (in tasks.php) - Complete sharing relationship overview with statistics and bidirectional data
+- **[RDY]** `leaveSharedTask` (in tasks.php) - Recipient self-removal from shared tasks with hard delete model
 
 **Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
 
@@ -157,6 +159,11 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Owner identification badges for shared task recipients with persistence
 - **[RDY]** Shared task notes collaboration with bidirectional editing capability
 - **[RDY]** Orphaned share cleanup for deleted/suspended user accounts
+- **[RDY]** Trust Management Modal - Complete interface for viewing and managing all sharing relationships
+- **[RDY]** Trust Relationship Statistics - Dashboard showing sharing metrics and ready-for-review counts
+- **[RDY]** Bidirectional Share Management - Revoke access and leave shared tasks with real-time updates
+- **[RDY]** Trust Management Dark Theme Integration - Properly styled modal matching application aesthetics
+- **[FIX]** Custom Confirmation Modal Integration - Replace browser confirm dialogs with application modal system
 - **[FUT]** Mobile share workflow optimization
 
 #### Advanced UI Features
@@ -191,7 +198,7 @@ The roadmap prioritizes stability, core feature completion, and foundational arc
 
 #### Immediate Priorities (Sprint 1-2)
 
-1. **Trust Management System** - User interface for viewing and managing all trust relationships and shared task recipients
+1. **Trust Management System** - ✅ **COMPLETED** - User interface for viewing and managing all trust relationships and shared task recipients with statistics overview and bidirectional management capabilities
 
 2. **File Management Enhancements** - Bulk operations, search functionality, and storage analytics
 
@@ -661,6 +668,9 @@ Recipients can edit task notes regardless of permission level, enabling collabor
 
 **Virtual Column Positioning:**
 The "Shared with Me" virtual column automatically appears as the rightmost column when shared tasks exist. New user-created columns insert before virtual columns to maintain consistent positioning. Column sorting ensures virtual columns remain at position 9999 with proper reference management after UI operations.
+
+**Trust Management System:**
+The Trust Management interface provides complete oversight of all sharing relationships through a dedicated modal accessible from the Settings panel. Users can view comprehensive statistics including tasks shared by/with them, unique people counts, and ready-for-review notifications. The tabbed interface separates outgoing shares ("Shared by Me") and incoming shares ("Shared with Me") with full management capabilities including revoking access and leaving shared tasks. Real-time updates ensure board data reflects trust relationship changes immediately.
 
 ---
 

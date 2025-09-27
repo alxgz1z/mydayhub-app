@@ -178,6 +178,20 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						</button>
 					</div>
 				</div>
+				<div class="setting-item">
+					<span class="setting-label">Trust Management</span>
+					<div class="setting-control">
+						<button type="button" id="btn-trust-management" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="18" cy="5" r="3"></circle>
+								<circle cx="6" cy="12" r="3"></circle>
+								<circle cx="18" cy="19" r="3"></circle>
+								<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+							</svg>
+							View
+						</button>
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -450,6 +464,51 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 		</div>
 	</div>
+	
+	<!-- Trust Management Modal -->
+	<div id="trust-management-modal-overlay" class="hidden">
+		<div id="trust-management-modal-container">
+			<div class="trust-management-header">
+				<h4>Trust Management</h4>
+				<button id="trust-management-close-btn" class="btn-icon" type="button">&times;</button>
+			</div>
+			<div id="trust-management-stats" class="trust-stats-overview">
+				<div class="stat-item">
+					<span class="stat-value" id="tasks-shared-by-me">0</span>
+					<span class="stat-label">Tasks Shared by Me</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="tasks-shared-with-me">0</span>
+					<span class="stat-label">Tasks Shared with Me</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="people-i-share-with">0</span>
+					<span class="stat-label">People I Share With</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="ready-for-review-count">0</span>
+					<span class="stat-label">Ready for Review</span>
+				</div>
+			</div>
+			<div class="trust-management-tabs">
+				<button class="trust-tab active" data-tab="outgoing">Shared by Me</button>
+				<button class="trust-tab" data-tab="incoming">Shared with Me</button>
+			</div>
+			<div id="trust-management-body">
+				<div id="trust-tab-outgoing" class="trust-tab-content active">
+					<div id="outgoing-shares-list" class="shares-list">
+						<!-- Outgoing shares will be populated here -->
+					</div>
+				</div>
+				<div id="trust-tab-incoming" class="trust-tab-content">
+					<div id="incoming-shares-list" class="shares-list">
+						<!-- Incoming shares will be populated here -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
 	
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>

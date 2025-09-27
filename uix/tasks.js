@@ -3720,6 +3720,273 @@ function exitMoveMode() {
 	 
 	 updateQuotaAwareUI();
  }
+ 
+ /**
+  * Trust Management System Functions
+  * Modified for Trust Management System - Complete sharing relationship interface
+  */
+ 
+ /**
+  * Opens the Trust Management modal and loads sharing data
+  */
+ async function openTrustManagementModal() {
+	 const overlay = document.getElementById('trust-management-modal-overlay');
+	 overlay.classList.remove('hidden');
+	 
+	 // Load trust relationship data
+	 await loadTrustRelationships();
+	 
+	 // Set up event listeners if not already done
+	 setupTrustManagementEventListeners();
+ }
+ 
+ /**
+  * Closes the Trust Management modal
+  */
+ function closeTrustManagementModal() {
+	 const overlay = document.getElementById('trust-management-modal-overlay');
+	 overlay.classList.add('hidden');
+ }
+ 
+ /**
+  * Sets up event listeners for Trust Management modal
+  */
+ function setupTrustManagementEventListeners() {
+	 // Close button
+	 const closeBtn = document.getElementById('trust-management-close-btn');
+	 if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
+		 closeBtn.addEventListener('click', closeTrustManagementModal);
+		 closeBtn.setAttribute('data-listener-added', 'true');
+	 }
+	 
+	 // Tab switching
+	 const tabButtons = document.querySelectorAll('.trust-tab');
+	 tabButtons.forEach(button => {
+		 if (!button.hasAttribute('data-listener-added')) {
+			 button.addEventListener('click', (e) => {
+				 const tabName = e.target.getAttribute('data-tab');
+				 switchTrustTab(tabName);
+			 });
+			 button.setAttribute('data-listener-added', 'true');
+		 }
+	 });
+	 
+	 // Close on overlay click
+	 const overlay = document.getElementById('trust-management-modal-overlay');
+	 if (overlay && !overlay.hasAttribute('data-listener-added')) {
+		 overlay.addEventListener('click', (e) => {
+			 if (e.target === overlay) {
+				 closeTrustManagementModal();
+			 }
+		 });
+		 overlay.setAttribute('data-listener-added', 'true');
+	 }
+ }
+ 
+ /**
+  * Switches between trust management tabs
+  */
+ function switchTrustTab(tabName) {
+	 // Update tab buttons
+	 document.querySelectorAll('.trust-tab').forEach(tab => {
+		 tab.classList.remove('active');
+	 });
+	 document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+	 
+	 // Update tab content
+	 document.querySelectorAll('.trust-tab-content').forEach(content => {
+		 content.classList.remove('active');
+	 });
+	 document.getElementById(`trust-tab-${tabName}`).classList.add('active');
+ }
+ 
+ /**
+  * Loads and displays trust relationship data
+  */
+ async function loadTrustRelationships() {
+	 try {
+		 const response = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'getTrustRelationships'
+		 });
+		 
+		 if (response.status === 'success') {
+			 displayTrustStatistics(response.data.statistics);
+			 displayOutgoingShares(response.data.outgoing_shares);
+			 displayIncomingShares(response.data.incoming_shares);
+		 } else {
+			 showToast({ message: `Error loading trust data: ${response.message}`, type: 'error' });
+		 }
+	 } catch (error) {
+		 console.error('Error loading trust relationships:', error);
+		 showToast({ message: 'Failed to load trust relationships', type: 'error' });
+	 }
+ }
+ 
+ /**
+  * Displays trust relationship statistics
+  */
+ function displayTrustStatistics(stats) {
+	 document.getElementById('tasks-shared-by-me').textContent = stats.tasks_shared_by_me;
+	 document.getElementById('tasks-shared-with-me').textContent = stats.tasks_shared_with_me;
+	 document.getElementById('people-i-share-with').textContent = stats.unique_people_i_share_with;
+	 document.getElementById('ready-for-review-count').textContent = stats.ready_for_review_count;
+ }
+ 
+ /**
+  * Displays outgoing shares (tasks I've shared)
+  */
+ function displayOutgoingShares(shares) {
+	 const container = document.getElementById('outgoing-shares-list');
+	 
+	 if (shares.length === 0) {
+		 container.innerHTML = '<p class="no-shares-message">You haven\'t shared any tasks yet.</p>';
+		 return;
+	 }
+	 
+	 container.innerHTML = shares.map(share => `
+		 <div class="share-item" data-task-id="${share.task_id}" data-recipient-id="${share.recipient_id}">
+			 <div class="share-info">
+				 <div class="share-task-title">${escapeHtml(share.task_title)}</div>
+				 <div class="share-details">
+					 <div class="share-user">
+						 <svg class="share-user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+							 <circle cx="12" cy="7" r="4"></circle>
+						 </svg>
+						 <span>${escapeHtml(share.recipient_username)}</span>
+					 </div>
+					 <span class="share-permission ${share.permission}">${share.permission}</span>
+					 <span class="share-date">Shared ${formatShareDate(share.shared_at)}</span>
+					 ${share.column_name ? `<span class="share-column">in ${escapeHtml(share.column_name)}</span>` : ''}
+				 </div>
+			 </div>
+			 <div class="share-actions">
+				 ${share.ready_for_review ? '<span class="ready-badge">Ready</span>' : ''}
+				 <button class="share-action-btn revoke" onclick="revokeTaskShare(${share.task_id}, ${share.recipient_id}, '${escapeHtml(share.recipient_username)}')">
+					 Revoke
+				 </button>
+			 </div>
+		 </div>
+	 `).join('');
+ }
+ 
+ /**
+  * Displays incoming shares (tasks shared with me)
+  */
+ function displayIncomingShares(shares) {
+	 const container = document.getElementById('incoming-shares-list');
+	 
+	 if (shares.length === 0) {
+		 container.innerHTML = '<p class="no-shares-message">No tasks have been shared with you yet.</p>';
+		 return;
+	 }
+	 
+	 container.innerHTML = shares.map(share => `
+		 <div class="share-item" data-task-id="${share.task_id}" data-owner-id="${share.owner_id}">
+			 <div class="share-info">
+				 <div class="share-task-title">${escapeHtml(share.task_title)}</div>
+				 <div class="share-details">
+					 <div class="share-user">
+						 <svg class="share-user-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+							 <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+							 <circle cx="12" cy="7" r="4"></circle>
+						 </svg>
+						 <span>${escapeHtml(share.owner_username)}</span>
+					 </div>
+					 <span class="share-permission ${share.permission}">${share.permission}</span>
+					 <span class="share-date">Shared ${formatShareDate(share.shared_at)}</span>
+				 </div>
+			 </div>
+			 <div class="share-actions">
+				 ${share.ready_for_review ? '<span class="ready-badge">Ready</span>' : ''}
+				 <button class="share-action-btn leave" onclick="leaveSharedTask(${share.task_id}, '${escapeHtml(share.owner_username)}')">
+					 Leave
+				 </button>
+			 </div>
+		 </div>
+	 `).join('');
+ }
+ 
+ /**
+  * Formats share date for display
+  */
+ function formatShareDate(dateString) {
+	 const date = new Date(dateString);
+	 const now = new Date();
+	 const diffTime = Math.abs(now - date);
+	 const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+	 
+	 if (diffDays === 1) return 'yesterday';
+	 if (diffDays < 7) return `${diffDays} days ago`;
+	 if (diffDays < 30) return `${Math.ceil(diffDays / 7)} weeks ago`;
+	 return date.toLocaleDateString();
+ }
+ 
+ /**
+  * Revokes access to a shared task
+  */
+ async function revokeTaskShare(taskId, recipientId, recipientName) {
+	 if (!confirm(`Remove ${recipientName}'s access to this task?`)) {
+		 return;
+	 }
+	 
+	 try {
+		 const response = await window.apiFetch({
+			 module: 'tasks',
+			 action: 'unshareTask',
+			 data: {
+				 task_id: taskId,
+				 recipient_user_id: recipientId
+			 }
+		 });
+		 
+		 if (response.status === 'success') {
+			 showToast({ message: 'Access revoked successfully', type: 'success' });
+			 await loadTrustRelationships(); // Reload data
+			 await loadBoardData(); // Refresh main board
+		 } else {
+			 showToast({ message: `Error: ${response.message}`, type: 'error' });
+		 }
+	 } catch (error) {
+		 console.error('Error revoking share:', error);
+		 showToast({ message: 'Failed to revoke access', type: 'error' });
+	 }
+ }
+ 
+ /**
+  * Leaves a shared task (removes self as recipient)
+  */
+ async function leaveSharedTask(taskId, ownerName) {
+	 if (!confirm(`Stop receiving updates for this task from ${ownerName}?`)) {
+		 return;
+	 }
+	 
+	 // Note: This would require a new API endpoint 'leaveSharedTask'
+	 // For now, show a message that this feature is coming soon
+	 showToast({ 
+		 message: 'Leave shared task feature coming soon', 
+		 type: 'info' 
+	 });
+ }
+ 
+ /**
+  * Escapes HTML to prevent XSS
+  */
+ function escapeHtml(text) {
+	 const div = document.createElement('div');
+	 div.textContent = text;
+	 return div.innerHTML;
+ }
+ 
+ // Initialize Trust Management when app loads
+ document.addEventListener('DOMContentLoaded', function() {
+	 // Add event listener to Trust Management button in Settings
+	 const trustButton = document.getElementById('btn-trust-management');
+	 if (trustButton) {
+		 trustButton.addEventListener('click', openTrustManagementModal);
+	 }
+ });
 
 // Initial load
 document.addEventListener('DOMContentLoaded', initTasksView);

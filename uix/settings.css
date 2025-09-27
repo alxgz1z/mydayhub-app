@@ -152,3 +152,282 @@
 .setting-control .slider.round:before {
 	border-radius: 50%;
 }
+
+/* ==========================================================================
+   4. TRUST MANAGEMENT MODAL STYLES
+   ========================================================================== */
+
+   #trust-management-modal-overlay {
+	   position: fixed;
+	   top: 0;
+	   left: 0;
+	   width: 100%;
+	   height: 100%;
+	   background: rgba(0, 0, 0, 0.8);
+	   z-index: 1000;
+	   display: flex;
+	   align-items: center;
+	   justify-content: center;
+	   backdrop-filter: blur(4px);
+   }
+   
+   #trust-management-modal-container {
+	   background: #1e293b;  /* Force dark background */
+	   border: 1px solid #475569;
+	   border-radius: 12px;
+	   width: 90%;
+	   max-width: 700px;
+	   max-height: 85vh;
+	   display: flex;
+	   flex-direction: column;
+	   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+	   color: #f8fafc;  /* Force light text */
+   }
+   
+   .trust-management-header {
+	   display: flex;
+	   align-items: center;
+	   justify-content: space-between;
+	   padding: 1.5rem;
+	   border-bottom: 1px solid #475569;
+	   background: #0f172a;
+	   border-radius: 12px 12px 0 0;
+   }
+   
+   .trust-management-header h4 {
+	   margin: 0;
+	   color: #f8fafc;
+	   font-size: 1.25rem;
+	   font-weight: 600;
+   }
+   
+   #trust-management-close-btn {
+	   background: none;
+	   border: none;
+	   color: #cbd5e1;
+	   font-size: 1.5rem;
+	   cursor: pointer;
+	   padding: 0.5rem;
+	   border-radius: 6px;
+	   transition: all 0.2s ease;
+	   width: 2rem;
+	   height: 2rem;
+	   display: flex;
+	   align-items: center;
+	   justify-content: center;
+   }
+   
+   #trust-management-close-btn:hover {
+	   background: #334155;
+	   color: #f8fafc;
+   }
+   
+   /* Statistics Overview - Target both ID and class */
+   #trust-management-stats,
+   .trust-stats-overview {
+	   display: grid;
+	   grid-template-columns: repeat(4, 1fr);
+	   gap: 1rem;
+	   padding: 1.5rem;
+	   background: #0f172a;
+	   border-bottom: 1px solid #475569;
+   }
+   
+   .stat-item {
+	   text-align: center;
+	   padding: 1rem 0.75rem;
+	   border-radius: 8px;
+	   background: #1e293b;
+	   border: 1px solid #475569;
+	   transition: all 0.2s ease;
+   }
+   
+   .stat-item:hover {
+	   border-color: #3b82f6;
+	   background: #334155;
+   }
+   
+   .stat-value {
+	   display: block;
+	   font-size: 2rem;
+	   font-weight: 700;
+	   color: #3b82f6;
+	   margin-bottom: 0.5rem;
+	   line-height: 1;
+   }
+   
+   .stat-label {
+	   display: block;
+	   font-size: 0.75rem;
+	   color: #cbd5e1;
+	   text-transform: uppercase;
+	   letter-spacing: 0.05em;
+	   font-weight: 500;
+   }
+   
+   /* Tab Navigation */
+   .trust-management-tabs {
+	   display: flex;
+	   background: #0f172a;
+	   border-bottom: 1px solid #475569;
+   }
+   
+   .trust-tab {
+	   flex: 1;
+	   padding: 1rem 1.5rem;
+	   background: none;
+	   border: none;
+	   color: #cbd5e1;
+	   font-size: 0.95rem;
+	   font-weight: 500;
+	   cursor: pointer;
+	   transition: all 0.2s ease;
+	   border-bottom: 3px solid transparent;
+	   position: relative;
+   }
+   
+   .trust-tab:hover {
+	   background: #334155;
+	   color: #f8fafc;
+   }
+   
+   .trust-tab.active {
+	   color: #3b82f6;
+	   border-bottom-color: #3b82f6;
+	   background: #1e293b;
+   }
+   
+   /* Tab Content */
+   #trust-management-body {
+	   flex: 1;
+	   overflow-y: auto;
+	   min-height: 300px;
+	   max-height: 400px;
+	   background: #1e293b;
+   }
+   
+   .trust-tab-content {
+	   display: none;
+	   padding: 1.5rem;
+   }
+   
+   .trust-tab-content.active {
+	   display: block;
+   }
+   
+   /* Shares List */
+   .shares-list {
+	   display: flex;
+	   flex-direction: column;
+	   gap: 1rem;
+   }
+   
+   .share-item {
+	   display: flex;
+	   align-items: center;
+	   justify-content: space-between;
+	   padding: 1.25rem;
+	   background: #0f172a;
+	   border: 1px solid #475569;
+	   border-radius: 8px;
+	   transition: all 0.2s ease;
+   }
+   
+   .share-item:hover {
+	   border-color: #3b82f6;
+	   background: #334155;
+   }
+   
+   .share-info {
+	   flex: 1;
+	   min-width: 0;
+   }
+   
+   .share-task-title {
+	   font-weight: 600;
+	   color: #f8fafc;
+	   margin-bottom: 0.5rem;
+	   overflow: hidden;
+	   text-overflow: ellipsis;
+	   white-space: nowrap;
+	   font-size: 1rem;
+   }
+   
+   .share-details {
+	   display: flex;
+	   align-items: center;
+	   gap: 1rem;
+	   font-size: 0.875rem;
+	   color: #cbd5e1;
+	   flex-wrap: wrap;
+   }
+   
+   .share-user {
+	   display: flex;
+	   align-items: center;
+	   gap: 0.5rem;
+   }
+   
+   .share-user-icon {
+	   width: 16px;
+	   height: 16px;
+	   color: #3b82f6;
+   }
+   
+   .share-permission {
+	   display: inline-flex;
+	   align-items: center;
+	   padding: 0.25rem 0.5rem;
+	   border-radius: 4px;
+	   font-size: 0.75rem;
+	   font-weight: 500;
+	   text-transform: uppercase;
+	   letter-spacing: 0.05em;
+   }
+   
+   .share-permission.edit {
+	   background: rgba(34, 197, 94, 0.2);
+	   color: #22c55e;
+	   border: 1px solid rgba(34, 197, 94, 0.3);
+   }
+   
+   .share-permission.view {
+	   background: rgba(59, 130, 246, 0.2);
+	   color: #3b82f6;
+	   border: 1px solid rgba(59, 130, 246, 0.3);
+   }
+   
+   .share-date {
+	   color: #94a3b8;
+	   font-size: 0.75rem;
+   }
+   
+   .share-actions {
+	   display: flex;
+	   align-items: center;
+	   gap: 0.75rem;
+	   margin-left: 1rem;
+   }
+   
+   .ready-badge {
+	   display: inline-flex;
+	   align-items: center;
+	   padding: 0.25rem 0.5rem;
+	   border-radius: 4px;
+	   font-size: 0.75rem;
+	   font-weight: 500;
+	   background: rgba(249, 115, 22, 0.2);
+	   color: #f97316;
+	   border: 1px solid rgba(249, 115, 22, 0.3);
+   }
+   
+   .share-action-btn {
+	   padding: 0.5rem 1rem;
+	   border: none;
+	   border-radius: 6px;
+	   font-size: 0.875rem;
+	   font-weight: 500;
+	   cursor: pointer;
+	   transition: all 0.2s ease;
+	   min-width: 70px;
+   }
