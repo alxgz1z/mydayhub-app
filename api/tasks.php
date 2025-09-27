@@ -702,12 +702,10 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	$notes = $data['notes'] ?? null;
-
 	if ($taskId <= 0 || ($notes === null && !array_key_exists('dueDate', $data))) {
 		send_json_response(['status' => 'error', 'message' => 'Task ID and at least one field to update (notes or dueDate) are required.'], 400);
 		return;
 	}
-
 	$dueDateForDb = null;
 	if (array_key_exists('dueDate', $data)) {
 		if (empty($data['dueDate'])) {
@@ -719,10 +717,8 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			return;
 		}
 	}
-
 	try {
 		$pdo->beginTransaction();
-
 		// Check if user is owner or has edit permission
 		$stmt_find = $pdo->prepare("
 			SELECT t.encrypted_data, t.user_id,
@@ -742,38 +738,30 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
 		}
-
 		$currentData = json_decode($task['encrypted_data'], true) ?: [];
-
-
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
 		}
 		$newDataJson = json_encode($currentData);
-
 		$sql_parts = [];
-		$params = [':taskId' => $taskId, ':userId' => $userId];
-
+		$params = [':taskId' => $taskId];
 		if ($notes !== null) {
 			$sql_parts[] = "encrypted_data = :newDataJson";
 			$params[':newDataJson'] = $newDataJson;
 		}
-
 		if (array_key_exists('dueDate', $data)) {
 			$sql_parts[] = "due_date = :dueDate";
 			$params[':dueDate'] = $dueDateForDb;
 		}
 		
 		if (!empty($sql_parts)) {
-			$sql = "UPDATE tasks SET " . implode(', ', $sql_parts) . ", updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId";
+			// Modified for Shared Task Notes - Remove user_id restriction since permission already verified
+			$sql = "UPDATE tasks SET " . implode(', ', $sql_parts) . ", updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId";
 			$stmt_update = $pdo->prepare($sql);
 			$stmt_update->execute($params);
 		}
-
 		$pdo->commit();
-
 		send_json_response(['status' => 'success'], 200);
-
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
@@ -878,7 +866,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
-		// Modified for Virtual Column Fix - First check if shared tasks exist
+		// Modified for Deleted User Cleanup - Exclude shared tasks from deleted/suspended users
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
@@ -891,7 +879,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
 			 JOIN users u ON u.user_id = t.user_id
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
-			 WHERE s.recipient_id = :userId AND t.deleted_at IS NULL
+			 WHERE s.recipient_id = :userId AND t.deleted_at IS NULL AND u.status = 'active'
 			 GROUP BY t.task_id
 			 ORDER BY t.position ASC"
 		);
@@ -911,6 +899,18 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			];
 			$boardData[] = $sharedColumn;
 			$columnMap[$sharedColumnId] = &$boardData[count($boardData) - 1];
+		}
+
+		// Modified for Virtual Column Positioning - Sort to ensure virtual column appears rightmost
+		if (!empty($sharedTasks)) {
+			usort($boardData, function($a, $b) {
+				return $a['position'] <=> $b['position'];
+			});
+			// Update column map references after sorting
+			$columnMap = [];
+			foreach ($boardData as $index => &$column) {
+				$columnMap[$column['column_id']] = &$boardData[$index];
+			}
 		}
 
 		// Get user's own tasks

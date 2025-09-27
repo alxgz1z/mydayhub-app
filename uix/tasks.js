@@ -70,7 +70,8 @@ function getTaskDataFromElement(taskCardEl) {
 		 snoozed_at: taskCardEl.dataset.snoozedAt || null,
 		 is_snoozed: taskCardEl.dataset.isSnoozed === 'true',
 		 access_type: taskCardEl.dataset.accessType || 'owner',
-		 ready_for_review: taskCardEl.dataset.readyForReview === 'true'
+		 ready_for_review: taskCardEl.dataset.readyForReview === 'true',
+		 shared_by: taskCardEl.dataset.sharedBy || null
 	 };
  }
 
@@ -1656,14 +1657,17 @@ function showAddColumnForm() {
 						 placeholder.remove();
 					 }
 					 const newColumnEl = createColumnElement(result.data);
-					 boardContainer.appendChild(newColumnEl);
+					 // Modified for Virtual Column Positioning - Insert before virtual column if it exists
+					 const virtualColumn = boardContainer.querySelector('.virtual-column');
+					 if (virtualColumn) {
+						 boardContainer.insertBefore(newColumnEl, virtualColumn);
+					 } else {
+						 boardContainer.appendChild(newColumnEl);
+					 }
 					 updateMoveButtonVisibility();
 					 
-					 // Modified for Subscription Quota Enforcement - Update quota tracking with debug
-					 console.log('About to update quota after column creation');
-					 console.log('Quota before update:', window.quotaStatus);
+					 // Modified for Column Quota Auto-Update Fix - Update quota before restoring button
 					 updateQuotaStatusAfterOperation('column', true);
-					 console.log('Quota after update:', window.quotaStatus);
 					 
 					 showToast({ message: 'Column created.', type: 'success' });
 				 } else {
@@ -1675,6 +1679,8 @@ function showAddColumnForm() {
 			 }
 		 }
 		 container.innerHTML = originalButton;
+		 // Modified for Column Quota Auto-Update Fix - Call updateQuotaAwareUI after button restoration
+		 updateQuotaAwareUI();
 	 });
  }
 
@@ -1921,7 +1927,7 @@ function createTaskCard(taskData) {
 	
 	let footerHTML = '';
 	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
-	const hasSharedIndicator = taskData.shares && taskData.shares.length > 0;
+	const hasSharedIndicator = (taskData.shares && taskData.shares.length > 0) || (!isOwner && taskData.shared_by);
 	const hasReadyIndicator = isOwner && taskData.shares && 
 		taskData.shares.some(share => share.ready_for_review);
 	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator;
@@ -1989,7 +1995,7 @@ function createTaskCard(taskData) {
 
 		let shareIndicator = '';
 		if (taskData.shares && taskData.shares.length > 0) {
-			// Get first recipient info for badge display
+			// Owner view - show recipients
 			const firstShare = taskData.shares[0];
 			const recipientDisplay = (firstShare.username || firstShare.email || 'user').substring(0, 6);
 			const shareCount = taskData.shares.length;
@@ -2006,6 +2012,18 @@ function createTaskCard(taskData) {
 						<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
 					</svg>
 					<span class="share-recipient-text">${recipientDisplay}</span>
+				</span>
+			`;
+		} else if (!isOwner && taskData.shared_by) {
+			// Modified for Owner Badge - Recipient view shows owner identification
+			const ownerDisplay = taskData.shared_by.substring(0, 6);
+			shareIndicator = `
+				<span class="task-indicator task-owner-badge" title="Shared by ${taskData.shared_by}">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+						<circle cx="12" cy="7" r="4"></circle>
+					</svg>
+					<span class="share-owner-text">${ownerDisplay}</span>
 				</span>
 			`;
 		}
@@ -2085,6 +2103,7 @@ function createTaskCard(taskData) {
 			data-shares='${JSON.stringify(taskData.shares || [])}'
 			data-access-type="${accessType}"
 			data-ready-for-review="${!!(taskData.ready_for_review)}"
+			data-shared-by="${taskData.shared_by || ''}"
 			${draggableAttr}>
 			<div class="task-card-main">
 				<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>

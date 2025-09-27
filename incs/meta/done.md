@@ -287,9 +287,9 @@ Implemented comprehensive admin superuser system with subscription management, q
 * Test admin interface across both localhost and breveasy.com environments
 * Consider notification system for quota violations and user status changes
 
+---
 
-
-# ### January 15, 2025 - Proactive Quota Management & API Consolidation
+# ### 2025-09-25 - Proactive Quota Management & API Consolidation
 **Completed Work**
 * **Proactive Quota-Aware UI System**: Implemented subscription limit enforcement that prevents failed user actions by disabling interface elements before quota violations occur
   * Added quota status to board data API response with current usage counts and limits per subscription tier
@@ -320,3 +320,32 @@ Implemented comprehensive admin superuser system with subscription management, q
 * ✅ **Usage stats modal functionality** - proper subscription limit visibility
 * ⚠️ **Real-time quota UI updates** - works manually but needs automatic triggering fix
 * ❌ **Shared notes persistence** - identified but not addressed
+
+---
+
+# # 2025-09-26 — Virtual Column Positioning & Shared Task Fixes
+**Completed Core Fixes:**
+* **Virtual Column Positioning**: Fixed "Shared with Me" column to consistently appear rightmost by adding sorting logic after virtual column creation and updating column map references post-sort
+* **Frontend Column Creation**: Modified showAddColumnForm() to insert new user columns before existing virtual columns instead of always appending to end, maintaining proper column order without page refresh
+* **Shared Task Notes Persistence**: Resolved critical bug where recipients couldn't save note edits by removing user_id restriction from UPDATE query in handle_save_task_details() - permission validation already ensures proper access control
+* **Owner Badge Persistence**: Fixed disappearing owner badges when recipients edit notes by adding shared_by data to task card datasets and including it in getTaskDataFromElement() reconstruction
+* **Orphaned Share Cleanup**: Added user status filtering to shared tasks query (AND u.status = 'active') to automatically exclude tasks from deleted/suspended users from "Shared with Me" columns
+
+⠀**Technical Achievements:**
+* Virtual column sorting ensures rightmost placement with position 9999 value
+* Shared task permission model allows recipients to edit notes while maintaining ownership boundaries
+* Owner identification badges display consistently for task recipients with proper data persistence
+* Automatic cleanup prevents display of invalid shares from deactivated accounts
+
+⠀**System Status:**
+* Sharing foundation fully functional with proper permission enforcement
+* Notes collaboration working bidirectionally between owners and recipients
+* Virtual columns maintain consistent positioning across all user interactions
+* Database integrity maintained with active user filtering
+
+⠀**Next Steps (Priority Order):**
+**1** **Trust Management System** - User interface for viewing and managing all trust relationships and shared task recipients
+**2** **Permission System Completion** - Full recipient permission enforcement for shared task actions (view vs edit restrictions)
+**3** **File Management Enhancements** - Bulk operations, search functionality, and storage analytics for attachment management
+**4** **Touch Moves: Mobile Move Mode 2.0** - Enhanced mobile task movement with shared task restrictions and permission indicators
+**5** **Zero-Knowledge Baseline** - Consolidate crypto operations to /uix/crypto.js and prepare per-item DEK architecture

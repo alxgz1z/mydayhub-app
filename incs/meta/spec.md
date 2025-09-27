@@ -99,9 +99,12 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `listTaskShares` (in tasks.php) - Share enumeration for modal display
 - **[WIP]** Permission-based action restrictions for shared task recipients
 
-> **Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
+**Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
 
-> **Architecture Note:** All API endpoints using `window.apiFetch` are properly documented and include CSRF protection, ownership validation, and debug logging when `DEVMODE=true`.
+**Automatic Cleanup:**
+Shared tasks from deleted or suspended users (u.status != 'active') are automatically filtered from recipient views, preventing orphaned share display while maintaining data integrity.
+
+**Architecture Note:** All API endpoints using `window.apiFetch` are properly documented and include CSRF protection, ownership validation, and debug logging when `DEVMODE=true`.
 
 #### Admin & Subscription Management
 - **[RDY]** `getAllUsers` (in admin.php) - User listing with subscription and usage data
@@ -145,12 +148,15 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Share Modal (recipient input, permission selection, current access list)
-- **[RDY]** "Shared with Me" virtual column with automatic population
+- **[RDY]** "Shared with Me" virtual column with automatic population and rightmost positioning
 - **[RDY]** Shared task visual styling (border, gradient, badges)
 - **[RDY]** Lightweight share badge updates without board reload
 - **[RDY]** Ready-for-Review workflow with pulsing owner notifications and proper state synchronization
 - **[RDY]** Ready-for-Review workflow (UI complete)
 - **[RDY]** Permission-based task action menu filtering (partial implementation)
+- **[RDY]** Owner identification badges for shared task recipients with persistence
+- **[RDY]** Shared task notes collaboration with bidirectional editing capability
+- **[RDY]** Orphaned share cleanup for deleted/suspended user accounts
 - **[FUT]** Mobile share workflow optimization
 
 #### Advanced UI Features
@@ -637,7 +643,8 @@ Shared tasks use server-side encryption to enable collaboration, representing a 
 **Note Editing Capabilities:**
 Recipients can edit task notes regardless of view/edit permission level, enabling collaborative documentation. Note changes must persist to database with proper user attribution.
 
-**Known Issue**: Shared task note edits by recipients are currently not persisting to database - requires investigation of permission validation in saveTaskDetails API endpoint.
+**Collaborative Note Editing:**
+Recipients can edit task notes regardless of permission level, enabling collaborative documentation. Note changes persist to database with proper permission validation while maintaining ownership boundaries. Owner badges display consistently for recipients with automatic persistence during task re-rendering.
 
 **Ready-for-Review Workflow:**
 - Recipients can mark tasks ready for owner review via interactive status indicator
@@ -651,6 +658,9 @@ Recipients can edit task notes regardless of view/edit permission level, enablin
 - Badge uses orange color (#f97316) for contrast with blue accent theme
 - Includes accessibility support with reduced motion variant
 - Provides complete audit trail of collaboration workflow
+
+**Virtual Column Positioning:**
+The "Shared with Me" virtual column automatically appears as the rightmost column when shared tasks exist. New user-created columns insert before virtual columns to maintain consistent positioning. Column sorting ensures virtual columns remain at position 9999 with proper reference management after UI operations.
 
 ---
 
