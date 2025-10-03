@@ -1,6 +1,6 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 6.7.0  
+**Version:** Beta 7.3.0  
 **Audience:** Internal Development & Project Management  
 **Last Updated:** September 15, 2025
 
@@ -16,6 +16,16 @@
 6. [Appendices](#6-appendices)
 
 ---
+
+## 0. Localhost server reboot
+
+> sudo apachectl -k restart
+> brew services restart php
+> brew services restart mysql
+> mysql -u alfa -p  
+%SET GLOBAL sql_mode = (SELECT REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', ''));
+%exit
+>
 
 ## 1. Introduction
 

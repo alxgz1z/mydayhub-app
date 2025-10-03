@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 6.6.1
+ * @version 7.3.0 
  * @author Alex & Gemini
  */ 
 

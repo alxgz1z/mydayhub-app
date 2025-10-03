@@ -6,7 +6,7 @@
  *
  * Handles user registration, login, and other authentication actions.
  *
- * @version 6.5.2-debug-complete
+ * @version 7.3.0 
  * @author Alex & Gemini
  */
 

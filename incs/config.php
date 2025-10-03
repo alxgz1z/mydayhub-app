@@ -7,7 +7,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 6.7.0
+ * @version 7.3.0
  * @author Alex & Gemini
  */
 

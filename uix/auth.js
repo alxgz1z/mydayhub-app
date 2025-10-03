@@ -5,7 +5,7 @@
  *
  * Handles form submissions for registration, login, and password reset pages.
  *
- * @version 6.5.2-debug-response
+ * @version 7.3.0
  * @author Alex & Gemini
  */
 document.addEventListener('DOMContentLoaded', () => {
