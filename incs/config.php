@@ -74,8 +74,8 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Tamarindo 7.3.0');
-define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
+define('APP_VER', 'Tamarindo B7');
+define('APP_URL', getenv('APP_URL') ?: 'http://jagmac.local');
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---
 define('DB_HOST', getenv('DB_HOST'));
