@@ -7,7 +7,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 7.3.0
+ * @version 7.3 Tamarindo
  * @author Alex & Gemini & Claude
  */
 
@@ -74,8 +74,8 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Tamarindo B7');
-define('APP_URL', getenv('APP_URL') ?: 'http://jagmac.local');
+define('APP_VER', 'Beta 7.3 - Tamarindo');
+define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---
 define('DB_HOST', getenv('DB_HOST'));

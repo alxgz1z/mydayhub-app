@@ -6,7 +6,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 7.3.0
+ * @version 7.3 Tamarindo
  * @author Alex & Gemini & Claude
  */
 
