@@ -7,8 +7,8 @@
  * This file contains utility functions that are used across multiple
  * parts of the backend application.
  *
- * @version 6.6.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 declare(strict_types=1);

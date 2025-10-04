@@ -7,8 +7,8 @@
  * This script handles the user logout process by destroying the
  * current session and redirecting to the login page.
  *
- * @version 6.3.1
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 // We need the config file to get the APP_URL for a reliable redirect.

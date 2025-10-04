@@ -7,8 +7,9 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ 
+ * @author Alex & Gemini & Claude
  */ 
 
 require_once __DIR__ . '/incs/config.php';
@@ -23,6 +24,9 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 $username = $_SESSION['username'] ?? 'User';
+
+// Check if current user is admin
+$isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION['user_id']) : false;
 
 ?>
 <!DOCTYPE html>
@@ -77,6 +81,13 @@ $username = $_SESSION['username'] ?? 'User';
 
 		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>">
 			<div class="footer-left">
+				<?php if ($isCurrentUserAdmin): ?>
+				<a href="/admin/" id="admin-access-link" title="Admin Panel">
+					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z"/>
+					</svg>
+				</a>
+				<?php endif; ?>
 				<span>[<?php echo htmlspecialchars($username); ?>]</span>
 				<span id="footer-date"></span>
 			</div>
@@ -85,8 +96,8 @@ $username = $_SESSION['username'] ?? 'User';
 					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
 					</svg>
-					</button>
-				</div>
+				</button>
+			</div>
 			<div class="footer-right">
 				<span><?php echo APP_VER; ?></span>
 				<a href="login/logout.php">Logout</a>
@@ -121,9 +132,61 @@ $username = $_SESSION['username'] ?? 'User';
 					</div>
 				</div>
 				<div class="setting-item">
-					<span class="setting-label">Change Password</span>
 					<div class="setting-control">
-						<button id="btn-change-password" class="btn">Change</button>
+						<button id="btn-change-password" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+								<circle cx="12" cy="16" r="1"></circle>
+								<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+							</svg>
+							<span class="setting-label">Change Password</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button id="btn-session-timeout" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="12" cy="12" r="10"></circle>
+								<polyline points="12,6 12,12 16,14"></polyline>
+							</svg>
+							<span class="setting-label">Session Timeout</span>
+							30 minutes
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" onclick="openFileManagementModal()" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+							</svg>
+							<span class="setting-label">Manage Files</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" id="btn-usage-stats" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M3 3v18h18"></path>
+								<path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"></path>
+							</svg>
+							<span class="setting-label">Usage Stats</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" id="btn-trust-management" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="18" cy="5" r="3"></circle>
+								<circle cx="6" cy="12" r="3"></circle>
+								<circle cx="18" cy="19" r="3"></circle>
+								<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+							</svg>
+							<span class="setting-label">Trust Management</span>
+						</button>
 					</div>
 				</div>
 			</div>
@@ -273,6 +336,177 @@ $username = $_SESSION['username'] ?? 'User';
 		<div id="attachment-viewer-content"></div>
 	</div>
 
+	<!-- File Management Modal -->
+	<!-- Modified for File Management Feature - Global attachment management interface -->
+	<div id="file-management-modal-overlay" class="hidden">
+		<div id="file-management-modal-container">
+			<div class="file-management-header">
+				<h4>File Management</h4>
+				<div class="file-management-header-controls">
+					<span id="file-management-count" class="file-management-count">Loading...</span>
+					<select id="file-management-sort">
+						<option value="date_desc">Newest First</option>
+						<option value="date_asc">Oldest First</option>
+						<option value="size_desc">Largest First</option>
+						<option value="size_asc">Smallest First</option>
+					</select>
+					<button id="file-management-close-btn" class="btn-icon" type="button">&times;</button>
+				</div>
+			</div>
+			<div id="file-management-body">
+				<div id="file-management-list">
+					<!-- File list will be populated by JavaScript -->
+				</div>
+			</div>
+			<div class="file-management-footer">
+				<div class="file-management-quota-info">
+					<span>Storage Used:</span>
+					<progress id="file-management-quota-bar" value="0" max="100"></progress>
+					<span id="file-management-quota-text">0 / 50 MB (0%)</span>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Session Timeout Modal -->
+	<div id="session-timeout-modal-overlay" class="hidden">
+		<div id="session-timeout-modal-container">
+			<h4>Session Timeout</h4>
+			<div id="session-timeout-content">
+				<p>Choose how long to keep you logged in during inactivity:</p>
+				<div class="timeout-options">
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="300">
+						<span>5 minutes</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="1800" checked>
+						<span>30 minutes (recommended)</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="7200">
+						<span>2 hours</span>
+					</label>
+					<label class="timeout-option">
+						<input type="radio" name="timeout" value="28800">
+						<span>8 hours</span>
+					</label>
+				</div>
+			</div>
+			<div id="session-timeout-buttons">
+				<button id="btn-timeout-cancel" class="btn">Cancel</button>
+				<button id="btn-timeout-save" class="btn btn-primary">Save</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Usage Stats Modal -->
+	<div id="usage-stats-modal-overlay" class="hidden">
+		<div id="usage-stats-modal-container">
+			<div class="usage-stats-header">
+				<h4>Subscription Usage</h4>
+				<button id="usage-stats-close-btn" class="btn-icon" type="button">&times;</button>
+			</div>
+			<div id="usage-stats-body">
+				<div class="subscription-info">
+					<div class="subscription-tier">
+						<span class="tier-label">Current Plan:</span>
+						<span id="current-tier" class="tier-value">Loading...</span>
+					</div>
+				</div>
+				<div class="usage-categories">
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Tasks</span>
+							<span id="tasks-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="tasks-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="tasks-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Columns</span>
+							<span id="columns-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="columns-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="columns-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Storage</span>
+							<span id="storage-usage-text" class="usage-text">0 MB of 0 MB</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="storage-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="storage-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Sharing</span>
+							<span id="sharing-status" class="usage-text">Loading...</span>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Trust Management Modal -->
+	<div id="trust-management-modal-overlay" class="hidden">
+		<div id="trust-management-modal-container">
+			<div class="trust-management-header">
+				<h4>Trust Management</h4>
+				<button id="trust-management-close-btn" class="btn-icon" type="button">&times;</button>
+			</div>
+			<div id="trust-management-stats" class="trust-stats-overview">
+				<div class="stat-item">
+					<span class="stat-value" id="tasks-shared-by-me">0</span>
+					<span class="stat-label">Tasks Shared by Me</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="tasks-shared-with-me">0</span>
+					<span class="stat-label">Tasks Shared with Me</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="people-i-share-with">0</span>
+					<span class="stat-label">People I Share With</span>
+				</div>
+				<div class="stat-item">
+					<span class="stat-value" id="ready-for-review-count">0</span>
+					<span class="stat-label">Ready for Review</span>
+				</div>
+			</div>
+			<div class="trust-management-tabs">
+				<button class="trust-tab active" data-tab="outgoing">Shared by Me</button>
+				<button class="trust-tab" data-tab="incoming">Shared with Me</button>
+			</div>
+			<div id="trust-management-body">
+				<div id="trust-tab-outgoing" class="trust-tab-content active">
+					<div id="outgoing-shares-list" class="shares-list">
+						<!-- Outgoing shares will be populated here -->
+					</div>
+				</div>
+				<div id="trust-tab-incoming" class="trust-tab-content">
+					<div id="incoming-shares-list" class="shares-list">
+						<!-- Incoming shares will be populated here -->
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>

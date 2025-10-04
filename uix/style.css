@@ -1,7 +1,7 @@
 /* Code for /uix/style.css */
-
-/* MyDayHub - Main Application Styles Beta 7.3.0*/
-
+/* MyDayHub - Main Application Styles */
+/* @version 7.0.0 */
+/* @author Alex & Gemini & Claude */
 /* ==========================================================================
    1. THEME VARIABLES & GLOBAL STYLES
    ========================================================================== */
@@ -786,4 +786,355 @@ input:checked + .slider:before {
 	justify-content: flex-end;
 	gap: 0.75rem;
 	margin-top: 1.5rem;
+}
+
+/* Session Timeout Modal */
+#session-timeout-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.5);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+}
+
+#session-timeout-modal-container {
+	background-color: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+	padding: 1.5rem;
+	max-width: 400px;
+	width: 90%;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+#session-timeout-modal-container h4 {
+	margin: 0 0 1rem 0;
+	color: var(--text-primary);
+	font-size: 1.2rem;
+}
+
+#session-timeout-content p {
+	margin: 0 0 1.5rem 0;
+	color: var(--text-secondary);
+	line-height: 1.5;
+}
+
+.timeout-options {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	margin-bottom: 1.5rem;
+}
+
+.timeout-option {
+	display: flex;
+	align-items: center;
+	padding: 0.75rem;
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+}
+
+.timeout-option:hover {
+	background-color: var(--hover-bg);
+	border-color: var(--accent-color);
+}
+
+.timeout-option input[type="radio"] {
+	margin-right: 0.75rem;
+	accent-color: var(--accent-color);
+}
+
+.timeout-option span {
+	color: var(--text-primary);
+	font-weight: 500;
+}
+
+#session-timeout-buttons {
+	display: flex;
+	gap: 0.75rem;
+	justify-content: flex-end;
+}
+
+#session-timeout-buttons .btn {
+	min-width: 80px;
+}
+
+/* ==========================================================================
+   9. ADMIN ACCESS ICON STYLING
+   ========================================================================== */
+
+/* Admin access icon styling */
+#admin-access-link {
+	display: inline-flex;
+	align-items: center;
+	padding: 0.25rem;
+	margin-right: 0.5rem;
+	border-radius: 0.25rem;
+	transition: all 0.2s ease;
+	text-decoration: none;
+}
+
+#admin-access-link:hover {
+	background: rgba(249, 115, 22, 0.1);
+	transform: scale(1.1);
+}
+
+#admin-access-link svg {
+	filter: drop-shadow(0 0 2px rgba(249, 115, 22, 0.5));
+}
+
+/* Ensure proper spacing in footer-left */
+.footer-left {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+/* ==========================================================================
+   10. USAGE STATS MODAL
+   ========================================================================== */
+
+#usage-stats-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 1200;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 1;
+	transition: opacity 0.2s ease-in-out;
+}
+
+#usage-stats-modal-overlay.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#usage-stats-modal-container {
+	background-color: var(--toolbar-bg);
+	padding: 1.5rem;
+	border-radius: 12px;
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+	border: 1px solid var(--border-color);
+	width: 100%;
+	max-width: 480px;
+	transform: scale(1);
+	transition: transform 0.2s ease-in-out;
+}
+
+#usage-stats-modal-overlay.hidden #usage-stats-modal-container {
+	transform: scale(0.95);
+}
+
+.usage-stats-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 1.5rem;
+}
+
+.usage-stats-header h4 {
+	margin: 0;
+	font-size: 1.3rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+#usage-stats-close-btn {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	font-size: 1.5rem;
+	cursor: pointer;
+	padding: 0.25rem;
+	border-radius: 4px;
+	transition: color 0.2s, background-color 0.2s;
+}
+
+#usage-stats-close-btn:hover {
+	color: var(--text-primary);
+	background-color: var(--btn-hover-bg);
+}
+
+.subscription-info {
+	margin-bottom: 2rem;
+	padding: 1rem;
+	background-color: var(--bg-color);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.subscription-tier {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.tier-label {
+	font-size: 1rem;
+	color: var(--text-secondary);
+}
+
+.tier-value {
+	font-size: 1.1rem;
+	font-weight: 600;
+	color: var(--accent-color);
+	text-transform: capitalize;
+}
+
+.usage-categories {
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+.usage-category {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.usage-category-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.usage-label {
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.usage-text {
+	font-size: 0.9rem;
+	color: var(--text-secondary);
+}
+
+.usage-bar-container {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+}
+
+.usage-bar {
+	flex-grow: 1;
+	height: 8px;
+	background-color: var(--border-color);
+	border-radius: 4px;
+	overflow: hidden;
+}
+
+.usage-fill {
+	height: 100%;
+	background-color: var(--accent-color);
+	border-radius: 4px;
+	transition: width 0.3s ease;
+}
+
+.usage-fill[style*="width: 100%"] {
+	background-color: var(--toast-error-bg);
+}
+
+.usage-fill[style*="width: 9"][style*="%"],
+.usage-fill[style*="width: 8"][style*="%"] {
+	background-color: #f59e0b;
+}
+
+.usage-percentage {
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--text-secondary);
+	min-width: 35px;
+	text-align: right;
+}
+
+/* ==========================================================================
+   11. QUOTA-AWARE UI STYLES
+   ========================================================================== */
+
+/* Quota-limited button styling - Friendly upgrade messaging */
+.btn-header.quota-limited,
+#btn-add-column.quota-limited {
+	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	color: white;
+	cursor: pointer;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	position: relative;
+	overflow: hidden;
+}
+
+.btn-header.quota-limited::before,
+#btn-add-column.quota-limited::before {
+	content: '';
+	position: absolute;
+	top: 0;
+	left: -100%;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+	transition: left 0.5s;
+}
+
+.btn-header.quota-limited:hover::before,
+#btn-add-column.quota-limited:hover::before {
+	left: 100%;
+}
+
+.btn-header.quota-limited:hover,
+#btn-add-column.quota-limited:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+/* Quota-limited task input styling - Friendly upgrade messaging */
+.new-task-input.quota-limited {
+	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	color: white;
+	cursor: pointer;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	text-align: center;
+	font-weight: 500;
+}
+
+.new-task-input.quota-limited::placeholder {
+	color: rgba(255, 255, 255, 0.95);
+	text-align: center;
+}
+
+.new-task-input.quota-limited:hover {
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.new-task-input.quota-limited:focus {
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Quota-restricted task action button */
+.task-action-btn.quota-restricted {
+	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	color: white;
+	opacity: 0.9;
+}
+
+.task-action-btn.quota-restricted:hover {
+	opacity: 1;
+	transform: translateY(-1px);
+}
+
+.task-action-btn.quota-restricted span::after {
+	content: " ✨";
 }

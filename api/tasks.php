@@ -7,8 +7,8 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 7.3.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 declare(strict_types=1);
@@ -30,6 +30,87 @@ define('ALLOWED_MIME_TYPES', [
 	'image/webp',
 	'application/pdf'
 ]);
+
+
+/**
+ * Modified for Subscription Quota Enforcement - Get user's subscription limits
+ */
+function getUserSubscriptionLimits(PDO $pdo, int $userId): array {
+	$stmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
+	$stmt->execute([':userId' => $userId]);
+	$subscriptionLevel = $stmt->fetchColumn() ?: 'free';
+	
+	// Define limits per subscription tier
+	$limits = [
+		'free' => [
+			'storage_mb' => 10,
+			'max_columns' => 3,
+			'max_tasks' => 60,
+			'sharing_enabled' => false
+		],
+		'base' => [
+			'storage_mb' => 10,
+			'max_columns' => 5,
+			'max_tasks' => 200,
+			'sharing_enabled' => true
+		],
+		'pro' => [
+			'storage_mb' => 50,
+			'max_columns' => 10,
+			'max_tasks' => 500,
+			'sharing_enabled' => true
+		],
+		'elite' => [
+			'storage_mb' => 1024, // 1GB
+			'max_columns' => 999,
+			'max_tasks' => 9999,
+			'sharing_enabled' => true
+		]
+	];
+	
+	return $limits[$subscriptionLevel] ?? $limits['free'];
+}
+
+/**
+ * Modified for Subscription Quota Enforcement - Check if user can create a new column
+ */
+function canCreateColumn(PDO $pdo, int $userId): array {
+	$limits = getUserSubscriptionLimits($pdo, $userId);
+	
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+	$stmt->execute([':userId' => $userId]);
+	$currentCount = (int)$stmt->fetchColumn();
+	
+	$canCreate = $currentCount < $limits['max_columns'];
+	
+	return [
+		'can_create' => $canCreate,
+		'current_count' => $currentCount,
+		'limit' => $limits['max_columns'],
+		'message' => $canCreate ? '' : "You've reached your column limit ({$limits['max_columns']}). Upgrade your subscription to create more columns."
+	];
+}
+
+/**
+ * Modified for Subscription Quota Enforcement - Check if user can create a new task
+ */
+function canCreateTask(PDO $pdo, int $userId): array {
+	$limits = getUserSubscriptionLimits($pdo, $userId);
+	
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = :userId AND deleted_at IS NULL");
+	$stmt->execute([':userId' => $userId]);
+	$currentCount = (int)$stmt->fetchColumn();
+	
+	$canCreate = $currentCount < $limits['max_tasks'];
+	
+	return [
+		'can_create' => $canCreate,
+		'current_count' => $currentCount,
+		'limit' => $limits['max_tasks'],
+		'message' => $canCreate ? '' : "You've reached your task limit ({$limits['max_tasks']}). Upgrade your subscription to create more tasks."
+	];
+}
+
 
 /**
  * Main router for all actions within the 'tasks' module.
@@ -189,6 +270,24 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 				handle_toggle_ready_for_review($pdo, $userId, $data);
 			}
 			break;
+			
+		case 'getAllUserAttachments':
+		if ($method === 'GET') {
+			handle_get_all_user_attachments($pdo, $userId);
+		}
+		break;
+		
+		case 'getTrustRelationships':
+		if ($method === 'GET' || $method === 'POST') {
+			handle_get_trust_relationships($pdo, $userId);
+		}
+		break;
+		
+		case 'leaveSharedTask':
+		if ($method === 'POST') {
+			handle_leave_shared_task($pdo, $userId, $data);
+		}
+		break;
 		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
@@ -208,13 +307,12 @@ function getTaskShares($pdo, $userId, $taskIds) {
 	 
 	 $placeholders = str_repeat('?,', count($taskIds) - 1) . '?';
 	 $sql = "
-		 SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, s.status, COALESCE(s.ready_for_review, 0) as ready_for_review
+		 SELECT s.item_id as task_id, u.user_id, u.username, u.email, s.permission, COALESCE(s.ready_for_review, 0) as ready_for_review
 		 FROM shared_items s
 		 JOIN users u ON u.user_id = s.recipient_id
 		 WHERE s.item_type = 'task' 
 		 AND s.item_id IN ($placeholders) 
 		 AND s.owner_id = ? 
-		 AND s.status = 'active'
 		 ORDER BY u.username
 	 ";
 	 
@@ -615,12 +713,10 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
 	$notes = $data['notes'] ?? null;
-
 	if ($taskId <= 0 || ($notes === null && !array_key_exists('dueDate', $data))) {
 		send_json_response(['status' => 'error', 'message' => 'Task ID and at least one field to update (notes or dueDate) are required.'], 400);
 		return;
 	}
-
 	$dueDateForDb = null;
 	if (array_key_exists('dueDate', $data)) {
 		if (empty($data['dueDate'])) {
@@ -632,10 +728,8 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			return;
 		}
 	}
-
 	try {
 		$pdo->beginTransaction();
-
 		// Check if user is owner or has edit permission
 		$stmt_find = $pdo->prepare("
 			SELECT t.encrypted_data, t.user_id,
@@ -655,38 +749,30 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
 		}
-
 		$currentData = json_decode($task['encrypted_data'], true) ?: [];
-
-
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
 		}
 		$newDataJson = json_encode($currentData);
-
 		$sql_parts = [];
-		$params = [':taskId' => $taskId, ':userId' => $userId];
-
+		$params = [':taskId' => $taskId];
 		if ($notes !== null) {
 			$sql_parts[] = "encrypted_data = :newDataJson";
 			$params[':newDataJson'] = $newDataJson;
 		}
-
 		if (array_key_exists('dueDate', $data)) {
 			$sql_parts[] = "due_date = :dueDate";
 			$params[':dueDate'] = $dueDateForDb;
 		}
 		
 		if (!empty($sql_parts)) {
-			$sql = "UPDATE tasks SET " . implode(', ', $sql_parts) . ", updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId AND user_id = :userId";
+			// Modified for Shared Task Notes - Remove user_id restriction since permission already verified
+			$sql = "UPDATE tasks SET " . implode(', ', $sql_parts) . ", updated_at = UTC_TIMESTAMP() WHERE task_id = :taskId";
 			$stmt_update = $pdo->prepare($sql);
 			$stmt_update->execute($params);
 		}
-
 		$pdo->commit();
-
 		send_json_response(['status' => 'success'], 200);
-
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();
@@ -741,15 +827,16 @@ function handle_reorder_tasks(PDO $pdo, int $userId, ?array $data): void {
 
 /**
  * Fetches all columns, tasks, and user preferences.
- * Modified for Sharing Foundation - Include shared tasks in "Shared with Me" column only when shared tasks exist
+ * Modified for Column Duplication Fix - Fixed columnMap reference corruption
  */
 function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	try {
-		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes FROM users WHERE user_id = :userId");
+		$stmtUser = $pdo->prepare("SELECT preferences, storage_used_bytes, subscription_level FROM users WHERE user_id = :userId");
 		$stmtUser->execute([':userId' => $userId]);
 		$userData = $stmtUser->fetch(PDO::FETCH_ASSOC);
 		$userPrefs = json_decode($userData['preferences'] ?? '{}', true);
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
+		$subscriptionLevel = $userData['subscription_level'] ?? 'free';
 
 		// Modified for Snooze Feature: Check for awakened tasks
 		$stmtAwakened = $pdo->prepare(
@@ -782,16 +869,14 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$stmtColumns->execute([':userId' => $userId]);
 		$columns = $stmtColumns->fetchAll();
 		$boardData = [];
-		$columnMap = [];
 		
 		// Add user's own columns
 		foreach ($columns as $column) {
 			$column['tasks'] = [];
 			$boardData[] = $column;
-			$columnMap[$column['column_id']] = &$boardData[count($boardData) - 1];
 		}
 
-		// Modified for Virtual Column Fix - First check if shared tasks exist
+		// Modified for Deleted User Cleanup - Exclude shared tasks from deleted/suspended users
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
@@ -804,7 +889,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
 			 JOIN users u ON u.user_id = t.user_id
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
-			 WHERE s.recipient_id = :userId AND t.deleted_at IS NULL
+			 WHERE s.recipient_id = :userId AND t.deleted_at IS NULL AND u.status = 'active'
 			 GROUP BY t.task_id
 			 ORDER BY t.position ASC"
 		);
@@ -823,7 +908,17 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 				'tasks' => []
 			];
 			$boardData[] = $sharedColumn;
-			$columnMap[$sharedColumnId] = &$boardData[count($boardData) - 1];
+		}
+
+		// Sort board data
+		usort($boardData, function($a, $b) {
+			return $a['position'] <=> $b['position'];
+		});
+		
+		// Modified for Column Duplication Fix - Create index-based columnMap to prevent reference corruption
+		$columnMap = [];
+		foreach ($boardData as $index => $column) {
+			$columnMap[$column['column_id']] = $index; // Store INDEX, not reference
 		}
 
 		// Get user's own tasks
@@ -871,18 +966,49 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			$taskShares = getTaskShares($pdo, $userId, $taskIds);
 		}
 
-		// Add shares to each task and place in appropriate columns
+		// Modified for Column Duplication Fix - Add tasks using index lookup to prevent reference corruption
 		foreach ($tasksArray as $task) {
 			$task['shares'] = $taskShares[$task['task_id']] ?? [];
-			$columnMap[$task['column_id']]['tasks'][] = $task;
+			if (isset($columnMap[$task['column_id']])) {
+				$boardData[$columnMap[$task['column_id']]]['tasks'][] = $task;
+			}
 		}
 
+		// Modified for Subscription Quota Enforcement - Include quota status for proactive UI
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		$storageQuotaBytes = $limits['storage_mb'] * 1024 * 1024;
+		
+		// Get current usage counts for quota status
+		$currentColumns = count($boardData) - (array_search('shared-with-me', array_column($boardData, 'column_id')) !== false ? 1 : 0);
+		$currentTasks = 0;
+		foreach ($boardData as $column) {
+			if ($column['column_id'] !== 'shared-with-me') {
+				$currentTasks += count($column['tasks'] ?? []);
+			}
+		}
+		
+		$quotaStatus = [
+			'columns' => [
+				'used' => $currentColumns,
+				'limit' => $limits['max_columns'],
+				'at_limit' => $currentColumns >= $limits['max_columns']
+			],
+			'tasks' => [
+				'used' => $currentTasks,
+				'limit' => $limits['max_tasks'],
+				'at_limit' => $currentTasks >= $limits['max_tasks']
+			],
+			'sharing_enabled' => $limits['sharing_enabled'],
+			'subscription_level' => strtoupper($subscriptionLevel)
+		];
+		
 		send_json_response([
 			'status' => 'success', 
 			'data' => [
 				'board' => $boardData,
 				'user_prefs' => $userPrefs,
-				'user_storage' => ['used' => $storageUsed, 'quota' => USER_STORAGE_QUOTA_BYTES],
+				'user_storage' => ['used' => $storageUsed, 'quota' => $storageQuotaBytes],
+				'quota_status' => $quotaStatus,
 				'wake_notification' => $hasAwakenedTasks
 			]
 		], 200);
@@ -901,6 +1027,20 @@ function handle_create_column(PDO $pdo, int $userId, ?array $data): void {
 		send_json_response(['status' => 'error', 'message' => 'Column name is required.'], 400);
 		return;
 	}
+	
+	// Modified for Subscription Quota Enforcement - Check column limits
+	$quotaCheck = canCreateColumn($pdo, $userId);
+	if (!$quotaCheck['can_create']) {
+		send_json_response([
+			'status' => 'error', 
+			'message' => $quotaCheck['message'],
+			'quota_exceeded' => true,
+			'current_count' => $quotaCheck['current_count'],
+			'limit' => $quotaCheck['limit']
+		], 403);
+		return;
+	}
+	
 	$columnName = trim($data['column_name']);
 
 	try {
@@ -938,6 +1078,20 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		send_json_response(['status' => 'error', 'message' => 'Column ID and task title are required.'], 400);
 		return;
 	}
+	
+	// Modified for Subscription Quota Enforcement - Check task limits
+	$quotaCheck = canCreateTask($pdo, $userId);
+	if (!$quotaCheck['can_create']) {
+		send_json_response([
+			'status' => 'error',
+			'message' => $quotaCheck['message'],
+			'quota_exceeded' => true,
+			'current_count' => $quotaCheck['current_count'],
+			'limit' => $quotaCheck['limit']
+		], 403);
+		return;
+	}
+	
 	$columnId = (int)$data['column_id'];
 	$taskTitle = trim($data['task_title']);
 
@@ -1169,7 +1323,6 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 			WHERE owner_id = :owner
 			  AND item_type = 'task'
 			  AND item_id = :tid
-			  AND status <> 'revoked'
 			LIMIT 1
 		");
 		$checkShare->execute([':owner' => $userId, ':tid' => $taskId]);
@@ -1347,7 +1500,11 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 		$stmt->execute([':userId' => $userId]);
 		$storageUsed = (int)$stmt->fetchColumn();
 
-		if (($storageUsed + $file['size']) > USER_STORAGE_QUOTA_BYTES) {
+		// Modified for Subscription Quota Enforcement - Use dynamic storage limits
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		$storageQuotaBytes = $limits['storage_mb'] * 1024 * 1024;
+
+		if (($storageUsed + $file['size']) > $storageQuotaBytes) {
 			$stmt = $pdo->prepare("SELECT attachment_id, filename_on_server, filesize_bytes FROM task_attachments WHERE user_id = :userId ORDER BY created_at ASC LIMIT 1");
 			$stmt->execute([':userId' => $userId]);
 			$oldest = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -1388,7 +1545,7 @@ function handle_upload_attachment(PDO $pdo, int $userId, ?array $data): void {
 			'data' => [
 				'attachment_id' => $newAttachmentId, 'task_id' => $taskId, 'filename_on_server' => $newFilename,
 				'original_filename' => $originalFilename, 'filesize_bytes' => $file['size'],
-				'user_storage_used' => $newStorageUsed, 'user_storage_quota' => USER_STORAGE_QUOTA_BYTES
+				'user_storage_used' => $newStorageUsed, 'user_storage_quota' => $storageQuotaBytes
 			]
 		], 201);
 	} catch (Exception $e) {
@@ -1534,6 +1691,16 @@ function handle_share_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		
 		log_debug_message("Task ownership verified");
+		
+		$limits = getUserSubscriptionLimits($pdo, $userId);
+		if (!$limits['sharing_enabled']) {
+			send_json_response([
+				'status' => 'error', 
+				'message' => 'Sharing is not available with your current subscription. Upgrade to BASE or higher to share tasks.',
+				'feature_restricted' => true
+			], 403);
+			return;
+		}
 		
 		// 2) Find the recipient user by email or username
 		log_debug_message("Looking up recipient user");
@@ -1778,5 +1945,247 @@ function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): vo
 		}
 		log_debug_message("Error in handle_toggle_ready_for_review: " . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred while updating ready status.'], 500);
+	}
+}
+
+
+
+/**
+ * Fetches all attachments for the current user across all tasks with sorting options.
+ * Modified for File Management Feature - New endpoint for global attachment management
+ */
+function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
+	$sortBy = $_GET['sort_by'] ?? 'date'; // 'date' or 'size'
+	$sortOrder = $_GET['sort_order'] ?? 'desc'; // 'asc' or 'desc'
+
+	// Validate sort parameters
+	if (!in_array($sortBy, ['date', 'size'])) {
+		$sortBy = 'date';
+	}
+	if (!in_array($sortOrder, ['asc', 'desc'])) {
+		$sortOrder = 'desc';
+	}
+
+	try {
+		// Get user's current storage usage
+		$storageStmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
+		$storageStmt->execute([':userId' => $userId]);
+		$storageUsed = (int)$storageStmt->fetchColumn();
+
+		// Build the ORDER BY clause based on sort parameters
+		$orderByClause = '';
+		if ($sortBy === 'size') {
+			$orderByClause = "ORDER BY ta.filesize_bytes {$sortOrder}";
+		} else { // date
+			$orderByClause = "ORDER BY ta.created_at {$sortOrder}";
+		}
+
+		// Get all attachments for the user with task information
+		$stmt = $pdo->prepare("
+			SELECT 
+				ta.attachment_id,
+				ta.task_id,
+				ta.filename_on_server,
+				ta.original_filename,
+				ta.filesize_bytes,
+				ta.mime_type,
+				ta.created_at,
+				t.encrypted_data,
+				t.column_id,
+				c.column_name
+			FROM task_attachments ta
+			JOIN tasks t ON t.task_id = ta.task_id
+			LEFT JOIN `columns` c ON c.column_id = t.column_id
+			WHERE ta.user_id = :userId
+			AND t.deleted_at IS NULL
+			{$orderByClause}
+		");
+		$stmt->execute([':userId' => $userId]);
+		$attachments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process attachments to include task titles
+		foreach ($attachments as &$attachment) {
+			$taskData = json_decode($attachment['encrypted_data'], true);
+			$attachment['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($attachment['encrypted_data']); // Remove encrypted data from response
+		}
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'attachments' => $attachments,
+				'storage_used' => $storageUsed,
+				'storage_quota' => USER_STORAGE_QUOTA_BYTES,
+				'total_count' => count($attachments)
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_all_user_attachments: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+	}
+}
+
+/**
+ * Gets all trust relationships for the current user - both outgoing and incoming shares.
+ * Modified for Trust Management System - Comprehensive sharing relationship overview
+ */
+function handle_get_trust_relationships(PDO $pdo, int $userId): void {
+	try {
+		// Get outgoing shares (tasks I've shared with others)
+		$outgoingStmt = $pdo->prepare("
+			SELECT 
+				s.item_id as task_id,
+				s.recipient_id,
+				s.permission,
+				s.created_at as shared_at,
+				COALESCE(s.ready_for_review, 0) as ready_for_review,
+				t.encrypted_data,
+				c.column_name,
+				u.username as recipient_username,
+				u.email as recipient_email
+			FROM shared_items s
+			JOIN tasks t ON t.task_id = s.item_id
+			JOIN users u ON u.user_id = s.recipient_id
+			LEFT JOIN `columns` c ON c.column_id = t.column_id
+			WHERE s.item_type = 'task' 
+			AND s.owner_id = :userId 
+			AND t.deleted_at IS NULL
+			AND u.status = 'active'
+			ORDER BY s.created_at DESC
+		");
+		$outgoingStmt->execute([':userId' => $userId]);
+		$outgoingShares = $outgoingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process outgoing shares to include task titles
+		foreach ($outgoingShares as &$share) {
+			$taskData = json_decode($share['encrypted_data'], true);
+			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($share['encrypted_data']); // Remove from response
+		}
+
+		// Get incoming shares (tasks others have shared with me)
+		$incomingStmt = $pdo->prepare("
+			SELECT 
+				s.item_id as task_id,
+				s.owner_id,
+				s.permission,
+				s.created_at as shared_at,
+				COALESCE(s.ready_for_review, 0) as ready_for_review,
+				t.encrypted_data,
+				u.username as owner_username,
+				u.email as owner_email
+			FROM shared_items s
+			JOIN tasks t ON t.task_id = s.item_id
+			JOIN users u ON u.user_id = s.owner_id
+			WHERE s.item_type = 'task' 
+			AND s.recipient_id = :userId 
+			AND t.deleted_at IS NULL
+			AND u.status = 'active'
+			ORDER BY s.created_at DESC
+		");
+		$incomingStmt->execute([':userId' => $userId]);
+		$incomingShares = $incomingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+		// Process incoming shares to include task titles
+		foreach ($incomingShares as &$share) {
+			$taskData = json_decode($share['encrypted_data'], true);
+			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
+			unset($share['encrypted_data']); // Remove from response
+		}
+
+		// Get summary statistics
+		$stats = [
+			'tasks_shared_by_me' => count($outgoingShares),
+			'tasks_shared_with_me' => count($incomingShares),
+			'unique_people_i_share_with' => count(array_unique(array_column($outgoingShares, 'recipient_id'))),
+			'unique_people_sharing_with_me' => count(array_unique(array_column($incomingShares, 'owner_id'))),
+			'ready_for_review_count' => count(array_filter($outgoingShares, function($share) {
+				return $share['ready_for_review'];
+			}))
+		];
+
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'outgoing_shares' => $outgoingShares,
+				'incoming_shares' => $incomingShares,
+				'statistics' => $stats
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_trust_relationships: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while fetching trust relationships.'], 500);
+	}
+}
+
+/**
+ * Allows a recipient to leave a shared task (remove themselves as recipient).
+ * Modified for Trust Management System - Complete recipient control over sharing relationships
+ */
+function handle_leave_shared_task(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+
+	try {
+		$pdo->beginTransaction();
+
+		// Verify that the user is actually a recipient of this task
+		$checkStmt = $pdo->prepare("
+			SELECT s.owner_id, u.username as owner_username
+			FROM shared_items s
+			JOIN users u ON u.user_id = s.owner_id
+			WHERE s.item_type = 'task' 
+			AND s.item_id = :taskId 
+			AND s.recipient_id = :userId
+		");
+		$checkStmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$shareRecord = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+		if (!$shareRecord) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'You are not a recipient of this shared task.'], 404);
+			return;
+		}
+
+		// Delete the share record (hard delete for clean state management)
+		$deleteStmt = $pdo->prepare("
+			DELETE FROM shared_items 
+			WHERE item_type = 'task' 
+			AND item_id = :taskId 
+			AND recipient_id = :userId
+		");
+		$deleteResult = $deleteStmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+
+		if (!$deleteResult || $deleteStmt->rowCount() === 0) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Failed to leave shared task.'], 500);
+			return;
+		}
+
+		$pdo->commit();
+
+		log_debug_message("User $userId left shared task $taskId owned by {$shareRecord['owner_id']}");
+		
+		send_json_response([
+			'status' => 'success', 
+			'message' => 'You have left the shared task.',
+			'data' => [
+				'task_id' => $taskId,
+				'owner_username' => $shareRecord['owner_username']
+			]
+		], 200);
+
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message("Error in handle_leave_shared_task: " . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while leaving the shared task.'], 500);
 	}
 }

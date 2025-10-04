@@ -7,8 +7,8 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 declare(strict_types=1);
@@ -30,6 +30,12 @@ function handle_users_action(string $action, string $method, PDO $pdo, int $user
 				handle_change_password($pdo, $userId, $data);
 			}
 			break;
+			
+		case 'getUserUsageStats':
+		if ($method === 'POST') {
+			handle_get_user_usage_stats($pdo, $userId);
+		}
+		break;
 
 		default:
 			http_response_code(404);
@@ -156,5 +162,120 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 		}
 		http_response_code(500);
 		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while saving the preference.']);
+	}
+}
+
+// Add this function to check if current user is admin
+function handle_check_admin_status(PDO $pdo, int $userId): void {
+	$isAdmin = is_admin_user($userId);
+	
+	send_json_response([
+		'status' => 'success',
+		'data' => ['is_admin' => $isAdmin]
+	], 200);
+}
+
+/**
+ * Modified for Subscription Usage Modal - Get user's current usage statistics
+ * Returns subscription limits and current usage for tasks, columns, storage, and sharing
+ */
+function handle_get_user_usage_stats(PDO $pdo, int $userId): void {
+	try {
+		// Get user subscription level and calculate limits
+		$stmt = $pdo->prepare("SELECT subscription_level, storage_used_bytes FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$userData = $stmt->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$userData) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'User not found.']);
+			return;
+		}
+		
+		$subscriptionLevel = $userData['subscription_level'] ?? 'free';
+		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
+		
+		// Define limits per subscription tier
+		$limits = [
+			'free' => [
+				'storage_mb' => 10,
+				'max_columns' => 3,
+				'max_tasks' => 60,
+				'sharing_enabled' => false
+			],
+			'base' => [
+				'storage_mb' => 10,
+				'max_columns' => 5,
+				'max_tasks' => 200,
+				'sharing_enabled' => true
+			],
+			'pro' => [
+				'storage_mb' => 50,
+				'max_columns' => 10,
+				'max_tasks' => 500,
+				'sharing_enabled' => true
+			],
+			'elite' => [
+				'storage_mb' => 1024, // 1GB
+				'max_columns' => 999,
+				'max_tasks' => 9999,
+				'sharing_enabled' => true
+			]
+		];
+		
+		$userLimits = $limits[$subscriptionLevel] ?? $limits['free'];
+		
+		// Get current usage counts
+		$stmtColumns = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+		$stmtColumns->execute([':userId' => $userId]);
+		$columnsUsed = (int)$stmtColumns->fetchColumn();
+		
+		$stmtTasks = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = :userId AND deleted_at IS NULL");
+		$stmtTasks->execute([':userId' => $userId]);
+		$tasksUsed = (int)$stmtTasks->fetchColumn();
+		
+		// Convert storage to MB for display
+		$storageLimitMB = $userLimits['storage_mb'];
+		$storageUsedMB = round($storageUsed / (1024 * 1024), 2);
+		
+		// Calculate percentages
+		$columnsPercentage = ($userLimits['max_columns'] > 0) ? round(($columnsUsed / $userLimits['max_columns']) * 100, 1) : 0;
+		$tasksPercentage = ($userLimits['max_tasks'] > 0) ? round(($tasksUsed / $userLimits['max_tasks']) * 100, 1) : 0;
+		$storagePercentage = ($storageLimitMB > 0) ? round(($storageUsedMB / $storageLimitMB) * 100, 1) : 0;
+		
+		http_response_code(200);
+		echo json_encode([
+			'status' => 'success',
+			'data' => [
+				'subscription_level' => strtoupper($subscriptionLevel),
+				'usage' => [
+					'columns' => [
+						'used' => $columnsUsed,
+						'limit' => $userLimits['max_columns'],
+						'percentage' => $columnsPercentage
+					],
+					'tasks' => [
+						'used' => $tasksUsed,
+						'limit' => $userLimits['max_tasks'],
+						'percentage' => $tasksPercentage
+					],
+					'storage' => [
+						'used_mb' => $storageUsedMB,
+						'limit_mb' => $storageLimitMB,
+						'percentage' => $storagePercentage
+					]
+				],
+				'features' => [
+					'sharing_enabled' => $userLimits['sharing_enabled']
+				]
+			]
+		]);
+		
+	} catch (Exception $e) {
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in users.php handle_get_user_usage_stats(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while fetching usage statistics.']);
 	}
 }

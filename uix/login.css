@@ -1,8 +1,9 @@
 /* Code for /uix/login.css */
-
 /* MyDayHub - Login/Auth Page Styles */
+/* @version 7.0.0*/
+/* @author Alex & Gemini & Claude*/
+/* Basic styles for a clean, centered layout */
 
-/* Basic styles for a clean, centered layout Beta 7.3.0*/
 body {
 	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 	background-color: #202124;

@@ -6,8 +6,8 @@
  *
  * Handles user registration, login, and other authentication actions.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 ini_set('display_errors', 1);
@@ -49,6 +49,15 @@ if ($method === 'POST') {
 	$action = $_GET['action'] ?? null;
 }
 
+
+// Modified for Email Verification - Add verification code handling
+if ($action === 'sendVerificationCode') {
+	handle_send_verification_code($input);
+	exit();
+} elseif ($action === 'verifyEmailCode') {
+	handle_verify_email_code($input);
+	exit();
+}
 
 switch ($action) {
 	case 'register':
@@ -249,6 +258,164 @@ function send_password_reset_email(string $email, string $username, string $toke
 
 
 /**
+ * Sends a 6-digit verification code to email for registration
+ */
+function handle_send_verification_code(?array $data): void {
+	if (empty($data['username']) || empty($data['email']) || empty($data['password'])) {
+		send_debug_response(['status' => 'error', 'message' => 'All fields are required.'], 400);
+		return;
+	}
+	if (!filter_var($data['email'], FILTER_VALIDATE_EMAIL)) {
+		send_debug_response(['status' => 'error', 'message' => 'Please provide a valid email address.'], 400);
+		return;
+	}
+	if (strlen($data['password']) < 8) {
+		send_debug_response(['status' => 'error', 'message' => 'Password must be at least 8 characters long.'], 400);
+		return;
+	}
+
+	try {
+		$pdo = get_pdo();
+		
+		// Check if username/email already exists
+		$stmt = $pdo->prepare("SELECT user_id FROM users WHERE username = :username OR email = :email");
+		$stmt->execute([':username' => $data['username'], ':email' => $data['email']]);
+		if ($stmt->fetch()) {
+			send_debug_response(['status' => 'error', 'message' => 'Username or email is already taken.'], 409);
+			return;
+		}
+
+		// Generate 6-digit code
+		$verificationCode = sprintf('%06d', mt_rand(100000, 999999));
+		$codeHash = hash('sha256', $verificationCode);
+		$expiresAt = date('Y-m-d H:i:s', time() + 900); // 15 minutes
+
+		// Store pending registration
+		$pdo->beginTransaction();
+		
+		// Clear any existing pending registrations for this email
+		$stmt = $pdo->prepare("DELETE FROM pending_registrations WHERE email = :email");
+		$stmt->execute([':email' => $data['email']]);
+
+		$stmt = $pdo->prepare(
+			"INSERT INTO pending_registrations (username, email, password_hash, code_hash, expires_at) 
+			 VALUES (:username, :email, :password_hash, :code_hash, :expires_at)"
+		);
+		$stmt->execute([
+			':username' => $data['username'],
+			':email' => $data['email'],
+			':password_hash' => password_hash($data['password'], PASSWORD_DEFAULT),
+			':code_hash' => $codeHash,
+			':expires_at' => $expiresAt
+		]);
+
+		send_verification_email($data['email'], $data['username'], $verificationCode);
+		
+		$pdo->commit();
+		send_debug_response(['status' => 'success', 'message' => 'Verification code sent to your email.'], 200);
+
+	} catch (Exception $e) {
+		if (isset($pdo) && $pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in handle_send_verification_code(): ' . $e->getMessage());
+		}
+		send_debug_response(['status' => 'error', 'message' => 'A server error occurred. Please try again later.'], 500);
+	}
+}
+
+/**
+ * Verifies email code and creates user account
+ */
+function handle_verify_email_code(?array $data): void {
+	if (empty($data['email']) || empty($data['code'])) {
+		send_debug_response(['status' => 'error', 'message' => 'Email and verification code are required.'], 400);
+		return;
+	}
+
+	try {
+		$pdo = get_pdo();
+		$pdo->beginTransaction();
+
+		$codeHash = hash('sha256', $data['code']);
+		
+		$stmt = $pdo->prepare(
+			"SELECT username, email, password_hash, expires_at FROM pending_registrations 
+			 WHERE email = :email AND code_hash = :code_hash"
+		);
+		$stmt->execute([':email' => $data['email'], ':code_hash' => $codeHash]);
+		$pending = $stmt->fetch();
+
+		if (!$pending || strtotime($pending['expires_at']) < time()) {
+			// Clean up expired records
+			if ($pending) {
+				$stmt_delete = $pdo->prepare("DELETE FROM pending_registrations WHERE email = :email");
+				$stmt_delete->execute([':email' => $data['email']]);
+			}
+			$pdo->commit();
+			send_debug_response(['status' => 'error', 'message' => 'Invalid or expired verification code.'], 400);
+			return;
+		}
+
+		// Create user account
+		$stmt = $pdo->prepare(
+			"INSERT INTO users (username, email, password_hash, preferences) 
+			 VALUES (:username, :email, :password_hash, :preferences)"
+		);
+		$stmt->execute([
+			':username' => $pending['username'],
+			':email' => $pending['email'],
+			':password_hash' => $pending['password_hash'],
+			':preferences' => '{}' // Modified for registration fix - provide empty JSON object as default
+		]);
+
+		$userId = $pdo->lastInsertId();
+
+		// Clean up pending registration
+		$stmt_delete = $pdo->prepare("DELETE FROM pending_registrations WHERE email = :email");
+		$stmt_delete->execute([':email' => $data['email']]);
+
+		// Auto-login user
+		session_regenerate_id(true);
+		$_SESSION['user_id'] = $userId;
+		$_SESSION['username'] = $pending['username'];
+
+		$pdo->commit();
+		send_debug_response(['status' => 'success', 'message' => 'Account created successfully!', 'redirect' => true], 201);
+
+	} catch (Exception $e) {
+		if (isset($pdo) && $pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in handle_verify_email_code(): ' . $e->getMessage());
+		}
+		send_debug_response(['status' => 'error', 'message' => 'A server error occurred. Please try again later.'], 500);
+	}
+}
+
+/**
+ * Sends verification code email
+ */
+function send_verification_email(string $email, string $username, string $code): void {
+	$subject = 'Your MyDayHub Verification Code';
+	$htmlBody = "
+		<div style='font-family: sans-serif; line-height: 1.6;'>
+			<h2>Welcome to MyDayHub!</h2>
+			<p>Hello {$username},</p>
+			<p>Your verification code is:</p>
+			<div style='font-size: 24px; font-weight: bold; text-align: center; background: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;'>
+				{$code}
+			</div>
+			<p>This code will expire in 15 minutes.</p>
+			<p>Thanks,<br>The MyDayHub Team</p>
+		</div>
+	";
+	send_email($email, $username, $subject, $htmlBody);
+}
+
+/**
  * Handles the user registration process.
  */
 function handle_register(?array $data): void {
@@ -277,9 +444,14 @@ function handle_register(?array $data): void {
 			 throw new Exception('Password hashing failed.');
 		}
 		$stmt = $pdo->prepare(
-			"INSERT INTO users (username, email, password_hash) VALUES (:username, :email, :password_hash)"
+			"INSERT INTO users (username, email, password_hash, preferences) VALUES (:username, :email, :password_hash, :preferences)"
 		);
-		$stmt->execute([':username' => $data['username'], ':email' => $data['email'], ':password_hash' => $password_hash]);
+		$stmt->execute([
+			':username' => $data['username'], 
+			':email' => $data['email'], 
+			':password_hash' => $password_hash,
+			':preferences' => '{}' // Modified for registration fix - provide empty JSON object as default
+		]);
 		send_debug_response(['status' => 'success', 'message' => 'Registration successful! You can now log in.'], 201);
 	} catch (Exception $e) {
 		if (defined('DEVMODE') && DEVMODE) {

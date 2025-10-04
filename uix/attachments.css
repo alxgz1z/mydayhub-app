@@ -5,8 +5,8 @@
  *
  * Styles for the task attachments gallery modal and its components.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 /* --- Modal Overlay and Container --- */
@@ -338,4 +338,295 @@
 	text-shadow: 0 0 10px black;
 	padding: 0 1rem;
 	line-height: 1;
+}
+
+/* --- File Management Modal Styles --- */
+/* Modified for File Management Feature - Global attachment management interface */
+
+#file-management-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.6);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1000;
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+	pointer-events: none;
+}
+
+#file-management-modal-overlay:not(.hidden) {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+#file-management-modal-container {
+	background-color: #2c2c2e;
+	color: #f2f2f7;
+	border-radius: 12px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+	width: 90%;
+	max-width: 800px;
+	max-height: 85vh;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.file-management-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.file-management-header h4 {
+	margin: 0;
+	font-size: 1.3rem;
+	font-weight: 600;
+}
+
+.file-management-header-controls {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.file-management-count {
+	font-size: 0.9rem;
+	color: #8e8e93;
+}
+
+#file-management-sort {
+	background: #48484a;
+	color: #f2f2f7;
+	border: 1px solid #636366;
+	border-radius: 6px;
+	padding: 0.4rem 0.8rem;
+	font-size: 0.9rem;
+	cursor: pointer;
+}
+
+#file-management-sort:focus {
+	outline: none;
+	border-color: #007aff;
+}
+
+.file-management-header .btn-icon {
+	background: none;
+	border: none;
+	color: var(--text-secondary);
+	font-size: 1.75rem;
+	line-height: 1;
+	padding: 0 0.5rem;
+	cursor: pointer;
+}
+
+#file-management-body {
+	padding: 1.5rem;
+	overflow-y: auto;
+	flex-grow: 1;
+}
+
+.file-management-item {
+	display: flex;
+	align-items: center;
+	padding: 1rem;
+	background-color: rgba(255, 255, 255, 0.05);
+	border-radius: 8px;
+	margin-bottom: 0.75rem;
+	transition: background-color 0.2s, transform 0.1s;
+	position: relative;
+}
+
+.file-management-item:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+	transform: translateY(-1px);
+}
+
+.file-management-thumbnail {
+	width: 60px;
+	height: 60px;
+	border-radius: 6px;
+	object-fit: cover;
+	margin-right: 1rem;
+	flex-shrink: 0;
+}
+
+.file-management-thumbnail-icon {
+	width: 60px;
+	height: 60px;
+	border-radius: 6px;
+	margin-right: 1rem;
+	background-color: #48484a;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	color: #d1d1d6;
+	flex-shrink: 0;
+}
+
+.file-management-thumbnail-icon svg {
+	width: 32px;
+	height: 32px;
+}
+
+.file-management-info {
+	flex-grow: 1;
+	min-width: 0;
+	margin-right: 1rem;
+}
+
+.file-management-filename {
+	font-weight: 600;
+	color: #f2f2f7;
+	font-size: 1rem;
+	margin-bottom: 0.25rem;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.file-management-details {
+	display: flex;
+	gap: 1rem;
+	margin-bottom: 0.25rem;
+}
+
+.file-size, .upload-date {
+	font-size: 0.85rem;
+	color: #8e8e93;
+}
+
+.file-management-task-info {
+	display: flex;
+	flex-direction: column;
+	gap: 0.1rem;
+}
+
+.task-name, .column-name {
+	font-size: 0.8rem;
+	color: #636366;
+}
+
+.task-name {
+	font-weight: 500;
+}
+
+.btn-delete-file-management {
+	background: none;
+	border: none;
+	color: #8e8e93;
+	font-size: 1.8rem;
+	cursor: pointer;
+	padding: 0.5rem;
+	transition: color 0.2s;
+	position: absolute;
+	top: 0.5rem;
+	right: 0.5rem;
+	z-index: 5;
+	border-radius: 4px;
+}
+
+.btn-delete-file-management:hover {
+	color: #ff453a;
+	background-color: rgba(255, 69, 58, 0.1);
+}
+
+.no-files-message {
+	text-align: center;
+	color: #8e8e93;
+	padding: 2rem 0;
+	font-style: italic;
+}
+
+.error-message {
+	text-align: center;
+	color: #ff453a;
+	padding: 1rem;
+	background-color: rgba(255, 69, 58, 0.1);
+	border-radius: 6px;
+	border: 1px solid rgba(255, 69, 58, 0.3);
+}
+
+/* File Management Footer */
+.file-management-footer {
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.1);
+	background-color: rgba(0, 0, 0, 0.2);
+}
+
+.file-management-quota-info {
+	display: flex;
+	align-items: center;
+	font-size: 0.9rem;
+	color: #8e8e93;
+	gap: 0.75rem;
+}
+
+#file-management-quota-bar {
+	width: 200px;
+	height: 10px;
+	-webkit-appearance: none;
+	appearance: none;
+}
+
+#file-management-quota-bar::-webkit-progress-bar {
+	background-color: #444;
+	border-radius: 5px;
+}
+
+#file-management-quota-bar::-webkit-progress-value {
+	background-color: #007aff;
+	border-radius: 5px;
+	transition: width 0.3s ease;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	#file-management-modal-container {
+		width: 95%;
+		max-height: 90vh;
+	}
+	
+	.file-management-header {
+		flex-direction: column;
+		gap: 0.75rem;
+		align-items: stretch;
+	}
+	
+	.file-management-header-controls {
+		justify-content: space-between;
+	}
+	
+	.file-management-item {
+		padding: 0.75rem;
+	}
+	
+	.file-management-thumbnail,
+	.file-management-thumbnail-icon {
+		width: 50px;
+		height: 50px;
+	}
+	
+	.file-management-details {
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+	
+	.file-management-task-info {
+		display: none; /* Hide task info on very small screens */
+	}
+	
+	#file-management-quota-bar {
+		width: 150px;
+	}
 }

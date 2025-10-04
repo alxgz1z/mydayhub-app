@@ -5,8 +5,8 @@
  *
  * Handles form submissions for registration, login, and password reset pages.
  *
- * @version 7.3.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 document.addEventListener('DOMContentLoaded', () => {
 	// Shared elements for all forms
@@ -21,29 +21,25 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}
 
-	// --- Registration Form Logic ---
+// --- Registration Form Logic (Modified for Email Verification) ---
 	const registerForm = document.getElementById('register-form');
+	const verificationStep = document.getElementById('verification-step');
+	const verificationEmailSpan = document.getElementById('verification-email');
+	const verifyButton = document.getElementById('verify-button');
+	const resendButton = document.getElementById('resend-code-button');
+	
 	if (registerForm) {
 		registerForm.addEventListener('submit', async (e) => {
 			e.preventDefault();
 			const submitButton = registerForm.querySelector('button[type="submit"]');
 			submitButton.disabled = true;
-			submitButton.textContent = 'Registering...';
-
+			submitButton.textContent = 'Sending Code...';
+	
 			messageContainer.style.display = 'none';
-			messageContainer.textContent = '';
-			messageContainer.className = '';
-
+	
 			const formData = new FormData(registerForm);
-			const data = { action: 'register', ...Object.fromEntries(formData.entries()) };
-
-			if (!data.username || !data.email || !data.password) {
-				displayMessage('All fields are required.', 'error');
-				submitButton.disabled = false;
-				submitButton.textContent = 'Register';
-				return;
-			}
-
+			const data = { action: 'sendVerificationCode', ...Object.fromEntries(formData.entries()) };
+	
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
 				const response = await fetch(`${appURL}/api/auth.php`, {
@@ -52,10 +48,14 @@ document.addEventListener('DOMContentLoaded', () => {
 					body: JSON.stringify(data),
 				});
 				const result = await response.json();
-				logServerDebug(result); // Log debug info
+				logServerDebug(result);
+				
 				if (response.ok) {
+					// Show verification step
+					registerForm.style.display = 'none';
+					verificationStep.style.display = 'block';
+					verificationEmailSpan.textContent = data.email;
 					displayMessage(result.message, 'success');
-					registerForm.reset();
 				} else {
 					displayMessage(result.message || 'An unknown error occurred.', 'error');
 				}
@@ -67,6 +67,57 @@ document.addEventListener('DOMContentLoaded', () => {
 				submitButton.textContent = 'Register';
 			}
 		});
+	
+		// Verification step handler
+		if (verifyButton) {
+			verifyButton.addEventListener('click', async () => {
+				const code = document.getElementById('verification-code').value;
+				const email = verificationEmailSpan.textContent;
+				
+				if (!code || code.length !== 6) {
+					displayMessage('Please enter the 6-digit verification code.', 'error');
+					return;
+				}
+	
+				verifyButton.disabled = true;
+				verifyButton.textContent = 'Verifying...';
+	
+				try {
+					const appURL = window.MyDayHub_Config?.appURL || '';
+					const response = await fetch(`${appURL}/api/auth.php`, {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ action: 'verifyEmailCode', email, code }),
+					});
+					const result = await response.json();
+					logServerDebug(result);
+					
+					if (response.ok && result.redirect) {
+						displayMessage('Account created successfully! Redirecting...', 'success');
+						setTimeout(() => {
+							window.location.href = `${appURL}/index.php`;
+						}, 1500);
+					} else {
+						displayMessage(result.message || 'Verification failed.', 'error');
+					}
+				} catch (error) {
+					console.error('Verification fetch error:', error);
+					displayMessage('Could not connect to the server. Please try again later.', 'error');
+				} finally {
+					verifyButton.disabled = false;
+					verifyButton.textContent = 'Verify Email';
+				}
+			});
+		}
+	
+		// Resend code handler
+		if (resendButton) {
+			resendButton.addEventListener('click', () => {
+				verificationStep.style.display = 'none';
+				registerForm.style.display = 'block';
+				displayMessage('Please submit the form again to receive a new code.', 'info');
+			});
+		}
 	}
 
 	// --- Login Form Logic ---

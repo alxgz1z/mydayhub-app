@@ -7,8 +7,8 @@
  * This file provides a function to establish a secure and configured
  * PDO database connection using the credentials from /incs/config.php.
  *
- * @version 5.0.0
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 // Enable strict typing for function arguments and return values.

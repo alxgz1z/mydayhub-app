@@ -4,8 +4,8 @@
  *
  * MyDayHub - Register Script
  *
- * @version 6.3.1
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 
@@ -48,6 +48,17 @@ require_once __DIR__ . '/../incs/config.php';
 			</div>
 			<button type="submit" class="btn">Register</button>
 		</form>
+		<!-- Modified for Email Verification - Add verification step -->
+		<div id="verification-step" style="display: none;">
+			<h2>Check Your Email</h2>
+			<p>We've sent a 6-digit verification code to <span id="verification-email"></span></p>
+			<div class="form-group">
+				<label for="verification-code">Verification Code</label>
+				<input type="text" id="verification-code" name="verification-code" maxlength="6" pattern="[0-9]{6}" required>
+			</div>
+			<button type="button" id="verify-button" class="btn">Verify Email</button>
+			<button type="button" id="resend-code-button" class="btn-secondary">Resend Code</button>
+		</div>
 		<div class="auth-link">
 			<p>Already have an account? <a href="login.php">Log In</a></p>
 		</div>

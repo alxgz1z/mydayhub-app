@@ -6,8 +6,8 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  */
 
 let dragSourceColumn = null;
@@ -70,7 +70,8 @@ function getTaskDataFromElement(taskCardEl) {
 		 snoozed_at: taskCardEl.dataset.snoozedAt || null,
 		 is_snoozed: taskCardEl.dataset.isSnoozed === 'true',
 		 access_type: taskCardEl.dataset.accessType || 'owner',
-		 ready_for_review: taskCardEl.dataset.readyForReview === 'true'
+		 ready_for_review: taskCardEl.dataset.readyForReview === 'true',
+		 shared_by: taskCardEl.dataset.sharedBy || null
 	 };
  }
 
@@ -387,12 +388,15 @@ function initEventListeners() {
 					if (success) {
 						columnEl.style.display = 'none';
 						updateMoveButtonVisibility();
-			
+						
+						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
+						updateQuotaStatusAfterOperation('column', false);
+					
 						const removalTimeout = setTimeout(() => {
 							columnEl.remove();
 							updateMoveButtonVisibility();
 						}, 7000);
-			
+					
 						showToast({
 							message: 'Column deleted.',
 							type: 'success',
@@ -402,6 +406,8 @@ function initEventListeners() {
 								callback: () => {
 									clearTimeout(removalTimeout);
 									restoreItem('column', columnId);
+									// Restore quota count on undo
+									updateQuotaStatusAfterOperation('column', true);
 								}
 							}
 						});
@@ -506,16 +512,25 @@ function initEventListeners() {
 						closeAllTaskActionMenus && closeAllTaskActionMenus();
 						await openShareModal(parseInt(taskId, 10));
 					}
+				} else if (action === 'show-share-upgrade') {
+					showToast({
+						message: `Sharing is not available with your ${window.quotaStatus?.subscription_level || 'FREE'} subscription. Upgrade to BASE or higher to share tasks.`,
+						type: 'info',
+						duration: 4000
+					});
 				} else if (action === 'delete') {
 					const success = await deleteTask(taskId);
 					if (success) {
 						taskCard.style.display = 'none';
 						updateColumnTaskCount(columnEl);
-
+						
+						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
+						updateQuotaStatusAfterOperation('task', false);
+					
 						const removalTimeout = setTimeout(() => {
 							taskCard.remove();
 						}, 7000);
-
+					
 						showToast({
 							message: 'Task deleted.',
 							type: 'success',
@@ -525,6 +540,8 @@ function initEventListeners() {
 								callback: () => {
 									clearTimeout(removalTimeout);
 									restoreItem('task', taskId);
+									// Restore quota count on undo
+									updateQuotaStatusAfterOperation('task', true);
 								}
 							}
 						});
@@ -1155,8 +1172,8 @@ function closeAllTaskActionMenus() {
 		 `;
 	 }
  
-	 // Share - Owner only
-	 if (isOwner) {
+	// Share - Owner only and subscription allows sharing
+	 if (isOwner && window.quotaStatus && window.quotaStatus.sharing_enabled) {
 		 menuHTML += `
 			 <button class="task-action-btn" data-action="share">
 				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -1167,6 +1184,20 @@ function closeAllTaskActionMenus() {
 					 <path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
 				 </svg>
 				 <span>Share</span>
+			 </button>
+		 `;
+	 } else if (isOwner && window.quotaStatus && !window.quotaStatus.sharing_enabled) {
+		 // Show upgrade message instead of share button for FREE users
+		 menuHTML += `
+			 <button class="task-action-btn quota-restricted" data-action="show-share-upgrade" disabled>
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+					  stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+					 <circle cx="18" cy="5" r="3"></circle>
+					 <circle cx="6" cy="12" r="3"></circle>
+					 <circle cx="18" cy="19" r="3"></circle>
+					 <path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
+				 </svg>
+				 <span>Share (Upgrade Required)</span>
 			 </button>
 		 `;
 	 }
@@ -1586,66 +1617,64 @@ function showClassificationPopover(taskCard) {
 
 /**
  * Displays an input form to add a new column in place of the button.
+ * Modified for Column Duplication Fix - Simplified column insertion and refresh logic
  */
 function showAddColumnForm() {
-	const container = document.getElementById('add-column-container');
-	if (!container || container.querySelector('#form-add-column')) {
-		return;
-	}
-	const originalButton = container.innerHTML;
-
-	container.innerHTML = `
-		<form id="form-add-column">
-			<input type="text" id="input-new-column-name" placeholder="Column Name..." required autofocus />
-		</form>
-	`;
-
-	const form = document.getElementById('form-add-column');
-	const input = document.getElementById('input-new-column-name');
-
-	const revertToButton = () => {
-		if (container.contains(form)) {
-			 container.innerHTML = originalButton;
-		}
-	};
-	
-	input.addEventListener('blur', revertToButton);
-
-	form.addEventListener('submit', async (e) => {
-		e.preventDefault();
-		input.removeEventListener('blur', revertToButton);
-		const columnName = input.value.trim();
-		if (columnName) {
-			try {
-				const result = await window.apiFetch({
-					module: 'tasks',
-					action: 'createColumn',
-					column_name: columnName
-				});
-
-				if (result.status === 'success') {
-					const boardContainer = document.getElementById('task-board-container');
-					
-					const placeholder = boardContainer.querySelector('p');
-					if (placeholder && placeholder.textContent.startsWith('No columns found')) {
-						placeholder.remove();
-					}
-
-					const newColumnEl = createColumnElement(result.data);
-					boardContainer.appendChild(newColumnEl);
-					updateMoveButtonVisibility(); 
-					showToast({ message: 'Column created.', type: 'success' });
-				} else {
-					showToast({ message: `Error: ${result.message}`, type: 'error' });
-				}
-			} catch (error) {
-				showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
-				console.error('Create column error:', error);
-			}
-		}
-		container.innerHTML = originalButton;
-	});
-}
+	 const container = document.getElementById('add-column-container');
+	 if (!container || container.querySelector('#form-add-column')) {
+		 return;
+	 }
+	 const originalButton = container.innerHTML;
+	 container.innerHTML = `
+		 <form id="form-add-column">
+			 <input type="text" id="input-new-column-name" placeholder="Column Name..." required autofocus />
+		 </form>
+	 `;
+	 const form = document.getElementById('form-add-column');
+	 const input = document.getElementById('input-new-column-name');
+	 const revertToButton = () => {
+		 if (container.contains(form)) {
+			  container.innerHTML = originalButton;
+		 }
+	 };
+	 
+	 input.addEventListener('blur', revertToButton);
+	 form.addEventListener('submit', async (e) => {
+		 e.preventDefault();
+		 input.removeEventListener('blur', revertToButton);
+		 const columnName = input.value.trim();
+		 if (columnName) {
+			 try {
+				 const result = await window.apiFetch({
+					 module: 'tasks',
+					 action: 'createColumn',
+					 column_name: columnName
+				 });
+				 if (result.status === 'success') {
+					 // Modified for Column Duplication Fix - Remove manual DOM insertion
+					 // and let fetchAndRenderBoard handle proper positioning
+					 
+					 // Update quota before refresh
+					 updateQuotaStatusAfterOperation('column', true);
+					 
+					 showToast({ message: 'Column created.', type: 'success' });
+					 
+					 // Refresh the entire board to ensure proper column ordering
+					 // and prevent duplication issues with virtual column positioning
+					 fetchAndRenderBoard();
+				 } else {
+					 showToast({ message: `Error: ${result.message}`, type: 'error' });
+				 }
+			 } catch (error) {
+				 showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
+				 console.error('Create column error:', error);
+			 }
+		 }
+		 container.innerHTML = originalButton;
+		 // Modified for Column Quota Auto-Update Fix - Call updateQuotaAwareUI after button restoration
+		 updateQuotaAwareUI();
+	 });
+ }
 
 /**
  * Sends a new task to the API and renders the response.
@@ -1669,6 +1698,10 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
+			
+			// Modified for Subscription Quota Enforcement - Update quota tracking
+			updateQuotaStatusAfterOperation('task', true);
+			
 			showToast({ message: 'Task created.', type: 'success' });
 		} else {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
@@ -1714,21 +1747,29 @@ async function fetchAndRenderBoard() {
 			if (result.data.user_storage) {
 				userStorage = result.data.user_storage;
 			}
+			
+			// Modified for Subscription Quota Enforcement - Store quota status for proactive UI
+			if (result.data.quota_status) {
+				window.quotaStatus = result.data.quota_status;
+				updateQuotaAwareUI();
+			}
 
 			// Apply user preferences on load
 			if (userPrefs) {
-				if (userPrefs.editor_font_size) {
-					container.dataset.editorFontSize = userPrefs.editor_font_size;
-				}
-				if (typeof userPrefs.filter_show_completed !== 'undefined') {
-					filterState.showCompleted = userPrefs.filter_show_completed;
-				}
-				if (typeof userPrefs.filter_show_private !== 'undefined') {
-					filterState.showPrivate = userPrefs.filter_show_private;
-				}
-				if (typeof userPrefs.filter_show_snoozed !== 'undefined') {
-					filterState.showSnoozed = userPrefs.filter_show_snoozed;
-				}
+			if (userPrefs.editor_font_size) {
+				container.dataset.editorFontSize = userPrefs.editor_font_size;
+			}
+			if (typeof userPrefs.filter_show_completed !== 'undefined') {
+				filterState.showCompleted = userPrefs.filter_show_completed;
+			}
+			if (typeof userPrefs.filter_show_private !== 'undefined') {
+				filterState.showPrivate = userPrefs.filter_show_private;
+			}
+			// Modified for Session Timeout - Load user's timeout preference
+			if (userPrefs.session_timeout) {
+				// Update session timeout setting and button text
+				updateSessionTimeoutSetting(userPrefs.session_timeout);
+			}
 				// Handle theme preferences
 				const highContrastToggle = document.getElementById('toggle-high-contrast');
 				const lightModeToggle = document.getElementById('toggle-light-mode');
@@ -1878,7 +1919,7 @@ function createTaskCard(taskData) {
 	
 	let footerHTML = '';
 	const hasSnoozeIndicator = taskData.is_snoozed || taskData.snoozed_until;
-	const hasSharedIndicator = taskData.shares && taskData.shares.length > 0;
+	const hasSharedIndicator = (taskData.shares && taskData.shares.length > 0) || (!isOwner && taskData.shared_by);
 	const hasReadyIndicator = isOwner && taskData.shares && 
 		taskData.shares.some(share => share.ready_for_review);
 	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator;
@@ -1946,7 +1987,7 @@ function createTaskCard(taskData) {
 
 		let shareIndicator = '';
 		if (taskData.shares && taskData.shares.length > 0) {
-			// Get first recipient info for badge display
+			// Owner view - show recipients
 			const firstShare = taskData.shares[0];
 			const recipientDisplay = (firstShare.username || firstShare.email || 'user').substring(0, 6);
 			const shareCount = taskData.shares.length;
@@ -1963,6 +2004,18 @@ function createTaskCard(taskData) {
 						<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
 					</svg>
 					<span class="share-recipient-text">${recipientDisplay}</span>
+				</span>
+			`;
+		} else if (!isOwner && taskData.shared_by) {
+			// Modified for Owner Badge - Recipient view shows owner identification
+			const ownerDisplay = taskData.shared_by.substring(0, 6);
+			shareIndicator = `
+				<span class="task-indicator task-owner-badge" title="Shared by ${taskData.shared_by}">
+					<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+						<circle cx="12" cy="7" r="4"></circle>
+					</svg>
+					<span class="share-owner-text">${ownerDisplay}</span>
 				</span>
 			`;
 		}
@@ -2042,6 +2095,7 @@ function createTaskCard(taskData) {
 			data-shares='${JSON.stringify(taskData.shares || [])}'
 			data-access-type="${accessType}"
 			data-ready-for-review="${!!(taskData.ready_for_review)}"
+			data-shared-by="${taskData.shared_by || ''}"
 			${draggableAttr}>
 			<div class="task-card-main">
 				<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>
@@ -2499,6 +2553,475 @@ function closeAttachmentViewer() {
 	}
 	isImageViewerOpen = false;
 }
+
+/**
+ * Opens the file management modal showing all user attachments.
+ * Modified for File Management Feature - New global attachment management interface
+ */
+async function openFileManagementModal() {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const modalOverlay = document.getElementById('file-management-modal-overlay');
+		const listContainer = document.getElementById('file-management-list');
+		const sortSelect = document.getElementById('file-management-sort');
+		const quotaBar = document.getElementById('file-management-quota-bar');
+		const quotaText = document.getElementById('file-management-quota-text');
+		
+		if (!modalOverlay || !listContainer) {
+			console.error('File management modal components are missing!');
+			return;
+		}
+
+		listContainer.innerHTML = '<p>Loading...</p>';
+		modalOverlay.classList.remove('hidden');
+
+		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
+				const result = await response.json();
+				
+				if (result.status === 'success') {
+					renderFileManagementList(result.data.attachments, listContainer);
+					updateFileManagementQuota(result.data.storage_used, result.data.storage_quota, quotaBar, quotaText);
+					
+					// Update total count display
+					const countDisplay = document.getElementById('file-management-count');
+					if (countDisplay) {
+						countDisplay.textContent = `${result.data.total_count} files`;
+					}
+				} else {
+					throw new Error(result.message || 'Failed to load files.');
+				}
+			} catch (error) {
+				listContainer.innerHTML = `<p class="error-message">Could not load files: ${error.message}</p>`;
+			}
+		};
+
+		await refreshFileList();
+
+		// Set up sort handler
+		if (sortSelect) {
+			sortSelect.addEventListener('change', async (e) => {
+				const [sortBy, sortOrder] = e.target.value.split('_');
+				await refreshFileList(sortBy, sortOrder);
+			});
+		}
+
+		// Set up close handlers
+		const closeButton = document.getElementById('file-management-close-btn');
+		const closeModalHandler = () => {
+			closeFileManagementModal();
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
+		};
+		
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+
+		// Set up delete handler
+		const handleDeleteClick = async (e) => {
+			const deleteBtn = e.target.closest('.btn-delete-file-management');
+			if (deleteBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const attachmentId = deleteBtn.dataset.attachmentId;
+				const filename = deleteBtn.dataset.filename;
+				const confirmed = await showConfirm(`Are you sure you want to permanently delete "${filename}"?`);
+				if (confirmed) {
+					const success = await deleteAttachment(attachmentId);
+					if (success) {
+						// Refresh the list after deletion
+						const sortValue = sortSelect ? sortSelect.value : 'date_desc';
+						const [sortBy, sortOrder] = sortValue.split('_');
+						await refreshFileList(sortBy, sortOrder);
+						showToast({ message: 'File deleted successfully.', type: 'success' });
+					}
+				}
+			}
+		};
+		
+		closeButton?.addEventListener('click', closeModalHandler);
+		listContainer.addEventListener('click', handleDeleteClick);
+		document.addEventListener('keydown', handleEscKey);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+
+		// Cleanup function
+		const cleanup = () => {
+			closeButton?.removeEventListener('click', closeModalHandler);
+			listContainer.removeEventListener('click', handleDeleteClick);
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+		};
+
+		// Store cleanup function for later use
+		modalOverlay._cleanup = cleanup;
+
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Closes the file management modal and cleans up event listeners.
+ * Modified for File Management Feature - Cleanup function for modal
+ */
+function closeFileManagementModal() {
+	const modalOverlay = document.getElementById('file-management-modal-overlay');
+	if (modalOverlay) {
+		// Run cleanup if it exists
+		if (modalOverlay._cleanup) {
+			modalOverlay._cleanup();
+			delete modalOverlay._cleanup;
+		}
+		modalOverlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Renders the list of all user attachments in the file management modal.
+ * Modified for File Management Feature - Render function for global file list
+ */
+function renderFileManagementList(attachments, container) {
+	container.innerHTML = '';
+	
+	if (attachments.length === 0) {
+		container.innerHTML = '<p class="no-files-message">No files uploaded yet.</p>';
+		return;
+	}
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+
+	attachments.forEach(att => {
+		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
+		const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+		
+		const itemEl = document.createElement('div');
+		itemEl.className = 'file-management-item';
+
+		const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+		const uploadDate = new Date(att.created_at).toLocaleDateString('en-US', { 
+			month: 'short', 
+			day: 'numeric',
+			year: 'numeric'
+		});
+		
+		let thumbnailHTML = '';
+		if (isPdf) {
+			thumbnailHTML = `
+				<div class="file-management-thumbnail-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+					</svg>
+				</div>
+			`;
+		} else {
+			thumbnailHTML = `<img src="${fileUrl}" class="file-management-thumbnail" alt="${att.original_filename}" />`;
+		}
+
+		itemEl.innerHTML = `
+			${thumbnailHTML}
+			<div class="file-management-info">
+				<div class="file-management-filename">${att.original_filename}</div>
+				<div class="file-management-details">
+					<span class="file-size">${fileSizeKB} KB</span>
+					<span class="upload-date">${uploadDate}</span>
+				</div>
+				<div class="file-management-task-info">
+					<span class="task-name">Task: ${att.task_title}</span>
+					<span class="column-name">Column: ${att.column_name || 'Unknown'}</span>
+				</div>
+			</div>
+			<button class="btn-delete-file-management" title="Delete File" 
+					data-attachment-id="${att.attachment_id}" 
+					data-filename="${att.original_filename}">&times;</button>
+		`;
+
+		// Add click handler for viewing (only for images)
+		if (!isPdf) {
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return; // Don't open viewer if delete button clicked
+				}
+				openAttachmentViewer(fileUrl, att.original_filename);
+			});
+			itemEl.style.cursor = 'pointer';
+		} else {
+			// For PDFs, make the whole item clickable to open in new tab
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return;
+				}
+				window.open(fileUrl, '_blank');
+			});
+			itemEl.style.cursor = 'pointer';
+		}
+		
+		container.appendChild(itemEl);
+	});
+}
+
+/**
+ * Updates the storage quota display in the file management modal.
+ * Modified for File Management Feature - Quota display for global view
+ */
+function updateFileManagementQuota(usedBytes, quotaBytes, progressBar, quotaText) {
+	if (!progressBar || !quotaText) return;
+	
+	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
+		usedBytes = 0;
+	}
+
+	const usedMB = (usedBytes / 1024 / 1024).toFixed(1);
+	const quotaMB = (quotaBytes / 1024 / 1024).toFixed(1);
+	const usedPercent = quotaBytes > 0 ? ((usedBytes / quotaBytes) * 100).toFixed(1) : 0;
+
+	progressBar.max = quotaBytes;
+	progressBar.value = usedBytes;
+	quotaText.textContent = `${usedMB} / ${quotaMB} MB (${usedPercent}%)`;
+}
+
+
+
+/**
+ * Opens the file management modal showing all user attachments.
+ * Modified for File Management Feature - New global attachment management interface
+ */
+async function openFileManagementModal() {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const modalOverlay = document.getElementById('file-management-modal-overlay');
+		const listContainer = document.getElementById('file-management-list');
+		const sortSelect = document.getElementById('file-management-sort');
+		const quotaBar = document.getElementById('file-management-quota-bar');
+		const quotaText = document.getElementById('file-management-quota-text');
+		
+		if (!modalOverlay || !listContainer) {
+			console.error('File management modal components are missing!');
+			return;
+		}
+
+		listContainer.innerHTML = '<p>Loading...</p>';
+		modalOverlay.classList.remove('hidden');
+
+		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
+				const result = await response.json();
+				
+				if (result.status === 'success') {
+					renderFileManagementList(result.data.attachments, listContainer);
+					updateFileManagementQuota(result.data.storage_used, result.data.storage_quota, quotaBar, quotaText);
+					
+					// Update total count display
+					const countDisplay = document.getElementById('file-management-count');
+					if (countDisplay) {
+						countDisplay.textContent = `${result.data.total_count} files`;
+					}
+				} else {
+					throw new Error(result.message || 'Failed to load files.');
+				}
+			} catch (error) {
+				listContainer.innerHTML = `<p class="error-message">Could not load files: ${error.message}</p>`;
+			}
+		};
+
+		await refreshFileList();
+
+		// Set up sort handler
+		if (sortSelect) {
+			sortSelect.addEventListener('change', async (e) => {
+				const [sortBy, sortOrder] = e.target.value.split('_');
+				await refreshFileList(sortBy, sortOrder);
+			});
+		}
+
+		// Set up close handlers
+		const closeButton = document.getElementById('file-management-close-btn');
+		const closeModalHandler = () => {
+			closeFileManagementModal();
+		};
+
+		const handleEscKey = (e) => {
+			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
+		};
+		
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+
+		// Set up delete handler
+		const handleDeleteClick = async (e) => {
+			const deleteBtn = e.target.closest('.btn-delete-file-management');
+			if (deleteBtn) {
+				e.preventDefault();
+				e.stopPropagation();
+				const attachmentId = deleteBtn.dataset.attachmentId;
+				const filename = deleteBtn.dataset.filename;
+				const confirmed = await showConfirm(`Are you sure you want to permanently delete "${filename}"?`);
+				if (confirmed) {
+					const success = await deleteAttachment(attachmentId);
+					if (success) {
+						// Refresh the list after deletion
+						const sortValue = sortSelect ? sortSelect.value : 'date_desc';
+						const [sortBy, sortOrder] = sortValue.split('_');
+						await refreshFileList(sortBy, sortOrder);
+						showToast({ message: 'File deleted successfully.', type: 'success' });
+					}
+				}
+			}
+		};
+		
+		closeButton?.addEventListener('click', closeModalHandler);
+		listContainer.addEventListener('click', handleDeleteClick);
+		document.addEventListener('keydown', handleEscKey);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+
+		// Cleanup function
+		const cleanup = () => {
+			closeButton?.removeEventListener('click', closeModalHandler);
+			listContainer.removeEventListener('click', handleDeleteClick);
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+		};
+
+		// Store cleanup function for later use
+		modalOverlay._cleanup = cleanup;
+
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Closes the file management modal and cleans up event listeners.
+ * Modified for File Management Feature - Cleanup function for modal
+ */
+function closeFileManagementModal() {
+	const modalOverlay = document.getElementById('file-management-modal-overlay');
+	if (modalOverlay) {
+		// Run cleanup if it exists
+		if (modalOverlay._cleanup) {
+			modalOverlay._cleanup();
+			delete modalOverlay._cleanup;
+		}
+		modalOverlay.classList.add('hidden');
+	}
+}
+
+/**
+ * Renders the list of all user attachments in the file management modal.
+ * Modified for File Management Feature - Render function for global file list
+ */
+function renderFileManagementList(attachments, container) {
+	container.innerHTML = '';
+	
+	if (attachments.length === 0) {
+		container.innerHTML = '<p class="no-files-message">No files uploaded yet.</p>';
+		return;
+	}
+
+	const appURL = window.MyDayHub_Config?.appURL || '';
+
+	attachments.forEach(att => {
+		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
+		const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+		
+		const itemEl = document.createElement('div');
+		itemEl.className = 'file-management-item';
+
+		const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+		const uploadDate = new Date(att.created_at).toLocaleDateString('en-US', { 
+			month: 'short', 
+			day: 'numeric',
+			year: 'numeric'
+		});
+		
+		let thumbnailHTML = '';
+		if (isPdf) {
+			thumbnailHTML = `
+				<div class="file-management-thumbnail-icon">
+					<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+						<polyline points="14 2 14 8 20 8"></polyline>
+					</svg>
+				</div>
+			`;
+		} else {
+			thumbnailHTML = `<img src="${fileUrl}" class="file-management-thumbnail" alt="${att.original_filename}" />`;
+		}
+
+		itemEl.innerHTML = `
+			${thumbnailHTML}
+			<div class="file-management-info">
+				<div class="file-management-filename">${att.original_filename}</div>
+				<div class="file-management-details">
+					<span class="file-size">${fileSizeKB} KB</span>
+					<span class="upload-date">${uploadDate}</span>
+				</div>
+				<div class="file-management-task-info">
+					<span class="task-name">Task: ${att.task_title}</span>
+					<span class="column-name">Column: ${att.column_name || 'Unknown'}</span>
+				</div>
+			</div>
+			<button class="btn-delete-file-management" title="Delete File" 
+					data-attachment-id="${att.attachment_id}" 
+					data-filename="${att.original_filename}">&times;</button>
+		`;
+
+		// Add click handler for viewing (only for images)
+		if (!isPdf) {
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return; // Don't open viewer if delete button clicked
+				}
+				openAttachmentViewer(fileUrl, att.original_filename);
+			});
+			itemEl.style.cursor = 'pointer';
+		} else {
+			// For PDFs, make the whole item clickable to open in new tab
+			itemEl.addEventListener('click', (e) => {
+				if (e.target.closest('.btn-delete-file-management')) {
+					return;
+				}
+				window.open(fileUrl, '_blank');
+			});
+			itemEl.style.cursor = 'pointer';
+		}
+		
+		container.appendChild(itemEl);
+	});
+}
+
+/**
+ * Updates the storage quota display in the file management modal.
+ * Modified for File Management Feature - Quota display for global view
+ */
+function updateFileManagementQuota(usedBytes, quotaBytes, progressBar, quotaText) {
+	if (!progressBar || !quotaText) return;
+	
+	if (usedBytes === null || typeof usedBytes === 'undefined' || !isFinite(usedBytes)) {
+		usedBytes = 0;
+	}
+
+	const usedMB = (usedBytes / 1024 / 1024).toFixed(1);
+	const quotaMB = (quotaBytes / 1024 / 1024).toFixed(1);
+	const usedPercent = quotaBytes > 0 ? ((usedBytes / quotaBytes) * 100).toFixed(1) : 0;
+
+	progressBar.max = quotaBytes;
+	progressBar.value = usedBytes;
+	quotaText.textContent = `${usedMB} / ${quotaMB} MB (${usedPercent}%)`;
+}
+
 
 // --- Mobile Move Mode Functions ---
 
@@ -2972,5 +3495,220 @@ function exitMoveMode() {
 	 });
  }
 
-// Initial load
-document.addEventListener('DOMContentLoaded', initTasksView);
+// ==========================================================================
+ // --- SESSION TIMEOUT MANAGEMENT ---
+ // ==========================================================================
+ 
+ /**
+  * Updates the session timeout setting and UI elements.
+  */
+ function updateSessionTimeoutSetting(timeoutSeconds) {
+	 const button = document.getElementById('btn-session-timeout');
+	 if (button) {
+		 const timeoutText = formatTimeoutDuration(timeoutSeconds);
+		 button.innerHTML = `
+			 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+				 <circle cx="12" cy="12" r="10"></circle>
+				 <polyline points="12,6 12,12 16,14"></polyline>
+			 </svg>
+			 ${timeoutText}
+		 `;
+	 }
+	 
+	 // Update modal selection when it opens
+	 const modal = document.getElementById('session-timeout-modal-overlay');
+	 if (modal) {
+		 const radioButton = modal.querySelector(`input[value="${timeoutSeconds}"]`);
+		 if (radioButton) {
+			 radioButton.checked = true;
+		 }
+	 }
+	 
+	 // Initialize session timeout system
+	 if (typeof initSessionTimeout === 'function') {
+		 initSessionTimeout(timeoutSeconds);
+	 }
+ }
+ 
+ /**
+  * Formats timeout duration in seconds to human-readable text.
+  */
+ function formatTimeoutDuration(seconds) {
+	 switch (parseInt(seconds)) {
+		 case 300: return '5 minutes';
+		 case 1800: return '30 minutes';
+		 case 7200: return '2 hours';
+		 case 28800: return '8 hours';
+		 default: return '30 minutes';
+	 }
+ }
+ 
+ /**
+  * Saves session timeout preference to database and updates session.
+  */
+ async function saveSessionTimeout(timeoutSeconds) {
+	 try {
+		 await window.apiFetch({
+			 module: 'users',
+			 action: 'saveUserPreference',
+			 key: 'session_timeout',
+			 value: parseInt(timeoutSeconds)
+		 });
+		 
+		 // Update UI and reinitialize timeout system
+		 updateSessionTimeoutSetting(timeoutSeconds);
+		 
+		 showToast('Session timeout updated successfully', 'success');
+	 } catch (error) {
+		 console.error('Error saving session timeout:', error);
+		 showToast('Failed to save session timeout', 'error');
+	 }
+ }
+ 
+ // Initialize session timeout modal when DOM loads
+ document.addEventListener('DOMContentLoaded', () => {
+	 const timeoutButton = document.getElementById('btn-session-timeout');
+	 const timeoutModal = document.getElementById('session-timeout-modal-overlay');
+	 const saveButton = document.getElementById('btn-timeout-save');
+	 const cancelButton = document.getElementById('btn-timeout-cancel');
+	 
+	 if (timeoutButton && timeoutModal) {
+		 timeoutButton.addEventListener('click', () => {
+			 timeoutModal.classList.remove('hidden');
+		 });
+		 
+		 cancelButton?.addEventListener('click', () => {
+			 timeoutModal.classList.add('hidden');
+		 });
+		 
+		 saveButton?.addEventListener('click', () => {
+			 const selectedValue = timeoutModal.querySelector('input[name="timeout"]:checked')?.value;
+			 if (selectedValue) {
+				 saveSessionTimeout(selectedValue);
+				 timeoutModal.classList.add('hidden');
+			 }
+		 });
+		 
+		 // Close modal on overlay click
+		 timeoutModal.addEventListener('click', (e) => {
+			 if (e.target === timeoutModal) {
+				 timeoutModal.classList.add('hidden');
+			 }
+		 });
+	 }
+ });
+ 
+// ==========================================================================
+ // --- QUOTA-AWARE UI MANAGEMENT ---
+ // ==========================================================================
+ 
+ /**
+  * Updates UI elements based on current quota status to prevent failed actions
+  * Modified for Subscription Quota Enforcement - Proactive quota-aware interface
+  */
+ function updateQuotaAwareUI() {
+	 if (!window.quotaStatus) return;
+	 
+	 updateColumnCreationUI();
+	 updateTaskCreationUI();
+ }
+ 
+/**
+  * Updates the "New Column" button based on column quota status
+  */
+ function updateColumnCreationUI() {
+	 const addColumnBtn = document.getElementById('btn-add-column');
+	 if (!addColumnBtn || !window.quotaStatus) return;
+	 
+	 if (window.quotaStatus.columns.at_limit) {
+		 // Replace button with upgrade message
+		 addColumnBtn.textContent = `Upgrade (${window.quotaStatus.columns.used}/${window.quotaStatus.columns.limit} columns used)`;
+		 addColumnBtn.disabled = true;
+		 addColumnBtn.classList.add('quota-limited');
+		 addColumnBtn.title = `You've reached your column limit. Upgrade your ${window.quotaStatus.subscription_level} plan to create more columns.`;
+		 
+		 // Remove the existing click event listeners and replace with upgrade message handler
+		 const newBtn = addColumnBtn.cloneNode(true);
+		 addColumnBtn.parentNode.replaceChild(newBtn, addColumnBtn);
+		 newBtn.addEventListener('click', showColumnUpgradeMessage);
+	 } else {
+		 // Ensure normal functionality is restored
+		 addColumnBtn.textContent = '+ New Column';
+		 addColumnBtn.disabled = false;
+		 addColumnBtn.classList.remove('quota-limited');
+		 addColumnBtn.title = 'Add a new column';
+		 
+		 // Restore normal functionality by cloning button to remove all event listeners
+		 const newBtn = addColumnBtn.cloneNode(true);
+		 addColumnBtn.parentNode.replaceChild(newBtn, addColumnBtn);
+		 // The normal click handler will be re-added by the main event listener in initEventListeners()
+	 }
+ }
+ 
+ /**
+  * Updates task input fields based on task quota status
+  */
+ function updateTaskCreationUI() {
+	 const taskInputs = document.querySelectorAll('.new-task-input');
+	 if (!window.quotaStatus) return;
+	 
+	 taskInputs.forEach(input => {
+		 // Only check task limits - users can still add tasks to existing columns
+		 if (window.quotaStatus.tasks.at_limit) {
+			 input.placeholder = `Upgrade (${window.quotaStatus.tasks.used}/${window.quotaStatus.tasks.limit} tasks used)`;
+			 input.disabled = true;
+			 input.classList.add('quota-limited');
+			 input.title = `You've reached your task limit. Upgrade your ${window.quotaStatus.subscription_level} plan to create more tasks.`;
+			 
+			 // Add click handler to show upgrade message
+			 input.addEventListener('click', showTaskUpgradeMessage);
+		 } else {
+			 input.placeholder = '+ New Task';
+			 input.disabled = false;
+			 input.classList.remove('quota-limited');
+			 input.title = 'Add a new task';
+			 
+			 // Remove upgrade click handler
+			 input.removeEventListener('click', showTaskUpgradeMessage);
+		 }
+	 });
+ }
+ 
+ /**
+  * Shows upgrade message for column limits
+  */
+ function showColumnUpgradeMessage() {
+	 showToast({
+		 message: `You've reached your column limit (${window.quotaStatus.columns.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more columns.`,
+		 type: 'info',
+		 duration: 4000
+	 });
+ }
+ 
+ /**
+  * Shows upgrade message for task limits  
+  */
+ function showTaskUpgradeMessage() {
+	 showToast({
+		 message: `You've reached your task limit (${window.quotaStatus.tasks.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more tasks.`,
+		 type: 'info', 
+		 duration: 4000
+	 });
+ }
+ 
+ /**
+  * Updates quota status after successful operations and refreshes UI
+  */
+ function updateQuotaStatusAfterOperation(operation, increment = true) {
+	 if (!window.quotaStatus) return;
+	 
+	 if (operation === 'column') {
+		 window.quotaStatus.columns.used += increment ? 1 : -1;
+		 window.quotaStatus.columns.at_limit = window.quotaStatus.columns.used >= window.quotaStatus.columns.limit;
+	 } else if (operation === 'task') {
+		 window.quotaStatus.tasks.used += increment ? 1 : -1;
+		 window.quotaStatus.tasks.at_limit = window.quotaStatus.tasks.used >= window.quotaStatus.tasks.limit;
+	 }
+	 
+	 updateQuotaAwareUI();
+ }

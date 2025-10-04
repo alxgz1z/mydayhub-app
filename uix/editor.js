@@ -5,8 +5,8 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 7.3.0 
- * @author Alex & Gemini
+ * @version 7.0.0
+ * @author Alex & Gemini & Claude
  *
  * Public API:
  * window.UnifiedEditor.open({ id, kind, title, content, updatedAt, fontSize })

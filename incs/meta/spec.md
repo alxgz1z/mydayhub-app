@@ -19,6 +19,7 @@
 
 ## 0. Localhost server reboot
 
+### to fire up servers
 > sudo apachectl -k restart
 > brew services restart php
 > brew services restart mysql
@@ -26,6 +27,9 @@
 %SET GLOBAL sql_mode = (SELECT REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', ''));
 %exit
 >
+
+### to consolidate codebase:
+>sudo ./concat_code.sh ./Documents > /Users/jalexg/Downloads/codebase.txt
 
 ## 1. Introduction
 
