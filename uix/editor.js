@@ -5,7 +5,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 7.0.0
+ * @version 7.3.0
  * @author Alex & Gemini & Claude
  *
  * Public API:

@@ -7,7 +7,7 @@
  * This file contains utility functions that are used across multiple
  * parts of the backend application.
  *
- * @version 7.0.0
+ * @version 7.3.0
  * @author Alex & Gemini & Claude
  */
 

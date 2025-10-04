@@ -6,7 +6,7 @@
  *
  * Handles user registration, login, and other authentication actions.
  *
- * @version 7.0.0
+ * @version 7.3.0
  * @author Alex & Gemini & Claude
  */
 

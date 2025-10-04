@@ -7,7 +7,7 @@
  * Admin-only interface for managing users, subscriptions, and system overview.
  * Requires admin authentication via ADMIN_EMAILS configuration.
  *
- * @version 7.0.0
+ * @version 7.3.0
  * @author Alex & Gemini & Claude
  */
 

@@ -7,7 +7,7 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 7.0.0
+ * @version 7.3.0
  * @author Alex & Gemini & Claude
  */
 

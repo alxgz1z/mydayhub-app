@@ -1,6 +1,6 @@
 <?php
 // Code for /login/reset-password.php
-// @version 7.0.0
+// @version 7.3.0
 // @author Alex & Gemini & Claude 
 // MyDayHub - Password Reset Page
 
