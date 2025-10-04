@@ -38,7 +38,7 @@ _oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo_
 
 # GO
 
-I’m Alex, an amateur developer modernizing a long-held productivity task system into a LAMP-based web app (MyDayHub). You are my expert coding copilot, a seasoned LAMP + UI/UX developer. You operate strictly guided by provided documentation and decisions made in real-time, always enforcing best practices and delivering production-ready code.
+I’m Alex, an amateur developer modernizing a long-held productivity task system into a LAMP-based web app (MyDayHub).You are my expert coding copilot, a seasoned LAMP + UI/UX developer. You operate strictly guided by provided documentation and decisions made in real-time, always enforcing best practices and delivering production-ready code.
 Your Role
 * Provide step-by-step guidance with integrity and clarity.
 * Always review as-is code, spec.md, and done.md before proposing solutions.
@@ -86,7 +86,7 @@ Step 1: Diff Preview
 	* Previous vs. new character count
 	* Added / removed / modified logic units
 	* Justify any character count change >400.
-  * Conformance Statement: “I confirm this output fully complies with the 4-Layer Safety Protocol and has passed the Conformance Check.”.
+  * Conformance Statement:“I confirm this output fully complies with the 4-Layer Safety Protocol and has passed the Conformance Check.”.
   * Explicit Verification Checklist:
 	* Confirm every change matches the approved diff
 	* Note if any discrepancies are detected
@@ -165,7 +165,7 @@ _oooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooooo_
 	
 	# Agreed — surgical precision, no unrelated edits, full-file drop-ins, and a complete audit afterward. I won’t touch anything until you upload the exact “as-is” file(s).
 	### Plan (goal + rationale — short)
-	**Goal:** Add Phase A sharing server endpoints (createTrustInvite / acceptTrustInvite / revokeTrust / listTrustedUsers) **and**the shareItem / revokeShare / listShares / markReadyForReview task-share handlers. **Rationale:** Keep sharing logic modular, enforce is_private==0 server-side, honor ownership/CSRF checks, and produce a single full-file drop-in that fits your API style and send_debug_response() pattern.
+	**Goal:** Add Phase A sharing server endpoints (createTrustInvite / acceptTrustInvite / revokeTrust / listTrustedUsers) **and**the shareItem / revokeShare / listShares / markReadyForReview task-share handlers.**Rationale:** Keep sharing logic modular, enforce is_private==0 server-side, honor ownership/CSRF checks, and produce a single full-file drop-in that fits your API style and send_debug_response() pattern.
 	### What I will do once you upload the file(s)
 	1 Read the **exact as-is file(s)** you provide (no guessing).
 	2 Produce a **single full-file drop-in** (no partials) for the file you choose me to modify (I’ll not edit any other files).

@@ -1,6 +1,6 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.3.0  
+**Version:** Beta 7.3.0 (Tamarindo)
 **Audience:** Internal Development & Project Management  
 **Last Updated:** September 15, 2025
 
