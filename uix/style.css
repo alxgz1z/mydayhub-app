@@ -6,23 +6,28 @@
    1. THEME VARIABLES & GLOBAL STYLES
    ========================================================================== */
 :root {
-	--bg-color: #202124;
-	--app-header-bg: rgba(32, 33, 36, 0.85);
-	--toolbar-bg: #282a2d;
+	--bg-color: #202020; /* Darker main background for better contrast */
+	--app-header-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); /* Subtle green gradient */
+	--toolbar-bg: #2b2b2b; /* Lighter than main background for columns */
 	--text-primary: #e8eaed;
 	--text-secondary: #9aa0a6;
-	--accent-color: #8ab4f8;
+	--accent-color: #22c55e; /* Green accent replacing blue */
+	--accent-color-secondary: #f97316; /* Orange secondary accent */
+	--accent-gradient: linear-gradient(135deg, #22c55e, #16a34a); /* Green gradient */
+	--accent-gradient-light: linear-gradient(135deg, #34d399, #22c55e); /* Lighter green gradient */
+	--accent-gradient-hover: linear-gradient(135deg, #16a34a, #15803d); /* Darker green gradient for hover */
 	--border-color: #3c4043;
-	--btn-hover-bg: rgba(255, 255, 255, 0.1);
-	--column-bg: var(--toolbar-bg);
-	--card-bg: var(--bg-color);
-	--card-border: var(--border-color);
-	--toast-success-bg: #4CAF50;
-	--toast-error-bg: #d94f46; 
-	--btn-danger-bg: #d94f46;
-	--btn-danger-hover-bg: #c53b32;
-	--btn-success-bg: #34a853;
-	--btn-success-hover-bg: #2c9f47;
+	--btn-hover-bg: rgba(34, 197, 94, 0.1); /* Green hover tint */
+	--column-bg: #2b2b2b; /* Distinct from main background */
+	--card-bg: #363636; /* Lighter than column background for task cards */
+	--card-border: #4a4d50; /* More defined borders */
+	--card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Subtle shadows for depth */
+	--toast-success-bg: #22c55e;
+	--toast-error-bg: #ef4444; 
+	--btn-danger-bg: #ef4444;
+	--btn-danger-hover-bg: #dc2626;
+	--btn-success-bg: #22c55e;
+	--btn-success-hover-bg: #16a34a;
 	--border-color-light: #4a4d50;
 }
 
@@ -47,23 +52,28 @@ body.high-contrast {
 }
 
 body.light-mode {
-	--bg-color: #f0f2f5; /* Softer grey background */
-	--app-header-bg: rgba(255, 255, 255, 0.85);
-	--toolbar-bg: #ffffff; /* White columns and toolbars */
-	--text-primary: #202124;
-	--text-secondary: #5f6368;
-	--accent-color: #1a73e8; /* Google Blue */
-	--border-color: #dee2e6; /* Softer borders */
-	--btn-hover-bg: rgba(0, 0, 0, 0.05);
-	--card-bg: #ffffff; /* White cards to match columns */
-	--card-border: #e0e0e0;
-	--toast-success-bg: #34a853;
-	--toast-error-bg: #ea4335;
-	--btn-danger-bg: #ea4335;
-	--btn-danger-hover-bg: #d93025;
-	--btn-success-bg: #34a853;
-	--btn-success-hover-bg: #2c9f47;
-	--border-color-light: #f1f3f5;
+	--bg-color: #f1f5f9; /* Softer, warmer background - less harsh than pure white */
+	--app-header-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(22, 163, 74, 0.08)); /* Subtle green tint like settings hover */
+	--toolbar-bg: #f8fafc; /* Very light gray instead of pure white */
+	--text-primary: #1e293b; /* Slightly softer dark text */
+	--text-secondary: #475569; /* Better contrast secondary text */
+	--accent-color: #22c55e; /* Green accent - Costa Rica inspired */
+	--accent-color-secondary: #f97316; /* Orange secondary accent */
+	--accent-gradient: linear-gradient(135deg, #22c55e, #16a34a); /* Green gradient */
+	--accent-gradient-light: linear-gradient(135deg, #34d399, #22c55e); /* Lighter green gradient */
+	--accent-gradient-hover: linear-gradient(135deg, #16a34a, #15803d); /* Darker green gradient for hover */
+	--border-color: #e2e8f0; /* Softer borders */
+	--btn-hover-bg: rgba(34, 197, 94, 0.08); /* Green hover tint */
+	--card-bg: #ffffff; /* Keep cards white for contrast */
+	--card-border: #e2e8f0; /* Softer card borders */
+	--card-shadow: 0 1px 3px rgba(0, 0, 0, 0.08); /* Softer shadows */
+	--toast-success-bg: #22c55e;
+	--toast-error-bg: #ef4444;
+	--btn-danger-bg: #ef4444;
+	--btn-danger-hover-bg: #dc2626;
+	--btn-success-bg: #22c55e;
+	--btn-success-hover-bg: #16a34a;
+	--border-color-light: #f1f5f9;
 }
 
 /* Additional overrides for light mode for better visibility */
@@ -99,10 +109,25 @@ body {
 	justify-content: space-between;
 	align-items: center;
 	padding: 0.75rem 1.5rem;
-	background-color: var(--app-header-bg);
+	background: var(--app-header-bg);
 	border-bottom: 1px solid var(--border-color);
 	backdrop-filter: blur(10px);
 	-webkit-backdrop-filter: blur(10px);
+}
+
+/* Light mode header text styling */
+body.light-mode #app-header {
+	color: var(--text-primary); /* Dark text for subtle background */
+}
+
+body.light-mode #app-header .btn-header {
+	color: var(--text-primary);
+	border-color: var(--border-color);
+}
+
+body.light-mode #app-header .btn-header:hover {
+	background-color: var(--btn-hover-bg);
+	color: var(--text-primary);
 }
 
 #main-content {
@@ -184,9 +209,44 @@ body {
 	text-decoration: none;
 }
 
+/* Elegant DEV_MODE indicator - subtle border accent instead of red ribbon */
 #app-footer.dev-mode {
-	background-color: #442c2e;
-	border-top-color: var(--toast-error-bg);
+	background-color: var(--toolbar-bg); /* Keep normal background */
+	border-top: 3px solid var(--accent-color); /* Green accent border */
+	border-top-color: var(--accent-color);
+	color: var(--text-primary); /* Normal text color */
+	position: relative;
+}
+
+/* Add a subtle "DEV" indicator */
+#app-footer.dev-mode::before {
+	content: 'DEV';
+	position: absolute;
+	top: -8px;
+	right: 1rem;
+	background: var(--accent-color);
+	color: white;
+	padding: 2px 8px;
+	border-radius: 4px;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.5px;
+}
+
+/* Light mode specific dev styling */
+body.light-mode #app-footer.dev-mode {
+	background-color: var(--toolbar-bg);
+	border-top-color: var(--accent-color);
+	color: var(--text-primary);
+}
+
+body.light-mode #app-footer.dev-mode a {
+	color: var(--text-primary) !important; /* Normal text color */
+	text-decoration: none;
+}
+
+body.light-mode #app-footer.dev-mode a:hover {
+	color: var(--accent-color) !important; /* Green hover state */
 }
 
 .footer-left span + span::before,
@@ -380,11 +440,15 @@ body {
 }
 
 .btn.btn-success {
-	background-color: var(--btn-success-bg);
+	background: var(--accent-gradient, var(--btn-success-bg));
 	color: #fff;
+	border: none;
+	transition: all 0.3s ease;
 }
 .btn.btn-success:hover {
-	background-color: var(--btn-success-hover-bg);
+	background: var(--accent-gradient-hover, var(--btn-success-hover-bg));
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 
@@ -458,8 +522,16 @@ body {
 }
 
 .btn.btn-primary {
-	background-color: var(--accent-color);
-	color: var(--bg-color);
+	background: var(--accent-gradient, var(--accent-color));
+	color: #ffffff;
+	border: none;
+	transition: all 0.3s ease;
+}
+
+.btn.btn-primary:hover {
+	background: var(--accent-gradient-hover, var(--accent-color));
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 /* ==========================================================================
@@ -1067,7 +1139,7 @@ input:checked + .slider:before {
 /* Quota-limited button styling - Friendly upgrade messaging */
 .btn-header.quota-limited,
 #btn-add-column.quota-limited {
-	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	background: var(--accent-gradient);
 	color: white;
 	cursor: pointer;
 	border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1095,12 +1167,12 @@ input:checked + .slider:before {
 .btn-header.quota-limited:hover,
 #btn-add-column.quota-limited:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 /* Quota-limited task input styling - Friendly upgrade messaging */
 .new-task-input.quota-limited {
-	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	background: var(--accent-gradient);
 	color: white;
 	cursor: pointer;
 	border: 1px solid rgba(255, 255, 255, 0.2);
@@ -1115,17 +1187,17 @@ input:checked + .slider:before {
 
 .new-task-input.quota-limited:hover {
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
 }
 
 .new-task-input.quota-limited:focus {
 	outline: none;
-	box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.3);
 }
 
 /* Quota-restricted task action button */
 .task-action-btn.quota-restricted {
-	background: linear-gradient(135deg, #3b82f6, #6366f1);
+	background: var(--accent-gradient);
 	color: white;
 	opacity: 0.9;
 }

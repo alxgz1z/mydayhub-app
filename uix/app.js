@@ -155,13 +155,14 @@ function initSettingsPanel() {
 	const toggleBtn = document.getElementById('btn-settings-toggle');
 	const closeBtn = document.getElementById('btn-settings-close');
 	const overlay = document.getElementById('settings-panel-overlay');
-	const highContrastToggle = document.getElementById('toggle-high-contrast');
-	const lightModeToggle = document.getElementById('toggle-light-mode');
+	const themeDarkBtn = document.getElementById('theme-dark');
+	const themeLightBtn = document.getElementById('theme-light');
+	const themeHighContrastBtn = document.getElementById('theme-high-contrast');
 	// Modified for Change Password
 	const changePasswordBtn = document.getElementById('btn-change-password');
 
 
-	if (!toggleBtn || !closeBtn || !overlay || !highContrastToggle || !lightModeToggle || !changePasswordBtn) {
+	if (!toggleBtn || !closeBtn || !overlay || !themeDarkBtn || !themeLightBtn || !themeHighContrastBtn || !changePasswordBtn) {
 		console.error('Settings panel elements could not be found.');
 		return;
 	}
@@ -188,37 +189,202 @@ function initSettingsPanel() {
 		trustButton.addEventListener('click', openTrustManagementModal);
 	}
 
-	lightModeToggle.addEventListener('change', (e) => {
-		const isEnabled = e.target.checked;
-		document.body.classList.toggle('light-mode', isEnabled);
-		saveUserPreference('light_mode', isEnabled);
-		if (isEnabled) {
-			highContrastToggle.checked = false;
-			document.body.classList.remove('high-contrast');
-			saveUserPreference('high_contrast_mode', false);
-		}
+	// Theme selector event listeners
+	themeDarkBtn.addEventListener('click', () => {
+		setTheme('dark');
 	});
 
-	highContrastToggle.addEventListener('change', (e) => {
-		const isEnabled = e.target.checked;
-		document.body.classList.toggle('high-contrast', isEnabled);
-		saveUserPreference('high_contrast_mode', isEnabled);
-		if (isEnabled) {
-			lightModeToggle.checked = false;
-			document.body.classList.remove('light-mode');
-			saveUserPreference('light_mode', false);
-		}
+	themeLightBtn.addEventListener('click', () => {
+		setTheme('light');
 	});
+
+	themeHighContrastBtn.addEventListener('click', () => {
+		setTheme('high-contrast');
+	});
+
+	// Completion Sound Selector
+	const soundOffBtn = document.getElementById('sound-off');
+	const soundOnBtn = document.getElementById('sound-on');
+	if (soundOffBtn && soundOnBtn) {
+		// Load saved preference
+		loadCompletionSoundPreference();
+		
+		// Add event listeners for button clicks
+		soundOffBtn.addEventListener('click', () => {
+			setCompletionSound(false);
+		});
+		
+		soundOnBtn.addEventListener('click', () => {
+			setCompletionSound(true);
+		});
+	}
 
 	// Modified for Change Password
 	changePasswordBtn.addEventListener('click', openChangePasswordModal);
 	initPasswordModalListeners();
+	
+	// Initialize theme selector state
+	loadThemePreferences();
 	
 	// Modified for Usage Stats Modal
 	const usageStatsBtn = document.getElementById('btn-usage-stats');
 	if (usageStatsBtn) {
 		usageStatsBtn.addEventListener('click', openUsageStatsModal);
 	}
+}
+
+/**
+ * Sets the application theme
+ * @param {string} theme - The theme to set ('dark', 'light', or 'high-contrast')
+ */
+function setTheme(theme) {
+	// Remove all theme classes
+	document.body.classList.remove('light-mode', 'high-contrast');
+	
+	// Remove active class from all theme buttons
+	document.getElementById('theme-dark').classList.remove('active');
+	document.getElementById('theme-light').classList.remove('active');
+	document.getElementById('theme-high-contrast').classList.remove('active');
+	
+	// Apply the selected theme
+	switch (theme) {
+		case 'light':
+			document.body.classList.add('light-mode');
+			document.getElementById('theme-light').classList.add('active');
+			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('light_mode', 'true');
+			localStorage.setItem('high_contrast_mode', 'false');
+			saveUserPreference('light_mode', true);
+			saveUserPreference('high_contrast_mode', false);
+			break;
+		case 'high-contrast':
+			document.body.classList.add('high-contrast');
+			document.getElementById('theme-high-contrast').classList.add('active');
+			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('light_mode', 'false');
+			localStorage.setItem('high_contrast_mode', 'true');
+			saveUserPreference('light_mode', false);
+			saveUserPreference('high_contrast_mode', true);
+			break;
+		case 'dark':
+		default:
+			document.getElementById('theme-dark').classList.add('active');
+			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('light_mode', 'false');
+			localStorage.setItem('high_contrast_mode', 'false');
+			saveUserPreference('light_mode', false);
+			saveUserPreference('high_contrast_mode', false);
+			break;
+	}
+}
+
+/**
+ * Loads and applies saved theme preferences
+ * This function is called during app initialization and will be overridden
+ * by the backend preferences when they are loaded in tasks.js
+ */
+function loadThemePreferences() {
+	// Use localStorage as fallback during initial load
+	// Backend preferences will override this when tasks.js loads
+	const lightMode = localStorage.getItem('light_mode') === 'true';
+	const highContrast = localStorage.getItem('high_contrast_mode') === 'true';
+	
+	if (highContrast) {
+		document.body.classList.add('high-contrast');
+		document.body.classList.remove('light-mode');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.add('active');
+		if (themeLightBtn) themeLightBtn.classList.remove('active');
+		if (themeDarkBtn) themeDarkBtn.classList.remove('active');
+	} else if (lightMode) {
+		document.body.classList.add('light-mode');
+		document.body.classList.remove('high-contrast');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.remove('active');
+		if (themeLightBtn) themeLightBtn.classList.add('active');
+		if (themeDarkBtn) themeDarkBtn.classList.remove('active');
+	} else {
+		// Default to dark theme
+		document.body.classList.remove('light-mode', 'high-contrast');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.remove('active');
+		if (themeLightBtn) themeLightBtn.classList.remove('active');
+		if (themeDarkBtn) themeDarkBtn.classList.add('active');
+	}
+}
+
+/**
+ * Loads the completion sound preference from localStorage and updates the UI
+ */
+function loadCompletionSoundPreference() {
+	const soundOffBtn = document.getElementById('sound-off');
+	const soundOnBtn = document.getElementById('sound-on');
+	if (soundOffBtn && soundOnBtn) {
+		// Default to enabled if no preference is saved
+		const isEnabled = localStorage.getItem('completion_sound_enabled') !== 'false';
+		updateSoundSelectorUI(isEnabled);
+	}
+}
+
+/**
+ * Updates the sound selector UI to show the active state
+ * @param {boolean} isEnabled - Whether sound is enabled
+ */
+function updateSoundSelectorUI(isEnabled) {
+	const soundOffBtn = document.getElementById('sound-off');
+	const soundOnBtn = document.getElementById('sound-on');
+	
+	if (soundOffBtn && soundOnBtn) {
+		// Remove active class from both buttons
+		soundOffBtn.classList.remove('active');
+		soundOnBtn.classList.remove('active');
+		
+		// Add active class to the correct button
+		if (isEnabled) {
+			soundOnBtn.classList.add('active');
+		} else {
+			soundOffBtn.classList.add('active');
+		}
+	}
+}
+
+/**
+ * Sets the completion sound preference and updates UI
+ * @param {boolean} isEnabled - Whether completion sound should be enabled
+ */
+function setCompletionSound(isEnabled) {
+	updateSoundSelectorUI(isEnabled);
+	saveCompletionSoundPreference(isEnabled);
+}
+
+/**
+ * Saves the completion sound preference to both localStorage and backend
+ * @param {boolean} isEnabled - Whether completion sound should be enabled
+ */
+async function saveCompletionSoundPreference(isEnabled) {
+	// Save to localStorage for immediate access
+	localStorage.setItem('completion_sound_enabled', isEnabled.toString());
+	
+	// Save to backend for persistence
+	try {
+		await saveUserPreference('completion_sound_enabled', isEnabled);
+	} catch (error) {
+		console.error('Error saving completion sound preference:', error);
+	}
+}
+
+/**
+ * Checks if completion sound is enabled
+ * @returns {boolean} - Whether completion sound should play
+ */
+function isCompletionSoundEnabled() {
+	return localStorage.getItem('completion_sound_enabled') !== 'false';
 }
 
 /**
@@ -238,6 +404,46 @@ async function saveUserPreference(key, value) {
 		console.error(`Error saving preference '${key}':`, error);
 	}
 }
+
+/**
+ * Syncs localStorage with backend preferences
+ * This should be called after backend preferences are loaded
+ */
+window.syncThemeWithBackend = function(lightMode, highContrast) {
+	// Update localStorage to match backend
+	localStorage.setItem('light_mode', lightMode ? 'true' : 'false');
+	localStorage.setItem('high_contrast_mode', highContrast ? 'true' : 'false');
+	
+	// Apply the theme
+	if (highContrast) {
+		document.body.classList.add('high-contrast');
+		document.body.classList.remove('light-mode');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.add('active');
+		if (themeLightBtn) themeLightBtn.classList.remove('active');
+		if (themeDarkBtn) themeDarkBtn.classList.remove('active');
+	} else if (lightMode) {
+		document.body.classList.add('light-mode');
+		document.body.classList.remove('high-contrast');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.remove('active');
+		if (themeLightBtn) themeLightBtn.classList.add('active');
+		if (themeDarkBtn) themeDarkBtn.classList.remove('active');
+	} else {
+		// Default to dark theme
+		document.body.classList.remove('light-mode', 'high-contrast');
+		const themeHighContrastBtn = document.getElementById('theme-high-contrast');
+		const themeLightBtn = document.getElementById('theme-light');
+		const themeDarkBtn = document.getElementById('theme-dark');
+		if (themeHighContrastBtn) themeHighContrastBtn.classList.remove('active');
+		if (themeLightBtn) themeLightBtn.classList.remove('active');
+		if (themeDarkBtn) themeDarkBtn.classList.add('active');
+	}
+};
 
 
 /**
@@ -1000,3 +1206,94 @@ window.openTrustManagementModal = openTrustManagementModal;
 window.closeTrustManagementModal = closeTrustManagementModal;
 window.revokeTaskShare = revokeTaskShare;
 window.leaveSharedTask = leaveSharedTask;
+
+/**
+ * Play a subtle completion sound using Web Audio API
+ * No external files needed - generates audio programmatically
+ */
+function playCompletionSound() {
+	try {
+		// Create audio context (reuse existing one if available)
+		const audioContext = window.audioContext || new (window.AudioContext || window.webkitAudioContext)();
+		window.audioContext = audioContext;
+		
+		// Resume context if it's suspended (required by some browsers)
+		if (audioContext.state === 'suspended') {
+			audioContext.resume();
+		}
+		
+		// Create a subtle, pleasant completion chime
+		// Two-tone chime: higher note followed by lower note
+		const now = audioContext.currentTime;
+		
+		// First tone (higher, celebratory)
+		const oscillator1 = audioContext.createOscillator();
+		const gain1 = audioContext.createGain();
+		
+		oscillator1.connect(gain1);
+		gain1.connect(audioContext.destination);
+		
+		oscillator1.frequency.setValueAtTime(800, now); // Pleasant high frequency
+		oscillator1.type = 'sine'; // Smooth sine wave
+		
+		// Envelope for first tone - quick attack, gentle decay
+		gain1.gain.setValueAtTime(0, now);
+		gain1.gain.linearRampToValueAtTime(0.15, now + 0.01); // Quick attack
+		gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.2); // Gentle decay
+		
+		oscillator1.start(now);
+		oscillator1.stop(now + 0.2);
+		
+		// Second tone (lower, satisfying resolution)
+		const oscillator2 = audioContext.createOscillator();
+		const gain2 = audioContext.createGain();
+		
+		oscillator2.connect(gain2);
+		gain2.connect(audioContext.destination);
+		
+		oscillator2.frequency.setValueAtTime(600, now + 0.1); // Slightly lower frequency
+		oscillator2.type = 'sine';
+		
+		// Envelope for second tone
+		gain2.gain.setValueAtTime(0, now + 0.1);
+		gain2.gain.linearRampToValueAtTime(0.12, now + 0.11);
+		gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+		
+		oscillator2.start(now + 0.1);
+		oscillator2.stop(now + 0.4);
+		
+	} catch (error) {
+		// Silently fail if Web Audio API is not supported or user interaction required
+		console.log('Completion sound not available:', error.message);
+	}
+}
+
+// Make completion sound functions globally available
+window.playCompletionSound = playCompletionSound;
+window.isCompletionSoundEnabled = isCompletionSoundEnabled;
+window.updateSoundSelectorUI = updateSoundSelectorUI;
+
+/**
+ * DEBUG: Function to check task classifications - call from browser console
+ */
+window.debugTaskClassifications = function() {
+	const tasks = document.querySelectorAll('.task-card');
+	console.log('=== TASK CLASSIFICATION DEBUG ===');
+	tasks.forEach((task, index) => {
+		const taskId = task.dataset.taskId;
+		const classification = task.dataset.classification;
+		const classes = Array.from(task.classList).filter(c => c.startsWith('classification-'));
+		const statusBand = task.querySelector('.task-status-band');
+		const computedStyle = statusBand ? window.getComputedStyle(statusBand) : null;
+		
+		console.log(`Task ${index + 1}:`, {
+			taskId,
+			classification,
+			classes,
+			statusBandExists: !!statusBand,
+			backgroundColor: computedStyle ? computedStyle.backgroundColor : 'N/A',
+			background: computedStyle ? computedStyle.background : 'N/A'
+		});
+	});
+	console.log('=== END DEBUG ===');
+};

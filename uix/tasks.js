@@ -888,6 +888,29 @@ async function saveFilterPreference(key, value) {
 }
 
 /**
+ * Updates the filter menu UI to reflect the current filter state.
+ */
+function updateFilterMenuUI() {
+	const filterMenu = document.querySelector('.filter-menu');
+	if (!filterMenu) return;
+	
+	// Update the checkboxes to reflect the current filter state
+	const showCompletedToggle = filterMenu.querySelector('input[data-filter="showCompleted"]');
+	const showPrivateToggle = filterMenu.querySelector('input[data-filter="showPrivate"]');
+	const showSnoozedToggle = filterMenu.querySelector('input[data-filter="showSnoozed"]');
+	
+	if (showCompletedToggle) {
+		showCompletedToggle.checked = filterState.showCompleted;
+	}
+	if (showPrivateToggle) {
+		showPrivateToggle.checked = filterState.showPrivate;
+	}
+	if (showSnoozedToggle) {
+		showSnoozedToggle.checked = filterState.showSnoozed;
+	}
+}
+
+/**
  * Creates and displays the filter menu.
  */
 function showFilterMenu() {
@@ -1497,21 +1520,58 @@ async function toggleTaskComplete(taskId, isComplete) {
 			// Re-render the card to update its content
 			rerenderTaskCard(taskCard);
 			
-			// Apply the animation to the new card
+			// Apply the flash animation to the new card
 			if (isComplete) {
 				const updatedCard = document.querySelector(`[data-task-id="${taskId}"]`);
-				updatedCard.classList.add('is-completing');
+				updatedCard.classList.add('flash-animation');
+				
+				// Play subtle completion sound (if enabled)
+				if (typeof window.playCompletionSound === 'function' && 
+					typeof window.isCompletionSoundEnabled === 'function' && 
+					window.isCompletionSoundEnabled()) {
+					window.playCompletionSound();
+				}
+				
+				// Sort immediately for completion (after DOM updates)
 				setTimeout(() => {
-					updatedCard.classList.remove('is-completing');
+					// Try to find the column body - the taskCard might have been re-rendered
+					let columnBody = taskCard.closest('.column-body');
+					if (!columnBody) {
+						// If not found, try to find it by task ID in case the card was re-rendered
+						const updatedTaskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+						if (updatedTaskCard) {
+							columnBody = updatedTaskCard.closest('.column-body');
+						}
+					}
+					if (columnBody) {
+						sortTasksInColumn(columnBody);
+					}
+				}, 10);
+				
+				setTimeout(() => {
+					updatedCard.classList.remove('flash-animation');
 					// IMPORTANT: Apply filters AFTER animation completes
 					applyAllFilters();
-				}, 1500);
+				}, 500);
 			} else {
-				// If unchecking, apply filters immediately
+				// If unchecking, apply filters immediately and reorder
 				applyAllFilters();
+				// Small delay to ensure DOM is updated before sorting
+				setTimeout(() => {
+					// Try to find the column body - the taskCard might have been re-rendered
+					let columnBody = taskCard.closest('.column-body');
+					if (!columnBody) {
+						// If not found, try to find it by task ID in case the card was re-rendered
+						const updatedTaskCard = document.querySelector(`[data-task-id="${taskId}"]`);
+						if (updatedTaskCard) {
+							columnBody = updatedTaskCard.closest('.column-body');
+						}
+					}
+					if (columnBody) {
+						sortTasksInColumn(columnBody);
+					}
+				}, 10);
 			}
-			
-			sortTasksInColumn(taskCard.closest('.column-body'));
 		} else {
 			throw new Error(result.message);
 		}
@@ -1765,21 +1825,30 @@ async function fetchAndRenderBoard() {
 			if (typeof userPrefs.filter_show_private !== 'undefined') {
 				filterState.showPrivate = userPrefs.filter_show_private;
 			}
+			if (typeof userPrefs.filter_show_snoozed !== 'undefined') {
+				filterState.showSnoozed = userPrefs.filter_show_snoozed;
+			}
+			
+			// Load completion sound preference
+			if (typeof userPrefs.completion_sound_enabled !== 'undefined') {
+				localStorage.setItem('completion_sound_enabled', userPrefs.completion_sound_enabled.toString());
+				// Update the sound selector in settings panel
+				if (typeof window.updateSoundSelectorUI === 'function') {
+					window.updateSoundSelectorUI(userPrefs.completion_sound_enabled);
+				}
+			}
+			
+			// Update filter menu to reflect loaded preferences
+			updateFilterMenuUI();
+			
 			// Modified for Session Timeout - Load user's timeout preference
 			if (userPrefs.session_timeout) {
 				// Update session timeout setting and button text
 				updateSessionTimeoutSetting(userPrefs.session_timeout);
 			}
-				// Handle theme preferences
-				const highContrastToggle = document.getElementById('toggle-high-contrast');
-				const lightModeToggle = document.getElementById('toggle-light-mode');
-
-				if (userPrefs.high_contrast_mode) {
-					document.body.classList.add('high-contrast');
-					if (highContrastToggle) highContrastToggle.checked = true;
-				} else if (userPrefs.light_mode) {
-					document.body.classList.add('light-mode');
-					if (lightModeToggle) lightModeToggle.checked = true;
+				// Handle theme preferences - sync with backend data
+				if (typeof window.syncThemeWithBackend === 'function') {
+					window.syncThemeWithBackend(userPrefs.light_mode, userPrefs.high_contrast_mode);
 				}
 			}
 
@@ -1834,6 +1903,14 @@ function createColumnElement(columnData) {
 
 	let tasksHTML = '';
 	if (columnData.tasks && columnData.tasks.length > 0) {
+		// Debug: Log task classification data
+		if (window.MyDayHub_Config?.DEV_MODE) {
+			console.log('Column tasks classification data:', columnData.tasks.map(t => ({
+				task_id: t.task_id,
+				classification: t.classification,
+				title: t.encrypted_data ? 'Encrypted' : 'No data'
+			})));
+		}
 		tasksHTML = columnData.tasks.map(taskData => createTaskCard(taskData)).join('');
 	} else {
 		tasksHTML = isVirtualColumn 
@@ -1915,6 +1992,16 @@ function createTaskCard(taskData) {
 	if (!isCompleted) {
 		const classification = taskData.classification === 'noise' ? 'backlog' : taskData.classification;
 		classificationClass = `classification-${classification}`;
+		
+		// Debug logging
+		if (window.MyDayHub_Config?.DEV_MODE) {
+			console.log('Task classification debug:', {
+				taskId: taskData.task_id,
+				originalClassification: taskData.classification,
+				finalClassification: classification,
+				classificationClass: classificationClass
+			});
+		}
 	}
 	
 	let footerHTML = '';

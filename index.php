@@ -114,21 +114,22 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 			<div class="settings-panel-body">
 				<div class="setting-item">
-					<span class="setting-label">Light Mode</span>
+					<span class="setting-label">Theme</span>
 					<div class="setting-control">
-						<label class="switch">
-							<input type="checkbox" id="toggle-light-mode">
-							<span class="slider round"></span>
-						</label>
+						<div class="theme-selector">
+							<button type="button" class="theme-btn" data-theme="dark" id="theme-dark">Dark</button>
+							<button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
+							<button type="button" class="theme-btn" data-theme="high-contrast" id="theme-high-contrast">High-Contrast</button>
+						</div>
 					</div>
 				</div>
 				<div class="setting-item">
-					<span class="setting-label">High-Contrast Mode</span>
+					<span class="setting-label">Completion Sound</span>
 					<div class="setting-control">
-						<label class="switch">
-							<input type="checkbox" id="toggle-high-contrast">
-							<span class="slider round"></span>
-						</label>
+						<div class="sound-selector">
+							<button type="button" class="sound-btn" data-sound="off" id="sound-off">Off</button>
+							<button type="button" class="sound-btn" data-sound="on" id="sound-on">On</button>
+						</div>
 					</div>
 				</div>
 				<div class="setting-item">

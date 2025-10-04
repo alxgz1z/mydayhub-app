@@ -1,8 +1,8 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.3.0 (Tamarindo)
+**Version:** Beta 7.3 - Tamarindo
 **Audience:** Internal Development & Project Management  
-**Last Updated:** September 15, 2025
+**Last Updated:** October 4, 2025
 
 ---
 
@@ -126,7 +126,7 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Create Task (footer input) - Context-aware task creation
 - **[RDY]** Rename Task Title (double-click) - Consistent editing pattern
 - **[RDY]** Toggle Task Completion (checkbox) - With celebration animation
-- **[RDY]** Task Completion Celebration Animation - Multi-effect 1.5-second sequence
+- **[RDY]** Task Completion Celebration Animation - Elegant golden flash sweep (0.5s duration)
 - **[RDY]** Task Drag-and-Drop - Within and between columns with visual feedback
 
 #### Task Classification & Management
@@ -154,7 +154,7 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 #### Advanced UI Features
 - **[RDY]** Task Notes integration (Unified Editor) - Full-featured editing experience
 - **[RDY]** Quick Notes (card flip) - 3D animation for short note editing
-- **[WIP]** Settings slider panel - Global preferences with light/dark mode
+- **[RDY]** Settings slider panel - Global preferences with theme selector and completion sound toggle
 - **[RDY]** Change Password modal - Secure password update workflow
 - **[RDY]** Forgot Password page & flow - Email-based reset with security
 - **[RDY]** Task Snooze Modal - Preset durations and custom date picker
@@ -162,6 +162,7 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Dynamic Snooze/Unsnooze Menu State - Context-aware action menus
 - **[RDY]** Snoozed Task Visual Styling - Opacity and grayscale effects
 - **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
+- **[RDY]** Completion Sound Toggle - User-controllable audio feedback with persistence
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
@@ -196,6 +197,9 @@ Recent completions have shifted focus toward advanced user experience and collab
 - "Column Reordering (Drag & Drop)" completed with both button and drag interfaces
 - "Debug/Observability Hardening" completed based on comprehensive backend testing results  
 - "Zero-Knowledge Baseline" priority increased based on stable foundation now established
+- "Theme System Enhancement" completed with three-theme selector and green accent color scheme
+- "Completion Sound System" completed with user-controllable audio feedback
+- "Task Sorting Improvements" completed with proper completion/uncompletion reordering
 
 ---
 
@@ -365,8 +369,10 @@ The classification system implements the core "Signal over Noise" philosophy:
 **Sorting Rules:**
 - Enforced hierarchy: Signal > Support > Backlog > Completed
 - Manual ordering preserved within each classification group
-- Automatic re-sorting on classification changes and drag-and-drop
+- Automatic re-sorting on classification changes, completion, and drag-and-drop
 - Cross-column moves maintain classification priority
+- Completed tasks automatically move to bottom when checked
+- Uncompleted tasks return to proper classification position when unchecked
 
 **User Interface:**
 - Status band click opens classification popover
@@ -432,9 +438,10 @@ Tasks can be temporarily hidden with scheduled wake-up times:
 - Cycle Classification (alternative to status band popover)
 
 **Completion Workflow:**
-- Checkbox click triggers multi-effect celebration animation
-- 1.5-second sequence: rainbow glow, confetti burst, bouncing checkmark
+- Checkbox click triggers elegant golden flash animation
+- 0.5-second golden sweep across task card with subtle sound (if enabled)
 - Automatic classification change to 'completed'
+- Proper task reordering to bottom of column
 - Respects "Hide Completed" filter timing
 
 #### 4.1.7 Attachments System
@@ -475,6 +482,26 @@ Tasks can be temporarily hidden with scheduled wake-up times:
 - "Show Private Items" toggle with visual feedback
 - "Show Snoozed Tasks" toggle with state management
 - Future: "Show Shared Items" and "Show Only My Items"
+
+#### 4.1.9 Completion Sound System
+
+**Audio Feedback:**
+- Subtle two-tone chime when tasks are completed
+- Generated using Web Audio API (no external files required)
+- Golden frequency progression: 800Hz → 600Hz for satisfying resolution
+- 0.4-second duration with natural decay envelope
+
+**User Control:**
+- Settings panel toggle: "Completion Sound" with segmented control (Off/On)
+- Preference persistence across sessions via localStorage and backend
+- Graceful fallback if Web Audio API is not supported
+- Default state: enabled for new users
+
+**Technical Implementation:**
+- Programmatic audio generation using oscillators and gain nodes
+- Context management for browser audio policy compliance
+- Synchronized with visual completion animation
+- Silent failure for unsupported browsers or user interaction requirements
 
 ---
 
@@ -518,8 +545,9 @@ The Settings Panel provides access to application-wide preferences and user acco
 #### 4.3.1 Display Settings
 
 **Theme Management:**
-- Light Mode toggle (default: dark theme)
-- High-Contrast Mode toggle (mutually exclusive with Light Mode)
+- Three-theme selector: Dark, Light, and High-Contrast modes
+- Segmented control interface for intuitive theme switching
+- Completion sound toggle with user preference persistence
 - Font scaling options for accessibility
 - Color-blind friendly patterns and indicators
 
@@ -527,6 +555,7 @@ The Settings Panel provides access to application-wide preferences and user acco
 - Filter state persistence (completed, private, snoozed items)
 - Editor font size with cross-device synchronization
 - Animation preferences and reduced motion support
+- Completion sound toggle with user preference persistence
 
 #### 4.3.2 Account Management
 
@@ -1259,24 +1288,25 @@ Front Side:                    Back Side (Flipped):
 
 #### 6.4.1 Primary Palette
 
-**Accent Color:** `#3B82F6` (Blue 500)
+**Accent Color:** `#22c55e` (Green)
 - Primary interactive elements
 - Focus rings and selection states
 - Link colors and call-to-action buttons
+- Costa Rica-inspired green theme throughout application
 
 **Classification Colors:**
-- **Signal:** `#10B981` (Green 500) - High priority, mission-critical
-- **Support:** `#3B82F6` (Blue 500) - Important, enables Signal tasks  
-- **Backlog:** `#F59E0B` (Orange 500) - Deferred, not time-sensitive
-- **Completed:** `#6B7280` (Gray 500) - Archived, finished work
+- **Signal:** `#22c55e` (Green) - High priority, mission-critical
+- **Support:** `#007bff` (Blue with dashed pattern) - Important, enables Signal tasks  
+- **Backlog:** `#fd7e14` (Orange) - Deferred, not time-sensitive
+- **Completed:** `#6B7280` (Gray) - Archived, finished work
 
 #### 6.4.2 Dark Theme (Primary)
 
 **Background Hierarchy:**
-- App Background: `#0F172A` (Slate 900)
-- Card Background: `#1E293B` (Slate 800)  
-- Interactive Background: `#334155` (Slate 700)
-- Border Color: `#475569` (Slate 600)
+- App Background: `#202020` (Darker for better contrast)
+- Card Background: `#363636` (Lighter than column background)
+- Interactive Background: `#2b2b2b` (Column background)
+- Border Color: `#3c4043` (Defined borders)
 
 **Text Hierarchy:**
 - Primary Text: `#F8FAFC` (Slate 50)
@@ -1286,10 +1316,10 @@ Front Side:                    Back Side (Flipped):
 #### 6.4.3 Light Theme (Optional)
 
 **Background Hierarchy:**
-- App Background: `#FFFFFF` (White)
-- Card Background: `#F8FAFC` (Slate 50)
-- Interactive Background: `#F1F5F9` (Slate 100)
-- Border Color: `#E2E8F0` (Slate 200)
+- App Background: `#f1f5f9` (Softer, warmer background)
+- Card Background: `#ffffff` (White for contrast)
+- Interactive Background: `#f8fafc` (Very light gray)
+- Border Color: `#e2e8f0` (Softer borders)
 
 **Text Hierarchy:**
 - Primary Text: `#0F172A` (Slate 900)
