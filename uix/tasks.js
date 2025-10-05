@@ -1838,6 +1838,19 @@ async function fetchAndRenderBoard() {
 				}
 			}
 			
+			// Load font size preference
+			if (typeof userPrefs.global_font_size !== 'undefined') {
+				localStorage.setItem('global_font_size', userPrefs.global_font_size.toString());
+				// Apply font size immediately
+				if (typeof window.applyFontSize === 'function') {
+					window.applyFontSize(userPrefs.global_font_size);
+				}
+				// Update the font size selector in settings panel
+				if (typeof window.updateFontSizeUI === 'function') {
+					window.updateFontSizeUI(userPrefs.global_font_size);
+				}
+			}
+			
 			// Update filter menu to reflect loaded preferences
 			updateFilterMenuUI();
 			

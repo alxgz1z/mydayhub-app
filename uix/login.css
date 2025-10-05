@@ -190,12 +190,18 @@ input:focus {
 .auth-link a {
 	color: var(--link-color);
 	text-decoration: none;
-	transition: color 0.3s ease;
+	transition: color 0.3s ease, text-decoration 0.3s ease;
 }
 
 .auth-link a:hover {
 	color: var(--link-hover);
 	text-decoration: underline;
+}
+
+/* High contrast mode link styling */
+body.high-contrast .auth-link a {
+	text-decoration: underline;
+	font-weight: 600;
 }
 
 /* Modified for Forgot Password */
@@ -204,14 +210,20 @@ input:focus {
 	margin-top: 0.75rem;
 }
 .auth-sub-link a {
-	color: var(--text-secondary);
+	color: var(--link-color);
 	font-size: 0.9rem;
 	text-decoration: none;
-	transition: color 0.3s ease;
+	transition: color 0.3s ease, text-decoration 0.3s ease;
 }
 .auth-sub-link a:hover {
-	color: var(--link-color);
+	color: var(--link-hover);
 	text-decoration: underline;
+}
+
+/* High contrast mode sub-link styling */
+body.high-contrast .auth-sub-link a {
+	text-decoration: underline;
+	font-weight: 600;
 }
 
 

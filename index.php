@@ -134,6 +134,16 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 				</div>
 				<div class="setting-item">
+					<span class="setting-label">Global Font Size</span>
+					<div class="setting-control">
+						<div class="font-size-selector">
+							<button type="button" class="font-btn" data-font="smaller" id="font-smaller">A-</button>
+							<button type="button" class="font-btn" data-font="reset" id="font-reset">Reset</button>
+							<button type="button" class="font-btn" data-font="larger" id="font-larger">A+</button>
+						</div>
+					</div>
+				</div>
+				<div class="setting-item">
 					<span class="setting-label">Completion Sound</span>
 					<div class="setting-control">
 						<div class="sound-selector">

@@ -233,6 +233,59 @@ body.light-mode .sound-btn.active {
 	color: #ffffff;
 }
 
+/* Font Size Selector - Segmented Control */
+.font-size-selector {
+	display: flex;
+	background-color: var(--border-color);
+	border-radius: 8px;
+	padding: 2px;
+	gap: 2px;
+}
+
+.font-btn {
+	flex: 1;
+	padding: 8px 12px;
+	border: none;
+	border-radius: 6px;
+	background-color: transparent;
+	color: var(--text-secondary);
+	font-size: 0.85rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	white-space: nowrap;
+}
+
+.font-btn:hover {
+	background-color: rgba(255, 255, 255, 0.1);
+	color: var(--text-primary);
+}
+
+.font-btn.active {
+	background: var(--accent-gradient, var(--accent-color));
+	color: #ffffff;
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Light mode specific font size selector */
+body.light-mode .font-size-selector {
+	background-color: #e5e7eb;
+}
+
+body.light-mode .font-btn {
+	color: #6b7280;
+}
+
+body.light-mode .font-btn:hover {
+	background-color: rgba(0, 0, 0, 0.05);
+	color: #374151;
+}
+
+body.light-mode .font-btn.active {
+	background: var(--accent-gradient);
+	color: #ffffff;
+}
+
 .setting-label {
 	font-size: 1rem;
 	color: var(--text-primary);

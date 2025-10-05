@@ -307,17 +307,26 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize theme system for authentication pages
  */
 function initAuthThemeSystem() {
-	// Load saved theme preference or default to dark
-	const savedTheme = localStorage.getItem('auth_theme') || 'dark';
-	applyAuthTheme(savedTheme);
+	// Load theme preference from main app's localStorage or default to dark
+	const lightMode = localStorage.getItem('light_mode') === 'true';
+	const highContrast = localStorage.getItem('high_contrast_mode') === 'true';
+	
+	let theme = 'dark'; // default
+	if (highContrast) {
+		theme = 'high-contrast';
+	} else if (lightMode) {
+		theme = 'light';
+	}
+	
+	applyAuthTheme(theme);
 	
 	// Set up theme selector buttons
 	const themeButtons = document.querySelectorAll('.theme-btn');
 	themeButtons.forEach(button => {
 		button.addEventListener('click', () => {
-			const theme = button.dataset.theme;
-			applyAuthTheme(theme);
-			saveAuthTheme(theme);
+			const selectedTheme = button.dataset.theme;
+			applyAuthTheme(selectedTheme);
+			saveAuthTheme(selectedTheme);
 		});
 	});
 }
@@ -349,8 +358,23 @@ function applyAuthTheme(theme) {
 }
 
 /**
- * Save theme preference for authentication pages
+ * Save theme preference using main app's system
  */
 function saveAuthTheme(theme) {
-	localStorage.setItem('auth_theme', theme);
+	// Save using the same localStorage keys as the main app
+	switch (theme) {
+		case 'light':
+			localStorage.setItem('light_mode', 'true');
+			localStorage.setItem('high_contrast_mode', 'false');
+			break;
+		case 'high-contrast':
+			localStorage.setItem('light_mode', 'false');
+			localStorage.setItem('high_contrast_mode', 'true');
+			break;
+		case 'dark':
+		default:
+			localStorage.setItem('light_mode', 'false');
+			localStorage.setItem('high_contrast_mode', 'false');
+			break;
+	}
 }

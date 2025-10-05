@@ -204,6 +204,19 @@ function initSettingsPanel() {
 		setTheme('high-contrast');
 	});
 
+	// Font Size Selector
+	const fontSmallerBtn = document.getElementById('font-smaller');
+	const fontResetBtn = document.getElementById('font-reset');
+	const fontLargerBtn = document.getElementById('font-larger');
+	if (fontSmallerBtn && fontResetBtn && fontLargerBtn) {
+		fontSmallerBtn.addEventListener('click', () => adjustFontSize('smaller'));
+		fontResetBtn.addEventListener('click', () => adjustFontSize('reset'));
+		fontLargerBtn.addEventListener('click', () => adjustFontSize('larger'));
+		
+		// Load font size preference
+		loadFontSizePreference();
+	}
+
 	// Completion Sound Selector
 	const soundOffBtn = document.getElementById('sound-off');
 	const soundOnBtn = document.getElementById('sound-on');
@@ -1305,3 +1318,93 @@ window.debugTaskClassifications = function() {
 	});
 	console.log('=== END DEBUG ===');
 };
+
+/**
+ * Adjust global font size
+ */
+function adjustFontSize(action) {
+	const currentSize = parseInt(localStorage.getItem('global_font_size') || '100');
+	let newSize = currentSize;
+	
+	switch (action) {
+		case 'smaller':
+			newSize = Math.max(80, currentSize - 10); // Minimum 80%
+			break;
+		case 'larger':
+			newSize = Math.min(150, currentSize + 10); // Maximum 150%
+			break;
+		case 'reset':
+		default:
+			newSize = 100; // Default 100%
+			break;
+	}
+	
+	// Apply font size
+	applyFontSize(newSize);
+	
+	// Save preference
+	saveFontSizePreference(newSize);
+	
+	// Update UI
+	updateFontSizeUI(newSize);
+}
+
+/**
+ * Apply font size to the document
+ */
+function applyFontSize(size) {
+	document.documentElement.style.fontSize = size + '%';
+}
+
+/**
+ * Load font size preference and apply it
+ */
+function loadFontSizePreference() {
+	const savedSize = parseInt(localStorage.getItem('global_font_size') || '100');
+	applyFontSize(savedSize);
+	updateFontSizeUI(savedSize);
+}
+
+/**
+ * Save font size preference to localStorage and backend
+ */
+async function saveFontSizePreference(size) {
+	// Save to localStorage for immediate access
+	localStorage.setItem('global_font_size', size.toString());
+	
+	// Save to backend for persistence
+	try {
+		await saveUserPreference('global_font_size', size);
+	} catch (error) {
+		console.error('Error saving font size preference:', error);
+	}
+}
+
+/**
+ * Update font size UI buttons
+ */
+function updateFontSizeUI(size) {
+	const fontSmallerBtn = document.getElementById('font-smaller');
+	const fontResetBtn = document.getElementById('font-reset');
+	const fontLargerBtn = document.getElementById('font-larger');
+	
+	if (fontSmallerBtn && fontResetBtn && fontLargerBtn) {
+		// Remove active class from all buttons
+		fontSmallerBtn.classList.remove('active');
+		fontResetBtn.classList.remove('active');
+		fontLargerBtn.classList.remove('active');
+		
+		// Add active class to appropriate button
+		if (size === 100) {
+			fontResetBtn.classList.add('active');
+		} else if (size < 100) {
+			fontSmallerBtn.classList.add('active');
+		} else {
+			fontLargerBtn.classList.add('active');
+		}
+	}
+}
+
+// Make font size functions globally available
+window.applyFontSize = applyFontSize;
+window.updateFontSizeUI = updateFontSizeUI;
