@@ -1489,3 +1489,66 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 
 ---
 
+**2025-01-04 - Global Font Size Control & Modal Management System**
+
+**Key work**
+* **Global Font Size Setting (New Feature):**
+  * Implemented user-adjustable font size control with 80%-150% range in 10% increments
+  * Added three-button segmented control interface (A- | Reset | A+) in settings panel
+  * Created persistent font size preferences stored in database and localStorage
+  * Applied immediate visual feedback across entire application using document.documentElement.style.fontSize
+  * Integrated with existing user preference system for cross-session persistence
+* **Modal Management System (Technical Architecture):**
+  * Implemented centralized modal stack management for consistent ESC key behavior
+  * Created global modalStack array with LIFO (Last In, First Out) ordering
+  * Added registerModal() and unregisterModal() functions for stack management
+  * Replaced individual ESC handlers with single global listener that closes topmost modal first
+  * Fixed inconsistent modal closing behavior across all application modals
+* **Modal System Integration (Comprehensive):**
+  * Updated Settings Panel, Change Password, Session Timeout, File Management modals
+  * Integrated Usage Stats, Trust Management, Date Picker, Confirmation modals
+  * Enhanced Attachment Management and all task-related modals with stack registration
+  * Ensured proper modal hierarchy: ESC closes modals in reverse order of opening
+  * Maintained existing click-outside behavior while fixing ESC key inconsistencies
+* **UI/UX Enhancements:**
+  * Updated filter icon to use app accent color (green) instead of light gray for visual consistency
+  * Enhanced logout link to display icon-only with tooltip on hover for cleaner interface
+  * Increased power symbol icon size by 15% (16px to 18px) for better visibility
+  * Removed vertical separators after APP_VER label for cleaner visual hierarchy
+  * Maintained red accent color for logout functionality across all themes
+
+**Technical Implementation**
+* **Font Size Architecture:** CSS-based global scaling using document.documentElement.style.fontSize with range validation
+* **Modal Stack System:** JavaScript-based centralized management with proper event handling and cleanup
+* **User Preference Integration:** Extended existing saveUserPreference() API for font size persistence
+* **Event Management:** Single global ESC listener with proper event prevention and propagation control
+* **UI Consistency:** Enhanced icon theming and visual hierarchy improvements
+
+**Files Modified**
+* `/uix/app.js` - Added modal management system, font size control functions, and global ESC handler
+* `/uix/tasks.js` - Integrated attachment and file management modals with modal stack system
+* `/uix/style.css` - Updated filter icon color and logout link styling with power symbol enhancement
+* `/index.php` - Added font size selector to settings panel with three-button segmented control
+* `/uix/settings.css` - Styled font size selector to match theme and sound selector designs
+* `/incs/meta/spec.md` - Updated specification with new features and technical architecture
+
+**Status** Global font size control fully functional with persistent user preferences. Modal management system provides consistent ESC key behavior across all application modals. UI enhancements improve visual consistency and user experience. All modals now follow proper LIFO hierarchy for closing behavior.
+
+**Recommended next steps (priority order)**
+**1** **Zero-Knowledge Architecture Foundation:** Begin implementing the encryption foundation with per-item DEKs and Master Key wrapping as specified in the roadmap
+**2** **Sharing Permission System:** Complete recipient permission restrictions for shared task actions (view vs edit vs owner rights)
+**3** **Mobile UX Polish:** Comprehensive testing and optimization of font size control and modal system on touch devices
+**4** **Performance Optimization:** Review modal system performance and implement loading states for better user experience
+**5** **Wake Notification System:** Implement automatic unsnooze notifications at 9 AM for snoozed tasks
+**6** **Advanced Features:** Begin work on Journal, Outlines, or Events views as planned expansion beyond Tasks
+
+**Technical Architecture Notes**
+* Font size control uses CSS document-level scaling with localStorage and backend persistence for reliability
+* Modal management system implements centralized stack with proper event handling and cleanup
+* ESC key behavior now consistent across all modals with proper hierarchy (settings → sub-modals → nested modals)
+* UI enhancements maintain theme consistency with green accent color throughout interface
+* Font size selector integrates seamlessly with existing segmented control design patterns
+* Modal stack system provides extensible foundation for future modal implementations
+
+---
+

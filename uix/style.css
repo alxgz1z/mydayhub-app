@@ -224,8 +224,12 @@ body.light-mode #app-header .btn-header:hover {
 	text-decoration: none;
 	display: flex;
 	align-items: center;
-	gap: 0.5rem;
 	transition: opacity 0.2s ease;
+	position: relative;
+	/* Hide the text content */
+	font-size: 0;
+	width: 18px; /* 15% bigger than 16px */
+	height: 18px; /* 15% bigger than 16px */
 }
 
 .footer-right a:hover {
@@ -234,13 +238,41 @@ body.light-mode #app-header .btn-header:hover {
 
 .footer-right a::before {
 	content: '';
-	width: 16px;
-	height: 16px;
+	width: 18px; /* 15% bigger than original 16px */
+	height: 18px; /* 15% bigger than original 16px */
 	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16,17 21,12 16,7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
 	background-size: contain;
 	background-repeat: no-repeat;
 	background-position: center;
 	flex-shrink: 0;
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+}
+
+/* Tooltip styling */
+.footer-right a::after {
+	content: 'Logout';
+	position: absolute;
+	bottom: 100%;
+	left: 50%;
+	transform: translateX(-50%);
+	background-color: rgba(0, 0, 0, 0.9);
+	color: white;
+	padding: 4px 8px;
+	border-radius: 4px;
+	font-size: 12px;
+	white-space: nowrap;
+	opacity: 0;
+	pointer-events: none;
+	transition: opacity 0.3s ease;
+	z-index: 1000;
+	margin-bottom: 5px;
+}
+
+.footer-right a:hover::after {
+	opacity: 1;
 }
 
 /* Elegant DEV_MODE indicator - subtle border accent instead of red ribbon */
@@ -289,16 +321,12 @@ body.light-mode #app-footer.dev-mode a:hover {
 	color: var(--border-color);
 }
 
-.footer-right span::after {
-	content: '|';
-	margin: 0 0.25rem;
-	color: var(--border-color);
-}
+/* Removed vertical separator after APP_VER label */
 
 .btn-footer-icon {
 	background: none;
 	border: none;
-	color: var(--text-secondary);
+	color: var(--accent-color); /* Use accent color instead of text-secondary */
 	cursor: pointer;
 	padding: 5px;
 	border-radius: 6px;
@@ -310,7 +338,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 
 .btn-footer-icon:hover {
 	background-color: var(--btn-hover-bg);
-	color: var(--text-primary);
+	color: var(--accent-color); /* Keep accent color on hover */
 }
 
 #btn-settings-toggle {

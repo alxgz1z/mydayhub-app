@@ -545,11 +545,33 @@ The Settings Panel provides access to application-wide preferences and user acco
 #### 4.3.1 Display Settings
 
 **Theme Management:**
+- Three-theme system: Dark (default), Light, and High-Contrast modes
+- CSS custom properties for consistent theming across all components
+- Persistent user preferences stored in database and localStorage
+- Real-time theme switching with smooth transitions
+
+**Global Font Size Control:**
+- User-adjustable font size with 80%-150% range in 10% increments
+- Three-button segmented control: A- | Reset | A+
+- Default size: 100% (normal)
+- Minimum size: 80% (smaller text)
+- Maximum size: 150% (larger text)
+- Persistent preference storage in database and localStorage
+- Immediate visual feedback across entire application
+
+**Accessibility Features:**
 - Three-theme selector: Dark, Light, and High-Contrast modes
 - Segmented control interface for intuitive theme switching
 - Completion sound toggle with user preference persistence
 - Font scaling options for accessibility
 - Color-blind friendly patterns and indicators
+
+**UI Enhancements:**
+- Filter icon uses app accent color for visual consistency
+- Logout link displays icon-only with tooltip on hover
+- Power symbol icon (15% larger) with red accent color
+- Removed vertical separators for cleaner visual hierarchy
+- Enhanced hover effects and smooth transitions throughout
 
 **UI Preferences:**
 - Filter state persistence (completed, private, snoozed items)
@@ -916,8 +938,14 @@ CREATE TABLE sharing_activity (
 - `/uix/tasks.css` - Task board and card styling
 - `/uix/editor.css` - Unified Editor interface  
 - `/uix/attachments.css` - File management UI
-- `/uix/settings.css` - Settings panel styling
+- `/uix/settings.css` - Settings panel styling with font size selector
 - `/uix/login.css` - Authentication pages theme system and styling
+
+**Settings Panel Components:**
+- Theme selector: Three-button segmented control (Dark, Light, High-Contrast)
+- Font size selector: Three-button segmented control (A-, Reset, A+)
+- Completion sound selector: Two-button segmented control (Off, On)
+- All selectors use consistent styling with accent color theming
 
 #### 5.4.3 Progressive Web App Features
 
@@ -1406,8 +1434,29 @@ All authentication pages implement the complete theme system with:
 **Technical Architecture:**
 - **CSS Architecture:** `/uix/login.css` provides complete theme system for authentication pages
 - **JavaScript Integration:** `/uix/auth.js` handles theme management and form interactions
+- **Modal Management System:** Centralized modal stack for consistent ESC key behavior
 - **Icon Support:** Comprehensive favicon and app icon implementation
 - **Cross-Platform:** Consistent appearance across all devices and browsers
+
+#### 6.5.3 Modal Management System
+
+**Centralized Modal Stack:**
+- Global `modalStack` array tracks open modals in LIFO order
+- `registerModal(id, closeFunction)` adds modals to the stack
+- `unregisterModal(id)` removes modals from the stack
+- Single global ESC key listener that closes topmost modal first
+
+**Modal Hierarchy:**
+- ESC key closes modals in reverse order of opening (Last In, First Out)
+- Consistent behavior between ESC key and click-outside interactions
+- Proper event prevention to avoid modal conflicts
+- Support for nested modals (e.g., settings → session timeout → date picker)
+
+**Integrated Modals:**
+- Settings Panel, Change Password, Session Timeout, File Management
+- Usage Stats, Trust Management, Date Picker, Confirmation
+- Attachment Management, and all task-related modals
+- Each modal registers/unregisters automatically with the stack system
 
 ### 6.6 Development Workflow & Testing
 

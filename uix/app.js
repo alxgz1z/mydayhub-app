@@ -147,6 +147,50 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ==========================================================================
+// --- MODAL MANAGEMENT SYSTEM ---
+// ==========================================================================
+
+/**
+ * Modal stack management for proper ESC key handling
+ */
+const modalStack = [];
+
+/**
+ * Registers a modal in the stack for proper ESC key handling
+ * @param {string} modalId - The modal identifier
+ * @param {Function} closeFunction - Function to call when ESC is pressed
+ */
+function registerModal(modalId, closeFunction) {
+	modalStack.push({ id: modalId, close: closeFunction });
+}
+
+/**
+ * Unregisters a modal from the stack
+ * @param {string} modalId - The modal identifier
+ */
+function unregisterModal(modalId) {
+	const index = modalStack.findIndex(modal => modal.id === modalId);
+	if (index !== -1) {
+		modalStack.splice(index, 1);
+	}
+}
+
+/**
+ * Global ESC key handler that respects modal stack order
+ */
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape') {
+		// Close the topmost modal first
+		if (modalStack.length > 0) {
+			const topModal = modalStack[modalStack.length - 1];
+			topModal.close();
+			e.preventDefault();
+			e.stopPropagation();
+		}
+	}
+});
+
+// ==========================================================================
 // --- SETTINGS PANEL ---
 // ==========================================================================
 
@@ -178,11 +222,7 @@ function initSettingsPanel() {
 		}
 	});
 
-	document.addEventListener('keydown', (e) => {
-		if (e.key === 'Escape' && !overlay.classList.contains('hidden')) {
-			closeSettingsPanel();
-		}
-	});
+	// ESC key handling now managed by modal stack system
 
 	// Modified for Trust Management Regression Fix
 	// Initialize Trust Management button in settings
@@ -468,6 +508,8 @@ function openSettingsPanel() {
 	const overlay = document.getElementById('settings-panel-overlay');
 	if (overlay) {
 		overlay.classList.remove('hidden');
+		// Register settings panel in modal stack
+		registerModal('settings-panel', closeSettingsPanel);
 	}
 }
 
@@ -478,6 +520,8 @@ function closeSettingsPanel() {
 	const overlay = document.getElementById('settings-panel-overlay');
 	if (overlay) {
 		overlay.classList.add('hidden');
+		// Unregister settings panel from modal stack
+		unregisterModal('settings-panel');
 	}
 }
 
@@ -541,6 +585,8 @@ function openChangePasswordModal() {
 	const overlay = document.getElementById('password-modal-overlay');
 	if (overlay) {
 		overlay.classList.remove('hidden');
+		// Register password change modal in modal stack
+		registerModal('password-change-modal', closeChangePasswordModal);
 		document.getElementById('current_password').focus();
 	}
 }
@@ -552,6 +598,8 @@ function closeChangePasswordModal() {
 	const overlay = document.getElementById('password-modal-overlay');
 	if (overlay) {
 		overlay.classList.add('hidden');
+		// Unregister password change modal from modal stack
+		unregisterModal('password-change-modal');
 		document.getElementById('change-password-form').reset();
 	}
 }
@@ -667,6 +715,9 @@ function showConfirm(message) {
 
 	messageEl.textContent = message;
 	modalOverlay.classList.remove('hidden');
+	
+	// Register confirm modal in modal stack
+	registerModal('confirm-modal', handleNo);
 
 	return new Promise(resolve => {
 		const handleYes = () => {
@@ -684,6 +735,7 @@ function showConfirm(message) {
 
 		function cleanup() {
 			modalOverlay.classList.add('hidden');
+			unregisterModal('confirm-modal');
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
 		}
@@ -714,6 +766,9 @@ function showDueDateModal(currentDate = '') {
 
 	input.value = currentDate;
 	modalOverlay.classList.remove('hidden');
+	
+	// Register date modal in modal stack
+	registerModal('date-modal', handleCancel);
 
 	return new Promise(resolve => {
 		let isResolved = false;
@@ -724,6 +779,16 @@ function showDueDateModal(currentDate = '') {
 			cleanup();
 			resolve(value);
 		};
+		
+		const cleanup = () => {
+			modalOverlay.classList.add('hidden');
+			unregisterModal('date-modal');
+			document.removeEventListener('keydown', handleEscKey);
+			modalOverlay.removeEventListener('click', handleOverlayClick);
+			saveBtn.removeEventListener('click', handleSave);
+			removeBtn.removeEventListener('click', handleRemove);
+			cancelBtn.removeEventListener('click', handleCancel);
+		};
 
 		const handleSave = () => resolveOnce(input.value);
 		const handleRemove = () => resolveOnce('');
@@ -733,24 +798,12 @@ function showDueDateModal(currentDate = '') {
 			if (e.target === modalOverlay) handleCancel();
 		};
 
-		const handleEscKey = (e) => {
-			if (e.key === 'Escape') handleCancel();
-		};
+		// ESC key handling now managed by modal stack system
 
 		saveBtn.addEventListener('click', handleSave);
 		removeBtn.addEventListener('click', handleRemove);
 		cancelBtn.addEventListener('click', handleCancel);
 		modalOverlay.addEventListener('click', handleOverlayClick);
-		document.addEventListener('keydown', handleEscKey);
-
-		function cleanup() {
-			modalOverlay.classList.add('hidden');
-			saveBtn.removeEventListener('click', handleSave);
-			removeBtn.removeEventListener('click', handleRemove);
-			cancelBtn.removeEventListener('click', handleCancel);
-			modalOverlay.removeEventListener('click', handleOverlayClick);
-			document.removeEventListener('keydown', handleEscKey);
-		}
 	});
 }
 
@@ -769,6 +822,9 @@ async function openUsageStatsModal() {
 	}
 	
 	overlay.classList.remove('hidden');
+	
+	// Register usage stats modal in modal stack
+	registerModal('usage-stats-modal', closeUsageStatsModal);
 	
 	// Initialize close button listener if not already done
 	const closeBtn = document.getElementById('usage-stats-close-btn');
@@ -803,6 +859,8 @@ function closeUsageStatsModal() {
 	const overlay = document.getElementById('usage-stats-modal-overlay');
 	if (overlay) {
 		overlay.classList.add('hidden');
+		// Unregister usage stats modal from modal stack
+		unregisterModal('usage-stats-modal');
 	}
 }
 
@@ -943,6 +1001,9 @@ async function openTrustManagementModal() {
 	const overlay = document.getElementById('trust-management-modal-overlay');
 	overlay.classList.remove('hidden');
 	
+	// Register trust management modal in modal stack
+	registerModal('trust-management-modal', closeTrustManagementModal);
+	
 	// Load trust relationship data
 	await loadTrustRelationships();
 	
@@ -957,6 +1018,8 @@ async function openTrustManagementModal() {
 function closeTrustManagementModal() {
 	const overlay = document.getElementById('trust-management-modal-overlay');
 	overlay.classList.add('hidden');
+	// Unregister trust management modal from modal stack
+	unregisterModal('trust-management-modal');
 }
 
 /**
@@ -1408,3 +1471,7 @@ function updateFontSizeUI(size) {
 // Make font size functions globally available
 window.applyFontSize = applyFontSize;
 window.updateFontSizeUI = updateFontSizeUI;
+
+// Make modal management functions globally available
+window.registerModal = registerModal;
+window.unregisterModal = unregisterModal;

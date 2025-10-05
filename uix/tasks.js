@@ -2483,15 +2483,15 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			dropZone.removeEventListener('dragleave', handleDragLeave);
 			dropZone.removeEventListener('drop', handleDrop);
 			document.removeEventListener('paste', handlePaste);
-			document.removeEventListener('keydown', handleEscKey);
 			modalOverlay.removeEventListener('click', clickOutsideHandler);
 			closeButton.removeEventListener('click', closeModalHandler);
+			// Unregister from modal stack
+			window.unregisterModal('attachments-modal');
 			closeAttachmentsModal();
 		};
 
-		const handleEscKey = (e) => {
-			if (e.key === 'Escape' && !isImageViewerOpen) closeModalHandler();
-		};
+		// Register attachments modal in modal stack
+		window.registerModal('attachments-modal', closeModalHandler);
 		
 		const clickOutsideHandler = (e) => {
 			if (e.target === modalOverlay) closeModalHandler();
@@ -2506,10 +2506,9 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			document.body.addEventListener(eventName, preventDefaults, false);
 		});
 		dropZone.addEventListener('dragenter', handleDragEnter, false);
-		dropZone.removeEventListener('dragleave', handleDragLeave, false);
+		dropZone.addEventListener('dragleave', handleDragLeave, false);
 		dropZone.addEventListener('drop', handleDrop, false);
 		document.addEventListener('paste', handlePaste, false);
-		document.addEventListener('keydown', handleEscKey, false);
 		modalOverlay.addEventListener('click', clickOutsideHandler);
 		closeButton.addEventListener('click', closeModalHandler);
 	} finally {
@@ -2676,6 +2675,12 @@ async function openFileManagementModal() {
 
 		listContainer.innerHTML = '<p>Loading...</p>';
 		modalOverlay.classList.remove('hidden');
+		
+		// Register file management modal in modal stack
+		window.registerModal('file-management-modal', () => {
+			window.unregisterModal('file-management-modal');
+			closeFileManagementModal();
+		});
 
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
@@ -2780,6 +2785,8 @@ function closeFileManagementModal() {
 			delete modalOverlay._cleanup;
 		}
 		modalOverlay.classList.add('hidden');
+		// Unregister from modal stack
+		window.unregisterModal('file-management-modal');
 	}
 }
 
@@ -2911,6 +2918,12 @@ async function openFileManagementModal() {
 
 		listContainer.innerHTML = '<p>Loading...</p>';
 		modalOverlay.classList.remove('hidden');
+		
+		// Register file management modal in modal stack
+		window.registerModal('file-management-modal', () => {
+			window.unregisterModal('file-management-modal');
+			closeFileManagementModal();
+		});
 
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
@@ -3015,6 +3028,8 @@ function closeFileManagementModal() {
 			delete modalOverlay._cleanup;
 		}
 		modalOverlay.classList.add('hidden');
+		// Unregister from modal stack
+		window.unregisterModal('file-management-modal');
 	}
 }
 
@@ -3675,9 +3690,15 @@ function exitMoveMode() {
 	 if (timeoutButton && timeoutModal) {
 		 timeoutButton.addEventListener('click', () => {
 			 timeoutModal.classList.remove('hidden');
+			 // Register session timeout modal in modal stack
+			 window.registerModal('session-timeout-modal', () => {
+				 window.unregisterModal('session-timeout-modal');
+				 timeoutModal.classList.add('hidden');
+			 });
 		 });
 		 
 		 cancelButton?.addEventListener('click', () => {
+			 window.unregisterModal('session-timeout-modal');
 			 timeoutModal.classList.add('hidden');
 		 });
 		 
@@ -3685,6 +3706,7 @@ function exitMoveMode() {
 			 const selectedValue = timeoutModal.querySelector('input[name="timeout"]:checked')?.value;
 			 if (selectedValue) {
 				 saveSessionTimeout(selectedValue);
+				 window.unregisterModal('session-timeout-modal');
 				 timeoutModal.classList.add('hidden');
 			 }
 		 });
@@ -3692,6 +3714,7 @@ function exitMoveMode() {
 		 // Close modal on overlay click
 		 timeoutModal.addEventListener('click', (e) => {
 			 if (e.target === timeoutModal) {
+				 window.unregisterModal('session-timeout-modal');
 				 timeoutModal.classList.add('hidden');
 			 }
 		 });
