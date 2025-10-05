@@ -162,6 +162,21 @@ body.light-mode #app-header .btn-header:hover {
 	gap: 1rem;
 }
 
+.user-info-display {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	color: var(--text-primary);
+	font-size: 0.9rem;
+	font-weight: 500;
+}
+
+/* Footer button styling for + New Column */
+#app-footer #btn-add-column {
+	font-size: 0.9rem;
+	padding: 0.5rem 1rem;
+}
+
 #app-title {
 	font-size: 1.5rem;
 	font-weight: 500;
@@ -205,8 +220,27 @@ body.light-mode #app-header .btn-header:hover {
 }
 
 .footer-right a {
-	color: var(--toast-error-bg);
+	color: #ef4444 !important; /* Always red regardless of theme */
 	text-decoration: none;
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	transition: opacity 0.2s ease;
+}
+
+.footer-right a:hover {
+	opacity: 0.8;
+}
+
+.footer-right a::before {
+	content: '';
+	width: 16px;
+	height: 16px;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ef4444' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4'/%3E%3Cpolyline points='16,17 21,12 16,7'/%3E%3Cline x1='21' y1='12' x2='9' y2='12'/%3E%3C/svg%3E");
+	background-size: contain;
+	background-repeat: no-repeat;
+	background-position: center;
+	flex-shrink: 0;
 }
 
 /* Elegant DEV_MODE indicator - subtle border accent instead of red ribbon */
@@ -249,10 +283,15 @@ body.light-mode #app-footer.dev-mode a:hover {
 	color: var(--accent-color) !important; /* Green hover state */
 }
 
-.footer-left span + span::before,
-.footer-right span + a::before {
+.footer-left span + span::before {
 	content: '|';
 	margin: 0 0.25rem 0 -0.25rem;
+	color: var(--border-color);
+}
+
+.footer-right span::after {
+	content: '|';
+	margin: 0 0.25rem;
 	color: var(--border-color);
 }
 
@@ -692,7 +731,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 
 #filter-menu {
 	position: absolute;
-	background-color: var(--column-bg);
+	background-color: var(--card-bg);
 	border: 1px solid var(--card-border);
 	border-radius: 8px;
 	box-shadow: 0 5px 15px rgba(0,0,0,0.3);
@@ -775,6 +814,17 @@ input:checked + .slider:before {
 
 .slider.round:before {
 	border-radius: 50%;
+}
+
+/* Light mode specific filter menu styling */
+body.light-mode #filter-menu {
+	background-color: #ffffff;
+	border: 1px solid #e5e7eb;
+	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
+}
+
+body.light-mode .filter-label {
+	color: #1a1a1a;
 }
 
 /* ==========================================================================

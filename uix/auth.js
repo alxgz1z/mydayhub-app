@@ -9,6 +9,9 @@
  * @author Alex & Gemini & Claude
  */
 document.addEventListener('DOMContentLoaded', () => {
+	// Initialize theme system for auth pages
+	initAuthThemeSystem();
+	
 	// Shared elements for all forms
 	const messageContainer = document.getElementById('message-container');
 
@@ -299,3 +302,55 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}
 });
+
+/**
+ * Initialize theme system for authentication pages
+ */
+function initAuthThemeSystem() {
+	// Load saved theme preference or default to dark
+	const savedTheme = localStorage.getItem('auth_theme') || 'dark';
+	applyAuthTheme(savedTheme);
+	
+	// Set up theme selector buttons
+	const themeButtons = document.querySelectorAll('.theme-btn');
+	themeButtons.forEach(button => {
+		button.addEventListener('click', () => {
+			const theme = button.dataset.theme;
+			applyAuthTheme(theme);
+			saveAuthTheme(theme);
+		});
+	});
+}
+
+/**
+ * Apply theme to authentication pages
+ */
+function applyAuthTheme(theme) {
+	// Remove existing theme classes
+	document.body.classList.remove('light-mode', 'dark-mode', 'high-contrast');
+	
+	// Apply new theme class
+	if (theme === 'light') {
+		document.body.classList.add('light-mode');
+	} else if (theme === 'high-contrast') {
+		document.body.classList.add('high-contrast');
+	} else {
+		document.body.classList.add('dark-mode');
+	}
+	
+	// Update theme selector buttons
+	const themeButtons = document.querySelectorAll('.theme-btn');
+	themeButtons.forEach(button => {
+		button.classList.remove('active');
+		if (button.dataset.theme === theme) {
+			button.classList.add('active');
+		}
+	});
+}
+
+/**
+ * Save theme preference for authentication pages
+ */
+function saveAuthTheme(theme) {
+	localStorage.setItem('auth_theme', theme);
+}

@@ -74,7 +74,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Beta 7.3 - Tamarindo');
+define('APP_VER', '🏖️ Tamarindo');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---

@@ -141,6 +141,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	if (typeof initTasksView === 'function') {
 		initTasksView();
+		// Ensure date is updated after tasks view loads
+		setTimeout(updateFooterDate, 100);
 	}
 });
 
@@ -547,20 +549,26 @@ function closeChangePasswordModal() {
 // ==========================================================================
 
 /**
- * Updates the date in the footer to the current date in "dd mmm yy" format.
+ * Updates the date in both header and footer to the current date in "dd mmm yy" format.
  */
 function updateFooterDate() {
-	const dateEl = document.getElementById('footer-date');
-	if (!dateEl) return;
-
+	const footerDateEl = document.getElementById('footer-date');
+	const headerDateEl = document.getElementById('header-date');
+	
 	const now = new Date();
 	const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 	
 	const day = String(now.getDate()).padStart(2, '0');
 	const month = months[now.getMonth()];
 	const year = String(now.getFullYear()).slice(-2);
+	const dateString = `${day} ${month} ${year}`;
 
-	dateEl.textContent = `${day} ${month} ${year}`;
+	if (footerDateEl) {
+		footerDateEl.textContent = dateString;
+	}
+	if (headerDateEl) {
+		headerDateEl.textContent = dateString;
+	}
 }
 
 

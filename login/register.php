@@ -19,6 +19,14 @@ require_once __DIR__ . '/../incs/config.php';
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Register - MyDayHub</title>
 	<link rel="stylesheet" href="../uix/login.css">
+	<!-- Favicon and App Icons -->
+	<link rel="icon" type="image/svg+xml" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="16x16" href="../media/leaf.svg">
+	<link rel="apple-touch-icon" href="../media/leaf.svg">
+	<link rel="apple-touch-icon" sizes="180x180" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="192x192" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="512x512" href="../media/leaf.svg">
 
 	<script>
 		window.MyDayHub_Config = {
@@ -28,7 +36,15 @@ require_once __DIR__ . '/../incs/config.php';
 </head>
 <body>
 
+	<!-- Theme Selector -->
+	<div class="auth-theme-selector">
+		<button class="theme-btn active" data-theme="dark">Dark</button>
+		<button class="theme-btn" data-theme="light">Light</button>
+		<button class="theme-btn" data-theme="high-contrast">High Contrast</button>
+	</div>
+
 	<div class="auth-container">
+		<img src="../media/leaf.svg" alt="MyDayHub Logo" class="auth-logo">
 		<h1>Create Account</h1>
 
 		<div id="message-container"></div>

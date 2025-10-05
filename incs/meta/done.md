@@ -1422,6 +1422,54 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 
 **Status** Theme system overhaul complete with modern green accent color scheme. Completion sound feature fully functional with user controls. Task sorting issues resolved with proper completion/uncompletion reordering. Application now provides polished, consistent user experience across all themes.
 
+---
+
+**2025-01-04 - Authentication Pages Theme System & UI Polish**
+
+**Key work**
+* **Complete Authentication Pages Theme Integration:**
+  * Implemented comprehensive theme system for all login pages (login, register, forgot-password, reset-password)
+  * Added floating theme selector with Dark, Light, and High-Contrast modes using CSS variables
+  * Integrated leaf.svg logo across all authentication pages with proper 80px sizing
+  * Enhanced login.css with complete CSS variables system matching main app themes
+  * Added persistent theme preferences using localStorage for seamless user experience
+* **Task Card Contextual Menu Fix:**
+  * Resolved light mode contrast issues in task card contextual menus
+  * Updated menu styling to use theme-aware CSS variables instead of hardcoded dark colors
+  * Enhanced menu appearance with proper white background and dark text in light mode
+* **Header/Footer Layout Optimization:**
+  * Swapped UI elements: moved user info ([username] date) to header-right, +New Column to footer-left
+  * Updated date display function to handle both header and footer locations
+  * Enhanced responsive layout with proper spacing and alignment
+* **Logout Link Enhancement:**
+  * Styled logout link with consistent red color (#ef4444) across all themes
+  * Added power symbol icon using inline SVG with proper 16px sizing
+  * Implemented hover effects and smooth transitions for better UX
+* **Comprehensive Icon Support:**
+  * Added complete favicon and app icon support to all authentication pages
+  * Implemented multiple icon sizes for various devices and platforms
+  * Ensured consistent branding across all entry points
+
+**Technical Implementation**
+* **CSS Architecture:** Extended theme system with comprehensive CSS custom properties for authentication pages
+* **Theme Persistence:** Dual-layer persistence (localStorage + backend) for reliable cross-session state
+* **SVG Integration:** Proper leaf.svg integration with natural display (removed aggressive CSS filters)
+* **JavaScript Enhancement:** Added auth-specific theme management functions in auth.js
+* **Responsive Design:** All authentication pages now fully responsive with theme-aware styling
+
+**Files Modified**
+* `/uix/login.css` - Complete theme system overhaul with CSS variables
+* `/uix/auth.js` - Added theme management functions for authentication pages
+* `/login/login.php` - Added logo, theme selector, and comprehensive icon support
+* `/login/register.php` - Added logo, theme selector, and comprehensive icon support
+* `/login/forgot-password.php` - Added logo, theme selector, and comprehensive icon support
+* `/login/reset-password.php` - Added logo, theme selector, and comprehensive icon support
+* `/uix/style.css` - Enhanced contextual menu styling and logout link with power icon
+* `/uix/app.js` - Updated date display function for header/footer swap
+* `/index.php` - Swapped header/footer elements and enhanced layout
+
+**Status** Authentication pages now fully integrated with main app theme system. All login pages feature consistent branding, theme switching, and professional appearance. Task card contextual menus properly styled for all themes. Header/footer layout optimized for better user experience. Logout functionality enhanced with clear visual indicators.
+
 **Recommended next steps (priority order)**
 **1** **Zero-Knowledge Architecture Foundation:** Begin implementing the encryption foundation with per-item DEKs and Master Key wrapping as specified in the roadmap
 **2** **Sharing Permission System:** Complete recipient permission restrictions for shared task actions (view vs edit vs owner rights)
@@ -1436,6 +1484,8 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 * Task sorting implements robust DOM update timing to handle async operations
 * Settings persistence uses dual-layer approach (localStorage + backend) for reliability
 * Green accent color scheme maintains accessibility compliance with proper contrast ratios
+* Authentication pages fully integrated with main app theme system using consistent CSS architecture
+* Logo integration uses natural SVG display without aggressive CSS filters for optimal appearance
 
 ---
 

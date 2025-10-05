@@ -16,6 +16,14 @@ $token = $_GET['token'] ?? '';
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Reset Password - MyDayHub</title>
 	<link rel="stylesheet" href="../uix/login.css">
+	<!-- Favicon and App Icons -->
+	<link rel="icon" type="image/svg+xml" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="16x16" href="../media/leaf.svg">
+	<link rel="apple-touch-icon" href="../media/leaf.svg">
+	<link rel="apple-touch-icon" sizes="180x180" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="192x192" href="../media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="512x512" href="../media/leaf.svg">
 	<script>
 		// Expose the app URL to our JavaScript file.
 		window.MyDayHub_Config = {
@@ -25,7 +33,15 @@ $token = $_GET['token'] ?? '';
 </head>
 <body>
 
+	<!-- Theme Selector -->
+	<div class="auth-theme-selector">
+		<button class="theme-btn active" data-theme="dark">Dark</button>
+		<button class="theme-btn" data-theme="light">Light</button>
+		<button class="theme-btn" data-theme="high-contrast">High Contrast</button>
+	</div>
+
 	<div class="auth-container">
+		<img src="../media/leaf.svg" alt="MyDayHub Logo" class="auth-logo">
 		<h1>Set New Password</h1>
 
 		<div id="message-container"></div>

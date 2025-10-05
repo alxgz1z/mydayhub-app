@@ -36,7 +36,15 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
 	<title>MyDayHub</title>
-	<link rel="icon" type="image/svg+xml" href="media/logo.svg">
+	
+	<!-- Favicon and App Icons -->
+	<link rel="icon" type="image/svg+xml" href="media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="16x16" href="media/leaf.svg">
+	<link rel="apple-touch-icon" href="media/leaf.svg">
+	<link rel="apple-touch-icon" sizes="180x180" href="media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="192x192" href="media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="512x512" href="media/leaf.svg">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css">
@@ -63,11 +71,12 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</svg>
 				</button>
 				<h1 id="app-title">MyDayHub</h1>
-				<img src="media/logo.svg" alt="MyDayHub Logo" id="header-logo">
+				<img src="media/leaf.svg" alt="MyDayHub Logo" id="header-logo">
 			</div>
 			<div class="header-right">
-				<div id="add-column-container">
-					<button id="btn-add-column" class="btn-header">+ New Column</button>
+				<div class="user-info-display">
+					<span>[<?php echo htmlspecialchars($username); ?>]</span>
+					<span id="header-date"></span>
 				</div>
 			</div>
 		</header>
@@ -88,8 +97,9 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</svg>
 				</a>
 				<?php endif; ?>
-				<span>[<?php echo htmlspecialchars($username); ?>]</span>
-				<span id="footer-date"></span>
+				<div id="add-column-container">
+					<button id="btn-add-column" class="btn-header">+ New Column</button>
+				</div>
 			</div>
 			<div class="footer-center">
 				<button id="btn-filters" class="btn-footer-icon" title="Show Filters">

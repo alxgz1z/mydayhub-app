@@ -917,6 +917,7 @@ CREATE TABLE sharing_activity (
 - `/uix/editor.css` - Unified Editor interface  
 - `/uix/attachments.css` - File management UI
 - `/uix/settings.css` - Settings panel styling
+- `/uix/login.css` - Authentication pages theme system and styling
 
 #### 5.4.3 Progressive Web App Features
 
@@ -1380,12 +1381,33 @@ mydayhub-app/
 │       └── dialogs.md        # Design decision discussions
 │
 └── login/                     # Authentication pages
-	├── login.php             # User login form
-	├── register.php          # User registration form
+	├── login.php             # User login form with theme system
+	├── register.php          # User registration form with theme system
 	├── logout.php            # Session termination
-	├── forgot-password.php   # Password reset request
-	└── reset-password.php    # Password reset completion
+	├── forgot-password.php   # Password reset request with theme system
+	└── reset-password.php    # Password reset completion with theme system
 ```
+
+#### 6.5.2 Authentication Pages Implementation
+
+**Theme Integration:**
+All authentication pages implement the complete theme system with:
+- **CSS Variables:** Full integration with main app theme variables for Dark, Light, and High-Contrast modes
+- **Theme Selector:** Floating theme selector in top-right corner for user preference
+- **Persistent Preferences:** Theme selection saved to localStorage for cross-session consistency
+- **Logo Integration:** Consistent leaf.svg branding across all authentication pages
+
+**Visual Design:**
+- **Responsive Layout:** Mobile-first design with proper scaling
+- **Brand Consistency:** Logo, colors, and typography match main application
+- **Accessibility:** High-contrast mode support with proper color ratios
+- **User Experience:** Smooth transitions and hover effects throughout
+
+**Technical Architecture:**
+- **CSS Architecture:** `/uix/login.css` provides complete theme system for authentication pages
+- **JavaScript Integration:** `/uix/auth.js` handles theme management and form interactions
+- **Icon Support:** Comprehensive favicon and app icon implementation
+- **Cross-Platform:** Consistent appearance across all devices and browsers
 
 ### 6.6 Development Workflow & Testing
 
