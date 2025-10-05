@@ -2068,8 +2068,573 @@ WHERE u.id IS NULL;
 * **Wiki mode**: Multi-user edits with per-field authorship and conflict prompts.
 
 ⠀10) Success metrics
-* Time to answer: “Who buys X? Where are we weak?” → under 30 seconds.
+* Time to answer: "Who buys X? Where are we weak?" → under 30 seconds.
 * Coverage: # of customers/use cases mapped after 30 days.
 * Insight yield: # of whitespace/opportunity views saved per week.
 
+
+# ON Calendar Overlay Feature Implementation
+
+**ALEX ASKED:**
+
+Read the Calendar Overlay function described in the spec.md document. It was originally intended to be presented in the header of Journal Columns as a badge similar to how we show badges in the taskcards (see attachment). That view hasn't been developed. But the Calendar Overlay is a very useful feature. We can show that badge between the [user] and the date (dd mmm yy) in the title bar. Please let me know how you think we could develop that feature. By the way, with this feature we would move the app to 7.4 being this a completally new addition.
+
+**ASSISTANT SAID:**
+
+Let me first read the Calendar Overlay function specification from the spec.md document to understand the intended functionality.
+
+[Analysis of spec.md revealed no specific "Calendar Overlay" function described, but found references to Journal view being planned for the future]
+
+Perfect! I can see the current header structure. Now let me propose how we could implement the Calendar Overlay feature:
+
+## **📅 Calendar Overlay Feature Implementation Proposal**
+
+### **🎯 Feature Overview:**
+A calendar badge in the header that provides quick date navigation and task filtering by date. This would be positioned between the user info `[username]` and the current date `dd mmm yy`.
+
+### **🏗️ Implementation Architecture:**
+
+#### **1. Header Layout Enhancement:**
+```html
+<div class="header-right">
+    <div class="user-info-display">
+        <span>[username]</span>
+        <div class="calendar-badge" id="calendar-badge">
+            <svg><!-- calendar icon --></svg>
+        </div>
+        <span id="header-date"></span>
+    </div>
+</div>
+```
+
+#### **2. Calendar Badge Design:**
+- **Visual Style**: Similar to task card badges (green background, white icon)
+- **Icon**: Calendar icon (📅) or SVG calendar symbol
+- **Positioning**: Between username and date with proper spacing
+- **Hover Effect**: Subtle scale/glow effect indicating interactivity
+
+#### **3. Calendar Overlay Modal:**
+- **Trigger**: Click on calendar badge
+- **Layout**: Mini calendar view (month grid)
+- **Functionality**: 
+  - Navigate between months
+  - Select specific dates
+  - Filter tasks by due dates
+  - Quick date shortcuts (Today, Tomorrow, This Week, Next Week)
+
+#### **4. Task Filtering Integration:**
+- **Date-based filtering**: Show tasks due on selected date
+- **Visual indicators**: Highlight dates with due tasks
+- **Integration**: Works with existing filter system
+
+### **🔧 Technical Implementation:**
+
+#### **Phase 1: Basic Calendar Badge**
+1. **Add calendar badge to header**
+2. **Style with consistent badge design**
+3. **Add hover effects and click handler**
+
+#### **Phase 2: Calendar Modal**
+1. **Create calendar overlay modal**
+2. **Implement month navigation**
+3. **Add date selection functionality**
+
+#### **Phase 3: Task Integration**
+1. **Query tasks with due dates**
+2. **Highlight dates with due tasks**
+3. **Filter tasks by selected date**
+
+#### **Phase 4: Enhanced Features**
+1. **Quick date shortcuts**
+2. **Task count indicators on calendar**
+3. **Drag-and-drop date assignment**
+
+### **💡 User Experience Flow:**
+1. **User sees calendar badge** in header between username and date
+2. **Clicks calendar badge** → Calendar overlay opens
+3. **Selects a date** → Tasks filter to show items due on that date
+4. **Calendar shows indicators** for dates with due tasks
+5. **Click outside or ESC** → Calendar closes, filter resets
+
+### **🎨 Visual Design:**
+- **Badge Style**: Green accent color with white calendar icon
+- **Modal Design**: Consistent with existing modal system
+- **Calendar Grid**: Clean month view with hover states
+- **Date Indicators**: Small dots/counts for dates with tasks
+- **Selected Date**: Highlighted with accent color
+
+### **📱 Responsive Considerations:**
+- **Mobile**: Touch-friendly calendar grid
+- **Desktop**: Hover states and keyboard navigation
+- **Tablet**: Optimized touch targets
+
+### **🔄 Integration Points:**
+- **Existing Filter System**: Extends current filter functionality
+- **Task Due Dates**: Leverages existing due date system
+- **Modal Management**: Uses new modal stack system
+- **Theme System**: Respects current theme preferences
+
+### **📊 Database Considerations:**
+- **Task Due Dates**: Already stored in `due_date` field
+- **Query Optimization**: Index on `due_date` for fast filtering
+- **Date Range Queries**: Efficient month/week filtering
+
+## **🚀 Development Approach:**
+
+### **Version 7.4 Scope:**
+This would indeed be a significant new feature worthy of a version bump to 7.4. It adds:
+- **New UI Component**: Calendar badge in header
+- **New Modal System**: Calendar overlay
+- **Enhanced Filtering**: Date-based task filtering
+- **Improved Navigation**: Quick date access
+
+### **Implementation Priority:**
+1. **Start with basic calendar badge** (visual presence)
+2. **Add calendar modal** (core functionality)
+3. **Integrate with task filtering** (main value)
+4. **Enhance with advanced features** (polish)
+
+Would you like me to proceed with implementing this Calendar Overlay feature? I can start with Phase 1 (basic calendar badge) and then build up to the full functionality. This would be an excellent addition to the app and would provide users with quick date-based navigation and filtering! 📅✨
+
+**ALEX CLARIFIED:**
+
+This calendar overlay feature doesn't have any purpose of filtering tasks. it's only the informative part. here's another piece of information for further refining the understanding of this feature and thus improving the proposal for implementation:
+
+********************************************************************************
+## ABOUT Calendars Overlays
+
+*Alex asked:*
+
+hey. exploring a different feature. take a look at the calendar attached. do you have a way to convert that calendar into some format, maybe JSON, that we could load to the database and use to show alternate calendar nomenclatures along the regular calendar in the journal view? It doesn't necessarily have to be a full calendar, but maybe a label corresponding to that Gregorian calendar date. So it could be birthdays, holidays or similar. The one attached just happens to have a nomenclature of fiscal quarter, months and weeks. So for calendar day we could add a label in the column header that describer those parts of the calendar attached. For example: Q1-M2-Wk7 would be the label for all the days from September 7th to September 13th 2025. What are your thoughts about this?
+
+*LLM said:*
+
+Of course, Alex. That's an excellent and powerful idea for enhancing the calendar's context. Adding an alternative, user-defined calendar nomenclature on top of the standard Gregorian calendar is a great way to make the tool more versatile.
+
+The Concept & The Challenge
+
+Your proposal is entirely feasible. The goal would be to have a data source that defines a label for a specific range of dates. The Journal view would then check if a date falls within any of these ranges and, if so, display the corresponding label in the column header.
+The primary challenge is that, as an AI, I cannot automatically "read" or convert the attached image of the fiscal calendar into a data format like JSON. The data from the calendar image needs to be manually transcribed into a structured format first.
+
+The Plan
+
+Here is a high-level plan for how we could implement this feature:
+1. Create the Data File: The first step is to manually create a data file (JSON is a perfect choice) that contains the calendar information. The structure would be an array of "event" objects, each with a start date, an end date, and the label to be displayed.
+2. Database & API: We would then create a new table in the database to store this custom calendar data and a new API endpoint in the api/ folder to allow the front-end to fetch it.
+3. Front-End Integration: Finally, we would update the renderJournalBoard function in app.js. When it builds the journal columns, it would fetch this new data and display the appropriate labels in the column headers.
+
+
+Data Structure Example
+
+To get started, we would need to create a JSON file with the data from your fiscal calendar. Based on your example and the attached calendar, the structure would look like this.
+(Note: In the provided fiscal calendar, the week of Sep 7 - Sep 13, 2025, falls in Month 3, Week 6 of Q1).
+JSON
+
+[
+  {
+	"startDate": "2025-07-01",
+	"endDate": "2025-07-05",
+	"label": "Q1-M1-Wk1"
+  },
+  {
+	"startDate": "2025-07-06",
+	"endDate": "2025-07-12",
+	"label": "Q1-M1-Wk2"
+  },
+  {
+	"startDate": "2025-09-07",
+	"endDate": "2025-09-13",
+	"label": "Q1-M3-Wk6"
+  },
+  {
+	"startDate": "2025-12-28",
+	"endDate": "2026-01-03",
+	"label": "Q2-M3-Wk13"
+  }
+]
+What are your thoughts on this approach? If you agree, the first step would be for you to create this JSON data file by transcribing the information from your fiscal calendar image.
+
+
+*Alex replied:*
+
+I like. it. However, it is not clear to me how we add other events. For example Holidays. Wouldn't it be faster to have as many records of a date as needed for each thing happening the date so instead of entering ranges, each date is entered separately. Also. It'd be great to be able to add and remove events for a date.
+
+*LLM responded:*
+
+Of course, Alex. Those are excellent points that get to the heart of making this a truly flexible and useful feature. Let's refine the plan.
+
+Handling Multiple Event Types (e.g., Holidays)
+
+You're right, my initial proposal didn't clearly account for different types of events. We can easily solve this by adding a "type" field to our data structure. This will allow us to categorize events and even style them differently in the future.
+For example:
+JSON
+
+[
+  {
+	"startDate": "2025-12-25",
+	"endDate": "2025-12-25",
+	"label": "Christmas Day",
+	"type": "holiday"
+  },
+  {
+	"startDate": "2025-09-07",
+	"endDate": "2025-09-13",
+	"label": "Q1-M3-Wk6",
+	"type": "fiscal"
+  }
+]
+
+
+Ranges vs. Single Dates
+
+You raised a great question about using ranges versus single-day records.
+While single-day records seem simpler for holidays, using a date range is actually more powerful and efficient because it can handle both single-day and multi-day events perfectly.
+* For a multi-day label like a fiscal week, one record with a startDate and endDate covers all seven days.
+* For a single-day event like a holiday, we simply make the startDate and endDate the same, as shown in the "Christmas Day" example above.
+My recommendation is to stick with the date range structure as it's the most flexible and efficient solution for all event types.
+
+
+Adding and Removing Events
+
+The ability to manage these events directly from the app is a fantastic goal. This is a larger feature that would involve building a new "Event Manager" interface, likely in its own modal, and updating the API to handle creating and deleting events.
+I suggest we implement this in two phases:
+1. Phase 1 (Display Logic): First, we'll build the core functionality to simply display the labels from a manually created JSON file. This ensures the main feature works perfectly.
+2. Phase 2 (Management UI): After Phase 1 is complete, we can then build the "Event Manager" interface that will allow you to add, edit, and delete events without touching the JSON file directly.
+Does this two-phase approach sound good to you? If so, the next step is still to manually create the initial JSON data file for your fiscal calendar so we have data to work with for Phase 1.
+
+**ASSISTANT REVISED PROPOSAL:**
+
+Thank you for this crucial clarification! Now I understand the Calendar Overlay feature much better. It's purely **informational** - showing alternative calendar nomenclatures (like fiscal quarters, holidays, birthdays) as labels in the journal view headers, not for task filtering.
+
+## **📅 Revised Calendar Overlay Implementation Proposal**
+
+Based on this clarification, let me completely revise the implementation proposal. The Calendar Overlay is an **informational system** for displaying alternative calendar nomenclatures, not a task filtering tool.
+
+### **🎯 Corrected Understanding:**
+
+The Calendar Overlay feature is designed to:
+1. **Display Alternative Calendar Labels**: Show fiscal quarters, holidays, birthdays, etc. as badges in journal column headers
+2. **Informational Only**: No filtering or interaction with tasks
+3. **Multiple Event Types**: Support different calendar types (fiscal, holidays, birthdays, etc.)
+4. **User Management**: Allow users to add/remove calendar events for specific dates
+
+### **🏗️ Revised Implementation Architecture:**
+
+#### **1. Calendar Badge in Header (Informational Display)**
+```html
+<div class="header-right">
+    <div class="user-info-display">
+        <span>[username]</span>
+        <div class="calendar-badge" id="calendar-badge">
+            <svg class="calendar-icon"><!-- calendar icon --></svg>
+            <span class="calendar-indicator" id="calendar-indicator"></span>
+        </div>
+        <span id="header-date"></span>
+    </div>
+</div>
+```
+
+**Purpose**: Show that calendar overlays are available and indicate if there are active calendar events for the current date.
+
+#### **2. Calendar Overlay Modal (Event Management)**
+```html
+<div id="calendar-overlay-modal" class="modal-overlay hidden">
+    <div class="calendar-modal-container">
+        <div class="calendar-modal-header">
+            <h3>Calendar Events</h3>
+            <button class="close-modal-btn" data-target-modal="calendar-overlay-modal">×</button>
+        </div>
+        
+        <div class="calendar-modal-content">
+            <!-- Current Date Events -->
+            <div class="current-date-events">
+                <h4>Today's Events</h4>
+                <div class="events-list" id="today-events-list">
+                    <!-- Events for current date -->
+                </div>
+            </div>
+            
+            <!-- Calendar Management -->
+            <div class="calendar-management-section">
+                <button class="btn btn-primary" id="manage-calendars-btn">Manage Calendars</button>
+                <button class="btn btn-secondary" id="add-event-btn">Add Event</button>
+            </div>
+            
+            <!-- Mini Calendar with Event Indicators -->
+            <div class="calendar-preview">
+                <div class="calendar-grid">
+                    <!-- Mini calendar showing current month with event indicators -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+#### **3. Calendar Management Modal**
+```html
+<div id="calendar-management-modal" class="modal-overlay hidden">
+    <div class="calendar-management-container">
+        <div class="calendar-management-header">
+            <h3>Manage Calendar Events</h3>
+            <button class="close-modal-btn" data-target-modal="calendar-management-modal">×</button>
+        </div>
+        
+        <div class="calendar-management-content">
+            <!-- Calendar Event Types -->
+            <div class="calendar-types-section">
+                <h4>Calendar Types</h4>
+                <div class="calendar-type-toggles">
+                    <!-- Toggle visibility for different calendar types -->
+                </div>
+            </div>
+            
+            <!-- Add New Event -->
+            <div class="add-event-section">
+                <h4>Add New Event</h4>
+                <form id="add-event-form">
+                    <div class="form-group">
+                        <label>Event Type:</label>
+                        <select id="event-type" required>
+                            <option value="fiscal">Fiscal Calendar</option>
+                            <option value="holiday">Holiday</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="custom">Custom</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Event Label:</label>
+                        <input type="text" id="event-label" placeholder="e.g., Q1-M2-Wk7" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Start Date:</label>
+                        <input type="date" id="event-start-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>End Date:</label>
+                        <input type="date" id="event-end-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Color:</label>
+                        <input type="color" id="event-color" value="#22c55e">
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Event</button>
+                </form>
+            </div>
+            
+            <!-- Existing Events -->
+            <div class="existing-events-section">
+                <h4>Existing Events</h4>
+                <div class="events-list" id="existing-events-list">
+                    <!-- List of existing events with edit/delete options -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+```
+
+### **🔧 Technical Implementation:**
+
+#### **1. Database Schema**
+```sql
+-- Calendar events table
+CREATE TABLE IF NOT EXISTS calendar_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
+    label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
+    is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+
+-- User calendar preferences (which calendar types to show)
+CREATE TABLE IF NOT EXISTS user_calendar_preferences (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    calendar_type VARCHAR(50) NOT NULL,
+    is_visible BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_calendar (user_id, calendar_type),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+#### **2. API Endpoints**
+```php
+// /api/calendar_events.php - CRUD operations for calendar events
+// GET: Fetch events for a date range
+// POST: Create new calendar event
+// PUT: Update existing calendar event
+// DELETE: Delete calendar event
+
+// /api/calendar_preferences.php - Manage user calendar visibility preferences
+// GET: Fetch user's calendar preferences
+// PUT: Update calendar preferences
+```
+
+#### **3. Frontend JavaScript Functions**
+```javascript
+// Calendar overlay management
+function openCalendarOverlay()
+function closeCalendarOverlay()
+function renderCalendarPreview()
+function showTodaysEvents()
+
+// Calendar event management
+function openCalendarManagement()
+function addCalendarEvent(eventData)
+function editCalendarEvent(eventId)
+function deleteCalendarEvent(eventId)
+function toggleCalendarTypeVisibility(calendarType)
+
+// Event display (for future Journal View integration)
+function getEventsForDate(date)
+function renderEventBadges(events)
+function applyEventStyling(eventType, color)
+```
+
+### **🎨 Visual Design & UX:**
+
+#### **1. Calendar Badge States**
+- **Normal**: Green background with white calendar icon
+- **Has Events**: Small indicator dot showing events available for today
+- **Hover**: Tooltip showing today's events
+- **Click**: Opens calendar overlay modal
+
+#### **2. Event Badge Design (Future Journal View)**
+```css
+.calendar-event-badge {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 4px;
+    color: white;
+}
+
+.calendar-event-badge.fiscal {
+    background-color: #22c55e; /* Green */
+}
+
+.calendar-event-badge.holiday {
+    background-color: #ef4444; /* Red */
+}
+
+.calendar-event-badge.birthday {
+    background-color: #f97316; /* Orange */
+}
+
+.calendar-event-badge.custom {
+    background-color: #8b5cf6; /* Purple */
+}
+```
+
+#### **3. Calendar Overlay Modal Design**
+- **Clean Layout**: Simple, focused interface for event management
+- **Color Coding**: Different colors for different event types
+- **Visual Indicators**: Small dots on calendar preview for dates with events
+- **Responsive**: Works well on mobile and desktop
+
+### **🔄 Integration Points:**
+
+#### **1. Current App Integration**
+```javascript
+// Update header to show calendar badge
+function updateCalendarBadge() {
+    const today = new Date().toISOString().split('T')[0];
+    const todaysEvents = getEventsForDate(today);
+    
+    const badge = document.getElementById('calendar-badge');
+    const indicator = document.getElementById('calendar-indicator');
+    
+    if (todaysEvents.length > 0) {
+        indicator.textContent = todaysEvents.length;
+        indicator.style.display = 'block';
+        badge.title = `Today's events: ${todaysEvents.map(e => e.label).join(', ')}`;
+    } else {
+        indicator.style.display = 'none';
+        badge.title = 'Calendar Events';
+    }
+}
+```
+
+#### **2. Future Journal View Integration**
+```javascript
+// When Journal View is implemented, display event badges in column headers
+function renderJournalColumnHeader(date) {
+    const events = getEventsForDate(date);
+    const eventBadges = events.map(event => 
+        `<span class="calendar-event-badge ${event.event_type}" 
+                style="background-color: ${event.color}">
+            ${event.label}
+        </span>`
+    ).join('');
+    
+    return `
+        <div class="journal-header-content">
+            <h5>${formatDateWithDay(date)}</h5>
+            <div class="calendar-events-container">${eventBadges}</div>
+        </div>
+    `;
+}
+```
+
+### **📱 Responsive Considerations:**
+
+#### **1. Mobile Optimization**
+- **Touch Targets**: Large enough buttons for easy touch interaction
+- **Modal Sizing**: Calendar modal adapts to screen size
+- **Swipe Navigation**: Easy navigation between months
+
+#### **2. Desktop Enhancement**
+- **Keyboard Navigation**: Tab navigation through modal elements
+- **Hover States**: Rich hover effects for better UX
+- **Tooltips**: Detailed information on hover
+
+### **🚀 Implementation Phases:**
+
+#### **Phase 1: Basic Calendar Badge & Modal**
+- Add calendar badge to header
+- Create basic calendar overlay modal
+- Implement calendar event display for current date
+- Add calendar management modal
+
+#### **Phase 2: Calendar Event CRUD**
+- Implement calendar event creation
+- Add event editing and deletion
+- Implement calendar type visibility toggles
+- Add color coding for different event types
+
+#### **Phase 3: Calendar Preview & Management**
+- Add mini calendar preview in modal
+- Implement event indicators on calendar
+- Add bulk event management features
+- Implement event import/export
+
+#### **Phase 4: Future Journal View Integration**
+- Display event badges in journal column headers
+- Implement event filtering in journal view
+- Add event-based journal navigation
+- Implement shared calendar events
+
+### **💡 Key Benefits:**
+
+1. **Informational Display**: Shows alternative calendar nomenclatures without interfering with task management
+2. **Flexible Event Types**: Support for fiscal, holidays, birthdays, and custom events
+3. **User Control**: Users can manage their own calendar events
+4. **Future-Ready**: Architecture supports Journal View integration
+5. **Non-Intrusive**: Purely informational, doesn't affect task filtering or workflow
+
+This revised implementation focuses on the **informational aspect** of calendar overlays, providing users with alternative calendar nomenclatures while keeping the feature separate from task management functionality! 📅✨
+
+**ALEX SAID:**
+
+before we proceed with this plan, append this dialog to dialogs.md to leave traceability of this discussion. use the same divider and title style as in previous sections of that document.
 

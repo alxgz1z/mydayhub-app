@@ -1,6 +1,6 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.3 - Tamarindo
+**Version:** Beta 7.4 - Calendar Overlay
 **Audience:** Internal Development & Project Management  
 **Last Updated:** October 4, 2025
 
@@ -98,6 +98,14 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `deleteAttachment` (in tasks.php) - File deletion with storage recalculation
 - **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
 
+#### Calendar Overlay System
+- **[PLN]** `getCalendarEvents` (in calendar_events.php) - Fetch events for date range with user preferences
+- **[PLN]** `createCalendarEvent` (in calendar_events.php) - Create new calendar event with validation
+- **[PLN]** `updateCalendarEvent` (in calendar_events.php) - Update existing calendar event
+- **[PLN]** `deleteCalendarEvent` (in calendar_events.php) - Delete calendar event with ownership verification
+- **[PLN]** `getCalendarPreferences` (in calendar_preferences.php) - Fetch user calendar type visibility preferences
+- **[PLN]** `updateCalendarPreferences` (in calendar_preferences.php) - Update calendar type visibility settings
+
 #### Collaboration (Foundation)
 - **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
 - **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
@@ -163,6 +171,14 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Snoozed Task Visual Styling - Opacity and grayscale effects
 - **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
 - **[RDY]** Completion Sound Toggle - User-controllable audio feedback with persistence
+
+#### Calendar Overlay System
+- **[PLN]** Calendar Badge in Header - Informational display between username and date
+- **[PLN]** Calendar Overlay Modal - Event viewing and management interface
+- **[PLN]** Calendar Event Management - CRUD operations for calendar events
+- **[PLN]** Calendar Event Types - Fiscal, holiday, birthday, and custom event support
+- **[PLN]** Calendar Preferences - User visibility toggles for different calendar types
+- **[FUT]** Journal View Integration - Event badges in journal column headers
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
@@ -653,26 +669,120 @@ Shared tasks use server-side encryption to enable collaboration, representing a 
 
 ---
 
-### 4.5 Future Views (Deferred)
+### 4.5 Calendar Overlay System
+
+The Calendar Overlay system provides informational display of alternative calendar nomenclatures, enabling users to view fiscal quarters, holidays, birthdays, and custom calendar events alongside the standard Gregorian calendar.
+
+#### 4.5.1 Calendar Badge in Header
+
+**Visual Design:**
+- Green accent color badge positioned between username and date in header
+- Calendar icon with optional indicator dot for active events
+- Consistent with existing app design language and theme system
+- Hover tooltip showing today's calendar events
+
+**Interaction Model:**
+- Click to open calendar overlay modal
+- Badge state indicates presence of calendar events for current date
+- Non-intrusive informational display that doesn't interfere with task management
+
+#### 4.5.2 Calendar Event Management
+
+**Event Types:**
+- **Fiscal Calendar**: Quarter, month, and week labels (e.g., "Q1-M2-Wk7")
+- **Holidays**: Standard and custom holiday events
+- **Birthdays**: Personal and team member birthdays
+- **Custom Events**: User-defined calendar events
+
+**Data Structure:**
+- Date range-based events (start_date, end_date) for flexible multi-day support
+- Event type categorization for color coding and organization
+- User-specific events with optional public sharing capability
+- Color customization per event type
+
+**Management Interface:**
+- Calendar overlay modal for event viewing and management
+- Calendar management modal for CRUD operations
+- Mini calendar preview with event indicators
+- Bulk event management and import/export capabilities
+
+#### 4.5.3 Database Schema
+
+**Calendar Events Table:**
+```sql
+CREATE TABLE calendar_events (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
+    label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
+    is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+**User Calendar Preferences Table:**
+```sql
+CREATE TABLE user_calendar_preferences (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    calendar_type VARCHAR(50) NOT NULL,
+    is_visible BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_calendar (user_id, calendar_type),
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
+
+#### 4.5.4 API Endpoints
+
+**Calendar Events API (`/api/calendar_events.php`):**
+- `GET`: Fetch events for a date range with user preferences
+- `POST`: Create new calendar event with validation
+- `PUT`: Update existing calendar event
+- `DELETE`: Delete calendar event with ownership verification
+
+**Calendar Preferences API (`/api/calendar_preferences.php`):**
+- `GET`: Fetch user's calendar type visibility preferences
+- `PUT`: Update calendar type visibility settings
+
+#### 4.5.5 Future Journal View Integration
+
+**Event Badge Display:**
+- Calendar events displayed as color-coded badges in journal column headers
+- Multiple event badges supported per date
+- Event type-based color coding (fiscal=green, holiday=red, birthday=orange, custom=purple)
+
+**Visual Integration:**
+- Seamless integration with journal column header design
+- Responsive badge layout for multiple events per date
+- Hover tooltips for event details
+- Consistent with existing badge system in task cards
+
+### 4.6 Future Views (Deferred)
 
 While current development focuses exclusively on Tasks, the architecture supports planned expansion:
 
-#### 4.5.1 Journal View (Future)
+#### 4.6.1 Journal View (Future)
 - Chronological daily layout with 1-day, 3-day, 5-day modes
 - Entry cards with timeline navigation
 - Integration with task attachments and due dates
 
-#### 4.5.2 Outlines View (Future)  
+#### 4.6.2 Outlines View (Future)  
 - Hierarchical tree structure for idea organization
 - Expand/collapse functionality with infinite nesting
 - Linking integration with tasks and journal entries
 
-#### 4.5.3 Events View (Future)
+#### 4.6.3 Events View (Future)
 - Multi-day event planning with timeline visualization
 - Segment management with participant tracking
 - Resource allocation and location management
 
-#### 4.6.1 Architecture Approach
+#### 4.6.4 Architecture Approach
 
 **Database Schema:**
 - New `task_note_history` table: `id`, `task_id`, `user_id`, `note_content`, `created_at`, `action_type`
@@ -685,7 +795,7 @@ While current development focuses exclusively on Tasks, the architecture support
 - History entries format: "Updated by [user] on [date]" with expandable content
 - Read-only view of all previous versions
 
-#### 4.6.2 Implementation Benefits
+#### 4.6.5 Implementation Benefits
 
 **Advantages over full multi-note system:**
 - Maintains current familiar UX patterns
@@ -897,7 +1007,39 @@ CREATE TABLE sharing_activity (
 );
 ```
 
+#### 5.3.5 Calendar Overlay System
 
+**calendar_events table:**
+```sql
+CREATE TABLE calendar_events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
+  label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
+  start_date DATE NOT NULL,
+  end_date DATE NOT NULL,
+  color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
+  is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+  INDEX ix_user_dates (user_id, start_date, end_date),
+  INDEX ix_event_type (event_type)
+);
+```
+
+**user_calendar_preferences table:**
+```sql
+CREATE TABLE user_calendar_preferences (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  user_id INT NOT NULL,
+  calendar_type VARCHAR(50) NOT NULL,
+  is_visible BOOLEAN DEFAULT TRUE,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY unique_user_calendar (user_id, calendar_type),
+  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+);
+```
 
 ### 5.4 Frontend Architecture
 
@@ -1412,8 +1554,8 @@ mydayhub-app/
 	├── login.php             # User login form with theme system
 	├── register.php          # User registration form with theme system
 	├── logout.php            # Session termination
-	├── forgot-password.php   # Password reset request with theme system
-	└── reset-password.php    # Password reset completion with theme system
+	├── forgot.php   # Password reset request with theme system
+	└── reset.php    # Password reset completion with theme system
 ```
 
 #### 6.5.2 Authentication Pages Implementation

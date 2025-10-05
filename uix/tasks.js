@@ -6,7 +6,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 7.3 Tamarindo
+ * @version 7.4 Jaco
  * @author Alex & Gemini & Claude
  */
 
@@ -3626,7 +3626,7 @@ function exitMoveMode() {
 				 <circle cx="12" cy="12" r="10"></circle>
 				 <polyline points="12,6 12,12 16,14"></polyline>
 			 </svg>
-			 ${timeoutText}
+			 <span class="setting-label">Timeout: ${timeoutText}</span>
 		 `;
 	 }
 	 

@@ -7,7 +7,7 @@
  * Handles admin-only operations like user management, subscription changes,
  * and system administration.
  *
- * @version 7.3 Tamarindo
+ * @version 7.4 Jaco
  * @author Alex & Gemini & Claude
  */
 

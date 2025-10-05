@@ -7,7 +7,7 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 7.3 Tamarindo
+ * @version 7.4 Jaco
  * @author Alex & Gemini & Claude
  */
 

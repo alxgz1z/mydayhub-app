@@ -6,7 +6,7 @@
  *
  * Handles user registration, login, and other authentication actions.
  *
- * @version 7.3 Tamarindo
+ * @version 7.4 Jaco
  * @author Alex & Gemini & Claude
  */
 
@@ -236,7 +236,7 @@ function handle_request_password_reset(?array $data): void {
  * Constructs and sends the password reset email.
  */
 function send_password_reset_email(string $email, string $username, string $token): void {
-	$resetLink = APP_URL . '/login/reset-password.php?token=' . urlencode($token);
+	$resetLink = APP_URL . '/login/reset.php?token=' . urlencode($token);
 	$subject = 'Your MyDayHub Password Reset Request';
 	$htmlBody = "
 		<div style='font-family: sans-serif; line-height: 1.6;'>

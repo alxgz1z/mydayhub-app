@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 7.3 Tamarindo
+ * @version 7.4 Jaco
  *
  * @author Alex & Gemini & Claude
  */ 
@@ -38,13 +38,21 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<title>MyDayHub</title>
 	
 	<!-- Favicon and App Icons -->
-	<link rel="icon" type="image/svg+xml" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="32x32" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="16x16" href="media/leaf.svg">
-	<link rel="apple-touch-icon" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="180x180" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="192x192" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="512x512" href="media/leaf.svg">
+	<link rel="icon" type="image/svg+xml" href="media/favico.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="media/favico.svg">
+	<link rel="icon" type="image/png" sizes="16x16" href="media/favico.svg">
+	<link rel="apple-touch-icon" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="180x180" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="152x152" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="144x144" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="120x120" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="114x114" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="76x76" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="72x72" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="60x60" href="media/favico.svg">
+	<link rel="apple-touch-icon" sizes="57x57" href="media/favico.svg">
+	<link rel="icon" type="image/png" sizes="192x192" href="media/favico.svg">
+	<link rel="icon" type="image/png" sizes="512x512" href="media/favico.svg">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css">
@@ -171,8 +179,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<circle cx="12" cy="12" r="10"></circle>
 								<polyline points="12,6 12,12 16,14"></polyline>
 							</svg>
-							<span class="setting-label">Session Timeout</span>
-							30 minutes
+							<span class="setting-label">Timeout: 30 minutes</span>
 						</button>
 					</div>
 				</div>

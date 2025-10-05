@@ -892,13 +892,13 @@ Version: Beta 6.0.4
 * **Database:** Created a new password_resets table with a secure structure to store hashed, time-limited reset tokens.
 * **UI:**
   * Added a "Forgot Password?" link to the login.php page.
-  * Created the login/forgot-password.php page with a form for users to request a reset link.
-  * Created the placeholder login/reset-password.php page, which will contain the form for entering the new password.
+  * Created the login/forgot.php page with a form for users to request a reset link.
+  * Created the placeholder login/reset.php page, which will contain the form for entering the new password.
 * **Backend (**api/auth.php**):**
   * Implemented the requestPasswordReset action, which validates a user's email, generates a secure token, stores its hash in the database, and dispatches the reset email via the new mailer utility.
   * Added robust, DEVMODE-aware error handling to help diagnose a blocking issue.
 * **Frontend (**uix/auth.js**):**
-  * Added a new form handler to send the email from the forgot-password.php page to the API.
+  * Added a new form handler to send the email from the forgot.php page to the API.
   * The logic was updated to display detailed error messages from the backend when in development mode to aid debugging.
 
 ⠀**Status** The entire framework for the "Forgot Password" feature is in place. However, a bug is currently preventing the backend from successfully sending the reset email. The user is not receiving the email, and no token is being stored in the database. Our last action was to add enhanced error reporting to diagnose this issue.
@@ -906,7 +906,7 @@ Version: Beta 6.0.4
 **1** **CRITICAL - Debug Email Sending:** The immediate priority is to use the new error reporting to diagnose and fix the bug in the requestPasswordReset flow. The likely causes are an issue with the SMTP connection, a misconfiguration in PHPMailer, or a silent error in the database transaction.
 **2** **Complete the Reset Flow:** Once emails are sending correctly, we must build out the final part of the feature:
 	* Implement the performPasswordReset action in api/auth.php.
-	* Add the frontend logic in uix/auth.js to handle the form submission on the reset-password.php page.
+	* Add the frontend logic in uix/auth.js to handle the form submission on the reset.php page.
 **3** **Refine Email Template:** Improve the visual design of the HTML email template in incs/mailer.php.
 
 ---
@@ -949,7 +949,7 @@ Version: Beta 6.0.4
 
 ⠀**Status** The "Forgot Password" feature is now fully functional. Users can successfully request password reset emails, which are delivered with secure tokens. The debugging infrastructure provides excellent visibility into server-side execution. The final step of the password reset flow (handling the reset link and updating passwords) remains to be implemented.
 **Recommended next steps (priority order)**
-**1** **Complete Password Reset Flow:** Implement the performPasswordReset action in /api/auth.php and corresponding frontend logic in /uix/auth.js for the /login/reset-password.php page.
+**1** **Complete Password Reset Flow:** Implement the performPasswordReset action in /api/auth.php and corresponding frontend logic in /uix/auth.js for the /login/reset.php page.
 **2** **Zero-Knowledge Architecture:** Begin implementing the encryption foundation with security questions recovery system as discussed, since password resets fundamentally conflict with zero-knowledge encryption without recovery mechanisms.
 **3** **Clean Up Debugging Code:** Remove temporary raw response logging from /uix/auth.js since the core issue is resolved.
 **4** **Settings Panel Development:** Resume work on the Settings Panel with the first functional setting (High-Contrast Mode toggle).
@@ -1462,8 +1462,8 @@ Maintains CSRF protection and ownership checks for all snooze operations.
 * `/uix/auth.js` - Added theme management functions for authentication pages
 * `/login/login.php` - Added logo, theme selector, and comprehensive icon support
 * `/login/register.php` - Added logo, theme selector, and comprehensive icon support
-* `/login/forgot-password.php` - Added logo, theme selector, and comprehensive icon support
-* `/login/reset-password.php` - Added logo, theme selector, and comprehensive icon support
+* `/login/forgot.php` - Added logo, theme selector, and comprehensive icon support
+* `/login/reset.php` - Added logo, theme selector, and comprehensive icon support
 * `/uix/style.css` - Enhanced contextual menu styling and logout link with power icon
 * `/uix/app.js` - Updated date display function for header/footer swap
 * `/index.php` - Swapped header/footer elements and enhanced layout
