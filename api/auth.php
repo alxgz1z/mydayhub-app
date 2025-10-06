@@ -7,7 +7,7 @@
  * Handles user registration, login, and other authentication actions.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 ini_set('display_errors', 1);

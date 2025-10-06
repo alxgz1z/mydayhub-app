@@ -8,7 +8,7 @@
  * configured with credentials from the .env file.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 declare(strict_types=1);

@@ -1,7 +1,7 @@
 <?php
 // Code for /login/reset.php
 // @version 7.4 Jaco
-// @author Alex & Gemini & Claude 
+// @author Alex & Gemini & Claude & Cursor 
 // MyDayHub - Password Reset Page
 
 require_once __DIR__ . '/../incs/config.php';

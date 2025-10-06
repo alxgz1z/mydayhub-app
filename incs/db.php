@@ -8,7 +8,7 @@
  * PDO database connection using the credentials from /incs/config.php.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 // Enable strict typing for function arguments and return values.

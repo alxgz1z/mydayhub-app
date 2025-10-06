@@ -5,7 +5,7 @@
  * MyDayHub - Register Script
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 

@@ -8,7 +8,7 @@
  * current session and redirecting to the login page.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 // We need the config file to get the APP_URL for a reliable redirect.

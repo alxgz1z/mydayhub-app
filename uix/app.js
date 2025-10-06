@@ -7,7 +7,7 @@
  * and contains global UI functions like toasts and modals.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 /**
@@ -133,6 +133,242 @@ window.apiFetch = apiFetch;
 // Make apiFetch globally available
 window.apiFetch = apiFetch;
 
+// Make mission focus chart function globally available
+window.updateMissionFocusChart = updateMissionFocusChart;
+
+/**
+ * Toggle header date visibility
+ */
+function toggleHeaderDateVisibility(state) {
+	const headerDateOffBtn = document.getElementById('header-date-off');
+	const headerDateOnBtn = document.getElementById('header-date-on');
+	const headerDateElement = document.getElementById('header-date');
+	
+	if (!headerDateOffBtn || !headerDateOnBtn || !headerDateElement) return;
+	
+	const isVisible = state === 'on';
+	
+	// Update button states
+	headerDateOffBtn.classList.toggle('active', !isVisible);
+	headerDateOnBtn.classList.toggle('active', isVisible);
+	
+	// Show/hide date
+	headerDateElement.style.display = isVisible ? 'block' : 'none';
+	
+	// Save preference
+	localStorage.setItem('showHeaderDate', isVisible ? 'true' : 'false');
+}
+
+/**
+ * Load header date visibility preference
+ */
+function loadHeaderDatePreference() {
+	const headerDateOffBtn = document.getElementById('header-date-off');
+	const headerDateOnBtn = document.getElementById('header-date-on');
+	const headerDateElement = document.getElementById('header-date');
+	
+	if (!headerDateOffBtn || !headerDateOnBtn || !headerDateElement) return;
+	
+	const savedPreference = localStorage.getItem('showHeaderDate');
+	const shouldShow = savedPreference !== null ? savedPreference === 'true' : true; // Default to true
+	
+	// Update button states
+	headerDateOffBtn.classList.toggle('active', !shouldShow);
+	headerDateOnBtn.classList.toggle('active', shouldShow);
+	
+	// Show/hide date
+	headerDateElement.style.display = shouldShow ? 'block' : 'none';
+}
+
+/**
+ * Toggle mission focus chart visibility
+ */
+function toggleMissionFocusChart(state) {
+	const missionFocusOffBtn = document.getElementById('mission-focus-off');
+	const missionFocusOnBtn = document.getElementById('mission-focus-on');
+	const missionFocusChart = document.getElementById('mission-focus-chart');
+	
+	if (!missionFocusOffBtn || !missionFocusOnBtn || !missionFocusChart) return;
+	
+	const isVisible = state === 'on';
+	
+	// Update button states
+	missionFocusOffBtn.classList.toggle('active', !isVisible);
+	missionFocusOnBtn.classList.toggle('active', isVisible);
+	
+	// Show/hide chart
+	missionFocusChart.style.display = isVisible ? 'block' : 'none';
+	
+	// Save preference
+	localStorage.setItem('showMissionFocusChart', isVisible ? 'true' : 'false');
+	
+	// Update chart if showing
+	if (isVisible) {
+		updateMissionFocusChart();
+	}
+}
+
+/**
+ * Load mission focus chart visibility preference
+ */
+function loadMissionFocusPreference() {
+	const missionFocusOffBtn = document.getElementById('mission-focus-off');
+	const missionFocusOnBtn = document.getElementById('mission-focus-on');
+	const missionFocusChart = document.getElementById('mission-focus-chart');
+	
+	if (!missionFocusOffBtn || !missionFocusOnBtn || !missionFocusChart) return;
+	
+	const savedPreference = localStorage.getItem('showMissionFocusChart');
+	const shouldShow = savedPreference !== null ? savedPreference === 'true' : false; // Default to false
+	
+	// Update button states
+	missionFocusOffBtn.classList.toggle('active', !shouldShow);
+	missionFocusOnBtn.classList.toggle('active', shouldShow);
+	
+	// Show/hide chart
+	missionFocusChart.style.display = shouldShow ? 'block' : 'none';
+	
+	// Update chart if showing
+	if (shouldShow) {
+		updateMissionFocusChart();
+	}
+}
+
+/**
+ * Update mission focus chart with current task data
+ */
+function updateMissionFocusChart() {
+	const missionFocusChart = document.getElementById('mission-focus-chart');
+	if (!missionFocusChart || missionFocusChart.style.display === 'none') return;
+	
+	// Safety check to prevent infinite loops
+	if (window._updatingMissionChart) return;
+	window._updatingMissionChart = true;
+	
+	try {
+		// Get all tasks that are not completed
+		const tasks = document.querySelectorAll('.task-card:not(.completed)');
+	
+		let signalCount = 0;
+		let supportCount = 0;
+		let backlogCount = 0;
+		
+		tasks.forEach(task => {
+			const colorBand = task.querySelector('.task-color-band');
+			if (!colorBand) return;
+			
+			const classList = colorBand.classList;
+			if (classList.contains('signal')) {
+				signalCount++;
+			} else if (classList.contains('support')) {
+				supportCount++;
+			} else if (classList.contains('backlog')) {
+				backlogCount++;
+			}
+		});
+		
+		const total = signalCount + supportCount + backlogCount;
+		
+		if (total === 0) {
+			// No tasks, show empty state
+			missionFocusChart.innerHTML = `
+				<svg viewBox="0 0 24 24">
+					<circle cx="12" cy="12" r="10" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>
+				</svg>
+			`;
+			missionFocusChart.setAttribute('data-tooltip', 'No active tasks');
+			window._updatingMissionChart = false;
+			return;
+		}
+		
+		const signalPercent = (signalCount / total) * 100;
+		const supportPercent = (supportCount / total) * 100;
+		const backlogPercent = (backlogCount / total) * 100;
+		
+		// Generate concentric rings SVG (like Apple Fitness)
+		// Outer ring (Backlog - Orange), Middle ring (Support - Blue), Inner ring (Signal - Green)
+		const centerX = 12;
+		const centerY = 12;
+		const strokeWidth = 2;
+		
+		// Calculate ring progress (0-1) based on task counts
+		const maxTasks = Math.max(signalCount, supportCount, backlogCount, 1);
+		const signalProgress = signalCount / maxTasks;
+		const supportProgress = supportCount / maxTasks;
+		const backlogProgress = backlogCount / maxTasks;
+		
+		missionFocusChart.innerHTML = `
+			<svg viewBox="0 0 24 24">
+				<!-- Outer ring - Backlog (Orange) -->
+				<circle cx="${centerX}" cy="${centerY}" r="9" 
+					fill="none" 
+					stroke="#e5e7eb" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 9}" 
+					stroke-dashoffset="${2 * Math.PI * 9 * (1 - backlogProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+				<circle cx="${centerX}" cy="${centerY}" r="9" 
+					fill="none" 
+					stroke="#f97316" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 9}" 
+					stroke-dashoffset="${2 * Math.PI * 9 * (1 - backlogProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+				
+				<!-- Middle ring - Support (Blue) -->
+				<circle cx="${centerX}" cy="${centerY}" r="6" 
+					fill="none" 
+					stroke="#e5e7eb" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 6}" 
+					stroke-dashoffset="${2 * Math.PI * 6 * (1 - supportProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+				<circle cx="${centerX}" cy="${centerY}" r="6" 
+					fill="none" 
+					stroke="#3b82f6" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 6}" 
+					stroke-dashoffset="${2 * Math.PI * 6 * (1 - supportProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+				
+				<!-- Inner ring - Signal (Green) -->
+				<circle cx="${centerX}" cy="${centerY}" r="3" 
+					fill="none" 
+					stroke="#e5e7eb" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 3}" 
+					stroke-dashoffset="${2 * Math.PI * 3 * (1 - signalProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+				<circle cx="${centerX}" cy="${centerY}" r="3" 
+					fill="none" 
+					stroke="#22c55e" 
+					stroke-width="${strokeWidth}"
+					stroke-dasharray="${2 * Math.PI * 3}" 
+					stroke-dashoffset="${2 * Math.PI * 3 * (1 - signalProgress)}"
+					stroke-linecap="round"
+					transform="rotate(-90 ${centerX} ${centerY})" />
+			</svg>
+		`;
+		
+		// Set tooltip
+		missionFocusChart.setAttribute('data-tooltip', 
+			`${Math.round(signalPercent)}% Signal, ${Math.round(supportPercent)}% Support, ${Math.round(backlogPercent)}% Backlog`
+		);
+		
+		// Clear the safety flag
+		window._updatingMissionChart = false;
+	} catch (error) {
+		console.error('Error updating mission focus chart:', error);
+		window._updatingMissionChart = false;
+	}
+}
+
+
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
@@ -144,6 +380,16 @@ document.addEventListener('DOMContentLoaded', () => {
 		// Ensure date is updated after tasks view loads
 		setTimeout(updateFooterDate, 100);
 	}
+	
+	// Initialize calendar overlay after settings panel and tasks view are ready
+	setTimeout(() => {
+		if (typeof initCalendarOverlay === 'function') {
+			initCalendarOverlay();
+		}
+	}, 100);
+	
+	// Update mission focus chart when tasks change (disabled to prevent infinite loop)
+	// TODO: Implement proper task change detection without MutationObserver
 });
 
 // ==========================================================================
@@ -255,6 +501,26 @@ function initSettingsPanel() {
 		
 		// Load font size preference
 		loadFontSizePreference();
+	}
+	
+	// Header Date Visibility Toggle
+	const headerDateOffBtn = document.getElementById('header-date-off');
+	const headerDateOnBtn = document.getElementById('header-date-on');
+	if (headerDateOffBtn && headerDateOnBtn) {
+		headerDateOffBtn.addEventListener('click', () => toggleHeaderDateVisibility('off'));
+		headerDateOnBtn.addEventListener('click', () => toggleHeaderDateVisibility('on'));
+		// Load saved preference
+		loadHeaderDatePreference();
+	}
+	
+	// Mission Focus Chart Toggle
+	const missionFocusOffBtn = document.getElementById('mission-focus-off');
+	const missionFocusOnBtn = document.getElementById('mission-focus-on');
+	if (missionFocusOffBtn && missionFocusOnBtn) {
+		missionFocusOffBtn.addEventListener('click', () => toggleMissionFocusChart('off'));
+		missionFocusOnBtn.addEventListener('click', () => toggleMissionFocusChart('on'));
+		// Load saved preference
+		loadMissionFocusPreference();
 	}
 
 	// Completion Sound Selector

@@ -1,8 +1,8 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.4 - Calendar Overlay
+**Version:** Beta 7.5 - Mission Focus
 **Audience:** Internal Development & Project Management  
-**Last Updated:** October 4, 2025
+**Last Updated:** October 5, 2025
 
 ---
 
@@ -99,12 +99,16 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
 
 #### Calendar Overlay System
-- **[PLN]** `getCalendarEvents` (in calendar_events.php) - Fetch events for date range with user preferences
-- **[PLN]** `createCalendarEvent` (in calendar_events.php) - Create new calendar event with validation
-- **[PLN]** `updateCalendarEvent` (in calendar_events.php) - Update existing calendar event
-- **[PLN]** `deleteCalendarEvent` (in calendar_events.php) - Delete calendar event with ownership verification
-- **[PLN]** `getCalendarPreferences` (in calendar_preferences.php) - Fetch user calendar type visibility preferences
-- **[PLN]** `updateCalendarPreferences` (in calendar_preferences.php) - Update calendar type visibility settings
+- **[RDY]** `getCalendarEvents` (in calevents.php) - Fetch events for date range with user preferences, ordered by priority
+- **[RDY]** `createCalendarEvent` (in calevents.php) - Create new calendar event with validation
+- **[RDY]** `updateCalendarEvent` (in calevents.php) - Update existing calendar event
+- **[RDY]** `deleteCalendarEvent` (in calevents.php) - Delete calendar event with ownership verification
+- **[RDY]** `bulkImport` (in calevents.php) - Import multiple events from JSON with calendar grouping
+- **[RDY]** `getCalendars` (in calevents.php) - Fetch all calendar groups with metadata
+- **[RDY]** `deleteCalendar` (in calevents.php) - Delete entire calendar group by name
+- **[RDY]** `setCalendarPriority` (in calevents.php) - Update priority for calendar group
+- **[RDY]** `getCalendarPreferences` (in calprefs.php) - Fetch user calendar type visibility preferences
+- **[RDY]** `updateCalendarPreferences` (in calprefs.php) - Update calendar type visibility settings
 
 #### Collaboration (Foundation)
 - **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
@@ -173,12 +177,22 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Completion Sound Toggle - User-controllable audio feedback with persistence
 
 #### Calendar Overlay System
-- **[PLN]** Calendar Badge in Header - Informational display between username and date
-- **[PLN]** Calendar Overlay Modal - Event viewing and management interface
-- **[PLN]** Calendar Event Management - CRUD operations for calendar events
-- **[PLN]** Calendar Event Types - Fiscal, holiday, birthday, and custom event support
-- **[PLN]** Calendar Preferences - User visibility toggles for different calendar types
+- **[RDY]** Calendar Badge in Header - Dynamic badge showing event labels with priority-based display
+- **[RDY]** Calendar Overlay Modal - Three-tab interface with event viewing, preferences, and calendar management
+- **[RDY]** Calendar Event Management - CRUD operations with form validation and calendar grouping
+- **[RDY]** Calendar Event Types - Fiscal, holiday, birthday, and custom event support with color coding
+- **[RDY]** Calendar Preferences - User visibility toggles for different calendar types
+- **[RDY]** JSON Import/Export - Bulk event management with calendar grouping and priority system
+- **[RDY]** Calendar Management Tab - Group-based event management with priority controls
 - **[FUT]** Journal View Integration - Event badges in journal column headers
+
+#### Mission Focus Chart System
+- **[RDY]** Mission Focus Chart - Apple Fitness-style concentric rings showing task distribution
+- **[RDY]** Settings Toggle - User-configurable show/hide control with persistence
+- **[RDY]** Header Integration - Non-intrusive placement between username and calendar badge
+- **[RDY]** Dynamic Updates - Real-time task classification analysis and ring sizing
+- **[RDY]** Tooltip System - Hover display showing exact percentage breakdown
+- **[RDY]** Theme Support - Consistent styling across light/dark/high-contrast modes
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
@@ -676,15 +690,17 @@ The Calendar Overlay system provides informational display of alternative calend
 #### 4.5.1 Calendar Badge in Header
 
 **Visual Design:**
-- Green accent color badge positioned between username and date in header
-- Calendar icon with optional indicator dot for active events
+- Dynamic badge positioned between username and date in header
+- Shows calendar icon when no events present
+- Displays event label text with event color when events exist
+- "+X more" indicator for multiple events on same date
 - Consistent with existing app design language and theme system
-- Hover tooltip showing today's calendar events
 
 **Interaction Model:**
 - Click to open calendar overlay modal
-- Badge state indicates presence of calendar events for current date
+- Badge content dynamically updates based on highest priority event
 - Non-intrusive informational display that doesn't interfere with task management
+- Badge size optimized for header space (50% of original size)
 
 #### 4.5.2 Calendar Event Management
 
@@ -699,12 +715,16 @@ The Calendar Overlay system provides informational display of alternative calend
 - Event type categorization for color coding and organization
 - User-specific events with optional public sharing capability
 - Color customization per event type
+- Calendar grouping via calendar_name field for bulk management
+- Priority system for determining which event shows in header badge
 
 **Management Interface:**
-- Calendar overlay modal for event viewing and management
-- Calendar management modal for CRUD operations
-- Mini calendar preview with event indicators
-- Bulk event management and import/export capabilities
+- Calendar overlay modal with three tabs: View Events, Preferences, Calendar Management
+- Event management modal for CRUD operations with form validation
+- Mini calendar preview with event labels directly in day squares
+- JSON import/export capabilities for bulk event management
+- Calendar Management tab for grouping events by calendar name
+- Priority management for determining header badge display
 
 #### 4.5.3 Database Schema
 
@@ -714,14 +734,18 @@ CREATE TABLE calendar_events (
     id INT AUTO_INCREMENT PRIMARY KEY,
     user_id INT NOT NULL,
     event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
+    calendar_name VARCHAR(100) DEFAULT 'Custom Event', -- Grouping for bulk management
     label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
     is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
+    priority INT DEFAULT 0,             -- Priority for header badge display
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
+    INDEX idx_calendar_name (calendar_name),
+    INDEX idx_priority (priority)
 );
 ```
 
@@ -740,13 +764,17 @@ CREATE TABLE user_calendar_preferences (
 
 #### 4.5.4 API Endpoints
 
-**Calendar Events API (`/api/calendar_events.php`):**
-- `GET`: Fetch events for a date range with user preferences
+**Calendar Events API (`/api/calevents.php`):**
+- `GET`: Fetch events for a date range with user preferences, ordered by priority
 - `POST`: Create new calendar event with validation
 - `PUT`: Update existing calendar event
 - `DELETE`: Delete calendar event with ownership verification
+- `bulkImport`: Import multiple events from JSON with calendar grouping
+- `getCalendars`: Fetch all calendar groups with metadata
+- `deleteCalendar`: Delete entire calendar group by name
+- `setCalendarPriority`: Update priority for calendar group
 
-**Calendar Preferences API (`/api/calendar_preferences.php`):**
+**Calendar Preferences API (`/api/calprefs.php`):**
 - `GET`: Fetch user's calendar type visibility preferences
 - `PUT`: Update calendar type visibility settings
 
@@ -763,26 +791,101 @@ CREATE TABLE user_calendar_preferences (
 - Hover tooltips for event details
 - Consistent with existing badge system in task cards
 
-### 4.6 Future Views (Deferred)
+### 4.6 Mission Focus Chart System
+
+The Mission Focus Chart provides a visual indicator of task classification proportions, helping users understand their focus distribution across Signal, Support, and Backlog tasks.
+
+#### 4.6.1 Visual Design
+
+**Chart Type:**
+- Apple Fitness-style concentric rings for clean, modern appearance
+- Three rings representing different task classifications
+- Dynamic sizing based on task count proportions
+- SVG-based implementation for crisp display at any size
+
+**Ring Configuration:**
+- **Outer Ring (Orange)**: Backlog tasks - represents non-mission critical work
+- **Middle Ring (Blue)**: Support tasks - represents mission-supporting activities
+- **Inner Ring (Green)**: Signal tasks - represents direct mission advancement
+
+**Display Properties:**
+- 24x24px size optimized for header placement
+- Positioned between username and calendar badge in header
+- Hidden by default, user-configurable via settings
+- Hover tooltip showing exact percentage breakdown
+
+#### 4.6.2 User Interface Integration
+
+**Settings Control:**
+- Toggle in Settings panel: "Mission Focus Chart"
+- Segmented control with Hide/Show options
+- Persistent user preference via localStorage
+- Consistent with existing settings UI patterns
+
+**Header Integration:**
+- Non-intrusive placement in header
+- Responsive design for mobile compatibility
+- Theme-aware styling (light/dark/high-contrast modes)
+- Click-through to calendar overlay (shared click handler)
+
+#### 4.6.3 Technical Implementation
+
+**Data Analysis:**
+- Scans all non-completed task cards for classification
+- Counts tasks by color band classes (signal, support, backlog)
+- Calculates relative proportions for ring sizing
+- Updates dynamically when tasks change
+
+**Rendering Logic:**
+- SVG circles with stroke-dasharray for progress indication
+- Progress calculated as ratio to maximum task count
+- Rounded line caps for smooth appearance
+- Rotation from top (-90°) for consistent starting position
+
+**Performance Considerations:**
+- Safety guards to prevent infinite update loops
+- Error handling for edge cases
+- Efficient DOM queries for task counting
+- Minimal re-rendering on task changes
+
+#### 4.6.4 User Experience
+
+**Empty State:**
+- Gray circle when no active tasks present
+- Tooltip: "No active tasks"
+- Consistent with app's empty state patterns
+
+**Active State:**
+- Colored rings showing task distribution
+- Tooltip with exact percentages: "X% Signal, Y% Support, Z% Backlog"
+- Visual feedback for mission focus assessment
+
+**Accessibility:**
+- High contrast support for all themes
+- Clear visual distinction between ring colors
+- Descriptive tooltips for screen readers
+- Keyboard navigation support
+
+### 4.7 Future Views (Deferred)
 
 While current development focuses exclusively on Tasks, the architecture supports planned expansion:
 
-#### 4.6.1 Journal View (Future)
+#### 4.7.1 Journal View (Future)
 - Chronological daily layout with 1-day, 3-day, 5-day modes
 - Entry cards with timeline navigation
 - Integration with task attachments and due dates
 
-#### 4.6.2 Outlines View (Future)  
+#### 4.7.2 Outlines View (Future)  
 - Hierarchical tree structure for idea organization
 - Expand/collapse functionality with infinite nesting
 - Linking integration with tasks and journal entries
 
-#### 4.6.3 Events View (Future)
+#### 4.7.3 Events View (Future)
 - Multi-day event planning with timeline visualization
 - Segment management with participant tracking
 - Resource allocation and location management
 
-#### 4.6.4 Architecture Approach
+#### 4.7.4 Architecture Approach
 
 **Database Schema:**
 - New `task_note_history` table: `id`, `task_id`, `user_id`, `note_content`, `created_at`, `action_type`

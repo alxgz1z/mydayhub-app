@@ -6,7 +6,7 @@
  * Adapted from the robust Beta 4 implementation.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor
  *
  * Public API:
  * window.UnifiedEditor.open({ id, kind, title, content, updatedAt, fontSize })

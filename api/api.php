@@ -8,7 +8,7 @@
  * It handles error logging, session security, request routing, and dispatches to module handlers.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude
+ * @author Alex & Gemini & Claude & Cursor & Cursor
  */
 
 declare(strict_types=1);
@@ -93,6 +93,16 @@ try {
 			require_once __DIR__ . '/users.php';
 			handle_users_action($action, $method, $pdo, $userId, $data);
 			break;
+
+        case 'calendar_events':
+            require_once __DIR__ . '/calevents.php';
+            handle_calendar_events_action($action, $method, $pdo, $userId, $data);
+            break;
+
+        case 'calendar_preferences':
+            require_once __DIR__ . '/calprefs.php';
+            handle_calendar_preferences_action($action, $method, $pdo, $userId, $data);
+            break;
 
 		default:
 			send_json_response(['status' => 'error', 'message' => "Module '{$module}' not found."], 404);
