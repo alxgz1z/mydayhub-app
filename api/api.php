@@ -8,7 +8,7 @@
  * It handles error logging, session security, request routing, and dispatches to module handlers.
  *
  * @version 7.4 Jaco
- * @author Alex & Gemini & Claude & Cursor & Cursor
+ * @author Alex & Gemini & Claude & Cursor
  */
 
 declare(strict_types=1);

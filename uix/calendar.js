@@ -30,12 +30,12 @@ async function initCalendarOverlay() {
  * Set up event listeners for calendar functionality
  */
 function setupCalendarEventListeners() {
-    console.log('setupCalendarEventListeners called');
+	// Setup calendar event listeners
     
     // Calendar badge click
     const calendarBadge = document.getElementById('btn-calendar-badge');
     if (calendarBadge) {
-        console.log('Calendar badge found, adding event listener');
+        // Calendar badge found
         calendarBadge.addEventListener('click', openCalendarOverlayModal);
     } else {
         console.error('Calendar badge not found!');
@@ -44,7 +44,7 @@ function setupCalendarEventListeners() {
     // Settings button click
     const settingsBtn = document.getElementById('btn-calendar-overlays');
     if (settingsBtn) {
-        console.log('Calendar Overlays settings button found, adding event listener');
+        // Calendar Overlays settings button found
         settingsBtn.addEventListener('click', openCalendarOverlayModal);
     } else {
         console.error('Calendar Overlays settings button not found!');

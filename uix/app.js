@@ -33,7 +33,7 @@ async function apiFetch(bodyPayload = {}) {
 	 
 	 // Get the raw response text for debugging
 	 const responseText = await response.text();
-	 console.log('Raw server response:', responseText);
+		// Raw server response logged for debugging (removed for production)
 	 
 	 if (!response.ok) {
 		 let errorData;
@@ -181,6 +181,29 @@ function loadHeaderDatePreference() {
 }
 
 /**
+ * Wait for task board to load, then update mission focus chart
+ */
+function waitForTaskBoardAndUpdateChart() {
+	const checkForTasks = () => {
+		const columns = document.querySelectorAll('.column');
+		const tasks = document.querySelectorAll('.task-card:not(.completed)');
+		
+		if (columns.length > 0 || tasks.length > 0) {
+			// Task board is loaded, update chart if visible
+			const missionFocusChart = document.getElementById('mission-focus-chart');
+			if (missionFocusChart && missionFocusChart.style.display !== 'none') {
+				updateMissionFocusChart();
+			}
+		} else {
+			// Task board not loaded yet, check again in 500ms
+			setTimeout(checkForTasks, 500);
+		}
+	};
+	
+	checkForTasks();
+}
+
+/**
  * Toggle mission focus chart visibility
  */
 function toggleMissionFocusChart(state) {
@@ -204,7 +227,8 @@ function toggleMissionFocusChart(state) {
 	
 	// Update chart if showing
 	if (isVisible) {
-		updateMissionFocusChart();
+		// Wait for task board to load before updating chart
+		waitForTaskBoardAndUpdateChart();
 	}
 }
 
@@ -235,7 +259,8 @@ function loadMissionFocusPreference() {
 }
 
 /**
- * Update mission focus chart with current task data
+ * Update mission focus chart with current task data using Chart.js
+ * This function can be called manually or automatically when tasks change
  */
 function updateMissionFocusChart() {
 	const missionFocusChart = document.getElementById('mission-focus-chart');
@@ -245,119 +270,160 @@ function updateMissionFocusChart() {
 	if (window._updatingMissionChart) return;
 	window._updatingMissionChart = true;
 	
-	try {
-		// Get all tasks that are not completed
-		const tasks = document.querySelectorAll('.task-card:not(.completed)');
+	// Chart.js available check is redundant - we already check it in waitForTaskBoardAndUpdateChart
 	
+	try {
+		// Get all tasks that are not completed, not deleted, and not received shared tasks
+		// Count ALL active tasks regardless of filter visibility (snoozed/private should be counted)
+		const allTasks = document.querySelectorAll('.task-card:not(.completed)');
+		const tasks = Array.from(allTasks).filter(task => {
+			// Exclude received shared tasks (access_type = 'recipient')
+			const accessType = task.dataset.accessType || 'owner';
+			if (accessType === 'recipient') {
+				return false;
+			}
+			
+			// Count all other tasks (including snoozed and private, even if filtered out)
+			// Note: Deleted tasks are temporarily hidden but will be removed from DOM soon
+			// We'll count them until they're actually removed
+			return true;
+		});
+		// If no tasks found, show empty state
+		if (tasks.length === 0) {
+			// Tasks may still be loading, but we'll show empty state for now
+		}
+		
 		let signalCount = 0;
 		let supportCount = 0;
 		let backlogCount = 0;
 		
 		tasks.forEach(task => {
-			const colorBand = task.querySelector('.task-color-band');
-			if (!colorBand) return;
+			// Prefer explicit data attribute if present
+			let classification = task.getAttribute('data-classification');
 			
-			const classList = colorBand.classList;
-			if (classList.contains('signal')) {
-				signalCount++;
-			} else if (classList.contains('support')) {
-				supportCount++;
-			} else if (classList.contains('backlog')) {
-				backlogCount++;
+			// Fallback to class name parsing if data attribute is missing
+			if (!classification) {
+				const classes = Array.from(task.classList);
+				const classMatch = classes.find(c => c.startsWith('classification-'));
+				if (classMatch) {
+					classification = classMatch.replace('classification-', '').trim();
+				}
+			}
+			
+			if (!classification) {
+				return; // Skip tasks without classification
+			}
+			
+			switch (classification) {
+				case 'signal':
+					signalCount++;
+					break;
+				case 'support':
+					supportCount++;
+					break;
+				case 'backlog':
+					backlogCount++;
+					break;
+				default:
+					// Skip unknown classifications silently
 			}
 		});
 		
 		const total = signalCount + supportCount + backlogCount;
 		
-		if (total === 0) {
-			// No tasks, show empty state
-			missionFocusChart.innerHTML = `
-				<svg viewBox="0 0 24 24">
-					<circle cx="12" cy="12" r="10" fill="#e5e7eb" stroke="#9ca3af" stroke-width="2"/>
-				</svg>
-			`;
-			missionFocusChart.setAttribute('data-tooltip', 'No active tasks');
+		// Get canvas element
+		const canvas = document.getElementById('mission-focus-canvas');
+		if (!canvas) {
+			console.error('Mission focus canvas not found');
 			window._updatingMissionChart = false;
 			return;
 		}
 		
-		const signalPercent = (signalCount / total) * 100;
-		const supportPercent = (supportCount / total) * 100;
-		const backlogPercent = (backlogCount / total) * 100;
+		// Destroy existing chart if it exists
+		if (window.missionFocusChartInstance) {
+			window.missionFocusChartInstance.destroy();
+		}
 		
-		// Generate concentric rings SVG (like Apple Fitness)
-		// Outer ring (Backlog - Orange), Middle ring (Support - Blue), Inner ring (Signal - Green)
-		const centerX = 12;
-		const centerY = 12;
-		const strokeWidth = 2;
+		if (total === 0) {
+			// No tasks found - check if we should retry or show empty state
+			const taskColumns = document.querySelectorAll('.column');
+			
+			if (taskColumns.length > 0 && !window._missionChartRetried) {
+				// Tasks might still be loading, retry once after a delay
+				window._missionChartRetried = true;
+				setTimeout(() => {
+					window._updatingMissionChart = false;
+					updateMissionFocusChart();
+				}, 1000);
+				return;
+			}
+			
+			// No tasks, show empty state
+			window.missionFocusChartInstance = new Chart(canvas, {
+				type: 'doughnut',
+				data: {
+					datasets: [{
+						data: [1],
+						backgroundColor: ['#e5e7eb'],
+						borderWidth: 0
+					}]
+				},
+				options: {
+					responsive: true,
+					maintainAspectRatio: true,
+					aspectRatio: 1,
+					cutout: '70%',
+					plugins: {
+						legend: { display: false },
+						tooltip: { enabled: false }
+					},
+					animation: {
+						duration: 0
+					}
+				}
+			});
+			missionFocusChart.setAttribute('data-tooltip', 'No active tasks');
+			window._updatingMissionChart = false;
+			window._missionChartRetried = false; // Reset retry flag
+			return;
+		}
 		
-		// Calculate ring progress (0-1) based on task counts
-		const maxTasks = Math.max(signalCount, supportCount, backlogCount, 1);
-		const signalProgress = signalCount / maxTasks;
-		const supportProgress = supportCount / maxTasks;
-		const backlogProgress = backlogCount / maxTasks;
+		const signalPercent = Math.round((signalCount / total) * 100);
+		const supportPercent = Math.round((supportCount / total) * 100);
+		const backlogPercent = Math.round((backlogCount / total) * 100);
 		
-		missionFocusChart.innerHTML = `
-			<svg viewBox="0 0 24 24">
-				<!-- Outer ring - Backlog (Orange) -->
-				<circle cx="${centerX}" cy="${centerY}" r="9" 
-					fill="none" 
-					stroke="#e5e7eb" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 9}" 
-					stroke-dashoffset="${2 * Math.PI * 9 * (1 - backlogProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-				<circle cx="${centerX}" cy="${centerY}" r="9" 
-					fill="none" 
-					stroke="#f97316" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 9}" 
-					stroke-dashoffset="${2 * Math.PI * 9 * (1 - backlogProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-				
-				<!-- Middle ring - Support (Blue) -->
-				<circle cx="${centerX}" cy="${centerY}" r="6" 
-					fill="none" 
-					stroke="#e5e7eb" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 6}" 
-					stroke-dashoffset="${2 * Math.PI * 6 * (1 - supportProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-				<circle cx="${centerX}" cy="${centerY}" r="6" 
-					fill="none" 
-					stroke="#3b82f6" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 6}" 
-					stroke-dashoffset="${2 * Math.PI * 6 * (1 - supportProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-				
-				<!-- Inner ring - Signal (Green) -->
-				<circle cx="${centerX}" cy="${centerY}" r="3" 
-					fill="none" 
-					stroke="#e5e7eb" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 3}" 
-					stroke-dashoffset="${2 * Math.PI * 3 * (1 - signalProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-				<circle cx="${centerX}" cy="${centerY}" r="3" 
-					fill="none" 
-					stroke="#22c55e" 
-					stroke-width="${strokeWidth}"
-					stroke-dasharray="${2 * Math.PI * 3}" 
-					stroke-dashoffset="${2 * Math.PI * 3 * (1 - signalProgress)}"
-					stroke-linecap="round"
-					transform="rotate(-90 ${centerX} ${centerY})" />
-			</svg>
-		`;
+		// Create doughnut chart
+		
+		window.missionFocusChartInstance = new Chart(canvas, {
+			type: 'doughnut',
+			data: {
+				labels: ['Signal', 'Support', 'Backlog'],
+				datasets: [{
+					data: [signalCount, supportCount, backlogCount],
+					backgroundColor: [
+						'#22c55e', // Signal - Green
+						'#3b82f6', // Support - Blue
+						'#f97316'  // Backlog - Orange
+					],
+					borderWidth: 0
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: false,
+				plugins: {
+					legend: { display: false },
+					tooltip: { enabled: false }
+				},
+				animation: false
+			}
+		});
+		
+		// Chart created successfully
 		
 		// Set tooltip
 		missionFocusChart.setAttribute('data-tooltip', 
-			`${Math.round(signalPercent)}% Signal, ${Math.round(supportPercent)}% Support, ${Math.round(backlogPercent)}% Backlog`
+			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog`
 		);
 		
 		// Clear the safety flag
@@ -388,8 +454,8 @@ document.addEventListener('DOMContentLoaded', () => {
 		}
 	}, 100);
 	
-	// Update mission focus chart when tasks change (disabled to prevent infinite loop)
-	// TODO: Implement proper task change detection without MutationObserver
+	// Update mission focus chart when task board is loaded
+	waitForTaskBoardAndUpdateChart();
 });
 
 // ==========================================================================

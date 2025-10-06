@@ -1,8 +1,8 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.5 - Mission Focus
+**Version:** Beta 7.5 - Mission Focus & Network Access
 **Audience:** Internal Development & Project Management  
-**Last Updated:** October 5, 2025
+**Last Updated:** October 6, 2025
 
 ---
 
@@ -187,12 +187,20 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[FUT]** Journal View Integration - Event badges in journal column headers
 
 #### Mission Focus Chart System
-- **[RDY]** Mission Focus Chart - Apple Fitness-style concentric rings showing task distribution
+- **[RDY]** Mission Focus Chart - Chart.js doughnut chart showing task distribution
 - **[RDY]** Settings Toggle - User-configurable show/hide control with persistence
 - **[RDY]** Header Integration - Non-intrusive placement between username and calendar badge
-- **[RDY]** Dynamic Updates - Real-time task classification analysis and ring sizing
+- **[RDY]** Dynamic Updates - Real-time task classification analysis and chart updates
 - **[RDY]** Tooltip System - Hover display showing exact percentage breakdown
 - **[RDY]** Theme Support - Consistent styling across light/dark/high-contrast modes
+- **[RDY]** Task Filtering - Counts all active tasks regardless of filter visibility
+- **[RDY]** Performance Optimization - Chart instance management and error handling
+
+#### Network Access & URL Management
+- **[RDY]** Dynamic URL Detection - Smart hostname resolution for localhost and jagmac.local
+- **[RDY]** DHCP Compatibility - Stable hostname usage avoiding dynamic IP dependencies
+- **[RDY]** Environment Configuration - .env file support with runtime detection
+- **[RDY]** Multi-Device Access - Network accessibility from other devices on local network
 
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
@@ -798,18 +806,19 @@ The Mission Focus Chart provides a visual indicator of task classification propo
 #### 4.6.1 Visual Design
 
 **Chart Type:**
-- Apple Fitness-style concentric rings for clean, modern appearance
-- Three rings representing different task classifications
+- Chart.js doughnut chart for reliable, consistent rendering
+- Three segments representing different task classifications
 - Dynamic sizing based on task count proportions
-- SVG-based implementation for crisp display at any size
+- Canvas-based implementation with responsive scaling
 
-**Ring Configuration:**
-- **Outer Ring (Orange)**: Backlog tasks - represents non-mission critical work
-- **Middle Ring (Blue)**: Support tasks - represents mission-supporting activities
-- **Inner Ring (Green)**: Signal tasks - represents direct mission advancement
+**Segment Configuration:**
+- **Green Segment**: Signal tasks - represents direct mission advancement
+- **Blue Segment**: Support tasks - represents mission-supporting activities
+- **Orange Segment**: Backlog tasks - represents non-mission critical work
 
 **Display Properties:**
-- 24x24px size optimized for header placement
+- 24x24px display size optimized for header placement
+- 48x48px canvas for high-quality rendering
 - Positioned between username and calendar badge in header
 - Hidden by default, user-configurable via settings
 - Hover tooltip showing exact percentage breakdown
@@ -832,15 +841,19 @@ The Mission Focus Chart provides a visual indicator of task classification propo
 
 **Data Analysis:**
 - Scans all non-completed task cards for classification
-- Counts tasks by color band classes (signal, support, backlog)
-- Calculates relative proportions for ring sizing
-- Updates dynamically when tasks change
+- Uses data-classification attribute and classification-* classes
+- Excludes completed, deleted, and received shared tasks
+- Includes snoozed and private tasks regardless of filter visibility
+- Calculates relative proportions for segment sizing
+- Updates dynamically when tasks change (create, complete, classify, delete)
 
 **Rendering Logic:**
-- SVG circles with stroke-dasharray for progress indication
-- Progress calculated as ratio to maximum task count
-- Rounded line caps for smooth appearance
-- Rotation from top (-90°) for consistent starting position
+- Chart.js doughnut chart with custom configuration
+- Responsive design with maintainAspectRatio: false
+- Smooth animations disabled for performance
+- Cutout percentage for doughnut appearance
+- Custom tooltip with percentage breakdown
+- Chart instance management (destroy/recreate pattern)
 
 **Performance Considerations:**
 - Safety guards to prevent infinite update loops
@@ -866,26 +879,103 @@ The Mission Focus Chart provides a visual indicator of task classification propo
 - Descriptive tooltips for screen readers
 - Keyboard navigation support
 
-### 4.7 Future Views (Deferred)
+### 4.7 Network Access & URL Management
+
+The application implements intelligent URL detection to support both local development and network access scenarios, ensuring reliable connectivity across different environments.
+
+#### 4.7.1 Dynamic URL Detection
+
+**Smart Hostname Resolution:**
+- Auto-detects appropriate URL based on request source
+- Supports stable hostnames: `localhost` and `jagmac.local`
+- Avoids dynamic IP addresses for DHCP compatibility
+- Falls back to `jagmac.local` for unknown hosts
+
+**Detection Logic:**
+```php
+function detectAppUrl() {
+    // Check environment variable first
+    $envUrl = getenv('APP_URL');
+    if ($envUrl && $envUrl !== 'http://localhost') {
+        return $envUrl;
+    }
+    
+    // Use stable hostnames only
+    if ($host === 'jagmac.local' || $host === 'localhost') {
+        return $protocol . '://' . $host;
+    }
+    
+    // Default to jagmac.local for any other host (including IPs)
+    return $protocol . '://jagmac.local';
+}
+```
+
+#### 4.7.2 Network Access Scenarios
+
+**Local Development:**
+- `http://localhost` → APP_URL = `http://localhost`
+- Full local development experience
+- No network dependencies
+
+**Network Access:**
+- `http://jagmac.local` → APP_URL = `http://jagmac.local`
+- Accessible from other devices on local network
+- Stable hostname regardless of IP changes
+
+**IP Access (Redirected):**
+- `http://10.0.0.3` (or any IP) → APP_URL = `http://jagmac.local`
+- Automatic redirection to stable hostname
+- DHCP-friendly behavior
+
+#### 4.7.3 Configuration Management
+
+**Environment Variables:**
+- `.env` file supports explicit APP_URL override
+- Defaults to `http://localhost` for local development
+- Environment-specific configurations supported
+
+**Runtime Detection:**
+- Uses `$_SERVER['HTTP_HOST']` for request-based detection
+- Protocol detection (HTTP/HTTPS) support
+- Consistent across all application components
+
+#### 4.7.4 Benefits
+
+**DHCP Compatibility:**
+- No dependency on changing IP addresses
+- Stable access via hostname regardless of network changes
+- Automatic fallback for IP-based access
+
+**Development Flexibility:**
+- Seamless local development experience
+- Network testing without configuration changes
+- Consistent behavior across environments
+
+**User Experience:**
+- Transparent URL management
+- No manual configuration required
+- Reliable access from any network device
+
+### 4.8 Future Views (Deferred)
 
 While current development focuses exclusively on Tasks, the architecture supports planned expansion:
 
-#### 4.7.1 Journal View (Future)
+#### 4.8.1 Journal View (Future)
 - Chronological daily layout with 1-day, 3-day, 5-day modes
 - Entry cards with timeline navigation
 - Integration with task attachments and due dates
 
-#### 4.7.2 Outlines View (Future)  
+#### 4.8.2 Outlines View (Future)  
 - Hierarchical tree structure for idea organization
 - Expand/collapse functionality with infinite nesting
 - Linking integration with tasks and journal entries
 
-#### 4.7.3 Events View (Future)
+#### 4.8.3 Events View (Future)
 - Multi-day event planning with timeline visualization
 - Segment management with participant tracking
 - Resource allocation and location management
 
-#### 4.7.4 Architecture Approach
+#### 4.8.4 Architecture Approach
 
 **Database Schema:**
 - New `task_note_history` table: `id`, `task_id`, `user_id`, `note_content`, `created_at`, `action_type`
@@ -1313,26 +1403,42 @@ SMTP_USER=email@domain.com
 SMTP_PASS=password
 SMTP_FROM=noreply@mydayhub.com
 
-APP_URL=https://mydayhub.com
+APP_URL=http://localhost
 DEV_MODE=false
 ```
 
+**Dynamic URL Detection:**
+- `APP_URL` defaults to `http://localhost` for local development
+- Runtime detection automatically uses request hostname
+- Supports `localhost` and `jagmac.local` for stable access
+- Falls back to `jagmac.local` for unknown hosts (including IPs)
+- Environment override available for explicit URL configuration
+
 #### 5.8.2 Deployment Environments
 
-**Development:** `localhost` with XAMPP/MAMP
+**Local Development:** `localhost` with Apache/PHP/MySQL
 - Full debugging enabled
 - File logging active
 - SMTP testing via local mail catcher
+- Dynamic URL detection for localhost access
+
+**Network Development:** `jagmac.local` (or custom hostname)
+- Network accessibility from other devices
+- DHCP-compatible hostname resolution
+- Real SMTP for testing
+- Multi-device testing capabilities
 
 **Staging:** `breveasy.com` 
 - Production-like configuration
 - Limited debugging
 - Real SMTP for testing
+- Environment-specific URL configuration
 
 **Production:** `mydayhub.com`
 - Debugging disabled
 - Performance optimization enabled
 - Monitoring and alerting active
+- SSL/HTTPS configuration
 
 ### 5.9 Performance & Optimization
 
@@ -1349,6 +1455,8 @@ DEV_MODE=false
 - Virtual scrolling for large lists
 - Efficient DOM manipulation patterns
 - Memory leak prevention
+- Production console cleanup (debugging logs removed)
+- Chart.js optimization for Mission Focus Chart
 
 #### 5.9.2 Backend Optimization
 
@@ -1516,21 +1624,7 @@ DEV_MODE=false
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-#### 6.2.5 Quick Notes (Card Flip)
 
-```
-Front Side:                    Back Side (Flipped):
-┌─────────────────────┐       ┌─────────────────────┐
-│ ☐ Task Title    [⋮] │  →    │ Quick Note:         │
-│ 📝 🗓️ 📎 👁          │       │ ┌─────────────────┐ │
-│─────────────────────│       │ │                 │ │
-│ [Signal] [Support]  │       │ │ Type here...    │ │
-└─────────────────────┘       │ │                 │ │
-							  │ └─────────────────┘ │
-							  │ [Save] [Cancel]     │
-							  │      [Expand]       │
-							  └─────────────────────┘
-```
 
 ### 6.3 Application Icons & Visual System
 
@@ -1622,44 +1716,81 @@ mydayhub-app/
 ├── composer.json              # PHP dependency management
 ├── composer.lock              # Locked dependency versions
 ├── vendor/                    # Composer dependencies (not in git)
+│   ├── phpmailer/            # Email sending library
+│   └── composer/             # Composer autoloader
 │
 ├── api/                       # Backend API gateway and handlers
 │   ├── api.php               # Main API gateway with routing
 │   ├── auth.php              # Authentication endpoints
 │   ├── tasks.php             # Task management endpoints
-│   └── users.php             # User preference endpoints
+│   ├── users.php             # User preference endpoints
+│   ├── admin.php             # Admin panel endpoints
+│   ├── calevents.php         # Calendar events management
+│   └── calprefs.php          # Calendar preferences management
+│
+├── login/                     # Authentication pages
+│   ├── login.php             # User login page
+│   ├── register.php          # User registration page
+│   ├── forgot.php            # Password reset request
+│   ├── reset.php             # Password reset completion
+│   └── logout.php            # Session termination
+│
+├── admin/                     # Administrative interface
+│   └── index.php             # Admin panel entry point
 │
 ├── uix/                       # Frontend user interface
 │   ├── app.js                # Global utilities and state management
 │   ├── auth.js               # Authentication form handling
 │   ├── editor.js             # Unified Editor functionality
 │   ├── tasks.js              # Task board interaction logic
+│   ├── calendar.js           # Calendar overlay functionality
 │   ├── style.css             # Global styles and theme variables
 │   ├── tasks.css             # Task-specific styling
 │   ├── editor.css            # Editor interface styling
 │   ├── attachments.css       # File management styling
-│   └── settings.css          # Settings panel styling
+│   ├── settings.css          # Settings panel styling
+│   └── login.css             # Authentication pages styling
 │
 ├── media/                     # Static assets and uploads
 │   ├── imgs/                 # User-uploaded attachments (organized by user)
-│   └── icons/                # Application icons and graphics
+│   ├── leaf.svg              # Application logo
+│   ├── favico.svg            # Favicon and app icons
+│   ├── logo.svg              # Legacy logo
+│   ├── monstera.svg          # Alternative logo
+│   └── leafcircle.svg        # Alternative logo variant
+│
+├── sql/                       # Database schema and migrations
+│   ├── calendar_overlay_schema.sql        # Calendar overlay tables
+│   ├── calendar_overlay_complete_schema.sql # Complete calendar setup
+│   └── calendar_overlay_migration.sql     # Calendar migration scripts
 │
 ├── incs/                      # Backend includes and utilities
-│   ├── config.php            # Application configuration
+│   ├── config.php            # Application configuration with URL detection
 │   ├── db.php                # Database connection management
 │   ├── mailer.php            # Email sending utilities
+│   ├── helpers.php           # Utility functions
 │   └── meta/                 # Documentation and specifications
 │       ├── spec.md           # This specification document
 │       ├── done.md           # Development progress log
-│       └── dialogs.md        # Design decision discussions
+│       ├── dialogs.md        # Design decision discussions
+│       ├── prompts.md        # AI prompt templates
+│       └── svgs.md           # SVG icon specifications
 │
-└── login/                     # Authentication pages
-	├── login.php             # User login form with theme system
-	├── register.php          # User registration form with theme system
-	├── logout.php            # Session termination
-	├── forgot.php   # Password reset request with theme system
-	└── reset.php    # Password reset completion with theme system
+├── temp/                      # Temporary development files
+│   └── [various temp files]  # Development artifacts
+│
 ```
+
+**Key Directory Descriptions:**
+
+- **`/api/`** - RESTful API endpoints following single gateway pattern
+- **`/login/`** - Authentication pages with theme integration and responsive design
+- **`/admin/`** - Administrative interface for system management
+- **`/uix/`** - Frontend JavaScript and CSS modules for user interface
+- **`/media/`** - Static assets including logos, icons, and user uploads
+- **`/sql/`** - Database schema files and migration scripts
+- **`/incs/`** - Backend PHP includes and configuration management
+- **`/temp/`** - Temporary development files (excluded from production)
 
 #### 6.5.2 Authentication Pages Implementation
 

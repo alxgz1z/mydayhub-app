@@ -75,7 +75,34 @@ if (DEVMODE) {
 
 // --- APPLICATION URL & VERSION ---
 define('APP_VER', 'Beta 7.4 - Jaco');
-define('APP_URL', getenv('APP_URL') ?: 'http://localhost');
+
+// Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
+function detectAppUrl() {
+	// First, check if APP_URL is explicitly set in environment
+	$envUrl = getenv('APP_URL');
+	if ($envUrl && $envUrl !== 'http://localhost') {
+		return $envUrl;
+	}
+	
+	// Auto-detect using stable hostnames only
+	if (isset($_SERVER['HTTP_HOST'])) {
+		$host = $_SERVER['HTTP_HOST'];
+		$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
+		
+		// Only use known stable hostnames, avoid dynamic IPs
+		if ($host === 'jagmac.local' || $host === 'localhost') {
+			return $protocol . '://' . $host;
+		}
+		
+		// For any other host (including IPs), default to jagmac.local
+		return $protocol . '://jagmac.local';
+	}
+	
+	// Fallback to environment variable or localhost
+	return $envUrl ?: 'http://localhost';
+}
+
+define('APP_URL', detectAppUrl());
 
 // --- DATABASE CREDENTIALS (from Environment Variables) ---
 define('DB_HOST', getenv('DB_HOST'));

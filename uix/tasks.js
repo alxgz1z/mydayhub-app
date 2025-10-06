@@ -526,6 +526,11 @@ function initEventListeners() {
 						
 						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
 						updateQuotaStatusAfterOperation('task', false);
+						
+						// Update mission focus chart if visible
+						if (typeof window.updateMissionFocusChart === 'function') {
+							window.updateMissionFocusChart();
+						}
 					
 						const removalTimeout = setTimeout(() => {
 							taskCard.remove();
@@ -1520,6 +1525,11 @@ async function toggleTaskComplete(taskId, isComplete) {
 			// Re-render the card to update its content
 			rerenderTaskCard(taskCard);
 			
+			// Update mission focus chart if visible
+			if (typeof window.updateMissionFocusChart === 'function') {
+				window.updateMissionFocusChart();
+			}
+			
 			// Apply the flash animation to the new card
 			if (isComplete) {
 				const updatedCard = document.querySelector(`[data-task-id="${taskId}"]`);
@@ -1604,6 +1614,11 @@ async function setTaskClassification(taskId, newClassification) {
 			taskCardEl.classList.remove('classification-signal', 'classification-support', 'classification-backlog', 'classification-noise');
 			taskCardEl.classList.add(`classification-${returnedClassification}`);
 			sortTasksInColumn(taskCardEl.closest('.column-body'));
+			
+			// Update mission focus chart if visible
+			if (typeof window.updateMissionFocusChart === 'function') {
+				window.updateMissionFocusChart();
+			}
 		} else {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
@@ -1761,6 +1776,11 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			
 			// Modified for Subscription Quota Enforcement - Update quota tracking
 			updateQuotaStatusAfterOperation('task', true);
+			
+			// Update mission focus chart if visible
+			if (typeof window.updateMissionFocusChart === 'function') {
+				window.updateMissionFocusChart();
+			}
 			
 			showToast({ message: 'Task created.', type: 'success' });
 		} else {
