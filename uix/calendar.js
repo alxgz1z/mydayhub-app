@@ -210,7 +210,7 @@ async function loadCalendarData() {
         
     } catch (error) {
         console.error('Error loading calendar data:', error);
-        showToast('Error loading calendar data', 'error');
+        showToast({ message: 'Error loading calendar data', type: 'error' });
     }
 }
 
@@ -515,7 +515,7 @@ async function loadEventsList() {
         }
     } catch (error) {
         console.error('Error loading events list:', error);
-        showToast('Error loading events list', 'error');
+        showToast({ message: 'Error loading events list', type: 'error' });
     }
 }
 
@@ -656,18 +656,18 @@ async function handleEventFormSubmit(e) {
     
     // Validate form data
     if (!eventData.label || eventData.label.trim().length === 0) {
-        showToast('Please enter an event label', 'error');
+        showToast({ message: 'Please enter an event label', type: 'error' });
         document.getElementById('event-label').focus();
         return;
     }
     
     if (!eventData.start_date || !eventData.end_date) {
-        showToast('Please select start and end dates', 'error');
+        showToast({ message: 'Please select start and end dates', type: 'error' });
         return;
     }
     
     if (eventData.start_date > eventData.end_date) {
-        showToast('Start date cannot be after end date', 'error');
+        showToast({ message: 'Start date cannot be after end date', type: 'error' });
         document.getElementById('event-start-date').focus();
         return;
     }
@@ -700,15 +700,15 @@ async function handleEventFormSubmit(e) {
         }
         
         if (response.success) {
-            showToast(eventId ? 'Event updated successfully' : 'Event created successfully', 'success');
+            showToast({ message: eventId ? 'Event updated successfully' : 'Event created successfully', type: 'success' });
             closeEventModal();
             loadCalendarData();
         } else {
-            showToast(response.error || 'Error saving event', 'error');
+            showToast({ message: response.error || 'Error saving event', type: 'error' });
         }
     } catch (error) {
         console.error('Error saving event:', error);
-        showToast('Error saving event', 'error');
+        showToast({ message: 'Error saving event', type: 'error' });
     } finally {
         // Reset button state
         saveBtn.textContent = originalText;
@@ -735,15 +735,15 @@ async function handleDeleteEvent() {
         });
         
         if (response.success) {
-            showToast('Event deleted successfully', 'success');
+            showToast({ message: 'Event deleted successfully', type: 'success' });
             closeEventModal();
             loadCalendarData();
         } else {
-            showToast(response.error || 'Error deleting event', 'error');
+            showToast({ message: response.error || 'Error deleting event', type: 'error' });
         }
     } catch (error) {
         console.error('Error deleting event:', error);
-        showToast('Error deleting event', 'error');
+        showToast({ message: 'Error deleting event', type: 'error' });
     }
 }
 
@@ -774,14 +774,14 @@ async function handlePreferenceChange(e) {
         });
         
         if (response.success) {
-            showToast('Preferences updated', 'success');
+            showToast({ message: 'Preferences updated', type: 'success' });
             loadCalendarData(); // Reload to reflect changes
         } else {
-            showToast('Error updating preferences', 'error');
+            showToast({ message: 'Error updating preferences', type: 'error' });
         }
     } catch (error) {
         console.error('Error updating preferences:', error);
-        showToast('Error updating preferences', 'error');
+        showToast({ message: 'Error updating preferences', type: 'error' });
     }
 }
 
@@ -806,15 +806,15 @@ function deleteEvent(eventId) {
         data: { id: eventId }
     }).then(response => {
         if (response.success) {
-            showToast('Event deleted successfully', 'success');
+            showToast({ message: 'Event deleted successfully', type: 'success' });
             loadEventsList();
             loadCalendarData();
         } else {
-            showToast(response.error || 'Error deleting event', 'error');
+            showToast({ message: response.error || 'Error deleting event', type: 'error' });
         }
     }).catch(error => {
         console.error('Error deleting event:', error);
-        showToast('Error deleting event', 'error');
+        showToast({ message: 'Error deleting event', type: 'error' });
     });
 }
 
@@ -892,13 +892,13 @@ function handleFileSelection(e) {
                 
                 // Validate JSON structure
                 if (!Array.isArray(jsonData)) {
-                    showToast('JSON must be an array of events', 'error');
+                    showToast({ message: 'JSON must be an array of events', type: 'error' });
                     if (executeBtn) executeBtn.disabled = true;
                     return;
                 }
                 
                 if (jsonData.length === 0) {
-                    showToast('JSON file is empty', 'error');
+                    showToast({ message: 'JSON file is empty', type: 'error' });
                     if (executeBtn) executeBtn.disabled = true;
                     return;
                 }
@@ -906,7 +906,7 @@ function handleFileSelection(e) {
                 // Validate first event structure
                 const firstEvent = jsonData[0];
                 if (!firstEvent.startDate || !firstEvent.endDate || !firstEvent.label) {
-                    showToast('Invalid JSON structure. Events must have startDate, endDate, and label', 'error');
+                    showToast({ message: 'Invalid JSON structure. Events must have startDate, endDate, and label', type: 'error' });
                     if (executeBtn) executeBtn.disabled = true;
                     return;
                 }
@@ -916,7 +916,7 @@ function handleFileSelection(e) {
                 
             } catch (error) {
                 console.error('JSON parsing error:', error);
-                showToast('Invalid JSON file: ' + error.message, 'error');
+                showToast({ message: 'Invalid JSON file: ' + error.message, type: 'error' });
                 if (executeBtn) executeBtn.disabled = true;
             }
         };
@@ -925,7 +925,7 @@ function handleFileSelection(e) {
     } else {
         if (previewBtn) previewBtn.disabled = true;
         if (executeBtn) executeBtn.disabled = true;
-        showToast('Please select a valid JSON file', 'error');
+        showToast({ message: 'Please select a valid JSON file', type: 'error' });
     }
 }
 
@@ -937,7 +937,7 @@ function previewJsonImport() {
     const file = fileInput.files[0];
     
     if (!file) {
-        showToast('Please select a JSON file first', 'error');
+        showToast({ message: 'Please select a JSON file first', type: 'error' });
         return;
     }
     
@@ -1017,7 +1017,7 @@ function displayImportPreview(events) {
  */
 async function executeJsonImport() {
     if (!importData) {
-        showToast('No import data available', 'error');
+        showToast({ message: 'No import data available', type: 'error' });
         return;
     }
     
@@ -1027,7 +1027,7 @@ async function executeJsonImport() {
     const replaceExisting = document.getElementById('import-replace-existing').checked;
     
     if (!calendarName) {
-        showToast('Please enter a calendar name', 'error');
+        showToast({ message: 'Please enter a calendar name', type: 'error' });
         return;
     }
     
@@ -1059,15 +1059,15 @@ async function executeJsonImport() {
                 console.warn('Import errors:', data.errors);
             }
             
-            showToast(message, 'success');
+            showToast({ message: message, type: 'success' });
             closeJsonImportModal();
             loadCalendarData();
         } else {
-            showToast(response.error || 'Import failed', 'error');
+            showToast({ message: response.error || 'Import failed', type: 'error' });
         }
     } catch (error) {
         console.error('Import error:', error);
-        showToast('Import failed: ' + error.message, 'error');
+        showToast({ message: 'Import failed: ' + error.message, type: 'error' });
     } finally {
         if (executeBtn) {
             executeBtn.textContent = 'Import Events';
@@ -1190,15 +1190,15 @@ async function deleteCalendar(calendarName) {
         });
         
         if (response.success) {
-            showToast('success', response.message);
+            showToast({ message: response.message, type: 'success' });
             loadCalendarsList(); // Refresh the list
             loadCalendarData(); // Refresh the calendar view
         } else {
-            showToast('error', response.error || 'Failed to delete calendar');
+            showToast({ message: response.error || 'Failed to delete calendar', type: 'error' });
         }
     } catch (error) {
         console.error('Error deleting calendar:', error);
-        showToast('error', 'Failed to delete calendar');
+        showToast({ message: 'Failed to delete calendar', type: 'error' });
     }
 }
 
@@ -1217,15 +1217,15 @@ async function setCalendarPriority(calendarName, priority) {
         });
         
         if (response.success) {
-            showToast('success', response.message);
+            showToast({ message: response.message, type: 'success' });
             loadCalendarsList(); // Refresh the list
             loadTodayEvents(); // Refresh the title bar badge
         } else {
-            showToast('error', response.error || 'Failed to set calendar priority');
+            showToast({ message: response.error || 'Failed to set calendar priority', type: 'error' });
         }
     } catch (error) {
         console.error('Error setting calendar priority:', error);
-        showToast('error', 'Failed to set calendar priority');
+        showToast({ message: 'Failed to set calendar priority', type: 'error' });
     }
 }
 

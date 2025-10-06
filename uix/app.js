@@ -910,6 +910,9 @@ function updateFooterDate() {
  */
 function showToast(options) {
 	const { message, type = 'info', duration = 5000, action = null } = options;
+	
+	// Prevent empty toast messages
+	const displayMessage = message || '<insert notification here>';
 
 	const container = document.getElementById('toast-container');
 	if (!container) {
@@ -924,7 +927,7 @@ function showToast(options) {
 	toastContent.className = 'toast-content';
 
 	const messageEl = document.createElement('span');
-	messageEl.textContent = message;
+	messageEl.textContent = displayMessage;
 	toastContent.appendChild(messageEl);
 
 	if (action && typeof action.callback === 'function') {
