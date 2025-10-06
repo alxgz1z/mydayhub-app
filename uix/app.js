@@ -135,11 +135,12 @@ window.apiFetch = apiFetch;
 
 // Make mission focus chart function globally available
 window.updateMissionFocusChart = updateMissionFocusChart;
+window.loadHeaderDatePreference = loadHeaderDatePreference;
 
 /**
  * Toggle header date visibility
  */
-function toggleHeaderDateVisibility(state) {
+async function toggleHeaderDateVisibility(state) {
 	const headerDateOffBtn = document.getElementById('header-date-off');
 	const headerDateOnBtn = document.getElementById('header-date-on');
 	const headerDateElement = document.getElementById('header-date');
@@ -155,22 +156,35 @@ function toggleHeaderDateVisibility(state) {
 	// Show/hide date
 	headerDateElement.style.display = isVisible ? 'block' : 'none';
 	
-	// Save preference
+	// Save preference to both localStorage (immediate) and backend (persistent)
 	localStorage.setItem('showHeaderDate', isVisible ? 'true' : 'false');
+	
+	try {
+		await saveUserPreference('show_header_date', isVisible);
+	} catch (error) {
+		console.error('Error saving header date preference:', error);
+	}
 }
 
 /**
  * Load header date visibility preference
  */
-function loadHeaderDatePreference() {
+function loadHeaderDatePreference(userPrefs = null) {
 	const headerDateOffBtn = document.getElementById('header-date-off');
 	const headerDateOnBtn = document.getElementById('header-date-on');
 	const headerDateElement = document.getElementById('header-date');
 	
 	if (!headerDateOffBtn || !headerDateOnBtn || !headerDateElement) return;
 	
-	const savedPreference = localStorage.getItem('showHeaderDate');
-	const shouldShow = savedPreference !== null ? savedPreference === 'true' : true; // Default to true
+	// Check backend preference first, then localStorage fallback, then default to true
+	let shouldShow = true; // Default to true
+	
+	if (userPrefs && typeof userPrefs.show_header_date !== 'undefined') {
+		shouldShow = userPrefs.show_header_date;
+	} else {
+		const savedPreference = localStorage.getItem('showHeaderDate');
+		shouldShow = savedPreference !== null ? savedPreference === 'true' : true;
+	}
 	
 	// Update button states
 	headerDateOffBtn.classList.toggle('active', !shouldShow);
@@ -178,6 +192,29 @@ function loadHeaderDatePreference() {
 	
 	// Show/hide date
 	headerDateElement.style.display = shouldShow ? 'block' : 'none';
+}
+
+/**
+ * Initialize mobile viewport height fix for browser UI overlays
+ */
+function initMobileViewportFix() {
+	// Only apply on mobile devices
+	if (window.innerWidth > 768) return;
+	
+	function setViewportHeight() {
+		const vh = window.innerHeight * 0.01;
+		document.documentElement.style.setProperty('--vh', `${vh}px`);
+	}
+	
+	// Set initial viewport height
+	setViewportHeight();
+	
+	// Update on resize (handles browser UI show/hide)
+	window.addEventListener('resize', setViewportHeight);
+	window.addEventListener('orientationchange', () => {
+		// Delay to ensure orientation change is complete
+		setTimeout(setViewportHeight, 100);
+	});
 }
 
 /**
@@ -456,6 +493,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Update mission focus chart when task board is loaded
 	waitForTaskBoardAndUpdateChart();
+	
+	// Initialize mobile viewport height fix
+	initMobileViewportFix();
 });
 
 // ==========================================================================
@@ -573,9 +613,9 @@ function initSettingsPanel() {
 	const headerDateOffBtn = document.getElementById('header-date-off');
 	const headerDateOnBtn = document.getElementById('header-date-on');
 	if (headerDateOffBtn && headerDateOnBtn) {
-		headerDateOffBtn.addEventListener('click', () => toggleHeaderDateVisibility('off'));
-		headerDateOnBtn.addEventListener('click', () => toggleHeaderDateVisibility('on'));
-		// Load saved preference
+		headerDateOffBtn.addEventListener('click', async () => await toggleHeaderDateVisibility('off'));
+		headerDateOnBtn.addEventListener('click', async () => await toggleHeaderDateVisibility('on'));
+		// Load saved preference (will be overridden by backend preferences when tasks load)
 		loadHeaderDatePreference();
 	}
 	
@@ -942,7 +982,7 @@ function closeChangePasswordModal() {
 // ==========================================================================
 
 /**
- * Updates the date in both header and footer to the current date in "dd mmm yy" format.
+ * Updates the date in both header and footer to the current date in "dd mmm" format.
  */
 function updateFooterDate() {
 	const footerDateEl = document.getElementById('footer-date');
@@ -953,8 +993,7 @@ function updateFooterDate() {
 	
 	const day = String(now.getDate()).padStart(2, '0');
 	const month = months[now.getMonth()];
-	const year = String(now.getFullYear()).slice(-2);
-	const dateString = `${day} ${month} ${year}`;
+	const dateString = `${day} ${month}`;
 
 	if (footerDateEl) {
 		footerDateEl.textContent = dateString;

@@ -1883,6 +1883,11 @@ async function fetchAndRenderBoard() {
 				if (typeof window.syncThemeWithBackend === 'function') {
 					window.syncThemeWithBackend(userPrefs.light_mode, userPrefs.high_contrast_mode);
 				}
+				
+				// Handle header date visibility preference
+				if (typeof window.loadHeaderDatePreference === 'function') {
+					window.loadHeaderDatePreference(userPrefs);
+				}
 			}
 
 			renderBoard(boardData);
