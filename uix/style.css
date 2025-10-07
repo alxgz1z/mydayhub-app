@@ -1364,7 +1364,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	position: fixed;
 	bottom: 20px;
 	right: 20px;
-	z-index: 1500;
+	z-index: 10002; /* Higher than encryption setup modal (10000-10001) */
 	display: flex;
 	flex-direction: column-reverse;
 	gap: 10px;
@@ -2393,6 +2393,410 @@ body.light-mode .filter-label {
 	/* Hide desktop navigation on mobile */
 	.nav-desktop {
 		display: none;
+	}
+}
+
+/* ==========================================================================
+   ENCRYPTION SETUP WIZARD STYLES
+   ========================================================================== */
+
+/* Modal overlay - ensure it's always on top */
+.modal-overlay {
+	position: fixed !important;
+	top: 0 !important;
+	left: 0 !important;
+	width: 100% !important;
+	height: 100% !important;
+	background-color: rgba(0, 0, 0, 0.85) !important;
+	z-index: 10000 !important;
+	display: flex !important;
+	align-items: center !important;
+	justify-content: center !important;
+	padding: 1rem !important;
+}
+
+.encryption-setup-modal {
+	max-width: 800px;
+	width: 100%;
+	max-height: 90vh;
+	overflow-y: auto;
+	background-color: var(--bg-primary) !important;
+	border: 1px solid var(--border-color) !important;
+	border-radius: 0.75rem !important;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+	position: relative !important;
+	z-index: 10001 !important;
+	opacity: 1 !important;
+}
+
+.setup-progress {
+	margin-bottom: 2rem;
+}
+
+.progress-bar {
+	width: 100%;
+	height: 8px;
+	background-color: var(--border-color);
+	border-radius: 4px;
+	overflow: hidden;
+	margin-bottom: 0.5rem;
+}
+
+.progress-fill {
+	height: 100%;
+	background: linear-gradient(90deg, var(--accent-color), #22c55e);
+	transition: width 0.3s ease;
+	border-radius: 4px;
+}
+
+.progress-text {
+	text-align: center;
+	font-size: 0.875rem;
+	color: var(--text-secondary);
+	font-weight: 500;
+}
+
+.setup-step {
+	padding: 1rem 0;
+}
+
+.setup-step h3 {
+	margin: 0 0 1rem 0;
+	font-size: 1.5rem;
+	color: var(--text-primary);
+}
+
+.setup-step p {
+	margin: 0 0 1.5rem 0;
+	color: var(--text-secondary);
+	line-height: 1.6;
+}
+
+/* Security Questions Step */
+.security-questions-form {
+	margin-bottom: 2rem;
+}
+
+.security-warning {
+	display: flex;
+	gap: 1rem;
+	padding: 1.5rem;
+	background-color: #fef3c7;
+	border: 2px solid #f59e0b;
+	border-radius: 0.75rem;
+	margin-bottom: 2rem;
+}
+
+.warning-icon {
+	font-size: 2rem;
+	flex-shrink: 0;
+	margin-top: 0.25rem;
+}
+
+.warning-content h4 {
+	margin: 0 0 0.75rem 0;
+	color: #92400e;
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.warning-content p {
+	margin: 0 0 0.75rem 0;
+	color: #92400e;
+	font-size: 0.875rem;
+	line-height: 1.5;
+}
+
+.warning-content p:last-child {
+	margin-bottom: 0;
+	font-weight: 600;
+}
+
+.warning-content ul {
+	margin: 0 0 0.75rem 0;
+	padding-left: 1.5rem;
+	color: #92400e;
+	line-height: 1.6;
+}
+
+.warning-content li {
+	margin-bottom: 0.25rem;
+	font-size: 0.875rem;
+}
+
+.questions-grid {
+	display: grid;
+	gap: 1.5rem;
+}
+
+.question-group {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+}
+
+.question-group label {
+	font-weight: 600;
+	color: var(--text-primary);
+	font-size: 0.875rem;
+}
+
+.question-input, .answer-input {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid var(--border-color);
+	border-radius: 0.5rem;
+	font-size: 0.875rem;
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	transition: border-color 0.2s ease;
+}
+
+.question-input:focus, .answer-input:focus {
+	outline: none;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.question-input::placeholder, .answer-input::placeholder {
+	color: var(--text-secondary);
+	font-style: italic;
+}
+
+.security-info, .password-info {
+	background-color: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 0.75rem;
+	padding: 1.5rem;
+	margin-top: 1.5rem;
+}
+
+.security-info h4, .password-info h4 {
+	margin: 0 0 1rem 0;
+	color: var(--text-primary);
+	font-size: 1rem;
+}
+
+.security-info ul, .password-info ul {
+	margin: 0;
+	padding-left: 1.5rem;
+	color: var(--text-secondary);
+	line-height: 1.6;
+}
+
+.security-info li, .password-info li {
+	margin-bottom: 0.5rem;
+}
+
+/* Password Step */
+.password-form {
+	margin-bottom: 2rem;
+}
+
+.form-group {
+	margin-bottom: 1.5rem;
+}
+
+.form-group label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.form-input {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid var(--border-color);
+	border-radius: 0.5rem;
+	font-size: 1rem;
+	background-color: var(--bg-primary);
+	color: var(--text-primary);
+	transition: border-color 0.2s ease;
+}
+
+.form-input:focus {
+	outline: none;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+.password-strength, .password-match {
+	margin-top: 0.5rem;
+}
+
+.strength-meter {
+	width: 100%;
+	height: 4px;
+	background-color: var(--border-color);
+	border-radius: 2px;
+	overflow: hidden;
+	margin-bottom: 0.25rem;
+}
+
+.strength-fill {
+	height: 100%;
+	transition: width 0.3s ease, background-color 0.3s ease;
+}
+
+.strength-text {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--text-secondary);
+}
+
+.match-indicator {
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.25rem;
+}
+
+.match-indicator.success {
+	color: #16a34a;
+	background-color: rgba(34, 197, 94, 0.1);
+}
+
+.match-indicator.error {
+	color: #dc2626;
+	background-color: rgba(239, 68, 68, 0.1);
+}
+
+/* Setup Complete Step */
+.complete-step {
+	text-align: center;
+}
+
+.success-icon {
+	font-size: 4rem;
+	margin-bottom: 1rem;
+}
+
+.setup-summary {
+	text-align: left;
+	margin: 2rem 0;
+	background-color: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 0.75rem;
+	padding: 1.5rem;
+}
+
+.setup-summary h4 {
+	margin: 0 0 1rem 0;
+	color: var(--text-primary);
+	font-size: 1rem;
+}
+
+.setup-summary ul {
+	margin: 0 0 1.5rem 0;
+	padding-left: 1.5rem;
+	color: var(--text-secondary);
+	line-height: 1.6;
+}
+
+.setup-summary li {
+	margin-bottom: 0.5rem;
+}
+
+.migration-status {
+	margin-top: 2rem;
+	padding: 1.5rem;
+	background-color: var(--bg-secondary);
+	border: 1px solid var(--border-color);
+	border-radius: 0.75rem;
+}
+
+.migration-status h4 {
+	margin: 0 0 1rem 0;
+	color: var(--text-primary);
+	font-size: 1rem;
+}
+
+.migration-progress {
+	margin-top: 1rem;
+}
+
+/* Setup Buttons */
+.setup-buttons {
+	display: flex;
+	gap: 1rem;
+	justify-content: center;
+	align-items: center;
+}
+
+.setup-buttons .btn {
+	padding: 0.75rem 1.5rem;
+	border-radius: 0.5rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	border: none;
+}
+
+.setup-buttons .btn-primary {
+	background-color: var(--accent-color);
+	color: white;
+}
+
+.setup-buttons .btn-primary:hover {
+	background-color: #16a34a;
+	transform: translateY(-1px);
+}
+
+.setup-buttons .btn-secondary {
+	background-color: var(--bg-secondary);
+	color: var(--text-primary);
+	border: 1px solid var(--border-color);
+}
+
+.setup-buttons .btn-secondary:hover {
+	background-color: var(--border-color);
+}
+
+.setup-buttons .btn-text {
+	background: none;
+	color: var(--text-secondary);
+	text-decoration: underline;
+}
+
+.setup-buttons .btn-text:hover {
+	color: var(--text-primary);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.encryption-setup-modal {
+		width: 95%;
+		margin: 1rem;
+	}
+	
+	.security-warning {
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem;
+	}
+	
+	.warning-icon {
+		font-size: 1.5rem;
+		margin-top: 0;
+		text-align: center;
+	}
+	
+	.questions-grid {
+		gap: 1rem;
+	}
+	
+	.security-info, .password-info, .setup-summary, .migration-status {
+		padding: 1rem;
+	}
+	
+	.setup-buttons {
+		flex-direction: column;
+		gap: 0.5rem;
+	}
+	
+	.setup-buttons .btn {
+		width: 100%;
 	}
 }
 

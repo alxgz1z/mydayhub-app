@@ -16,6 +16,7 @@ declare(strict_types=1);
 // Modified for Debugging Hardening: Include the global helpers file.
 // Note: While the gateway includes this, including it here makes the module self-contained and runnable in isolation for testing.
 require_once __DIR__ . '/../incs/helpers.php';
+require_once __DIR__ . '/../incs/crypto.php';
 
 
 // Define constants for the attachment feature
@@ -280,6 +281,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'getTrustRelationships':
 		if ($method === 'GET' || $method === 'POST') {
 			handle_get_trust_relationships($pdo, $userId);
+		}
+		break;
+		
+		case 'getSharedTasksInColumn':
+		if ($method === 'POST') {
+			handle_get_shared_tasks_in_column($pdo, $userId, $data);
 		}
 		break;
 		
@@ -671,20 +678,127 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 
-		$updateSql = "UPDATE `{$table}` SET is_private = NOT is_private, updated_at = UTC_TIMESTAMP() WHERE {$idColumn} = :id AND user_id = :userId";
-		$stmtUpdate = $pdo->prepare($updateSql);
-		$stmtUpdate->execute([':id' => $id, ':userId' => $userId]);
-
-		if ($stmtUpdate->rowCount() === 0) {
+		// Get current private state
+		if ($type === 'task') {
+			$selectSql = "SELECT is_private, encrypted_data FROM `{$table}` WHERE {$idColumn} = :id AND user_id = :userId";
+		} else {
+			$selectSql = "SELECT is_private FROM `{$table}` WHERE {$idColumn} = :id AND user_id = :userId";
+		}
+		$stmtSelect = $pdo->prepare($selectSql);
+		$stmtSelect->execute([':id' => $id, ':userId' => $userId]);
+		$currentData = $stmtSelect->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$currentData) {
 			$pdo->rollBack();
 			send_json_response(['status' => 'error', 'message' => ucfirst($type) . ' not found or permission denied.'], 404);
 			return;
 		}
 
-		$selectSql = "SELECT is_private FROM `{$table}` WHERE {$idColumn} = :id";
-		$stmtSelect = $pdo->prepare($selectSql);
-		$stmtSelect->execute([':id' => $id]);
-		$newPrivateState = (bool)$stmtSelect->fetchColumn();
+		$currentPrivateState = (bool)$currentData['is_private'];
+		$newPrivateState = !$currentPrivateState;
+
+		// Update privacy status
+		$updateSql = "UPDATE `{$table}` SET is_private = NOT is_private, updated_at = UTC_TIMESTAMP() WHERE {$idColumn} = :id AND user_id = :userId";
+		$stmtUpdate = $pdo->prepare($updateSql);
+		$stmtUpdate->execute([':id' => $id, ':userId' => $userId]);
+
+		// Handle encryption for tasks
+		if ($type === 'task' && isEncryptionEnabled($pdo, $userId) && isset($currentData['encrypted_data'])) {
+			if ($newPrivateState) {
+				// Task is being made private - encrypt the data
+				$decryptedData = decryptTaskData($pdo, $userId, $id, $currentData['encrypted_data']);
+				if ($decryptedData) {
+					$encryptedData = encryptTaskData($pdo, $userId, $id, $decryptedData);
+					$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
+					$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':id' => $id]);
+				}
+			} else {
+				// Task is being made public - decrypt the data
+				$decryptedData = decryptTaskData($pdo, $userId, $id, $currentData['encrypted_data']);
+				if ($decryptedData) {
+					$stmtDecrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
+					$stmtDecrypt->execute([':encryptedData' => json_encode($decryptedData), ':id' => $id]);
+				}
+			}
+		}
+
+		// Handle column privacy inheritance
+		if ($type === 'column') {
+			if ($newPrivateState) {
+				// Column is being made private - make all tasks private and track inheritance
+				
+				// Check if column has shared tasks
+				$stmtShared = $pdo->prepare("
+					SELECT COUNT(*) FROM tasks t 
+					JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
+					WHERE t.column_id = :columnId AND t.user_id = :userId AND t.deleted_at IS NULL
+				");
+				$stmtShared->execute([':columnId' => $id, ':userId' => $userId]);
+				$sharedTaskCount = (int)$stmtShared->fetchColumn();
+				
+				if ($sharedTaskCount > 0) {
+					// Auto-unshare all shared tasks in the column (both active and completed)
+					$stmtUnshareAll = $pdo->prepare("
+						DELETE s FROM shared_items s 
+						JOIN tasks t ON t.task_id = s.item_id AND s.item_type = 'task'
+						WHERE t.column_id = :columnId AND t.user_id = :userId AND t.deleted_at IS NULL
+					");
+					$stmtUnshareAll->execute([':columnId' => $id, ':userId' => $userId]);
+					$unsharedCount = $stmtUnshareAll->rowCount();
+					
+					// Log the auto-unsharing
+					log_debug_message("Auto-unshared {$unsharedCount} shared tasks in column {$id} for user {$userId}");
+				}
+				
+				// Make all tasks in the column private and track inheritance
+				if (isEncryptionEnabled($pdo, $userId)) {
+					$stmtTasks = $pdo->prepare("SELECT task_id, encrypted_data FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL AND is_private = 0");
+					$stmtTasks->execute([':columnId' => $id, ':userId' => $userId]);
+					
+					while ($task = $stmtTasks->fetch(PDO::FETCH_ASSOC)) {
+						// Mark task as private and set privacy_inherited = TRUE
+						$stmtUpdateTask = $pdo->prepare("UPDATE tasks SET is_private = 1, privacy_inherited = 1 WHERE task_id = :taskId");
+						$stmtUpdateTask->execute([':taskId' => $task['task_id']]);
+						
+						// Encrypt the task data
+						$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+						if ($decryptedData) {
+							$encryptedData = encryptTaskData($pdo, $userId, $task['task_id'], $decryptedData);
+							$stmtEncryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+							$stmtEncryptTask->execute([':encryptedData' => $encryptedData, ':taskId' => $task['task_id']]);
+						}
+					}
+				} else {
+					// Just mark tasks as private and track inheritance without encryption
+					$stmtUpdateTasks = $pdo->prepare("UPDATE tasks SET is_private = 1, privacy_inherited = 1 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL AND is_private = 0");
+					$stmtUpdateTasks->execute([':columnId' => $id, ':userId' => $userId]);
+				}
+			} else {
+				// Column is being made public - restore original privacy states for inherited tasks
+				
+				if (isEncryptionEnabled($pdo, $userId)) {
+					$stmtInheritedTasks = $pdo->prepare("SELECT task_id, encrypted_data FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL AND privacy_inherited = 1");
+					$stmtInheritedTasks->execute([':columnId' => $id, ':userId' => $userId]);
+					
+					while ($task = $stmtInheritedTasks->fetch(PDO::FETCH_ASSOC)) {
+						// Restore task to public and clear inheritance flag
+						$stmtRestoreTask = $pdo->prepare("UPDATE tasks SET is_private = 0, privacy_inherited = 0 WHERE task_id = :taskId");
+						$stmtRestoreTask->execute([':taskId' => $task['task_id']]);
+						
+						// Decrypt the task data back to plain JSON
+						$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+						if ($decryptedData) {
+							$stmtDecryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+							$stmtDecryptTask->execute([':encryptedData' => json_encode($decryptedData), ':taskId' => $task['task_id']]);
+						}
+					}
+				} else {
+					// Just restore privacy states for inherited tasks without encryption
+					$stmtRestoreTasks = $pdo->prepare("UPDATE tasks SET is_private = 0, privacy_inherited = 0 WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL AND privacy_inherited = 1");
+					$stmtRestoreTasks->execute([':columnId' => $id, ':userId' => $userId]);
+				}
+			}
+		}
 
 		$pdo->commit();
 
@@ -749,11 +863,14 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
 		}
-		$currentData = json_decode($task['encrypted_data'], true) ?: [];
+		// Decrypt current data if encrypted
+		$currentData = decryptTaskData($pdo, $userId, $taskId, $task['encrypted_data']) ?: [];
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
 		}
-		$newDataJson = json_encode($currentData);
+		
+		// Encrypt the updated data
+		$newDataJson = encryptTaskData($pdo, $userId, $taskId, $currentData);
 		$sql_parts = [];
 		$params = [':taskId' => $taskId];
 		if ($notes !== null) {
@@ -877,6 +994,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		}
 
 		// Modified for Deleted User Cleanup - Exclude shared tasks from deleted/suspended users
+		// Modified for Shared Task Completion - Exclude completed shared tasks from receiver view
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
@@ -889,7 +1007,10 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
 			 JOIN users u ON u.user_id = t.user_id
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
-			 WHERE s.recipient_id = :userId AND t.deleted_at IS NULL AND u.status = 'active'
+			 WHERE s.recipient_id = :userId 
+			 AND t.deleted_at IS NULL 
+			 AND u.status = 'active'
+			 AND t.classification != 'completed'
 			 GROUP BY t.task_id
 			 ORDER BY t.position ASC"
 		);
@@ -941,8 +1062,9 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$tasksArray = [];
 		while ($task = $stmtTasks->fetch()) {
 			if (isset($columnMap[$task['column_id']])) {
-				$encryptedData = json_decode($task['encrypted_data'], true);
-				$task['has_notes'] = !empty($encryptedData['notes']);
+				// Decrypt task data if encrypted
+				$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+				$task['has_notes'] = !empty($decryptedData['notes']);
 				$task['is_snoozed'] = !empty($task['snoozed_until']);
 				$tasksArray[] = $task;
 				$taskIds[] = $task['task_id'];
@@ -951,6 +1073,8 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 
 		// Process shared tasks - add to "Shared with Me" column only if it exists
 		foreach ($sharedTasks as $task) {
+			// For shared tasks, we don't decrypt them as they belong to other users
+			// The frontend will handle decryption if needed
 			$encryptedData = json_decode($task['encrypted_data'], true);
 			$task['has_notes'] = !empty($encryptedData['notes']);
 			$task['is_snoozed'] = !empty($task['snoozed_until']);
@@ -1099,17 +1223,31 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		$stmtPos = $pdo->prepare("SELECT COUNT(*) FROM `tasks` WHERE user_id = :userId AND column_id = :columnId AND deleted_at IS NULL");
 		$stmtPos->execute([':userId' => $userId, ':columnId' => $columnId]);
 		$position = (int)$stmtPos->fetchColumn();
-		$encryptedData = json_encode(['title' => $taskTitle, 'notes' => '']);
+		
+		// Create task data
+		$taskData = ['title' => $taskTitle, 'notes' => ''];
+		
+		// Insert task first to get the ID
 		$stmt = $pdo->prepare(
 			"INSERT INTO `tasks` (user_id, column_id, encrypted_data, position, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())"
 		);
-		$stmt->execute([':userId' => $userId, ':columnId' => $columnId, ':encryptedData' => $encryptedData, ':position' => $position]);
+		$stmt->execute([':userId' => $userId, ':columnId' => $columnId, ':encryptedData' => json_encode($taskData), ':position' => $position]);
 		$newTaskId = (int)$pdo->lastInsertId();
+		
+		// Encrypt the data if encryption is enabled and task is private
+		if (isEncryptionEnabled($pdo, $userId)) {
+			$encryptedData = encryptTaskData($pdo, $userId, $newTaskId, $taskData);
+			$stmtUpdate = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+			$stmtUpdate->execute([':encryptedData' => $encryptedData, ':taskId' => $newTaskId]);
+		}
 
+		// Get the final encrypted data for response
+		$finalEncryptedData = isEncryptionEnabled($pdo, $userId) ? $encryptedData : json_encode($taskData);
+		
 		send_json_response([
 			'status' => 'success',
 			'data' => [
-				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $encryptedData,
+				'task_id' => $newTaskId, 'column_id' => $columnId, 'encrypted_data' => $finalEncryptedData,
 				'position' => $position, 'classification' => 'support', 'is_private' => false,
 				'due_date' => null, 'has_notes' => false, 'attachments_count' => 0,
 				// Modified for Snooze Feature: Add snooze fields
@@ -2027,6 +2165,49 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
 }
 
 /**
+ * Gets shared tasks in a specific column for privacy conflict checking.
+ */
+function handle_get_shared_tasks_in_column(PDO $pdo, int $userId, array $data): void {
+	try {
+		$columnId = (int)($data['column_id'] ?? 0);
+		
+		if (!$columnId) {
+			send_json_response(['status' => 'error', 'message' => 'Column ID is required.'], 400);
+			return;
+		}
+		
+		// Get shared tasks in the column
+		$stmt = $pdo->prepare("
+			SELECT 
+				t.task_id,
+				t.classification,
+				t.is_private,
+				s.permission,
+				u.username as recipient_username
+			FROM tasks t
+			JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
+			JOIN users u ON u.user_id = s.recipient_id
+			WHERE t.column_id = :columnId 
+			AND t.user_id = :userId 
+			AND t.deleted_at IS NULL
+			ORDER BY t.classification, t.task_id
+		");
+		
+		$stmt->execute([':columnId' => $columnId, ':userId' => $userId]);
+		$sharedTasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => $sharedTasks
+		]);
+		
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_shared_tasks_in_column: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+	}
+}
+
+/**
  * Gets all trust relationships for the current user - both outgoing and incoming shares.
  * Modified for Trust Management System - Comprehensive sharing relationship overview
  */
@@ -2065,6 +2246,7 @@ function handle_get_trust_relationships(PDO $pdo, int $userId): void {
 		}
 
 		// Get incoming shares (tasks others have shared with me)
+		// Modified for Shared Task Completion - Exclude completed shared tasks from trust relationships
 		$incomingStmt = $pdo->prepare("
 			SELECT 
 				s.item_id as task_id,
@@ -2082,6 +2264,7 @@ function handle_get_trust_relationships(PDO $pdo, int $userId): void {
 			AND s.recipient_id = :userId 
 			AND t.deleted_at IS NULL
 			AND u.status = 'active'
+			AND t.classification != 'completed'
 			ORDER BY s.created_at DESC
 		");
 		$incomingStmt->execute([':userId' => $userId]);

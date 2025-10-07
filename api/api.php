@@ -104,6 +104,18 @@ try {
             handle_calendar_preferences_action($action, $method, $pdo, $userId, $data);
             break;
 
+		case 'security_questions':
+			require_once __DIR__ . '/secquestions.php';
+			$result = handle_security_questions_action($action, $method, $pdo, $userId, $data);
+			send_json_response($result);
+			break;
+
+		case 'encryption':
+			require_once __DIR__ . '/encryption.php';
+			$result = handle_encryption_action($action, $method, $pdo, $userId, $data);
+			send_json_response($result);
+			break;
+
 		default:
 			send_json_response(['status' => 'error', 'message' => "Module '{$module}' not found."], 404);
 			break;

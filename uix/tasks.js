@@ -368,8 +368,48 @@ function initEventListeners() {
 					const columnEl = privacyBtn.closest('.task-column');
 					const columnId = columnEl.dataset.columnId;
 					if (columnId) {
+						// Check if column is being made private and has shared tasks
+						const isCurrentlyPrivate = columnEl.dataset.isPrivate === 'true';
+						console.log('Column privacy toggle:', { columnId, isCurrentlyPrivate, action: isCurrentlyPrivate ? 'make public' : 'make private' });
+						
+						if (!isCurrentlyPrivate) {
+							// Check for shared tasks before making private
+							console.log('Checking for shared tasks before making private...');
+							try {
+								// Add timeout to prevent hanging
+								const timeoutPromise = new Promise((_, reject) => 
+									setTimeout(() => reject(new Error('Timeout checking shared tasks')), 5000)
+								);
+								
+								const hasSharedTasks = await Promise.race([
+									checkColumnForSharedTasks(parseInt(columnId, 10)),
+									timeoutPromise
+								]);
+								
+								console.log('Shared tasks check completed:', hasSharedTasks);
+								if (hasSharedTasks && hasSharedTasks.hasShared) {
+									const proceed = await showSharedTaskConfirmation(hasSharedTasks);
+									if (!proceed) {
+										isActionRunning = false;
+										return;
+									}
+								}
+							} catch (error) {
+								console.error('Error in shared tasks check:', error);
+								// Continue with privacy toggle even if shared task check fails
+								console.log('Continuing with privacy toggle despite shared task check error');
+							}
+						} else {
+							console.log('Making column public - no shared task check needed');
+						}
+						
+						console.log('Calling togglePrivacy for column:', columnId);
 						await togglePrivacy('column', columnId);
 					}
+				} catch (error) {
+					console.error('Column privacy toggle error:', error);
+					const errorMessage = error.message || 'An unexpected error occurred while updating column privacy.';
+					showToast({ message: errorMessage, type: 'error' });
 				} finally {
 					isActionRunning = false;
 				}
@@ -1124,9 +1164,20 @@ function closeAllTaskActionMenus() {
 	 const isViewOnly = accessType === 'view';
 	 const isOwner = accessType === 'owner';
  
-	 const isPrivate = taskCard.dataset.isPrivate === 'true';
-	 const isSnoozed = taskCard.dataset.isSnoozed === 'true';
-	 const privacyText = isPrivate ? 'Make Public' : 'Make Private';
+	const isPrivate = taskCard.dataset.isPrivate === 'true';
+	const isSnoozed = taskCard.dataset.isSnoozed === 'true';
+	
+	// Debug: Log the privacy state for context menu
+	if (window.MyDayHub_Config?.DEV_MODE) {
+		console.log('Context menu privacy debug:', {
+			taskId: taskCard.dataset.taskId,
+			datasetIsPrivate: taskCard.dataset.isPrivate,
+			isPrivate: isPrivate,
+			privacyText: isPrivate ? 'Make Public' : 'Make Private'
+		});
+	}
+	
+	const privacyText = isPrivate ? 'Make Public' : 'Make Private';
 	 const privacyIcon = isPrivate
 		 ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
 		 : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
@@ -1484,7 +1535,21 @@ async function togglePrivacy(type, id) {
 
 				if (type === 'column') {
 					const btn = element.querySelector('.btn-toggle-column-privacy');
-					if (btn) btn.title = privacyBtnText;
+					if (btn) {
+						btn.title = privacyBtnText;
+						
+						// Update the icon based on new privacy state
+						const newIcon = is_private
+							? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
+							: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+						
+						btn.innerHTML = newIcon;
+					}
+					
+					// Reload entire board to get updated task privacy states
+					setTimeout(() => {
+						fetchAndRenderBoard();
+					}, 100);
 				}
 				
 				applyAllFilters();
@@ -1493,8 +1558,9 @@ async function togglePrivacy(type, id) {
 			throw new Error(result.message || `Failed to toggle privacy for ${type}.`);
 		}
 	} catch (error) {
-		showToast({ message: error.message, type: 'error' });
 		console.error('Toggle privacy error:', error);
+		const errorMessage = error.message || 'An unexpected error occurred while updating privacy status.';
+		showToast({ message: errorMessage, type: 'error' });
 	}
 }
 
@@ -1926,6 +1992,74 @@ function renderBoard(boardData) {
 	applyAllFilters();
 }
 
+
+/**
+ * Checks if a column has shared tasks and returns details about them.
+ */
+async function checkColumnForSharedTasks(columnId) {
+	console.log('checkColumnForSharedTasks called with columnId:', columnId);
+	try {
+		console.log('Making API call to getSharedTasksInColumn...');
+		const result = await apiFetch({
+			module: 'tasks',
+			action: 'getSharedTasksInColumn',
+			column_id: columnId
+		});
+		console.log('API response received:', result);
+		
+		if (result.status === 'success' && result.data) {
+			const sharedTasks = result.data;
+			const result_data = {
+				hasShared: sharedTasks.length > 0,
+				tasks: sharedTasks,
+				completedCount: sharedTasks.filter(t => t.classification === 'completed').length,
+				activeCount: sharedTasks.filter(t => t.classification !== 'completed').length
+			};
+			console.log('Processed shared tasks data:', result_data);
+			return result_data;
+		}
+		console.log('No shared tasks found or invalid response');
+		return { hasShared: false, tasks: [], completedCount: 0, activeCount: 0 };
+	} catch (error) {
+		console.error('Error checking shared tasks:', error);
+		return { hasShared: false, tasks: [], completedCount: 0, activeCount: 0 };
+	}
+}
+
+/**
+ * Shows a confirmation dialog for handling shared tasks when making column private.
+ */
+async function showSharedTaskConfirmation(sharedTaskInfo) {
+	const { completedCount, activeCount } = sharedTaskInfo;
+	
+	let message = '';
+	let canProceed = false;
+	
+	if (activeCount > 0 && completedCount > 0) {
+		// Has both active and completed shared tasks
+		message = `This column contains ${activeCount} active shared task${activeCount > 1 ? 's' : ''} and ${completedCount} completed shared task${completedCount > 1 ? 's' : ''}. Making the column private will automatically unshare all shared tasks in this column. Do you want to proceed?`;
+		canProceed = true;
+	} else if (activeCount > 0) {
+		// Has only active shared tasks - can auto-unshare
+		message = `This column contains ${activeCount} active shared task${activeCount > 1 ? 's' : ''}. Making the column private will automatically unshare these tasks. Do you want to proceed?`;
+		canProceed = true;
+	} else if (completedCount > 0) {
+		// Only completed shared tasks - can auto-unshare
+		message = `This column contains ${completedCount} completed shared task${completedCount > 1 ? 's' : ''}. Making the column private will automatically unshare these completed tasks. Do you want to proceed?`;
+		canProceed = true;
+	}
+	
+	if (!canProceed) {
+		// Show error message
+		showToast({ message, type: 'error' });
+		return false;
+	}
+	
+	// Show custom confirmation dialog
+	const confirmed = await showConfirm(message);
+	return confirmed;
+}
+
 /**
  * Creates the HTML element for a single column and its tasks.
  * Modified for Sharing Foundation - Hide task input for virtual "Shared with Me" column
@@ -2011,12 +2145,28 @@ function createTaskCard(taskData) {
 
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
+	
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
-		taskTitle = data.title;
-		taskNotes = data.notes || '';
+		
+		// Check if this is encrypted data (has encrypted envelope structure)
+		if (data.encrypted && data.item_type === 'task' && data.data) {
+			// This is encrypted data - use the decrypted data from the envelope
+			taskTitle = data.data.title || 'Untitled Task';
+			taskNotes = data.data.notes || '';
+		} else if (data.title !== undefined) {
+			// This is plain JSON data
+			taskTitle = data.title;
+			taskNotes = data.notes || '';
+		} else {
+			// Fallback for unexpected data structure
+			taskTitle = 'Invalid Task Data';
+			taskNotes = '';
+		}
 	} catch (e) {
 		console.error("Could not parse task data:", taskData.encrypted_data);
+		taskTitle = 'Parse Error';
+		taskNotes = '';
 	}
 
 	const isCompleted = taskData.classification === 'completed';
@@ -2209,14 +2359,14 @@ function createTaskCard(taskData) {
 			data-title="${encodeURIComponent(taskTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
 			data-classification="${taskData.classification}"
-			data-is-private="${isPrivate}"
+			data-is-private="${isPrivate ? 'true' : 'false'}"
 			data-has-notes="${taskData.has_notes}"
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"
 			data-attachments-count="${taskData.attachments_count || 0}"
 			data-snoozed-until="${taskData.snoozed_until || ''}"
 			data-snoozed-at="${taskData.snoozed_at || ''}"
-			data-is-snoozed="${taskData.is_snoozed || false}"
+			data-is-snoozed="${taskData.is_snoozed ? 'true' : 'false'}"
 			data-shares='${JSON.stringify(taskData.shares || [])}'
 			data-access-type="${accessType}"
 			data-ready-for-review="${!!(taskData.ready_for_review)}"

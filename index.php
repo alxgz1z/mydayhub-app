@@ -787,6 +787,8 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	
 	
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
+	<script src="uix/crypto.js" defer></script>
+	<script src="uix/encryption-setup.js" defer></script>
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/tasks.js" defer></script>

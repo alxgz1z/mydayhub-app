@@ -94,8 +94,14 @@ function detectAppUrl() {
 			return $protocol . '://' . $host;
 		}
 		
-		// For any other host (including IPs), default to jagmac.local
-		return $protocol . '://jagmac.local';
+		// For IP addresses, use them directly (Web Crypto API works with IPs on localhost)
+		if (filter_var($host, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
+			// This is a private IP address (like 10.0.0.3), use it directly
+			return $protocol . '://' . $host;
+		}
+		
+		// For any other host, default to localhost
+		return 'http://localhost';
 	}
 	
 	// Fallback to environment variable or localhost

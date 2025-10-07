@@ -1,0 +1,670 @@
+--- /Users/jalexg/Downloads/mydayhub-behind.sql	2025-10-06 23:56:41
++++ /Users/jalexg/Downloads/mydayhub-latest.sql	2025-10-06 23:55:40
+@@ -2,10 +2,10 @@
+ -- version 5.2.2
+ -- https://www.phpmyadmin.net/
+ --
+--- Host: 127.0.0.1:3306
+--- Generation Time: Oct 07, 2025 at 03:56 AM
+--- Server version: 11.8.3-MariaDB-log
+--- PHP Version: 7.2.34
++-- Host: localhost
++-- Generation Time: Oct 07, 2025 at 03:55 AM
++-- Server version: 9.4.0
++-- PHP Version: 8.2.29
+ 
+ SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+ START TRANSACTION;
+@@ -18,7 +18,7 @@
+ /*!40101 SET NAMES utf8mb4 */;
+ 
+ --
+--- Database: `u756585617_mydayhub`
++-- Database: `mydayhub`
+ --
+ 
+ -- --------------------------------------------------------
+@@ -28,14 +28,14 @@
+ --
+ 
+ CREATE TABLE `admin_actions` (
+-  `id` int(11) NOT NULL,
+-  `admin_user_id` int(11) NOT NULL,
+-  `target_user_id` int(11) NOT NULL,
+-  `action_type` enum('subscription_change','status_change','user_delete','data_export','notes_update') NOT NULL,
+-  `old_value` text DEFAULT NULL,
+-  `new_value` text DEFAULT NULL,
+-  `reason` text DEFAULT NULL,
+-  `created_at` datetime DEFAULT current_timestamp()
++  `id` int NOT NULL,
++  `admin_user_id` int NOT NULL,
++  `target_user_id` int NOT NULL,
++  `action_type` enum('subscription_change','status_change','user_delete','data_export','notes_update') COLLATE utf8mb4_unicode_ci NOT NULL,
++  `old_value` text COLLATE utf8mb4_unicode_ci,
++  `new_value` text COLLATE utf8mb4_unicode_ci,
++  `reason` text COLLATE utf8mb4_unicode_ci,
++  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -45,18 +45,18 @@
+ --
+ 
+ CREATE TABLE `calendar_events` (
+-  `id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `event_type` varchar(50) NOT NULL,
+-  `calendar_name` varchar(100) DEFAULT 'Custom Event',
+-  `label` varchar(100) NOT NULL,
++  `id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `event_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `calendar_name` varchar(100) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
++  `label` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL,
+   `start_date` date NOT NULL,
+   `end_date` date NOT NULL,
+-  `color` varchar(7) DEFAULT '#22c55e',
+-  `is_public` tinyint(1) DEFAULT 0,
+-  `priority` int(11) DEFAULT 0,
+-  `created_at` timestamp NULL DEFAULT current_timestamp(),
+-  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
++  `color` varchar(7) COLLATE utf8mb4_unicode_ci DEFAULT '#22c55e',
++  `is_public` tinyint(1) DEFAULT '0',
++  `priority` int DEFAULT '0',
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
++  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -66,28 +66,75 @@
+ --
+ 
+ CREATE TABLE `columns` (
+-  `column_id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `column_name` varchar(64) NOT NULL,
+-  `position` int(11) NOT NULL,
+-  `is_private` tinyint(1) NOT NULL DEFAULT 0,
+-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
+-  `deleted_at` datetime DEFAULT NULL
++  `column_id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `column_name` varchar(64) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `position` int NOT NULL,
++  `is_private` tinyint(1) NOT NULL DEFAULT '0',
++  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
++  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
++  `deleted_at` datetime DEFAULT NULL,
++  `has_shared_tasks` tinyint(1) DEFAULT '0' COMMENT 'Column contains shared tasks (blocks privacy)'
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+ 
+ --
++-- Table structure for table `encryption_audit_log`
++--
++
++CREATE TABLE `encryption_audit_log` (
++  `id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `operation` enum('encrypt','decrypt','key_derive','recovery_used','migration') COLLATE utf8mb4_unicode_ci NOT NULL,
++  `item_type` enum('task','column','user_key') COLLATE utf8mb4_unicode_ci DEFAULT NULL,
++  `item_id` int DEFAULT NULL,
++  `success` tinyint(1) NOT NULL,
++  `error_message` text COLLATE utf8mb4_unicode_ci,
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------
++
++--
++-- Table structure for table `encryption_migration_status`
++--
++
++CREATE TABLE `encryption_migration_status` (
++  `user_id` int NOT NULL,
++  `migration_status` enum('pending','in_progress','completed','failed') COLLATE utf8mb4_unicode_ci DEFAULT 'pending',
++  `tasks_migrated` int DEFAULT '0',
++  `total_tasks` int DEFAULT '0',
++  `migration_started_at` timestamp NULL DEFAULT NULL,
++  `migration_completed_at` timestamp NULL DEFAULT NULL,
++  `error_message` text COLLATE utf8mb4_unicode_ci
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------
++
++--
++-- Table structure for table `item_encryption_keys`
++--
++
++CREATE TABLE `item_encryption_keys` (
++  `item_id` int NOT NULL,
++  `item_type` enum('task','column') COLLATE utf8mb4_unicode_ci NOT NULL,
++  `wrapped_dek` blob NOT NULL,
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------
++
++--
+ -- Table structure for table `password_resets`
+ --
+ 
+ CREATE TABLE `password_resets` (
+-  `id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `token_hash` varchar(255) NOT NULL,
++  `id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `token_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+   `expires_at` datetime NOT NULL,
+-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
++  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -97,13 +144,13 @@
+ --
+ 
+ CREATE TABLE `pending_registrations` (
+-  `id` int(11) NOT NULL,
+-  `username` varchar(50) NOT NULL,
+-  `email` varchar(255) NOT NULL,
+-  `password_hash` varchar(255) NOT NULL,
+-  `code_hash` varchar(255) NOT NULL,
++  `id` int NOT NULL,
++  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `code_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
+   `expires_at` datetime NOT NULL,
+-  `created_at` datetime DEFAULT current_timestamp()
++  `created_at` datetime DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -113,16 +160,16 @@
+ --
+ 
+ CREATE TABLE `shared_items` (
+-  `id` int(11) NOT NULL,
+-  `owner_id` int(11) NOT NULL,
+-  `recipient_id` int(11) NOT NULL,
+-  `item_type` enum('task','column') NOT NULL DEFAULT 'task',
+-  `item_id` int(11) NOT NULL,
+-  `permission` enum('edit','view') NOT NULL DEFAULT 'edit',
+-  `status` enum('active','ready_for_review','revoked') NOT NULL DEFAULT 'active',
+-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+-  `updated_at` datetime NOT NULL DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+-  `ready_for_review` tinyint(1) DEFAULT 0
++  `id` int NOT NULL,
++  `owner_id` int NOT NULL,
++  `recipient_id` int NOT NULL,
++  `item_type` enum('task','column') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'task',
++  `item_id` int NOT NULL,
++  `permission` enum('edit','view') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'edit',
++  `status` enum('active','ready_for_review','revoked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active',
++  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
++  `updated_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
++  `ready_for_review` tinyint(1) DEFAULT '0'
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -132,13 +179,13 @@
+ --
+ 
+ CREATE TABLE `sharing_activity` (
+-  `id` int(11) NOT NULL,
+-  `shared_item_id` int(11) NOT NULL,
+-  `actor_user_id` int(11) NOT NULL,
+-  `action` enum('created','accepted','revoked','updated','marked_ready') NOT NULL,
+-  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin DEFAULT NULL CHECK (json_valid(`payload`)),
+-  `created_at` timestamp NOT NULL DEFAULT current_timestamp()
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++  `id` int NOT NULL,
++  `shared_item_id` int NOT NULL,
++  `actor_user_id` int NOT NULL,
++  `action` enum('created','accepted','revoked','updated','marked_ready') COLLATE utf8mb4_unicode_ci NOT NULL,
++  `payload` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin,
++  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP
++) ;
+ 
+ -- --------------------------------------------------------
+ 
+@@ -147,20 +194,22 @@
+ --
+ 
+ CREATE TABLE `tasks` (
+-  `task_id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `column_id` int(11) NOT NULL,
+-  `encrypted_data` text NOT NULL,
+-  `position` int(11) NOT NULL,
+-  `classification` enum('signal','support','backlog','completed') NOT NULL,
++  `task_id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `column_id` int NOT NULL,
++  `encrypted_data` text COLLATE utf8mb4_unicode_ci NOT NULL,
++  `position` int NOT NULL,
++  `classification` enum('signal','support','backlog','completed') COLLATE utf8mb4_unicode_ci NOT NULL,
+   `due_date` date DEFAULT NULL,
+-  `is_private` tinyint(1) NOT NULL DEFAULT 0,
+-  `delegated_to` int(11) DEFAULT NULL,
+-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+-  `updated_at` datetime DEFAULT NULL ON UPDATE current_timestamp(),
++  `is_private` tinyint(1) NOT NULL DEFAULT '0',
++  `delegated_to` int DEFAULT NULL,
++  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
++  `updated_at` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP,
+   `deleted_at` datetime DEFAULT NULL,
+   `snoozed_until` datetime DEFAULT NULL,
+-  `snoozed_at` datetime DEFAULT NULL
++  `snoozed_at` datetime DEFAULT NULL,
++  `privacy_inherited` tinyint(1) DEFAULT '0' COMMENT 'Task privacy inherited from column',
++  `privacy_override` tinyint(1) DEFAULT '0' COMMENT 'User explicitly set task privacy'
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -170,14 +219,14 @@
+ --
+ 
+ CREATE TABLE `task_attachments` (
+-  `attachment_id` int(11) NOT NULL,
+-  `task_id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `filename_on_server` varchar(255) NOT NULL,
+-  `original_filename` varchar(255) NOT NULL,
+-  `filesize_bytes` int(11) NOT NULL,
+-  `mime_type` varchar(50) NOT NULL,
+-  `created_at` datetime NOT NULL DEFAULT current_timestamp()
++  `attachment_id` int NOT NULL,
++  `task_id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `filename_on_server` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `original_filename` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `filesize_bytes` int NOT NULL,
++  `mime_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+@@ -187,19 +236,19 @@
+ --
+ 
+ CREATE TABLE `users` (
+-  `user_id` int(11) NOT NULL,
+-  `username` varchar(50) NOT NULL,
+-  `email` varchar(255) NOT NULL,
+-  `password_hash` varchar(255) NOT NULL,
+-  `preferences` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL CHECK (json_valid(`preferences`)),
+-  `created_at` datetime NOT NULL DEFAULT current_timestamp(),
+-  `storage_used_bytes` bigint(20) NOT NULL DEFAULT 0,
+-  `subscription_level` enum('free','base','pro','elite') DEFAULT 'free',
+-  `status` enum('active','suspended','deleted') DEFAULT 'active',
+-  `suspended_reason` text DEFAULT NULL,
+-  `admin_notes` text DEFAULT NULL,
++  `user_id` int NOT NULL,
++  `username` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `email` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `password_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `preferences` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_bin NOT NULL,
++  `created_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
++  `storage_used_bytes` bigint NOT NULL DEFAULT '0',
++  `subscription_level` enum('free','base','pro','elite') COLLATE utf8mb4_unicode_ci DEFAULT 'free',
++  `status` enum('active','suspended','deleted') COLLATE utf8mb4_unicode_ci DEFAULT 'active',
++  `suspended_reason` text COLLATE utf8mb4_unicode_ci,
++  `admin_notes` text COLLATE utf8mb4_unicode_ci,
+   `suspended_at` datetime DEFAULT NULL
+-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++) ;
+ 
+ -- --------------------------------------------------------
+ 
+@@ -208,31 +257,92 @@
+ --
+ 
+ CREATE TABLE `user_calendar_preferences` (
+-  `id` int(11) NOT NULL,
+-  `user_id` int(11) NOT NULL,
+-  `calendar_type` varchar(50) NOT NULL,
+-  `is_visible` tinyint(1) DEFAULT 1,
+-  `created_at` timestamp NULL DEFAULT current_timestamp()
++  `id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `calendar_type` varchar(50) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `is_visible` tinyint(1) DEFAULT '1',
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
+ -- --------------------------------------------------------
+ 
+ --
++-- Table structure for table `user_encryption_keys`
++--
++
++CREATE TABLE `user_encryption_keys` (
++  `user_id` int NOT NULL,
++  `wrapped_master_key` blob NOT NULL,
++  `key_derivation_salt` blob NOT NULL,
++  `recovery_envelope` blob,
++  `recovery_questions_hash` blob,
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
++  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------
++
++--
++-- Table structure for table `user_security_questions`
++--
++
++CREATE TABLE `user_security_questions` (
++  `id` int NOT NULL,
++  `user_id` int NOT NULL,
++  `question_text` text COLLATE utf8mb4_unicode_ci NOT NULL,
++  `question_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `answer_hash` varchar(255) COLLATE utf8mb4_unicode_ci NOT NULL,
++  `question_order` tinyint NOT NULL,
++  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP
++) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
++
++-- --------------------------------------------------------
++
++--
+ -- Table structure for table `user_trusts`
+ --
+ 
+ CREATE TABLE `user_trusts` (
+-  `id` int(11) NOT NULL,
+-  `owner_user_id` int(11) NOT NULL,
+-  `trusted_user_id` int(11) NOT NULL,
+-  `status` enum('pending','accepted','revoked','rejected') NOT NULL DEFAULT 'pending',
+-  `invite_code` varchar(64) DEFAULT NULL,
+-  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
++  `id` int NOT NULL,
++  `owner_user_id` int NOT NULL,
++  `trusted_user_id` int NOT NULL,
++  `status` enum('pending','accepted','revoked','rejected') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pending',
++  `invite_code` varchar(64) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
++  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+   `accepted_at` timestamp NULL DEFAULT NULL,
+   `revoked_at` timestamp NULL DEFAULT NULL
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+ 
++-- --------------------------------------------------------
++
+ --
++-- Stand-in structure for view `v_shared_tasks_by_column`
++-- (See below for the actual view)
++--
++CREATE TABLE `v_shared_tasks_by_column` (
++`column_id` int
++,`owner_id` int
++,`shared_count` bigint
++,`recipient_ids` text
++);
++
++-- --------------------------------------------------------
++
++--
++-- Stand-in structure for view `v_user_encryption_status`
++-- (See below for the actual view)
++--
++CREATE TABLE `v_user_encryption_status` (
++`user_id` int
++,`username` varchar(50)
++,`encryption_status` varchar(8)
++,`recovery_status` varchar(8)
++,`migration_status` enum('pending','in_progress','completed','failed')
++,`tasks_migrated` int
++,`total_tasks` int
++);
++
++--
+ -- Indexes for dumped tables
+ --
+ 
+@@ -253,17 +363,41 @@
+   ADD KEY `idx_user_date` (`user_id`,`start_date`),
+   ADD KEY `idx_event_type` (`event_type`),
+   ADD KEY `idx_public` (`is_public`),
+-  ADD KEY `idx_calendar_name` (`calendar_name`),
+-  ADD KEY `idx_priority` (`priority`);
++  ADD KEY `idx_calendar_name` (`user_id`,`calendar_name`),
++  ADD KEY `idx_priority` (`user_id`,`priority`);
+ 
+ --
+ -- Indexes for table `columns`
+ --
+ ALTER TABLE `columns`
+   ADD PRIMARY KEY (`column_id`),
+-  ADD KEY `user_id` (`user_id`);
++  ADD KEY `user_id` (`user_id`),
++  ADD KEY `idx_columns_privacy` (`user_id`,`is_private`,`has_shared_tasks`);
+ 
+ --
++-- Indexes for table `encryption_audit_log`
++--
++ALTER TABLE `encryption_audit_log`
++  ADD PRIMARY KEY (`id`),
++  ADD KEY `idx_user_operations` (`user_id`,`operation`,`created_at`),
++  ADD KEY `idx_audit_timeline` (`created_at`);
++
++--
++-- Indexes for table `encryption_migration_status`
++--
++ALTER TABLE `encryption_migration_status`
++  ADD PRIMARY KEY (`user_id`),
++  ADD KEY `idx_migration_status` (`migration_status`);
++
++--
++-- Indexes for table `item_encryption_keys`
++--
++ALTER TABLE `item_encryption_keys`
++  ADD PRIMARY KEY (`item_id`,`item_type`),
++  ADD KEY `idx_user_items` (`item_type`,`item_id`),
++  ADD KEY `idx_item_keys_created` (`created_at`);
++
++--
+ -- Indexes for table `password_resets`
+ --
+ ALTER TABLE `password_resets`
+@@ -288,7 +422,8 @@
+   ADD KEY `ix_recipient` (`recipient_id`),
+   ADD KEY `ix_owner` (`owner_id`),
+   ADD KEY `ix_recipient_active` (`recipient_id`,`status`),
+-  ADD KEY `ix_owner_item` (`owner_id`,`item_type`,`item_id`);
++  ADD KEY `ix_owner_item` (`owner_id`,`item_type`,`item_id`),
++  ADD KEY `idx_shared_items_detection` (`owner_id`,`recipient_id`,`item_type`,`item_id`,`status`);
+ 
+ --
+ -- Indexes for table `sharing_activity`
+@@ -303,7 +438,8 @@
+ ALTER TABLE `tasks`
+   ADD PRIMARY KEY (`task_id`),
+   ADD KEY `user_id` (`user_id`),
+-  ADD KEY `column_id` (`column_id`);
++  ADD KEY `column_id` (`column_id`),
++  ADD KEY `idx_tasks_privacy` (`user_id`,`is_private`,`privacy_inherited`);
+ 
+ --
+ -- Indexes for table `task_attachments`
+@@ -329,6 +465,21 @@
+   ADD UNIQUE KEY `unique_user_calendar` (`user_id`,`calendar_type`);
+ 
+ --
++-- Indexes for table `user_encryption_keys`
++--
++ALTER TABLE `user_encryption_keys`
++  ADD PRIMARY KEY (`user_id`),
++  ADD KEY `idx_user_encryption_created` (`created_at`);
++
++--
++-- Indexes for table `user_security_questions`
++--
++ALTER TABLE `user_security_questions`
++  ADD PRIMARY KEY (`id`),
++  ADD UNIQUE KEY `unique_user_question` (`user_id`,`question_order`),
++  ADD KEY `idx_user_questions` (`user_id`);
++
++--
+ -- Indexes for table `user_trusts`
+ --
+ ALTER TABLE `user_trusts`
+@@ -344,75 +495,105 @@
+ -- AUTO_INCREMENT for table `admin_actions`
+ --
+ ALTER TABLE `admin_actions`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `calendar_events`
+ --
+ ALTER TABLE `calendar_events`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `columns`
+ --
+ ALTER TABLE `columns`
+-  MODIFY `column_id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `column_id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
++-- AUTO_INCREMENT for table `encryption_audit_log`
++--
++ALTER TABLE `encryption_audit_log`
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
++
++--
+ -- AUTO_INCREMENT for table `password_resets`
+ --
+ ALTER TABLE `password_resets`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `pending_registrations`
+ --
+ ALTER TABLE `pending_registrations`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `shared_items`
+ --
+ ALTER TABLE `shared_items`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `sharing_activity`
+ --
+ ALTER TABLE `sharing_activity`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `tasks`
+ --
+ ALTER TABLE `tasks`
+-  MODIFY `task_id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `task_id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `task_attachments`
+ --
+ ALTER TABLE `task_attachments`
+-  MODIFY `attachment_id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `attachment_id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `users`
+ --
+ ALTER TABLE `users`
+-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `user_id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
+ -- AUTO_INCREMENT for table `user_calendar_preferences`
+ --
+ ALTER TABLE `user_calendar_preferences`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
+ --
++-- AUTO_INCREMENT for table `user_security_questions`
++--
++ALTER TABLE `user_security_questions`
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
++
++--
+ -- AUTO_INCREMENT for table `user_trusts`
+ --
+ ALTER TABLE `user_trusts`
+-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
++  MODIFY `id` int NOT NULL AUTO_INCREMENT;
+ 
++-- --------------------------------------------------------
++
+ --
++-- Structure for view `v_shared_tasks_by_column`
++--
++DROP TABLE IF EXISTS `v_shared_tasks_by_column`;
++
++CREATE ALGORITHM=UNDEFINED DEFINER=`alfa`@`localhost` SQL SECURITY DEFINER VIEW `v_shared_tasks_by_column`  AS SELECT `t`.`column_id` AS `column_id`, `t`.`user_id` AS `owner_id`, count(`si`.`id`) AS `shared_count`, group_concat(distinct `si`.`recipient_id` separator ',') AS `recipient_ids` FROM (`tasks` `t` left join `shared_items` `si` on(((`t`.`task_id` = `si`.`item_id`) and (`si`.`item_type` = 'task') and (`si`.`status` = 'active')))) WHERE (`t`.`deleted_at` is null) GROUP BY `t`.`column_id`, `t`.`user_id` ;
++
++-- --------------------------------------------------------
++
++--
++-- Structure for view `v_user_encryption_status`
++--
++DROP TABLE IF EXISTS `v_user_encryption_status`;
++
++CREATE ALGORITHM=UNDEFINED DEFINER=`alfa`@`localhost` SQL SECURITY DEFINER VIEW `v_user_encryption_status`  AS SELECT `u`.`user_id` AS `user_id`, `u`.`username` AS `username`, (case when (`uek`.`user_id` is not null) then 'enabled' else 'disabled' end) AS `encryption_status`, (case when (`uek`.`recovery_envelope` is not null) then 'enabled' else 'disabled' end) AS `recovery_status`, `ems`.`migration_status` AS `migration_status`, `ems`.`tasks_migrated` AS `tasks_migrated`, `ems`.`total_tasks` AS `total_tasks` FROM ((`users` `u` left join `user_encryption_keys` `uek` on((`u`.`user_id` = `uek`.`user_id`))) left join `encryption_migration_status` `ems` on((`u`.`user_id` = `ems`.`user_id`))) ;
++
++--
+ -- Constraints for dumped tables
+ --
+ 
+@@ -430,6 +611,18 @@
+   ADD CONSTRAINT `calendar_events_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+ 
+ --
++-- Constraints for table `encryption_audit_log`
++--
++ALTER TABLE `encryption_audit_log`
++  ADD CONSTRAINT `encryption_audit_log_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
++
++--
++-- Constraints for table `encryption_migration_status`
++--
++ALTER TABLE `encryption_migration_status`
++  ADD CONSTRAINT `encryption_migration_status_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
++
++--
+ -- Constraints for table `password_resets`
+ --
+ ALTER TABLE `password_resets`
+@@ -447,6 +640,18 @@
+ --
+ ALTER TABLE `user_calendar_preferences`
+   ADD CONSTRAINT `user_calendar_preferences_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
++
++--
++-- Constraints for table `user_encryption_keys`
++--
++ALTER TABLE `user_encryption_keys`
++  ADD CONSTRAINT `user_encryption_keys_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
++
++--
++-- Constraints for table `user_security_questions`
++--
++ALTER TABLE `user_security_questions`
++  ADD CONSTRAINT `user_security_questions_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`user_id`) ON DELETE CASCADE;
+ COMMIT;
+ 
+ /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

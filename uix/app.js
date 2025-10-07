@@ -1017,7 +1017,7 @@ function showToast(options) {
 	const { message, type = 'info', duration = 5000, action = null } = options;
 	
 	// Prevent empty toast messages
-	const displayMessage = message || '<insert notification here>';
+	const displayMessage = message && message.trim() !== '' ? message : 'An unexpected error occurred.';
 
 	const container = document.getElementById('toast-container');
 	if (!container) {
@@ -1849,3 +1849,4 @@ window.updateFontSizeUI = updateFontSizeUI;
 // Make modal management functions globally available
 window.registerModal = registerModal;
 window.unregisterModal = unregisterModal;
+window.showConfirm = showConfirm;

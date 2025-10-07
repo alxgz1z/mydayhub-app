@@ -1170,12 +1170,8 @@ function renderCalendarsList(calendars) {
  */
 async function deleteCalendar(calendarName) {
     // Use custom confirmation modal
-    const confirmed = await showConfirmDialog(
-        'Delete Calendar',
-        `Are you sure you want to delete all events from the calendar "${calendarName}"?`,
-        'This action cannot be undone.',
-        'Delete Calendar',
-        'Cancel'
+    const confirmed = await showConfirm(
+        `Are you sure you want to delete all events from the calendar "${calendarName}"? This action cannot be undone.`
     );
     
     if (!confirmed) {

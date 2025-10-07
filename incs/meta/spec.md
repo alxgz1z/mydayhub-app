@@ -1,8 +1,8 @@
 # MYDAYHUB APPLICATION SPECIFICATION
 
-**Version:** Beta 7.5 - Mission Focus & Network Access
+**Version:** Beta 7.6 - Zero-Knowledge Encryption Implementation
 **Audience:** Internal Development & Project Management  
-**Last Updated:** October 6, 2025
+**Last Updated:** January 7, 2025
 
 ---
 
@@ -110,6 +110,18 @@ The backend API follows a single-gateway pattern with modular handlers, ensuring
 - **[RDY]** `getCalendarPreferences` (in calprefs.php) - Fetch user calendar type visibility preferences
 - **[RDY]** `updateCalendarPreferences` (in calprefs.php) - Update calendar type visibility settings
 
+#### Zero-Knowledge Encryption System
+- **[RDY]** `setupEncryption` (in encryption.php) - Initialize encryption for new users with password setup
+- **[RDY]** `getEncryptionStatus` (in encryption.php) - Check if user has encryption enabled
+- **[RDY]** `startMigration` (in encryption.php) - Begin encryption migration for existing private tasks
+- **[RDY]** `getMigrationStatus` (in encryption.php) - Monitor migration progress and completion
+- **[RDY]** `setupSecurityQuestions` (in secquestions.php) - Create recovery system during setup
+- **[RDY]** `verifySecurityQuestions` (in secquestions.php) - Validate answers for recovery
+- **[RDY]** `getSharedTasksInColumn` (in tasks.php) - Check for shared tasks before making column private
+- **[RDY]** `getSharedTasksInColumnCount` (in tasks.php) - Count shared tasks for conflict resolution
+- **[FIX]** `encryptTaskData` (in crypto.php) - ⚠️ **CRITICAL**: Creates envelope but doesn't encrypt data content
+- **[FIX]** `decryptTaskData` (in crypto.php) - ⚠️ **CRITICAL**: Expects encrypted data but receives plaintext
+
 #### Collaboration (Foundation)
 - **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
 - **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
@@ -202,6 +214,18 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 - **[RDY]** Environment Configuration - .env file support with runtime detection
 - **[RDY]** Multi-Device Access - Network accessibility from other devices on local network
 
+#### Zero-Knowledge Encryption System
+- **[RDY]** Encryption Setup Wizard - Multi-step setup with security questions and password configuration
+- **[RDY]** Database Schema - Complete encryption infrastructure with user keys, item keys, and audit logging
+- **[RDY]** Core Encryption Module - Centralized crypto engine with Argon2id key derivation and AES-256-GCM encryption
+- **[RDY]** Client-Side Crypto Integration - Web Crypto API with master key management and DEK wrapping
+- **[RDY]** API Integration - Automatic encryption/decryption of private tasks in all CRUD operations
+- **[RDY]** Column Privacy Inheritance - Automatic encryption of all tasks when column is made private
+- **[RDY]** Shared Task Conflict Resolution - Auto-unsharing of shared tasks when making columns private
+- **[RDY]** Recovery System - Security questions-based master key recovery envelope
+- **[FIX]** Data Encryption Logic - ⚠️ **CRITICAL**: Encryption envelope created but actual data content not encrypted
+- **[FUT]** End-to-End Sharing - Client-side encryption for shared task data
+
 #### Collaboration UI (Foundation)
 - **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
 
@@ -210,19 +234,18 @@ The frontend follows a mobile-first, progressive enhancement approach with a foc
 The roadmap prioritizes stability, core feature completion, and foundational architecture for future advanced features.
 
 #### Immediate Priorities (Sprint 1-2)
-#### Immediate Priorities (Sprint 1-2)
-1. **Recipient Permission System** - Implement action menu filtering and interaction restrictions based on share permissions (`view`/`edit` vs owner rights)
+1. **🔴 CRITICAL: Zero-Knowledge Encryption Bug Fix** - Fix `encryptTaskData()` and `decryptTaskData()` functions in `/incs/crypto.php` to actually encrypt data content instead of storing plaintext within encryption envelope structure
 
-2. **Sharing Workflow Polish** - Complete mobile UX testing, refine modal interactions, and add permission-based visual cues
+2. **Recipient Permission System** - Implement action menu filtering and interaction restrictions based on share permissions (`view`/`edit` vs owner rights)
 
-3. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
+3. **Sharing Workflow Polish** - Complete mobile UX testing, refine modal interactions, and add permission-based visual cues
 
-4. **Zero-Knowledge Baseline** (encryption boundary only) - Consolidate crypto to `/uix/crypto.js`; prepare per-item DEKs and wrapping model; defer key-sharing until cryptographic foundation is solid.
+4. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
 
 #### Medium-term Features (Sprint 3-4)
-5. **Recovery (Security-Questions) for ZK Password Reset** - Add Recovery Key → Recovery Envelope flow before fully enabling ZK reset, ensuring users don't lose data due to forgotten passwords.
+5. **End-to-End Sharing** - Implement client-side encryption for shared task data using asymmetric key exchange, ensuring shared tasks remain zero-knowledge encrypted
 
-6. **Sharing (foundation)** - UI + API stubs (shareTask / revokeShare) without E2E key exchange yet, providing basic collaboration without compromising the zero-knowledge architecture.
+6. **Enhanced Recovery System** - Improve security questions validation and add multiple recovery methods (backup codes, email verification)
 
 #### Long-term Features (Sprint 5+)
 7. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
@@ -1300,20 +1323,45 @@ CREATE TABLE user_calendar_preferences (
 
 #### 5.5.1 Zero-Knowledge Encryption
 
+**Implementation Status:** ⚠️ **CRITICAL ISSUE** - Infrastructure complete but data encryption not functioning
+
 **Encryption Boundary:**
-All cryptographic operations handled by `/uix/crypto.js` module with clear separation between encrypted and plaintext data flows.
+All cryptographic operations handled by `/incs/crypto.php` (backend) and `/uix/crypto.js` (frontend) modules with clear separation between encrypted and plaintext data flows.
+
+**Database Schema:**
+- `user_encryption_keys` - Stores user's wrapped master key and encryption settings
+- `item_encryption_keys` - Stores per-item DEKs wrapped with user's master key
+- `user_security_questions` - Security questions for recovery system
+- `encryption_migration_status` - Tracks migration progress for existing data
+- `encryption_audit_log` - Comprehensive logging of encryption operations
+- `tasks.privacy_inherited` - Tracks tasks made private by column inheritance
+- `tasks.privacy_override` - Tracks user overrides of inherited privacy
+- `columns.has_shared_tasks` - Prevents making columns with shared tasks private
 
 **Key Management:**
-- Master Key derived on-device using Argon2id from passphrase + salt
+- Master Key derived on-device using PBKDF2 (100,000 iterations) from passphrase + salt
 - Per-item Data Encryption Keys (DEKs) for granular access control
 - DEKs encrypted with user's Master Key before storage
 - Server never sees plaintext data or Master Key
+- **Issue**: Master key derivation and DEK management working, but actual data encryption failing
+
+**Encryption Process:**
+1. User sets up encryption password during wizard
+2. Master key derived from password using PBKDF2 + SHA-256
+3. Security questions create recovery envelope for master key backup
+4. Per-task DEKs generated and wrapped with master key
+5. **CRITICAL BUG**: Data content stored in plaintext within encryption envelope structure
 
 **Recovery System:**
 - User-generated security questions during setup
 - Question answers hash to derive Recovery Key using PBKDF2
 - Recovery Key encrypts a copy of the Master Key (Recovery Envelope)
 - Password reset requires answering questions to decrypt Master Key copy
+
+**Column Privacy Inheritance:**
+- When column marked private: all public tasks inherit privacy and get encrypted
+- When column marked public: only inherited tasks restored to public (user overrides preserved)
+- Shared task conflict resolution: auto-unsharing prevents privacy violations
 
 #### 5.5.2 Sharing & Collaboration Security
 
