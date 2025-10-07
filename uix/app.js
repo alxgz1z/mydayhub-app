@@ -558,6 +558,8 @@ function initSettingsPanel() {
 	const themeHighContrastBtn = document.getElementById('theme-high-contrast');
 	// Modified for Change Password
 	const changePasswordBtn = document.getElementById('btn-change-password');
+	// Encryption setup button
+	const encryptionSetupBtn = document.getElementById('btn-encryption-setup');
 
 
 	if (!toggleBtn || !closeBtn || !overlay || !themeDarkBtn || !themeLightBtn || !themeHighContrastBtn || !changePasswordBtn) {
@@ -649,6 +651,17 @@ function initSettingsPanel() {
 	// Modified for Change Password
 	changePasswordBtn.addEventListener('click', openChangePasswordModal);
 	initPasswordModalListeners();
+	
+	// Encryption setup button
+	if (encryptionSetupBtn) {
+		encryptionSetupBtn.addEventListener('click', async () => {
+			if (window.encryptionSetupWizard) {
+				await window.encryptionSetupWizard.triggerSetup();
+			} else {
+				showToast({ message: 'Encryption setup not available', type: 'error' });
+			}
+		});
+	}
 	
 	// Initialize theme selector state
 	loadThemePreferences();
@@ -1076,7 +1089,7 @@ function showToast(options) {
  * @param {string} message The confirmation message to display.
  * @returns {Promise<boolean>} A promise that resolves to `true` if confirmed, `false` otherwise.
  */
-function showConfirm(message) {
+function showConfirm(message, options = {}) {
 	const modalOverlay = document.getElementById('confirm-modal-overlay');
 	const messageEl = document.getElementById('confirm-modal-message');
 	const yesBtn = document.getElementById('btn-confirm-yes');
@@ -1087,7 +1100,17 @@ function showConfirm(message) {
 		return Promise.resolve(false);
 	}
 
+	// Set message
 	messageEl.textContent = message;
+	
+	// Update button text if provided
+	if (options.confirmText) {
+		yesBtn.textContent = options.confirmText;
+	}
+	if (options.cancelText) {
+		noBtn.textContent = options.cancelText;
+	}
+	
 	modalOverlay.classList.remove('hidden');
 	
 	// Register confirm modal in modal stack
@@ -1112,6 +1135,10 @@ function showConfirm(message) {
 			unregisterModal('confirm-modal');
 			yesBtn.removeEventListener('click', handleYes);
 			noBtn.removeEventListener('click', handleNo);
+			
+			// Reset button text to defaults
+			yesBtn.textContent = 'Yes';
+			noBtn.textContent = 'No';
 		}
 	});
 }

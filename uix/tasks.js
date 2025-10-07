@@ -1511,10 +1511,79 @@ async function reorderTasks(columnId, tasks) {
 }
 
 /**
+ * Check if we're making an item private (vs making it public)
+ */
+async function checkIfMakingPrivate(type, id) {
+	const selector = type === 'task' ? `.task-card[data-task-id="${id}"]` : `.task-column[data-column-id="${id}"]`;
+	const element = document.querySelector(selector);
+	if (!element) return false;
+	
+	const isCurrentlyPrivate = element.dataset.isPrivate === 'true';
+	return !isCurrentlyPrivate; // Making private if currently public
+}
+
+/**
+ * Check if encryption setup is needed
+ */
+async function checkEncryptionSetupNeeded() {
+	try {
+		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		
+		const response = await fetch(`${appURL}/api/api.php?module=encryption&action=getEncryptionStatus`, {
+			method: 'GET',
+			headers: {
+				'X-CSRF-TOKEN': csrfToken,
+			}
+		});
+		
+		const responseData = await response.json();
+		return !responseData.data?.encryption_enabled;
+	} catch (error) {
+		console.error('Failed to check encryption status:', error);
+		return false; // Don't block if we can't check
+	}
+}
+
+/**
+ * Show encryption setup prompt to user
+ */
+async function showEncryptionSetupPrompt(type) {
+	const message = `To make ${type}s private, you'll need to set up encryption first. This ensures your private data is secure with zero-knowledge encryption.
+
+Would you like to set up encryption now?`;
+	
+	const confirmed = await window.showConfirm(message, {
+		title: 'Encryption Setup Required',
+		confirmText: 'Set Up Encryption',
+		cancelText: 'Not Now'
+	});
+	
+	return confirmed;
+}
+
+/**
  * Toggles the privacy status of a task or column.
  */
 async function togglePrivacy(type, id) {
 	try {
+		// Check if encryption setup is needed when making something private
+		const isMakingPrivate = await checkIfMakingPrivate(type, id);
+		if (isMakingPrivate) {
+			const needsEncryption = await checkEncryptionSetupNeeded();
+			if (needsEncryption) {
+				const shouldSetup = await showEncryptionSetupPrompt(type);
+				if (!shouldSetup) {
+					return; // User chose not to set up encryption
+				}
+				// Trigger encryption setup
+				if (window.encryptionSetupWizard) {
+					await window.encryptionSetupWizard.triggerSetup();
+					// After setup, continue with the privacy toggle
+				}
+			}
+		}
+
 		const result = await window.apiFetch({
 			module: 'tasks',
 			action: 'togglePrivacy',

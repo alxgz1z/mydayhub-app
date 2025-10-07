@@ -33,6 +33,25 @@ class EncryptionSetupWizard {
 
         // Check if Web Crypto API is available
         if (!window.crypto || !window.crypto.subtle) {
+            console.log('Web Crypto API not available');
+            return;
+        }
+
+        // Don't auto-show wizard - wait for user to need it
+        console.log('Encryption setup available but not auto-triggered');
+    }
+
+    // New method to manually trigger encryption setup
+    async triggerSetup() {
+        const status = await this.checkEncryptionStatus();
+        
+        if (status.encryption_enabled) {
+            console.log('Encryption already enabled');
+            return;
+        }
+
+        // Check if Web Crypto API is available
+        if (!window.crypto || !window.crypto.subtle) {
             console.log('Web Crypto API not available - showing skip option');
             this.showSkipEncryptionOption();
             return;
@@ -928,14 +947,65 @@ Try refreshing the page or using a different browser.`;
 // 9. GLOBAL INITIALIZATION
 // ==========================================================================
 
-// Initialize encryption setup on app load
+// Initialize encryption setup wizard (but don't auto-trigger)
 document.addEventListener('DOMContentLoaded', async () => {
-    // Wait for crypto manager to be ready
+    // Make encryption setup wizard globally available for on-demand use
     if (window.cryptoManager) {
-        const setupWizard = new EncryptionSetupWizard();
-        await setupWizard.init();
+        window.encryptionSetupWizard = new EncryptionSetupWizard();
+        console.log('Encryption setup wizard ready for on-demand use');
+        
+        // Check encryption status and show banner if needed
+        await checkAndShowEncryptionBanner();
     }
 });
+
+/**
+ * Check encryption status and show banner if encryption is not set up
+ */
+async function checkAndShowEncryptionBanner() {
+    try {
+        const status = await window.encryptionSetupWizard.checkEncryptionStatus();
+        
+        // Only show banner if encryption is not enabled and user hasn't dismissed it
+        const bannerDismissed = localStorage.getItem('encryption-banner-dismissed') === 'true';
+        
+        if (!status.encryption_enabled && !bannerDismissed) {
+            showEncryptionBanner();
+        }
+    } catch (error) {
+        console.error('Failed to check encryption status for banner:', error);
+    }
+}
+
+/**
+ * Show the encryption status banner
+ */
+function showEncryptionBanner() {
+    const banner = document.getElementById('encryption-status-banner');
+    if (banner) {
+        banner.classList.remove('hidden');
+        
+        // Add event listeners
+        const setupBtn = document.getElementById('encryption-banner-setup');
+        const dismissBtn = document.getElementById('encryption-banner-dismiss');
+        
+        if (setupBtn) {
+            setupBtn.addEventListener('click', async () => {
+                banner.classList.add('hidden');
+                if (window.encryptionSetupWizard) {
+                    await window.encryptionSetupWizard.triggerSetup();
+                }
+            });
+        }
+        
+        if (dismissBtn) {
+            dismissBtn.addEventListener('click', () => {
+                banner.classList.add('hidden');
+                localStorage.setItem('encryption-banner-dismissed', 'true');
+            });
+        }
+    }
+}
 
 // Export for module usage
 if (typeof module !== 'undefined' && module.exports) {

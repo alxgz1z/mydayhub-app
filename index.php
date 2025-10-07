@@ -95,6 +95,28 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 		</header>
 
+		<!-- Encryption Status Banner -->
+		<div id="encryption-status-banner" class="encryption-banner hidden">
+			<div class="encryption-banner-content">
+				<div class="encryption-banner-icon">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+						<circle cx="12" cy="16" r="1"></circle>
+						<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+						<path d="M12 1v6"></path>
+						<path d="M9 4l3-3 3 3"></path>
+					</svg>
+				</div>
+				<div class="encryption-banner-text">
+					<strong>Enhance your privacy</strong> - Set up encryption to secure your private tasks with zero-knowledge encryption.
+				</div>
+				<div class="encryption-banner-actions">
+					<button id="encryption-banner-setup" class="btn btn-primary btn-sm">Set Up</button>
+					<button id="encryption-banner-dismiss" class="btn btn-secondary btn-sm">Dismiss</button>
+				</div>
+			</div>
+		</div>
+
 		<main id="main-content">
 			<div id="task-board-container">
 				<p>Loading Task Board...</p>
@@ -182,6 +204,21 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							<button type="button" class="sound-btn" data-sound="off" id="sound-off">Off</button>
 							<button type="button" class="sound-btn" data-sound="on" id="sound-on">On</button>
 						</div>
+					</div>
+				</div>
+				<div class="setting-item">
+					<span class="setting-label">Privacy & Encryption</span>
+					<div class="setting-control">
+						<button id="btn-encryption-setup" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+								<circle cx="12" cy="16" r="1"></circle>
+								<path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+								<path d="M12 1v6"></path>
+								<path d="M9 4l3-3 3 3"></path>
+							</svg>
+							<span class="setting-label">Manage Encryption</span>
+						</button>
 					</div>
 				</div>
 				<div class="setting-item">

@@ -1,1987 +1,241 @@
-# MYDAYHUB APPLICATION SPECIFICATION
+# MyDayHub Reference Specification (Proposed)
 
-**Version:** Beta 7.6 - Zero-Knowledge Encryption Implementation
-**Audience:** Internal Development & Project Management  
-**Last Updated:** January 7, 2025
+Version: Beta 7.x (Proposed Refactor)
+Audience: Internal Development & Product
+Last Updated: 2025-10-07
 
 ---
 
 ## Table of Contents
 
-1. [Introduction](#1-introduction)
-2. [Implementation Tracking](#2-implementation-tracking)
-3. [Vision & Scope](#3-vision--scope)
-4. [Functional Specification](#4-functional-specification)
-5. [Technical Specification](#5-technical-specification)
-6. [Appendices](#6-appendices)
+1. Introduction & Philosophy
+2. Product Scope & Primary View
+3. Core Functional Specification
+4. Collaboration & Sharing (Foundations)
+5. Zero‑Knowledge Privacy & Recovery (Conceptual)
+6. Calendar Overlay System (Conceptual)
+7. Mission Focus Chart (Conceptual)
+8. Settings, Theming, Accessibility
+9. Network & Environment
+10. API Model (Descriptions Only)
+11. Data Model (Tables and Fields)
+12. Non‑Goals & Deferred Items
+13. Roadmap & Priorities
+14. Glossary
 
 ---
 
-## 0. Localhost server reboot
+## 1. Introduction & Philosophy
 
-### to fire up servers
-> sudo apachectl -k restart
-> brew services restart php
-> brew services restart mysql
-> mysql -u alfa -p  
-%SET GLOBAL sql_mode = (SELECT REPLACE(@@sql_mode, 'ONLY_FULL_GROUP_BY', ''));
-%exit
->
+MyDayHub is a productivity hub emphasizing signal over noise. The objective is a fast, fluid, mobile‑friendly experience that keeps sensitive data private by default while enabling practical collaboration when explicitly chosen.
 
-### to consolidate codebase:
->sudo ./concat_code.sh ./Documents > /Users/jalexg/Downloads/codebase.txt
-
-## 1. Introduction
-
-### 1.1 Why Are We Doing This
-
-MyDayHub represents more than just another productivity application—it's an experiment in building a truly private, focused, and collaborative workspace for small teams. The project serves three critical purposes:
-
-- **Collaborate effectively** with a small team and promote productivity on activities that matter
-- **Experiment with AI code assistance** and agents, putting ourselves in the shoes of our team members
-- **Channel creativity and passion** for development while creating something genuinely useful
-
-The application embodies a philosophy of "signal over noise," helping users distinguish between work that advances their mission and work that merely keeps them busy. In an era where data privacy concerns are mounting and productivity tools often become productivity obstacles, MyDayHub aims to be different.
-
-### 1.2 Project Context & Learning Goals
-
-This project serves as a practical laboratory for exploring modern development practices, particularly AI-assisted coding workflows. By building a real-world application with genuine users, we gain authentic insights into how AI tools can accelerate development without sacrificing code quality or security.
-
-The focus on privacy-first architecture challenges us to think beyond conventional patterns, implementing zero-knowledge encryption while maintaining the collaborative features teams need. This balance between absolute privacy and practical collaboration represents one of the most interesting technical challenges in modern web development.
+Core principles:
+- Absolute privacy: Client‑side encryption boundary for private content; plaintext never stored for private items.
+- Fluid experience: Inline edits, optimistic updates, non‑blocking feedback.
+- Modern, minimalist UI: Dark‑first visual language with accessibility baked in.
+- Signal over noise: Classification drives focus and decisions.
+- Work anywhere: Resilient UX patterns; offline is a long‑term objective.
+- Accessibility: WCAG contrast, keyboard navigation, high‑contrast theme.
 
 ---
 
-## 2. Implementation Tracking
+## 2. Product Scope & Primary View
 
-### 2.1 Status Legends
+Scope focuses on the Tasks View (Kanban) as the primary interface. Journal, Outlines, and Events are future expansions. The Tasks View delivers:
+- Columns with header (title, count, privacy toggle, actions)
+- Task cards with classification, completion, notes, due date, attachments, privacy indicator, and share state
+- Drag‑and‑drop and a touch‑friendly move mode
+- Snooze with visual indicators and filters
 
-- **[RDY]** Feature complete, matches spec intent and is production-ready
-- **[WIP]** Under construction, present but evolving with active development
-- **[FIX]** Implemented but needs refactoring or bug fixes before release
-- **[FUT]** Scheduled for future milestone, planned but not yet started
-- **[CNS]** Under consideration, not yet scheduled or committed
-
-### 2.2 API Implementation Tracking
-
-The backend API follows a single-gateway pattern with modular handlers, ensuring consistent security, logging, and error handling across all endpoints.
-
-#### Authentication & User Management
-- **[RDY]** `register` (in auth.php) - Complete user registration with password hashing
-- **[RDY]** `login` (in auth.php) - Session-based authentication with CSRF protection
-- **[RDY]** `requestPasswordReset` (in auth.php) - Secure email-based password reset
-- **[RDY]** `performPasswordReset` (in auth.php) - Token validation and password update
-- **[RDY]** `changePassword` (in users.php) - Authenticated password changes
-
-#### Core Task Management
-- **[RDY]** `getAll` (in tasks.php) - Comprehensive board data with tasks, columns, and metadata
-- **[RDY]** `createColumn` (in tasks.php) - New column creation with position management
-- **[RDY]** `createTask` (in tasks.php) - Task creation with auto-positioning and classification
-- **[RDY]** `toggleComplete` (in tasks.php) - Task completion with celebration triggers
-- **[RDY]** `reorderTasks` (in tasks.php) - Drag-and-drop persistence with position compaction
-- **[RDY]** `toggleClassification` (in tasks.php) - Signal/Support/Backlog status cycling
-- **[RDY]** `renameColumn` (in tasks.php) - Inline column title editing
-- **[RDY]** `deleteColumn` (in tasks.php) - Soft delete with undo capability
-- **[RDY]** `reorderColumns` (in tasks.php) - Column positioning for drag-and-drop
-- **[RDY]** `deleteTask` (in tasks.php) - Soft delete with toast-based undo
-- **[RDY]** `renameTaskTitle` (in tasks.php) - Inline task title editing
-- **[RDY]** `duplicateTask` (in tasks.php) - Task duplication with smart positioning
-- **[RDY]** `saveTaskDetails` (in tasks.php) - Notes persistence from Unified Editor
-- **[RDY]** `restoreItem` (in tasks.php) - Undo functionality for soft-deleted items
-- **[RDY]** `moveTask` (in tasks.php) - Cross-column moves with Mobile Move Mode
-- **[RDY]** `snoozeTask` (in tasks.php) - Preset and custom date snoozing
-- **[RDY]** `unsnoozeTask` (in tasks.php) - Manual and automatic task wake-up
-
-#### Advanced Features
-- **[RDY]** `saveUserPreference` (in users.php) - Settings persistence (filters, UI state)
-- **[RDY]** `getAttachments` (in tasks.php) - File listing with metadata
-- **[RDY]** `uploadAttachment` (in tasks.php) - Multi-format file upload with quotas
-- **[RDY]** `deleteAttachment` (in tasks.php) - File deletion with storage recalculation
-- **[RDY]** `togglePrivacy` (in tasks.php) - Privacy flag management for tasks/columns
-
-#### Calendar Overlay System
-- **[RDY]** `getCalendarEvents` (in calevents.php) - Fetch events for date range with user preferences, ordered by priority
-- **[RDY]** `createCalendarEvent` (in calevents.php) - Create new calendar event with validation
-- **[RDY]** `updateCalendarEvent` (in calevents.php) - Update existing calendar event
-- **[RDY]** `deleteCalendarEvent` (in calevents.php) - Delete calendar event with ownership verification
-- **[RDY]** `bulkImport` (in calevents.php) - Import multiple events from JSON with calendar grouping
-- **[RDY]** `getCalendars` (in calevents.php) - Fetch all calendar groups with metadata
-- **[RDY]** `deleteCalendar` (in calevents.php) - Delete entire calendar group by name
-- **[RDY]** `setCalendarPriority` (in calevents.php) - Update priority for calendar group
-- **[RDY]** `getCalendarPreferences` (in calprefs.php) - Fetch user calendar type visibility preferences
-- **[RDY]** `updateCalendarPreferences` (in calprefs.php) - Update calendar type visibility settings
-
-#### Zero-Knowledge Encryption System
-- **[RDY]** `setupEncryption` (in encryption.php) - Initialize encryption for new users with password setup
-- **[RDY]** `getEncryptionStatus` (in encryption.php) - Check if user has encryption enabled
-- **[RDY]** `startMigration` (in encryption.php) - Begin encryption migration for existing private tasks
-- **[RDY]** `getMigrationStatus` (in encryption.php) - Monitor migration progress and completion
-- **[RDY]** `setupSecurityQuestions` (in secquestions.php) - Create recovery system during setup
-- **[RDY]** `verifySecurityQuestions` (in secquestions.php) - Validate answers for recovery
-- **[RDY]** `getSharedTasksInColumn` (in tasks.php) - Check for shared tasks before making column private
-- **[RDY]** `getSharedTasksInColumnCount` (in tasks.php) - Count shared tasks for conflict resolution
-- **[FIX]** `encryptTaskData` (in crypto.php) - ⚠️ **CRITICAL**: Creates envelope but doesn't encrypt data content
-- **[FIX]** `decryptTaskData` (in crypto.php) - ⚠️ **CRITICAL**: Expects encrypted data but receives plaintext
-
-#### Collaboration (Foundation)
-- **[RDY]** `shareTask` (in tasks.php) - Task sharing with permission management and recipient lookup
-- **[RDY]** `unshareTask` (in tasks.php) - Hard delete share removal with immediate persistence  
-- **[RDY]** `listTaskShares` (in tasks.php) - Share enumeration for modal display
-- **[WIP]** Permission-based action restrictions for shared task recipients
-
-> **Note:** `deleteTask` and `deleteColumn` actions perform soft delete by setting a `deleted_at` timestamp. The `restoreItem` action reverts this, enabling the undo functionality.
-
-> **Architecture Note:** All API endpoints using `window.apiFetch` are properly documented and include CSRF protection, ownership validation, and debug logging when `DEVMODE=true`.
-
-### 2.3 UI Implementation Tracking
-
-The frontend follows a mobile-first, progressive enhancement approach with a focus on touch-friendly interactions and accessibility.
-
-#### Foundation & Authentication
-- **[RDY]** User Registration page - Clean, minimal design with validation
-- **[RDY]** User Login page - Session management with "Forgot Password" flow
-- **[RDY]** Responsive board layout (desktop/mobile) - Adaptive column stacking
-
-#### Core Board Functionality
-- **[RDY]** Board rendering from getAll API - Real-time data synchronization
-- **[RDY]** Create Column (inline form) - Progressive disclosure pattern
-- **[RDY]** Rename Column (double-click) - In-place editing with validation
-- **[RDY]** Delete Column (hover button with confirmation) - Soft delete with undo
-- **[RDY]** Reorder Columns (hover buttons + drag-and-drop) - Both mobile and desktop patterns
-- **[RDY]** Create Task (footer input) - Context-aware task creation
-- **[RDY]** Rename Task Title (double-click) - Consistent editing pattern
-- **[RDY]** Toggle Task Completion (checkbox) - With celebration animation
-- **[RDY]** Task Completion Celebration Animation - Elegant golden flash sweep (0.5s duration)
-- **[RDY]** Task Drag-and-Drop - Within and between columns with visual feedback
-
-#### Task Classification & Management
-- **[RDY]** Task Classification (status band popover) - Signal/Support/Backlog selection
-- **[RDY]** Enforced Task Sorting by classification - Automatic hierarchy maintenance
-- **[RDY]** Task Actions Menu (⋮ button) - Context-sensitive action disclosure
-- **[RDY]** Delete Task (from actions menu) - Non-blocking confirmation with undo
-- **[RDY]** Custom modals/toasts - Unified notification system replacing native alerts
-- **[RDY]** Due Date picker (custom modal) - Clean date selection interface
-- **[RDY]** Task Attachments UI (drop zone, gallery) - Multi-format file support
-- **[RDY]** Bottom toolbar with filters - Persistent filter state management
-- **[RDY]** Privacy toggles - Item-level privacy with visual indicators
-- **[RDY]** Mobile Move Mode - Button-based cross-column movement for touch
-
-#### Collaboration UI (Foundation)
-- **[RDY]** Share Modal (recipient input, permission selection, current access list)
-- **[RDY]** "Shared with Me" virtual column with automatic population
-- **[RDY]** Shared task visual styling (border, gradient, badges)
-- **[RDY]** Lightweight share badge updates without board reload
-- **[RDY]** Ready-for-Review workflow with pulsing owner notifications and proper state synchronization
-- **[RDY]** Ready-for-Review workflow (UI complete)
-- **[RDY]** Permission-based task action menu filtering (partial implementation)
-- **[FUT]** Mobile share workflow optimization
-
-#### Advanced UI Features
-- **[RDY]** Task Notes integration (Unified Editor) - Full-featured editing experience
-- **[RDY]** Quick Notes (card flip) - 3D animation for short note editing
-- **[RDY]** Settings slider panel - Global preferences with theme selector and completion sound toggle
-- **[RDY]** Change Password modal - Secure password update workflow
-- **[RDY]** Forgot Password page & flow - Email-based reset with security
-- **[RDY]** Task Snooze Modal - Preset durations and custom date picker
-- **[RDY]** Snooze Visual Indicators - Purple badge with wake date display
-- **[RDY]** Dynamic Snooze/Unsnooze Menu State - Context-aware action menus
-- **[RDY]** Snoozed Task Visual Styling - Opacity and grayscale effects
-- **[RDY]** Show/Hide Snoozed Tasks Filter - Bottom toolbar toggle with persistence
-- **[RDY]** Completion Sound Toggle - User-controllable audio feedback with persistence
-
-#### Calendar Overlay System
-- **[RDY]** Calendar Badge in Header - Dynamic badge showing event labels with priority-based display
-- **[RDY]** Calendar Overlay Modal - Three-tab interface with event viewing, preferences, and calendar management
-- **[RDY]** Calendar Event Management - CRUD operations with form validation and calendar grouping
-- **[RDY]** Calendar Event Types - Fiscal, holiday, birthday, and custom event support with color coding
-- **[RDY]** Calendar Preferences - User visibility toggles for different calendar types
-- **[RDY]** JSON Import/Export - Bulk event management with calendar grouping and priority system
-- **[RDY]** Calendar Management Tab - Group-based event management with priority controls
-- **[FUT]** Journal View Integration - Event badges in journal column headers
-
-#### Mission Focus Chart System
-- **[RDY]** Mission Focus Chart - Chart.js doughnut chart showing task distribution
-- **[RDY]** Settings Toggle - User-configurable show/hide control with persistence
-- **[RDY]** Header Integration - Non-intrusive placement between username and calendar badge
-- **[RDY]** Dynamic Updates - Real-time task classification analysis and chart updates
-- **[RDY]** Tooltip System - Hover display showing exact percentage breakdown
-- **[RDY]** Theme Support - Consistent styling across light/dark/high-contrast modes
-- **[RDY]** Task Filtering - Counts all active tasks regardless of filter visibility
-- **[RDY]** Performance Optimization - Chart instance management and error handling
-
-#### Network Access & URL Management
-- **[RDY]** Dynamic URL Detection - Smart hostname resolution for localhost and jagmac.local
-- **[RDY]** DHCP Compatibility - Stable hostname usage avoiding dynamic IP dependencies
-- **[RDY]** Environment Configuration - .env file support with runtime detection
-- **[RDY]** Multi-Device Access - Network accessibility from other devices on local network
-
-#### Zero-Knowledge Encryption System
-- **[RDY]** Encryption Setup Wizard - Multi-step setup with security questions and password configuration
-- **[RDY]** Database Schema - Complete encryption infrastructure with user keys, item keys, and audit logging
-- **[RDY]** Core Encryption Module - Centralized crypto engine with Argon2id key derivation and AES-256-GCM encryption
-- **[RDY]** Client-Side Crypto Integration - Web Crypto API with master key management and DEK wrapping
-- **[RDY]** API Integration - Automatic encryption/decryption of private tasks in all CRUD operations
-- **[RDY]** Column Privacy Inheritance - Automatic encryption of all tasks when column is made private
-- **[RDY]** Shared Task Conflict Resolution - Auto-unsharing of shared tasks when making columns private
-- **[RDY]** Recovery System - Security questions-based master key recovery envelope
-- **[FIX]** Data Encryption Logic - ⚠️ **CRITICAL**: Encryption envelope created but actual data content not encrypted
-- **[FUT]** End-to-End Sharing - Client-side encryption for shared task data
-
-#### Collaboration UI (Foundation)
-- **[RDY]** Sharing UI (Share modal, Current Access list, Unshare) - Basic sharing workflow
-
-### 2.4 Priority Roadmap (Beta 6.7+)
-
-The roadmap prioritizes stability, core feature completion, and foundational architecture for future advanced features.
-
-#### Immediate Priorities (Sprint 1-2)
-1. **🔴 CRITICAL: Zero-Knowledge Encryption Bug Fix** - Fix `encryptTaskData()` and `decryptTaskData()` functions in `/incs/crypto.php` to actually encrypt data content instead of storing plaintext within encryption envelope structure
-
-2. **Recipient Permission System** - Implement action menu filtering and interaction restrictions based on share permissions (`view`/`edit` vs owner rights)
-
-3. **Sharing Workflow Polish** - Complete mobile UX testing, refine modal interactions, and add permission-based visual cues
-
-4. **Touch Moves: Mobile Move Mode 2.0** - Restore enhanced Move Mode with shared task restrictions and clear permission indicators
-
-#### Medium-term Features (Sprint 3-4)
-5. **End-to-End Sharing** - Implement client-side encryption for shared task data using asymmetric key exchange, ensuring shared tasks remain zero-knowledge encrypted
-
-6. **Enhanced Recovery System** - Improve security questions validation and add multiple recovery methods (backup codes, email verification)
-
-#### Long-term Features (Sprint 5+)
-7. **Offline MVP** (defer) - Service Worker app-shell, IndexedDB mirror, write queue (LWW) for true offline-first experience.
-
-8. **Accessibility Polish** - Colorblind/high-contrast tuning; ARIA announcements for Move Mode; keyboard navigation improvements.
-
-#### Priority Roadmap Updates
-
-Recent completions have shifted focus toward advanced user experience and collaboration:
-- "Column Reordering (Drag & Drop)" completed with both button and drag interfaces
-- "Debug/Observability Hardening" completed based on comprehensive backend testing results  
-- "Zero-Knowledge Baseline" priority increased based on stable foundation now established
-- "Theme System Enhancement" completed with three-theme selector and green accent color scheme
-- "Completion Sound System" completed with user-controllable audio feedback
-- "Task Sorting Improvements" completed with proper completion/uncompletion reordering
+Non‑goals for the current milestone: full offline engine, full end‑to‑end encrypted sharing, and cross‑view integrations beyond the Calendar Overlay basics.
 
 ---
 
-## 3. Vision & Scope
+## 3. Core Functional Specification
 
-### 3.1 Application Scope
+3.1 Columns
+- Create, rename, delete (soft delete with undo), reorder
+- Privacy inheritance (making a column private encrypts its tasks)
 
-From Beta 5 onward, the application scope is strictly focused on perfecting the **Tasks View**. All development, UI, and architecture improvements support this "tasks-first" approach. Other views (Journal, Outlines, Events) remain deferred, except for maintenance work required for future integration.
+3.2 Tasks
+- Create, rename, duplicate, delete (soft with undo), move within/between columns
+- Classify: Signal, Support, Backlog, Completed; enforced sorting rules
+- Complete/uncomplete with visual and audio feedback
+- Due date, snooze (preset and custom), notes via Unified Editor
+- Attachments (images, PDFs) with quotas
+- Privacy toggle with visual indicators
 
-This focused approach allows us to create an exceptionally polished task management experience rather than a mediocre multi-purpose tool. By mastering one domain completely, we establish patterns and architecture that will scale elegantly when we expand scope.
+3.3 Filters & Toolbar
+- Show/Hide Completed, Private, Snoozed; state persists
 
-### 3.2 Application Description
-
-**MyDayHub** is a next-generation productivity hub, built for focus, simplicity, and absolute privacy. We start with task management and plan to integrate Journal, Outlines, and Events later. The UI combines dark backgrounds, accent gradients, translucent overlays, and rounded cards. Typography is clean and scalable. Status bands and quick-action icons are always visible, supporting classification, privacy, attachments, and sharing.
-
-All content is encrypted end-to-end with zero-knowledge encryption. Plaintext is never stored or transmitted.
-
-#### Current Features
-- **Tasks:** Kanban board for flexible task tracking with Signal/Support/Backlog classification
-
-#### Future Features  
-- **Journal (Future):** Daily notes and reflections with timeline navigation
-- **Outlines (Future):** Hierarchical trees for structuring ideas and projects
-- **Events (Future):** Agenda planning with segments for meeting management
-
-### 3.3 Core Philosophy
-
-The application is built on six foundational principles that guide every design and technical decision:
-
-#### Absolute Privacy
-True zero-knowledge encryption with per-item DEKs, encrypted by a Master Key derived on device via Argon2id from passphrase + salt. Master Key never leaves device. This ensures that even if our servers are compromised, user data remains completely private.
-
-#### Fluid Experience  
-Inline editing, drag-and-drop, single-page interactions with optimistic UI updates. Every action should feel immediate and responsive, with animations providing feedback and rollback capabilities for error handling.
-
-#### Modern & Minimalist
-Simplicity, clarity, comfortable dark theme (light optional). The interface should disappear, allowing users to focus entirely on their work without UI friction or visual clutter.
-
-#### Work Anywhere
-Full offline support with sync resolution. Users should be able to work productively regardless of network connectivity, with intelligent conflict resolution when multiple devices sync.
-
-#### Signal over Noise
-Classification ensures attention on mission-critical tasks. The system actively helps users distinguish between work that advances their goals and work that merely keeps them busy.
-
-#### Accessibility
-WCAG color contrast, ARIA labels, keyboard navigation, font scaling, high-contrast mode. The application must be usable by everyone, regardless of ability or preferred interaction method.
-
-### 3.4 General Requirements
-
-These requirements apply across all features and ensure consistency in user experience:
-
-#### Visual Design
-- **Aesthetics:** Rounded corners, sans-serif fonts, shadows, translucency, accent color highlights
-- **Layout:** Responsive, touch-friendly, mobile-first design patterns
-- **Theming:** Dark theme primary, light theme optional, high-contrast mode available
-
-#### Privacy & Security
-- **Privacy Switch:** Every item (column, task, entry, event, tree, branch, node) can be marked private
-- **Sessions:** Multi-user sessions with last-writer control and ownership checks  
-- **Encryption:** Client-side encryption with server-side validation of permissions
-
-#### User Experience
-- **Optimistic UI:** Animations with rollback if errors occur
-- **Progressive Disclosure:** Features appear when needed, hide when not
-- **Non-blocking Feedback:** Toast notifications instead of blocking alerts
-
-#### System Features
-- **Quotas:** Tiered storage/sharing limits, upgrade prompts for resource management
-- **Telemetry:** CRUD, navigation, and sharing analytics for product improvement
-- **Import/Export:** JSON for migration and backup capabilities
-- **Notifications:** Alerts for reminders, quota nearing, conflicts, and collaboration
-- **Debugging:** DEVMODE=true logs to debug.log; curl/API tests; offline simulations
-
-### 3.5 User Stories
-
-The following user stories capture the core value propositions and guide feature development:
-
-#### 3.5.1 Privacy & Security
-- As a user, I want all of my content to be encrypted end-to-end so that no one else can read it
-- As a user, I want to toggle privacy on any item so I can control who sees what  
-- As a user, I want to securely share items with other users, granting them view or edit access
-
-#### 3.5.2 Collaboration & Awareness
-- As a user, I want to notify others when I change a shared item, so they stay up to date
-- As a user, I want to receive a notification when someone else modifies an item I shared with them
-
-#### 3.5.3 Productivity & Workflow  
-- As a user, I want to drag and drop to manage my tasks (and later entries, nodes, and segments) for quick organization
-- As a user, I want to classify tasks as Signal, Support, Backlog, or Completed to stay focused on what matters
-- As a user, I want to attach and manage images within tasks to keep related information in one place
-- As a user, I want to email tasks directly into the app so I can capture work quickly
-
-#### 3.5.4 Mobility & Responsiveness
-- As a user, I want the app to work seamlessly on both desktop and mobile layouts
-- As a user, I want to use the app effectively on my phone while on the go
-
-#### 3.5.5 Reliability & Offline
-- As a user, I want to edit offline and have changes auto-sync when I reconnect
-
-#### 3.5.6 Notifications & Limits
-- As a user, I want clear notifications for reminders, conflicts, and system alerts
-- As a user, I want to be warned when I'm nearing my storage limit so I can manage my files  
-- As a user, I want to be prompted before my oldest attachments are deleted, so I can choose what to remove
+3.4 Unified Editor
+- Modal editor for task notes with autosave, formatting tools, and font sizing
 
 ---
 
-## 4. Functional Specification
+## 4. Collaboration & Sharing (Foundations)
 
-### 4.1 Tasks View
+Model favors clarity and safety:
+- Only non‑private items can be shared
+- Permissions: view or edit; owners retain share/privacy controls
+- Recipient experience: “Shared with Me” virtual column; permission‑based action visibility
+- Ready‑for‑Review workflow: recipients mark ready; owners see non‑blocking notifications
 
-The Tasks View serves as the application's primary interface, implementing a Kanban-style board with horizontal scroll on desktop and vertical stack on mobile. All interactions use optimistic updates with rollback on error.
-
-#### 4.1.1 Column Structure
-
-**Header Components:**
-- Title (inline edit via double-click)
-- Live task count with classification breakdown
-- Privacy toggle with visual indicator  
-- Actions menu (delete/move/settings)
-
-**Body Layout:**
-- Displays task cards with enforced sorting
-- Placeholder text for empty columns
-- Drag-and-drop targets for cross-column moves
-
-**Footer Interface:**
-- Quick-add input field for new tasks
-- Transforms to "Move here" button during Mobile Move Mode
-- Context-sensitive interaction patterns
-
-#### 4.1.2 Task Card Architecture
-
-**Display Elements:**
-- Title (inline edit via double-click)
-- Classification status band (clickable popover)
-- Checkbox for completion with celebration animation
-- Metadata footer (notes indicator, due date, attachments, privacy)
-
-**Interactive Features:**
-- Drag-and-drop handle (≡) for desktop reordering
-- Actions menu (⋮) for context-sensitive operations  
-- Quick Notes card flip for short note editing
-- Status band popover for classification changes
-
-**Visual States:**
-- **Normal:** Full opacity, standard styling
-- **Completed:** Celebration animation, then filtered visibility based on user preference
-- **Snoozed:** Opacity 0.65, grayscale(0.3) filter, purple wake indicator
-- **Private:** Diagonal line pattern overlay
-- **Shared:** Distinct styling with recipient badges
-
-**Ready-for-Review States (Recipients):**
-- **Not Ready:** Empty circle indicator - recipient can mark ready
-- **Ready for Review:** Filled circle indicator - recipient marked ready, owner notified
-- **Completed by Owner:** Checkmark indicator - task completed, workflow complete
-
-#### 4.1.3 Task Classification System
-
-The classification system implements the core "Signal over Noise" philosophy:
-
-**Classification Types:**
-- **Signal (Green):** Directly advances the mission - highest priority
-- **Support (Blue):** Enables Signal tasks indirectly - medium priority  
-- **Backlog (Orange):** Important but not time-sensitive - lower priority
-- **Completed (Gray):** Finished tasks - archived at bottom
-
-**Sorting Rules:**
-- Enforced hierarchy: Signal > Support > Backlog > Completed
-- Manual ordering preserved within each classification group
-- Automatic re-sorting on classification changes, completion, and drag-and-drop
-- Cross-column moves maintain classification priority
-- Completed tasks automatically move to bottom when checked
-- Uncompleted tasks return to proper classification position when unchecked
-
-**User Interface:**
-- Status band click opens classification popover
-- Direct selection instead of cycling through options
-- Visual feedback with color-coded left border
-- Accessibility patterns for colorblind users
-
-#### 4.1.4 Mobile & Touch Interactions
-
-The application provides dual interaction patterns optimized for different device types:
-
-**Touch Drag & Drop (Mobile/Tablet):**
-- Long-press (~350ms) on card handle (≡) to initiate drag
-- Visual feedback: elevated shadow, target highlighting
-- Support for same-column reordering and cross-column moves
-- Automatic scroll when dragging near screen edges
-
-**Mobile Move Mode 2.0 (Enhanced):**
-- Enter via Actions → Move, card enters wiggle state
-- Top banner appears: "Move 'Task Title' • Cancel"
-- Column footers transform to "Move here" buttons
-- In-column drop-zones appear between cards for precise positioning
-- Multiple abort options: Cancel button, backdrop tap, Esc key, back button
-
-**Accessibility Features:**
-- ARIA live regions announce mode changes
-- Focus management during Move Mode
-- Touch targets meet 44-48px minimum size requirements
-- High contrast mode available for improved visibility
-
-#### 4.1.5 Snooze Functionality
-
-Tasks can be temporarily hidden with scheduled wake-up times:
-
-**Snooze Options:**
-- Preset durations: 1 week, 1 month, 1 quarter
-- Custom date selection with date picker
-- "Snooze until..." for specific deadlines
-
-**Visual Implementation:**
-- Snoozed tasks receive 'backlog' classification automatically
-- Styling: opacity 0.65, grayscale(0.3) filter for muted appearance
-- Purple indicator badge with clock icon and wake date
-- Clickable indicators for direct snooze editing
-
-**Behavior:**
-- Tasks automatically unsnooze at 9 AM local time on scheduled date
-- Filter toggle: "Show Snoozed Tasks" in bottom toolbar
-- Persistent user preference for filter state
-- Wake notification system (implementation pending)
-
-#### 4.1.6 Task Actions & Quick Operations
-
-**Actions Menu (⋮):**
-- Notes (opens Unified Editor or Quick Notes flip)
-- Due Date (custom modal with date picker)
-- Duplicate (creates copy at column end)
-- Delete (soft delete with toast-based undo)
-- Move (enters Mobile Move Mode with enhanced cancel options)
-- Share (opens sharing modal for collaboration)
-- Toggle Private (privacy flag with visual feedback)
-- Snooze (sub-menu with duration options and custom picker)
-- Cycle Classification (alternative to status band popover)
-
-**Completion Workflow:**
-- Checkbox click triggers elegant golden flash animation
-- 0.5-second golden sweep across task card with subtle sound (if enabled)
-- Automatic classification change to 'completed'
-- Proper task reordering to bottom of column
-- Respects "Hide Completed" filter timing
-
-#### 4.1.7 Attachments System
-
-**File Support:**
-- Image formats: JPEG, PNG, GIF, WebP
-- Document format: PDF  
-- Maximum file size: 5MB per file
-- Storage quota: Configurable per user tier
-
-**Upload Methods:**
-- File picker dialog ("Browse Files...")
-- Drag-and-drop to attachment modal
-- Paste from clipboard (images)
-
-**Quota Management:**
-- Real-time storage usage indicator
-- Automatic oldest-file deletion when quota exceeded
-- User confirmation before automatic deletions
-- "Manage Attachments" modal for manual file management
-
-**Viewing Experience:**
-- Images: In-app modal viewer with natural sizing
-- PDFs: Opens in new browser tab for full functionality
-- Gallery view with file metadata and deletion options
-
-#### 4.1.8 Privacy & Filtering
-
-**Privacy Implementation:**
-- Per-task and per-column privacy toggles
-- Visual indicator: diagonal line pattern for private items
-- Privacy flag enforcement: private items cannot be shared
-- Filter persistence across sessions
-
-**Filter System:**
-- Bottom toolbar with filter menu
-- "Show Completed" toggle with persistence
-- "Show Private Items" toggle with visual feedback
-- "Show Snoozed Tasks" toggle with state management
-- Future: "Show Shared Items" and "Show Only My Items"
-
-#### 4.1.9 Completion Sound System
-
-**Audio Feedback:**
-- Subtle two-tone chime when tasks are completed
-- Generated using Web Audio API (no external files required)
-- Golden frequency progression: 800Hz → 600Hz for satisfying resolution
-- 0.4-second duration with natural decay envelope
-
-**User Control:**
-- Settings panel toggle: "Completion Sound" with segmented control (Off/On)
-- Preference persistence across sessions via localStorage and backend
-- Graceful fallback if Web Audio API is not supported
-- Default state: enabled for new users
-
-**Technical Implementation:**
-- Programmatic audio generation using oscillators and gain nodes
-- Context management for browser audio policy compliance
-- Synchronized with visual completion animation
-- Silent failure for unsupported browsers or user interaction requirements
+Out‑of‑scope for current milestone: full end‑to‑end encrypted sharing. A documented trade‑off is used for shareable items.
 
 ---
 
-### 4.2 Unified Note Editor
+## 5. Zero‑Knowledge Privacy & Recovery (Conceptual)
 
-The Unified Note Editor provides a full-featured writing environment accessible from any task's note field, with support for both quick edits and extended writing sessions.
+Boundary:
+- Private data is encrypted client‑side before transit/storage
+- Per‑item data keys (DEKs) wrapped by a user master key; the master key never leaves the device
 
-#### 4.2.1 Editor Interface
+Recovery (future‑complete):
+- Security questions derive a recovery key used to encrypt a copy of the master key (recovery envelope)
+- Clear user education on security vs recoverability trade‑offs
 
-**Modal Structure:**
-- Header: Context title, export/print/save buttons
-- Toolbar: Format tools, find & replace, search functionality  
-- Text Area: Scrollable textarea with line numbers
-- Status Bar: Word/character/line counters, last saved timestamp
-
-**Editing Features:**
-- Plain text + Markdown support with preview toggle
-- Auto-save on pause and explicit save on close
-- Font size adjustment (A-/A+) with user preference persistence
-- Tab/Shift+Tab for indentation control
-- Case conversion tools (UPPER, lower, Title Case)
-
-#### 4.2.2 Auto-save & Persistence
-
-**Auto-save Behavior:**
-- Debounced auto-save after typing stops (configurable interval)
-- Explicit save on close and mode transitions
-- Visual feedback for save states and conflicts
-
-**Data Integrity:**
-- Optimistic updates with rollback on failure
-- Conflict detection for multi-device editing
-- Last-writer-wins resolution with user notification
+Known risk to resolve: ensure data payloads are actually encrypted under the envelope structure in all create/update paths.
 
 ---
 
-### 4.3 Settings Panel & Global Preferences
+## 6. Calendar Overlay System (Conceptual)
 
-The Settings Panel provides access to application-wide preferences and user account management.
+Purpose:
+- Show contextual date information (fiscal, holidays, birthdays, custom) without disrupting task focus
 
-#### 4.3.1 Display Settings
-
-**Theme Management:**
-- Three-theme system: Dark (default), Light, and High-Contrast modes
-- CSS custom properties for consistent theming across all components
-- Persistent user preferences stored in database and localStorage
-- Real-time theme switching with smooth transitions
-
-**Global Font Size Control:**
-- User-adjustable font size with 80%-150% range in 10% increments
-- Three-button segmented control: A- | Reset | A+
-- Default size: 100% (normal)
-- Minimum size: 80% (smaller text)
-- Maximum size: 150% (larger text)
-- Persistent preference storage in database and localStorage
-- Immediate visual feedback across entire application
-
-**Accessibility Features:**
-- Three-theme selector: Dark, Light, and High-Contrast modes
-- Segmented control interface for intuitive theme switching
-- Completion sound toggle with user preference persistence
-- Font scaling options for accessibility
-- Color-blind friendly patterns and indicators
-
-**UI Enhancements:**
-- Filter icon uses app accent color for visual consistency
-- Logout link displays icon-only with tooltip on hover
-- Power symbol icon (15% larger) with red accent color
-- Removed vertical separators for cleaner visual hierarchy
-- Enhanced hover effects and smooth transitions throughout
-
-**UI Preferences:**
-- Filter state persistence (completed, private, snoozed items)
-- Editor font size with cross-device synchronization
-- Animation preferences and reduced motion support
-- Completion sound toggle with user preference persistence
-
-#### 4.3.2 Account Management
-
-**Security Settings:**
-- Change Password modal with validation
-- Security Questions setup for password recovery
-- Session management and device logout
-- Two-factor authentication (future)
-
-**Data Management:**
-- Storage usage overview with quota indicators
-- Import/Export functionality for data portability
-- Account deletion with data retention policies
+Key elements:
+- Header badge shows highest‑priority event label for the selected date
+- Modal with tabs: Events, Preferences, Calendar Management
+- JSON import/export; calendar grouping; group priority affects badge display
 
 ---
 
-### 4.4 Collaboration & Sharing (Foundation)
+## 7. Mission Focus Chart (Conceptual)
 
-The sharing system enables controlled collaboration while maintaining the zero-knowledge encryption model for private content.
+Purpose:
+- Visualize distribution of Signal/Support/Backlog among active tasks (excludes completed/deleted/received shares)
 
-#### 4.4.1 Sharing Model
-
-**Privacy Boundary:**
-- Only non-private items can be shared
-- Clear user education about encryption trade-offs
-- Visual indicators for shared vs. private content
-
-**Permission Levels:**
-- View: Read-only access to shared items
-- Edit: Full modification rights except sharing/privacy changes
-- Owner retains ultimate control and revocation rights
-
-**Hard Delete Model:**
-The sharing system uses direct record deletion rather than status-based soft deletes to eliminate state inconsistencies. When a share is revoked, the `shared_items` record is permanently removed, ensuring clean state management between frontend and backend.
-
-**Virtual Column Approach:**
-Recipients see shared tasks in a "Shared with Me" virtual column that appears automatically when shares exist. This column is generated server-side during the `getAll` response and provides clear separation between owned and shared content.
-
-**Permission Enforcement (Pending):**
-- `view` permission: Read-only access to task content, no modification capabilities
-- `edit` permission: Full modification rights except ownership actions (delete, share, privacy)
-- Owner retains exclusive rights: delete, duplicate, share management, privacy settings
-
-**Zero-Knowledge Boundary:**
-Shared tasks use server-side encryption to enable collaboration, representing a documented trade-off from pure zero-knowledge architecture. Private tasks cannot be shared, maintaining the encryption boundary for sensitive content.
-
-#### 4.4.2 Sharing Workflow
-
-**Share Management:**
-- Share modal with recipient selection
-- Email or username-based user identification  
-- Permission assignment and modification
-- Current access list with individual revocation
-
-**Recipient Experience:**
-- Shared items appear in dedicated "Shared with Me" column
-- Distinct visual styling with owner attribution
-- Edit capabilities based on assigned permissions
-- "Ready for Review" status for workflow completion
-
-**Ready-for-Review Workflow:**
-- Recipients can mark tasks ready for owner review via interactive status indicator
-- Owner receives visual notification (badge) when tasks marked ready
-- Status persists across sessions and syncs between collaborators
-- Workflow completion tracked per recipient for multi-user shared tasks
-
-**Owner Notification System:**
-- Task owners receive visual notification (pulsing orange badge) when recipients mark tasks ready
-- Notification persists on both active and completed tasks (Option B workflow)
-- Badge uses orange color (#f97316) for contrast with blue accent theme
-- Includes accessibility support with reduced motion variant
-- Provides complete audit trail of collaboration workflow
+Behavior:
+- Small header chart; optional via Settings; updates as tasks change
 
 ---
 
-### 4.5 Calendar Overlay System
+## 8. Settings, Theming, Accessibility
 
-The Calendar Overlay system provides informational display of alternative calendar nomenclatures, enabling users to view fiscal quarters, holidays, birthdays, and custom calendar events alongside the standard Gregorian calendar.
+Settings:
+- Theme: Dark (default), Light, High‑Contrast
+- Font size: global scaling controls
+- Completion sound: on/off
+- Filter state persistence
 
-#### 4.5.1 Calendar Badge in Header
-
-**Visual Design:**
-- Dynamic badge positioned between username and date in header
-- Shows calendar icon when no events present
-- Displays event label text with event color when events exist
-- "+X more" indicator for multiple events on same date
-- Consistent with existing app design language and theme system
-
-**Interaction Model:**
-- Click to open calendar overlay modal
-- Badge content dynamically updates based on highest priority event
-- Non-intrusive informational display that doesn't interfere with task management
-- Badge size optimized for header space (50% of original size)
-
-#### 4.5.2 Calendar Event Management
-
-**Event Types:**
-- **Fiscal Calendar**: Quarter, month, and week labels (e.g., "Q1-M2-Wk7")
-- **Holidays**: Standard and custom holiday events
-- **Birthdays**: Personal and team member birthdays
-- **Custom Events**: User-defined calendar events
-
-**Data Structure:**
-- Date range-based events (start_date, end_date) for flexible multi-day support
-- Event type categorization for color coding and organization
-- User-specific events with optional public sharing capability
-- Color customization per event type
-- Calendar grouping via calendar_name field for bulk management
-- Priority system for determining which event shows in header badge
-
-**Management Interface:**
-- Calendar overlay modal with three tabs: View Events, Preferences, Calendar Management
-- Event management modal for CRUD operations with form validation
-- Mini calendar preview with event labels directly in day squares
-- JSON import/export capabilities for bulk event management
-- Calendar Management tab for grouping events by calendar name
-- Priority management for determining header badge display
-
-#### 4.5.3 Database Schema
-
-**Calendar Events Table:**
-```sql
-CREATE TABLE calendar_events (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
-    calendar_name VARCHAR(100) DEFAULT 'Custom Event', -- Grouping for bulk management
-    label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
-    start_date DATE NOT NULL,
-    end_date DATE NOT NULL,
-    color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
-    is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
-    priority INT DEFAULT 0,             -- Priority for header badge display
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-    INDEX idx_calendar_name (calendar_name),
-    INDEX idx_priority (priority)
-);
-```
-
-**User Calendar Preferences Table:**
-```sql
-CREATE TABLE user_calendar_preferences (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    user_id INT NOT NULL,
-    calendar_type VARCHAR(50) NOT NULL,
-    is_visible BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE KEY unique_user_calendar (user_id, calendar_type),
-    FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
-
-#### 4.5.4 API Endpoints
-
-**Calendar Events API (`/api/calevents.php`):**
-- `GET`: Fetch events for a date range with user preferences, ordered by priority
-- `POST`: Create new calendar event with validation
-- `PUT`: Update existing calendar event
-- `DELETE`: Delete calendar event with ownership verification
-- `bulkImport`: Import multiple events from JSON with calendar grouping
-- `getCalendars`: Fetch all calendar groups with metadata
-- `deleteCalendar`: Delete entire calendar group by name
-- `setCalendarPriority`: Update priority for calendar group
-
-**Calendar Preferences API (`/api/calprefs.php`):**
-- `GET`: Fetch user's calendar type visibility preferences
-- `PUT`: Update calendar type visibility settings
-
-#### 4.5.5 Future Journal View Integration
-
-**Event Badge Display:**
-- Calendar events displayed as color-coded badges in journal column headers
-- Multiple event badges supported per date
-- Event type-based color coding (fiscal=green, holiday=red, birthday=orange, custom=purple)
-
-**Visual Integration:**
-- Seamless integration with journal column header design
-- Responsive badge layout for multiple events per date
-- Hover tooltips for event details
-- Consistent with existing badge system in task cards
-
-### 4.6 Mission Focus Chart System
-
-The Mission Focus Chart provides a visual indicator of task classification proportions, helping users understand their focus distribution across Signal, Support, and Backlog tasks.
-
-#### 4.6.1 Visual Design
-
-**Chart Type:**
-- Chart.js doughnut chart for reliable, consistent rendering
-- Three segments representing different task classifications
-- Dynamic sizing based on task count proportions
-- Canvas-based implementation with responsive scaling
-
-**Segment Configuration:**
-- **Green Segment**: Signal tasks - represents direct mission advancement
-- **Blue Segment**: Support tasks - represents mission-supporting activities
-- **Orange Segment**: Backlog tasks - represents non-mission critical work
-
-**Display Properties:**
-- 24x24px display size optimized for header placement
-- 48x48px canvas for high-quality rendering
-- Positioned between username and calendar badge in header
-- Hidden by default, user-configurable via settings
-- Hover tooltip showing exact percentage breakdown
-
-#### 4.6.2 User Interface Integration
-
-**Settings Control:**
-- Toggle in Settings panel: "Mission Focus Chart"
-- Segmented control with Hide/Show options
-- Persistent user preference via localStorage
-- Consistent with existing settings UI patterns
-
-**Header Integration:**
-- Non-intrusive placement in header
-- Responsive design for mobile compatibility
-- Theme-aware styling (light/dark/high-contrast modes)
-- Click-through to calendar overlay (shared click handler)
-
-#### 4.6.3 Technical Implementation
-
-**Data Analysis:**
-- Scans all non-completed task cards for classification
-- Uses data-classification attribute and classification-* classes
-- Excludes completed, deleted, and received shared tasks
-- Includes snoozed and private tasks regardless of filter visibility
-- Calculates relative proportions for segment sizing
-- Updates dynamically when tasks change (create, complete, classify, delete)
-
-**Rendering Logic:**
-- Chart.js doughnut chart with custom configuration
-- Responsive design with maintainAspectRatio: false
-- Smooth animations disabled for performance
-- Cutout percentage for doughnut appearance
-- Custom tooltip with percentage breakdown
-- Chart instance management (destroy/recreate pattern)
-
-**Performance Considerations:**
-- Safety guards to prevent infinite update loops
-- Error handling for edge cases
-- Efficient DOM queries for task counting
-- Minimal re-rendering on task changes
-
-#### 4.6.4 User Experience
-
-**Empty State:**
-- Gray circle when no active tasks present
-- Tooltip: "No active tasks"
-- Consistent with app's empty state patterns
-
-**Active State:**
-- Colored rings showing task distribution
-- Tooltip with exact percentages: "X% Signal, Y% Support, Z% Backlog"
-- Visual feedback for mission focus assessment
-
-**Accessibility:**
-- High contrast support for all themes
-- Clear visual distinction between ring colors
-- Descriptive tooltips for screen readers
-- Keyboard navigation support
-
-### 4.7 Network Access & URL Management
-
-The application implements intelligent URL detection to support both local development and network access scenarios, ensuring reliable connectivity across different environments.
-
-#### 4.7.1 Dynamic URL Detection
-
-**Smart Hostname Resolution:**
-- Auto-detects appropriate URL based on request source
-- Supports stable hostnames: `localhost` and `jagmac.local`
-- Avoids dynamic IP addresses for DHCP compatibility
-- Falls back to `jagmac.local` for unknown hosts
-
-**Detection Logic:**
-```php
-function detectAppUrl() {
-    // Check environment variable first
-    $envUrl = getenv('APP_URL');
-    if ($envUrl && $envUrl !== 'http://localhost') {
-        return $envUrl;
-    }
-    
-    // Use stable hostnames only
-    if ($host === 'jagmac.local' || $host === 'localhost') {
-        return $protocol . '://' . $host;
-    }
-    
-    // Default to jagmac.local for any other host (including IPs)
-    return $protocol . '://jagmac.local';
-}
-```
-
-#### 4.7.2 Network Access Scenarios
-
-**Local Development:**
-- `http://localhost` → APP_URL = `http://localhost`
-- Full local development experience
-- No network dependencies
-
-**Network Access:**
-- `http://jagmac.local` → APP_URL = `http://jagmac.local`
-- Accessible from other devices on local network
-- Stable hostname regardless of IP changes
-
-**IP Access (Redirected):**
-- `http://10.0.0.3` (or any IP) → APP_URL = `http://jagmac.local`
-- Automatic redirection to stable hostname
-- DHCP-friendly behavior
-
-#### 4.7.3 Configuration Management
-
-**Environment Variables:**
-- `.env` file supports explicit APP_URL override
-- Defaults to `http://localhost` for local development
-- Environment-specific configurations supported
-
-**Runtime Detection:**
-- Uses `$_SERVER['HTTP_HOST']` for request-based detection
-- Protocol detection (HTTP/HTTPS) support
-- Consistent across all application components
-
-#### 4.7.4 Benefits
-
-**DHCP Compatibility:**
-- No dependency on changing IP addresses
-- Stable access via hostname regardless of network changes
-- Automatic fallback for IP-based access
-
-**Development Flexibility:**
-- Seamless local development experience
-- Network testing without configuration changes
-- Consistent behavior across environments
-
-**User Experience:**
-- Transparent URL management
-- No manual configuration required
-- Reliable access from any network device
-
-### 4.8 Future Views (Deferred)
-
-While current development focuses exclusively on Tasks, the architecture supports planned expansion:
-
-#### 4.8.1 Journal View (Future)
-- Chronological daily layout with 1-day, 3-day, 5-day modes
-- Entry cards with timeline navigation
-- Integration with task attachments and due dates
-
-#### 4.8.2 Outlines View (Future)  
-- Hierarchical tree structure for idea organization
-- Expand/collapse functionality with infinite nesting
-- Linking integration with tasks and journal entries
-
-#### 4.8.3 Events View (Future)
-- Multi-day event planning with timeline visualization
-- Segment management with participant tracking
-- Resource allocation and location management
-
-#### 4.8.4 Architecture Approach
-
-**Database Schema:**
-- New `task_note_history` table: `id`, `task_id`, `user_id`, `note_content`, `created_at`, `action_type`
-- Current single-note system remains in tasks table
-- Previous versions archived automatically when notes updated
-
-**Workflow:**
-- Users continue to see one current note per task
-- "View History" button in UnifiedEditor shows chronological list
-- History entries format: "Updated by [user] on [date]" with expandable content
-- Read-only view of all previous versions
-
-#### 4.6.5 Implementation Benefits
-
-**Advantages over full multi-note system:**
-- Maintains current familiar UX patterns
-- Provides accountability without workflow changes  
-- Much simpler to implement and maintain
-- Clear audit trail for collaboration
-- No UI complexity increase for basic note editing
-
-**Technical Requirements:**
-- Auto-logging in existing `saveTaskDetails` API before content update
-- New `getNoteHistory` endpoint for viewing past versions
-- Modal or expandable UI component for history display
-- Handles both owner and recipient note changes with proper attribution
+Theming & Accessibility:
+- Dark‑first palette with clear hierarchy; high‑contrast variant
+- Touch targets ≥44px, ARIA patterns, keyboard navigation support
 
 ---
 
-## 5. Technical Specification
-
-### 5.1 System Architecture
-
-MyDayHub follows a modern LAMP stack architecture optimized for security, performance, and maintainability.
-
-#### 5.1.1 Technology Stack
-
-**Backend:**
-- PHP 8.2+ with modern language features
-- MySQL 8.0+ with JSON column support
-- Apache 2.4+ with mod_rewrite
-- Composer for dependency management
-
-**Frontend:**
-- Vanilla JavaScript ES6+ for maximum performance
-- CSS Grid and Flexbox for responsive layouts
-- Progressive Web App capabilities via Service Worker
-- No framework dependencies for minimal overhead
-
-**Security:**
-- CSRF protection on all mutating operations
-- Session-based authentication with secure tokens
-- Input validation and output encoding
-- SQL injection prevention via prepared statements
-
-### 5.2 API Gateway & Architecture
-
-#### 5.2.1 Single Gateway Pattern
-
-All API requests flow through `/api/api.php`, providing:
-- Centralized CSRF validation for security
-- Consistent error handling and logging
-- Request routing to appropriate handlers
-- Debug response formatting when DEVMODE=true
-
-**Request Format:**
-```json
-{
-  "module": "tasks",
-  "action": "createTask",
-  "data": {
-	"column_id": 123,
-	"title": "New task title"
-  }
-}
-```
-
-**Response Format:**
-```json
-{
-  "success": true,
-  "data": { /* response payload */ },
-  "debug": [ /* debug messages when DEVMODE=true */ ]
-}
-```
-
-#### 5.2.2 Module Handlers
-
-**Authentication (`/api/auth.php`):**
-- User registration with password hashing
-- Login with session creation
-- Password reset via secure email tokens
-- Logout with session cleanup
-
-**Task Management (`/api/tasks.php`):**
-- Complete CRUD operations for tasks and columns
-- Drag-and-drop position management
-- Classification and privacy controls
-- Attachment upload and management
-
-**User Preferences (`/api/users.php`):**
-- Settings persistence in JSON format
-- Cross-device preference synchronization
-- Account management operations
-
-### 5.3 Database Schema
-
-#### 5.3.1 User Management
-
-**users table:**
-```sql
-CREATE TABLE users (
-  user_id INT AUTO_INCREMENT PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  email VARCHAR(255) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  preferences JSON DEFAULT '{}',
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  storage_used_bytes BIGINT DEFAULT 0
-);
-```
-
-**password_resets table:**
-```sql
-CREATE TABLE password_resets (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  token_hash VARCHAR(255) NOT NULL,
-  expires_at DATETIME NOT NULL,
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
-
-#### 5.3.2 Task Management
-
-**columns table:**
-```sql
-CREATE TABLE columns (
-  column_id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  column_name VARCHAR(255) NOT NULL,
-  position INT NOT NULL,
-  is_private BOOLEAN DEFAULT FALSE,
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
-  deleted_at DATETIME NULL,
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
-
-**tasks table:**
-```sql
-CREATE TABLE tasks (
-  task_id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  column_id INT NOT NULL,
-  encrypted_data JSON NOT NULL, -- Contains title, notes in encrypted format
-  position INT NOT NULL,
-  classification ENUM('signal', 'support', 'backlog', 'completed') DEFAULT 'support',
-  is_private BOOLEAN DEFAULT FALSE,
-  due_date DATE NULL,
-  snoozed_until DATETIME NULL,
-  snoozed_at DATETIME NULL,
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
-  deleted_at DATETIME NULL,
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-  FOREIGN KEY (column_id) REFERENCES columns(column_id) ON DELETE CASCADE
-);
-```
-
-#### 5.3.3 File Attachments
-
-**task_attachments table:**
-```sql
-CREATE TABLE task_attachments (
-  attachment_id INT AUTO_INCREMENT PRIMARY KEY,
-  task_id INT NOT NULL,
-  user_id INT NOT NULL,
-  filename_on_server VARCHAR(255) NOT NULL,
-  original_filename VARCHAR(255) NOT NULL,
-  filesize_bytes INT NOT NULL,
-  mime_type VARCHAR(100) NOT NULL,
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  FOREIGN KEY (task_id) REFERENCES tasks(task_id) ON DELETE CASCADE,
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
-
-#### 5.3.4 Collaboration (Foundation)
-
-**shared_items table:**
-```sql
-CREATE TABLE shared_items (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  owner_id INT NOT NULL,
-  recipient_id INT NOT NULL,
-  item_type ENUM('task', 'column') NOT NULL DEFAULT 'task',
-  item_id INT NOT NULL,
-  permission ENUM('edit', 'view') NOT NULL DEFAULT 'edit',
-  ready_for_review BOOLEAN DEFAULT FALSE,  -- Add this line
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  updated_at DATETIME DEFAULT UTC_TIMESTAMP ON UPDATE UTC_TIMESTAMP,
-  UNIQUE KEY ux_share (owner_id, recipient_id, item_type, item_id),
-  INDEX ix_recipient (recipient_id),
-  INDEX ix_owner (owner_id)
-);NDEX ix_owner (owner_id)
-);
-```
-
-**sharing_activity table:**
-```sql
-CREATE TABLE sharing_activity (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  shared_item_id INT NOT NULL,
-  actor_user_id INT NOT NULL,
-  action ENUM('created', 'updated', 'revoked', 'marked_ready') NOT NULL,
-  payload JSON NULL,
-  created_at DATETIME DEFAULT UTC_TIMESTAMP,
-  INDEX ix_shared_item (shared_item_id)
-);
-```
-
-#### 5.3.5 Calendar Overlay System
-
-**calendar_events table:**
-```sql
-CREATE TABLE calendar_events (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  event_type VARCHAR(50) NOT NULL, -- 'fiscal', 'holiday', 'birthday', 'custom'
-  label VARCHAR(100) NOT NULL,     -- 'Q1-M2-Wk7', 'Christmas Day', etc.
-  start_date DATE NOT NULL,
-  end_date DATE NOT NULL,
-  color VARCHAR(7) DEFAULT '#22c55e', -- Hex color for display
-  is_public BOOLEAN DEFAULT FALSE,    -- Whether other users can see this event
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE,
-  INDEX ix_user_dates (user_id, start_date, end_date),
-  INDEX ix_event_type (event_type)
-);
-```
-
-**user_calendar_preferences table:**
-```sql
-CREATE TABLE user_calendar_preferences (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  user_id INT NOT NULL,
-  calendar_type VARCHAR(50) NOT NULL,
-  is_visible BOOLEAN DEFAULT TRUE,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  UNIQUE KEY unique_user_calendar (user_id, calendar_type),
-  FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
-);
-```
-
-### 5.4 Frontend Architecture
-
-#### 5.4.1 Module Structure
-
-**Core Application (`/uix/app.js`):**
-- Global utilities and state management
-- Toast notification system  
-- CSRF token management
-- API communication via `window.apiFetch`
-
-**Task Management (`/uix/tasks.js`):**
-- Board rendering and interaction logic
-- Drag-and-drop implementation  
-- Task CRUD operations
-- Mobile Move Mode functionality
-
-**Unified Editor (`/uix/editor.js`):**
-- Full-featured text editing
-- Auto-save functionality
-- Font size preference management
-- Modal lifecycle management
-
-**Authentication (`/uix/auth.js`):**
-- Login/registration form handling
-- Password reset workflow
-- Session management
-
-#### 5.4.2 CSS Architecture
-
-**Base Styles (`/uix/style.css`):**
-- CSS custom properties for theming
-- Responsive grid and flexbox utilities
-- Animation and transition definitions
-- Accessibility support (high contrast, reduced motion)
-
-**View-Specific Styles:**
-- `/uix/tasks.css` - Task board and card styling
-- `/uix/editor.css` - Unified Editor interface  
-- `/uix/attachments.css` - File management UI
-- `/uix/settings.css` - Settings panel styling with font size selector
-- `/uix/login.css` - Authentication pages theme system and styling
-
-**Settings Panel Components:**
-- Theme selector: Three-button segmented control (Dark, Light, High-Contrast)
-- Font size selector: Three-button segmented control (A-, Reset, A+)
-- Completion sound selector: Two-button segmented control (Off, On)
-- All selectors use consistent styling with accent color theming
-
-#### 5.4.3 Progressive Web App Features
-
-**Service Worker Implementation:**
-- Application shell caching for offline access
-- Background sync for offline operations
-- Push notification support
-- Update management and cache versioning
-
-**IndexedDB Integration:**
-- Local data mirroring for offline work
-- Conflict resolution for multi-device editing
-- Write queue for offline operations
-- Sync status management
-
-### 5.5 Security Model & Privacy Architecture
-
-#### 5.5.1 Zero-Knowledge Encryption
-
-**Implementation Status:** ⚠️ **CRITICAL ISSUE** - Infrastructure complete but data encryption not functioning
-
-**Encryption Boundary:**
-All cryptographic operations handled by `/incs/crypto.php` (backend) and `/uix/crypto.js` (frontend) modules with clear separation between encrypted and plaintext data flows.
-
-**Database Schema:**
-- `user_encryption_keys` - Stores user's wrapped master key and encryption settings
-- `item_encryption_keys` - Stores per-item DEKs wrapped with user's master key
-- `user_security_questions` - Security questions for recovery system
-- `encryption_migration_status` - Tracks migration progress for existing data
-- `encryption_audit_log` - Comprehensive logging of encryption operations
-- `tasks.privacy_inherited` - Tracks tasks made private by column inheritance
-- `tasks.privacy_override` - Tracks user overrides of inherited privacy
-- `columns.has_shared_tasks` - Prevents making columns with shared tasks private
-
-**Key Management:**
-- Master Key derived on-device using PBKDF2 (100,000 iterations) from passphrase + salt
-- Per-item Data Encryption Keys (DEKs) for granular access control
-- DEKs encrypted with user's Master Key before storage
-- Server never sees plaintext data or Master Key
-- **Issue**: Master key derivation and DEK management working, but actual data encryption failing
-
-**Encryption Process:**
-1. User sets up encryption password during wizard
-2. Master key derived from password using PBKDF2 + SHA-256
-3. Security questions create recovery envelope for master key backup
-4. Per-task DEKs generated and wrapped with master key
-5. **CRITICAL BUG**: Data content stored in plaintext within encryption envelope structure
-
-**Recovery System:**
-- User-generated security questions during setup
-- Question answers hash to derive Recovery Key using PBKDF2
-- Recovery Key encrypts a copy of the Master Key (Recovery Envelope)
-- Password reset requires answering questions to decrypt Master Key copy
-
-**Column Privacy Inheritance:**
-- When column marked private: all public tasks inherit privacy and get encrypted
-- When column marked public: only inherited tasks restored to public (user overrides preserved)
-- Shared task conflict resolution: auto-unsharing prevents privacy violations
-
-#### 5.5.2 Sharing & Collaboration Security
-
-**Privacy Boundaries:**
-- Only non-private items can be shared (clear user control)
-- Shared items use server-side encryption (documented trade-off)
-- Private items remain zero-knowledge encrypted
-- Future: Asymmetric key exchange for end-to-end sharing
-
-**Permission Enforcement:**
-- Server-side ownership validation on all operations
-- CSRF protection on all mutating requests
-- Session-based authentication with secure tokens
-- Audit trail for all sharing activities
-
-### 5.6 Password Reset & Recovery
-
-#### 5.6.1 Standard Password Reset (Current)
-
-**Implementation:**
-- Email-based reset with secure tokens
-- SHA-256 hashed tokens with 1-hour expiration
-- Single-use tokens prevent replay attacks
-- PHPMailer with SMTP for reliable delivery
-
-**Security Considerations:**
-- Tokens stored as hashes, never plaintext
-- Automatic cleanup of expired tokens
-- Rate limiting to prevent abuse
-- Secure token generation using cryptographically secure random bytes
-
-#### 5.6.2 Zero-Knowledge Password Reset (Future)
-
-**Challenge:**
-Traditional password resets incompatible with zero-knowledge encryption without recovery mechanism.
-
-**Solution:**
-- Security questions for recovery key derivation
-- Recovery envelope containing encrypted Master Key copy
-- User education about trade-offs between security and recoverability
-- Clear warnings about data loss if both password and recovery answers are lost
-
-### 5.7 Development & Debugging Infrastructure
-
-#### 5.7.1 Debug System
-
-**Server-Side Debugging:**
-- Global debug message collection in `/incs/config.php`
-- Automatic debug array inclusion when DEVMODE=true
-- File logging fallback to `/debug.log`
-- Comprehensive error tracing with context
-
-**Client-Side Integration:**
-- Automatic server debug message extraction
-- Browser console logging with consistent formatting
-- Error correlation between client and server
-- Performance monitoring and optimization insights
-
-#### 5.7.2 API Testing
-
-**Automated Testing:**
-- CURL command validation for all endpoints
-- Authentication flow testing
-- CRUD operation verification
-- File upload and quota testing
-
-**Manual Testing:**
-- Cross-browser compatibility validation
-- Mobile responsiveness testing
-- Performance testing under load
-- Security penetration testing
-
-### 5.8 Environment Configuration
-
-#### 5.8.1 Environment Variables
-
-**Required Configuration (`.env`):**
-```
-DB_HOST=localhost
-DB_NAME=mydayhub
-DB_USER=username
-DB_PASS=password
-
-SMTP_HOST=smtp.server.com
-SMTP_PORT=587
-SMTP_USER=email@domain.com
-SMTP_PASS=password
-SMTP_FROM=noreply@mydayhub.com
-
-APP_URL=http://localhost
-DEV_MODE=false
-```
-
-**Dynamic URL Detection:**
-- `APP_URL` defaults to `http://localhost` for local development
-- Runtime detection automatically uses request hostname
-- Supports `localhost` and `jagmac.local` for stable access
-- Falls back to `jagmac.local` for unknown hosts (including IPs)
-- Environment override available for explicit URL configuration
-
-#### 5.8.2 Deployment Environments
-
-**Local Development:** `localhost` with Apache/PHP/MySQL
-- Full debugging enabled
-- File logging active
-- SMTP testing via local mail catcher
-- Dynamic URL detection for localhost access
-
-**Network Development:** `jagmac.local` (or custom hostname)
-- Network accessibility from other devices
-- DHCP-compatible hostname resolution
-- Real SMTP for testing
-- Multi-device testing capabilities
-
-**Staging:** `breveasy.com` 
-- Production-like configuration
-- Limited debugging
-- Real SMTP for testing
-- Environment-specific URL configuration
-
-**Production:** `mydayhub.com`
-- Debugging disabled
-- Performance optimization enabled
-- Monitoring and alerting active
-- SSL/HTTPS configuration
-
-### 5.9 Performance & Optimization
-
-#### 5.9.1 Frontend Optimization
-
-**Asset Management:**
-- CSS/JS minification for production
-- Image optimization and lazy loading
-- Font loading optimization
-- Critical path CSS prioritization
-
-**JavaScript Performance:**
-- Debounced user input handling
-- Virtual scrolling for large lists
-- Efficient DOM manipulation patterns
-- Memory leak prevention
-- Production console cleanup (debugging logs removed)
-- Chart.js optimization for Mission Focus Chart
-
-#### 5.9.2 Backend Optimization
-
-**Database Performance:**
-- Proper indexing on query patterns
-- Query optimization and profiling
-- Connection pooling and management
-- Caching layer implementation
-
-**API Efficiency:**
-- Batch operations where possible
-- Pagination for large datasets
-- Response compression
-- Rate limiting and throttling
+## 9. Network & Environment
+
+URL detection:
+- Stable hostnames for local development and LAN testing (e.g., localhost, jagmac.local)
+- Environment variable override supported
+
+Environments:
+- Local development, network development, staging, production
+- Debug logging enabled only where appropriate
 
 ---
 
-## 6. Appendices
-
-### 6.1 Glossary
-
-**Application Components:**
-- **Task card** = Individual task item in a column
-- **Journal entry card** = Daily note item (future feature)
-- **Event plan** = Meeting or event container (future feature)
-- **Event plan segment** = Time block within an event (future feature)
-- **Outlines tree** = Hierarchical structure (future feature)
-- **Tree branch** = Section within an outline (future feature)
-- **Branch node** = Individual item in outline (future feature)
-
-**Task Classifications:**
-- **Signal task** = Directly advances the mission; highest priority work
-- **Support task** = Indirectly enables Signal tasks; important but secondary
-- **Backlog task** = Important but not time-sensitive; can be deferred
-- **Completed task** = Finished item, archived at bottom of column
-
-**Encryption & Security:**
-- **Master Key** = User-specific encryption key derived on-device, never transmitted
-- **DEK** = Data Encryption Key, unique per item, wrapped with Master Key
-- **Recovery Envelope** = Master Key copy encrypted with Recovery Key
-- **Recovery Key** = Key derived from security question answers
-- **Zero-Knowledge** = Server cannot read user data even if compromised
-
-**User Interface:**
-- **Drag-and-Drop** = DnD - Desktop interaction for reordering items
-- **Toast Notification** = Non-blocking popup message for feedback
-- **Modal Window** = Focused overlay window for specific tasks
-- **Move Mode** = Mobile-friendly relocation workflow with visual guides
-- **Drag Handle** = The ≡ grip area on task cards for touch DnD initiation
-- **Popover** = Small contextual menu (e.g., classification selector)
-
-**System States:**
-- **Snoozed Task** = Task with future schedule; visually muted until wake time
-- **Private Item** = Content marked private; encrypted and hideable
-- **Shared Item** = Content shared with other users with specific permissions
-
-**Environment Types:**
-- **hostinger hosted environment** = web-env (production hosting)
-- **local hosted environment** = loc-env (development setup)
-
-### 6.2 Wireframe Mockups
-
-#### 6.2.1 Tasks View (Primary Interface)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│[≡] ☕️ MyDayHub [Tasks] [Journal] [Outlines] [Events]      [+ New Column]  │
-└─────────────────────────────────────────────────────────────────────────────┘
-┌─────────────────┐ ┌──────────────────┐ ┌─────────────────┐
-│ Column A ▹ … > │ │ < Column B ▶ … > │ │ < Column C ► … │
-│─────────────────│ │──────────────────│ │─────────────────│
-│☐ Monday         │ │☐ Blue            │ │☐ Black          │
-│☐ Tuesday        │ │☐ White           │ │☐ Red            │
-│☐ Wednesday      │ │                  │ │☐ Wash car       │
-│☐ Friday         │ │                  │ │☐ Mow lawn       │
-│☑ Thursday       │ │                  │ │☐ Water plant    │
-│                 │ │                  │ │☐ Garbage out    │
-│─────────────────│ │──────────────────│ │─────────────────│
-│ + New Task      │ │ + New Task       │ │ + New Task      │
-└─────────────────┘ └──────────────────┘ └─────────────────┘
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ 19.Aug.25, Tuesday                [FILTERS]                        [alfa] │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-*Visual Elements:*
-- Colored status bands on left edge of each task card
-- Privacy indicators (diagonal lines for private items)
-- Attachment and due date icons in task footer
-- Drag handles (≡) visible on hover/mobile
-
-#### 6.2.2 Mobile Layout (Responsive)
-
-```
-┌─────────────────────┐
-│ [≡] MyDayHub   [⚙] │
-├─────────────────────┤
-│ Column A        [⋮] │
-│─────────────────────│
-│ ☐ Monday            │
-│ ☐ Tuesday           │
-│ ☑ Thursday          │
-│─────────────────────│
-│ + New Task          │
-├─────────────────────┤
-│ Column B        [⋮] │
-│─────────────────────│
-│ ☐ Blue              │
-│ ☐ White             │
-│─────────────────────│
-│ + New Task          │
-├─────────────────────┤
-│ [FILTERS] [username]│
-└─────────────────────┘
-```
-
-*Mobile Adaptations:*
-- Vertical column stacking
-- Touch-friendly targets (44px minimum)
-- Hamburger menu for navigation
-- Bottom toolbar for filters and user info
-
-#### 6.2.3 Task Actions Menu
-
-```
-┌─────────────────────┐
-│ ☐ Task Title    [⋮] │ ← Click ⋮ opens menu
-│─────────────────────│
-│     [📝] Notes      │
-│     [📅] Due Date   │
-│     [📎] Share      │
-│     [👁] Private    │
-│     [⏰] Snooze     │
-│     [📋] Duplicate  │
-│     [🗑] Delete     │
-└─────────────────────┘
-```
-
-#### 6.2.4 Unified Editor (Modal)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Editing a task's note                                            [□] [×]  │
-└─────────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ [Format] [Find & Replace] [Search] [Add Task]                           … │
-│ [AA] [Aa] [aa] [[]] 🔢  [A-] [A+]                                         │
-│─────────────────────────────────────────────────────────────────────────────│
-│ 1│                                                                        │
-│ 2│  LOREM IPSUM DOLOR                                                     │
-│ 4│                                                                        │
-│ 5│  Lorem ipsum dolor sit amet, consectetur adipiscing eli Etiam facilisis│
-│ 6│  velit eget risus facilisis, et dictum dolor sodales. Pellentesque     │
-│ 7│  dictum leo...                                                         │
-│ 8│                                                                        │
-│ 9│  PORTTITOR VENENATIS                                                   │
-│10│                                                                        │
-│11│  Suspendisse justo ipsum, imperdiet ac acmsan vel, feugiat vitae purus.│
-│12│  Suspendisse dapibus ante ac eros bindum, vel laoreet massa cursus...  │
-│  │                                                                        │
-│  │                                                                        │
-└─────────────────────────────────────────────────────────────────────────────┘
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ Words: 231  Chars: 1664  Lines: 12                      Last saved: Never │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
-
-
-### 6.3 Application Icons & Visual System
-
-#### 6.3.1 Icon Standards
-
-**Format:** SVG with `currentColor` for theme consistency
-**Size:** 16x16px base, scalable to 24x24px for touch targets
-**Style:** Minimal, consistent stroke width, rounded corners where appropriate
-
-**Core Icons:**
-- 📝 Notes (edit/document symbol)
-- 📅 Due Date (calendar symbol)  
-- 📎 Attachments (paperclip symbol)
-- 👁 Privacy (eye symbol with strikethrough for private)
-- 🔄 Share (interconnected nodes)
-- ⏰ Snooze (clock with Z symbol)
-- ⋮ Actions (vertical ellipsis)
-- ≡ Drag Handle (hamburger icon rotated)
-
-**Status Indicators:**
-- ✓ Completed (checkmark in circle)
-- ▶ Signal (right-pointing triangle, green)
-- ◆ Support (diamond, blue with stripes for accessibility)
-- ⬣ Backlog (hexagon, orange)
-- 🔒 Private (lock symbol)
-- 👥 Shared (people symbol)
-
-### 6.4 Color System & Theming
-
-#### 6.4.1 Primary Palette
-
-**Accent Color:** `#22c55e` (Green)
-- Primary interactive elements
-- Focus rings and selection states
-- Link colors and call-to-action buttons
-- Costa Rica-inspired green theme throughout application
-
-**Classification Colors:**
-- **Signal:** `#22c55e` (Green) - High priority, mission-critical
-- **Support:** `#007bff` (Blue with dashed pattern) - Important, enables Signal tasks  
-- **Backlog:** `#fd7e14` (Orange) - Deferred, not time-sensitive
-- **Completed:** `#6B7280` (Gray) - Archived, finished work
-
-#### 6.4.2 Dark Theme (Primary)
-
-**Background Hierarchy:**
-- App Background: `#202020` (Darker for better contrast)
-- Card Background: `#363636` (Lighter than column background)
-- Interactive Background: `#2b2b2b` (Column background)
-- Border Color: `#3c4043` (Defined borders)
-
-**Text Hierarchy:**
-- Primary Text: `#F8FAFC` (Slate 50)
-- Secondary Text: `#CBD5E1` (Slate 300)
-- Muted Text: `#94A3B8` (Slate 400)
-
-#### 6.4.3 Light Theme (Optional)
-
-**Background Hierarchy:**
-- App Background: `#f1f5f9` (Softer, warmer background)
-- Card Background: `#ffffff` (White for contrast)
-- Interactive Background: `#f8fafc` (Very light gray)
-- Border Color: `#e2e8f0` (Softer borders)
-
-**Text Hierarchy:**
-- Primary Text: `#0F172A` (Slate 900)
-- Secondary Text: `#475569` (Slate 600)
-- Muted Text: `#64748B` (Slate 500)
-
-#### 6.4.4 High Contrast Mode
-
-Enhanced contrast ratios for accessibility compliance:
-- Minimum 4.5:1 for normal text
-- Minimum 3:1 for large text and UI components
-- Enhanced border contrast for better element definition
-- Alternative visual patterns for color-dependent information
-
-### 6.5 File Organization
-
-#### 6.5.1 Project Structure
-
-```
-mydayhub-app/
-├── index.php                  # Main application entry point
-├── .env                       # Environment configuration (not in git)
-├── .gitignore                 # Git exclusion rules
-├── debug.log                  # Development debugging output
-├── .htaccess                  # Apache URL rewriting rules
-├── composer.json              # PHP dependency management
-├── composer.lock              # Locked dependency versions
-├── vendor/                    # Composer dependencies (not in git)
-│   ├── phpmailer/            # Email sending library
-│   └── composer/             # Composer autoloader
-│
-├── api/                       # Backend API gateway and handlers
-│   ├── api.php               # Main API gateway with routing
-│   ├── auth.php              # Authentication endpoints
-│   ├── tasks.php             # Task management endpoints
-│   ├── users.php             # User preference endpoints
-│   ├── admin.php             # Admin panel endpoints
-│   ├── calevents.php         # Calendar events management
-│   └── calprefs.php          # Calendar preferences management
-│
-├── login/                     # Authentication pages
-│   ├── login.php             # User login page
-│   ├── register.php          # User registration page
-│   ├── forgot.php            # Password reset request
-│   ├── reset.php             # Password reset completion
-│   └── logout.php            # Session termination
-│
-├── admin/                     # Administrative interface
-│   └── index.php             # Admin panel entry point
-│
-├── uix/                       # Frontend user interface
-│   ├── app.js                # Global utilities and state management
-│   ├── auth.js               # Authentication form handling
-│   ├── editor.js             # Unified Editor functionality
-│   ├── tasks.js              # Task board interaction logic
-│   ├── calendar.js           # Calendar overlay functionality
-│   ├── style.css             # Global styles and theme variables
-│   ├── tasks.css             # Task-specific styling
-│   ├── editor.css            # Editor interface styling
-│   ├── attachments.css       # File management styling
-│   ├── settings.css          # Settings panel styling
-│   └── login.css             # Authentication pages styling
-│
-├── media/                     # Static assets and uploads
-│   ├── imgs/                 # User-uploaded attachments (organized by user)
-│   ├── leaf.svg              # Application logo
-│   ├── favico.svg            # Favicon and app icons
-│   ├── logo.svg              # Legacy logo
-│   ├── monstera.svg          # Alternative logo
-│   └── leafcircle.svg        # Alternative logo variant
-│
-├── sql/                       # Database schema and migrations
-│   ├── calendar_overlay_schema.sql        # Calendar overlay tables
-│   ├── calendar_overlay_complete_schema.sql # Complete calendar setup
-│   └── calendar_overlay_migration.sql     # Calendar migration scripts
-│
-├── incs/                      # Backend includes and utilities
-│   ├── config.php            # Application configuration with URL detection
-│   ├── db.php                # Database connection management
-│   ├── mailer.php            # Email sending utilities
-│   ├── helpers.php           # Utility functions
-│   └── meta/                 # Documentation and specifications
-│       ├── spec.md           # This specification document
-│       ├── done.md           # Development progress log
-│       ├── dialogs.md        # Design decision discussions
-│       ├── prompts.md        # AI prompt templates
-│       └── svgs.md           # SVG icon specifications
-│
-├── temp/                      # Temporary development files
-│   └── [various temp files]  # Development artifacts
-│
-```
-
-**Key Directory Descriptions:**
-
-- **`/api/`** - RESTful API endpoints following single gateway pattern
-- **`/login/`** - Authentication pages with theme integration and responsive design
-- **`/admin/`** - Administrative interface for system management
-- **`/uix/`** - Frontend JavaScript and CSS modules for user interface
-- **`/media/`** - Static assets including logos, icons, and user uploads
-- **`/sql/`** - Database schema files and migration scripts
-- **`/incs/`** - Backend PHP includes and configuration management
-- **`/temp/`** - Temporary development files (excluded from production)
-
-#### 6.5.2 Authentication Pages Implementation
-
-**Theme Integration:**
-All authentication pages implement the complete theme system with:
-- **CSS Variables:** Full integration with main app theme variables for Dark, Light, and High-Contrast modes
-- **Theme Selector:** Floating theme selector in top-right corner for user preference
-- **Persistent Preferences:** Theme selection saved to localStorage for cross-session consistency
-- **Logo Integration:** Consistent leaf.svg branding across all authentication pages
-
-**Visual Design:**
-- **Responsive Layout:** Mobile-first design with proper scaling
-- **Brand Consistency:** Logo, colors, and typography match main application
-- **Accessibility:** High-contrast mode support with proper color ratios
-- **User Experience:** Smooth transitions and hover effects throughout
-
-**Technical Architecture:**
-- **CSS Architecture:** `/uix/login.css` provides complete theme system for authentication pages
-- **JavaScript Integration:** `/uix/auth.js` handles theme management and form interactions
-- **Modal Management System:** Centralized modal stack for consistent ESC key behavior
-- **Icon Support:** Comprehensive favicon and app icon implementation
-- **Cross-Platform:** Consistent appearance across all devices and browsers
-
-#### 6.5.3 Modal Management System
-
-**Centralized Modal Stack:**
-- Global `modalStack` array tracks open modals in LIFO order
-- `registerModal(id, closeFunction)` adds modals to the stack
-- `unregisterModal(id)` removes modals from the stack
-- Single global ESC key listener that closes topmost modal first
-
-**Modal Hierarchy:**
-- ESC key closes modals in reverse order of opening (Last In, First Out)
-- Consistent behavior between ESC key and click-outside interactions
-- Proper event prevention to avoid modal conflicts
-- Support for nested modals (e.g., settings → session timeout → date picker)
-
-**Integrated Modals:**
-- Settings Panel, Change Password, Session Timeout, File Management
-- Usage Stats, Trust Management, Date Picker, Confirmation
-- Attachment Management, and all task-related modals
-- Each modal registers/unregisters automatically with the stack system
-
-### 6.6 Development Workflow & Testing
-
-#### 6.6.1 Development Process
-
-**Code Standards:**
-- PHP 8.2+ features and type declarations
-- ESLint configuration for JavaScript consistency
-- CSS naming conventions (BEM methodology)
-- Comprehensive inline documentation
-
-**Version Control:**
-- Git with atomic commits (≤120 words)
-- Descriptive commit messages with scope/files explicit
-- Feature branches for major changes
-- Pull request reviews for quality assurance
-
-**Testing Strategy:**
-- Unit tests for critical business logic
-- Integration tests for API endpoints
-- Manual testing checklist for UI interactions
-- Cross-browser compatibility validation
-
-#### 6.6.2 Debugging & Observability
-
-**Development Mode Features:**
-- `DEVMODE=true` enables comprehensive logging
-- Debug message collection in global array
-- Browser console integration for server messages
-- File logging fallback to `/debug.log`
-
-**Production Monitoring:**
-- Error tracking and alerting
-- Performance monitoring and optimization
-- User analytics for feature usage
-- Security audit logging
-
-#### 6.6.3 API Testing Patterns
-
-**CURL Testing Examples:**
-```bash
-# Test user registration
-curl -X POST http://localhost/api/api.php \
-  -H "Content-Type: application/json" \
-  -d '{"module":"auth","action":"register","data":{"username":"test","email":"test@example.com","password":"password123"}}'
-
-# Test task creation with CSRF
-curl -X POST http://localhost/api/api.php \
-  -H "Content-Type: application/json" \
-  -H "X-CSRF-Token: your-token-here" \
-  -d '{"module":"tasks","action":"createTask","data":{"column_id":1,"title":"Test Task"}}'
-```
-
-### 6.7 Deployment & Environment Management
-
-#### 6.7.1 Environment Configuration
-
-**Local Development:**
-- XAMPP/MAMP for rapid iteration
-- File-based debugging enabled
-- Hot reload for frontend changes
-- Full error reporting active
-
-**Staging Environment:**
-- Production-like configuration
-- Limited debugging for security
-- Real email delivery testing
-- Performance profiling enabled
-
-**Production Deployment:**
-- Optimized asset delivery
-- Comprehensive monitoring
-- Automated backup systems
-- Zero-downtime deployment process
-
-#### 6.7.2 Performance Benchmarks
-
-**Target Performance:**
-- Initial page load: <2 seconds
-- Task operations: <200ms response time
-- File uploads: <5 seconds for 5MB files
-- Drag operations: 60fps smooth animation
-
-**Scalability Targets:**
-- 1000+ tasks per user without performance degradation
-- 100+ concurrent users per server
-- 99.9% uptime with load balancing
-- Automatic scaling based on demand
+## 10. API Model (Descriptions Only)
+
+Single‑gateway API pattern with modular handlers. All mutating actions enforce session auth, CSRF validation, ownership checks, and consistent error semantics.
+
+Representative capability areas (non‑exhaustive, no request/response bodies here):
+- Authentication & User: register, login, logout, password reset flows, change password, preference persistence
+- Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy, snooze, attachments, soft‑delete and restore
+- Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
+- Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
+- Zero‑Knowledge: encryption setup, status, migration progress, recovery questions
 
 ---
 
-## Conclusion
+## 11. Data Model (Tables and Fields)
 
-MyDayHub represents a comprehensive approach to privacy-focused productivity software, balancing the complexity of zero-knowledge encryption with the simplicity users expect from modern applications. The specification outlined above provides a roadmap for building not just a task management tool, but a foundation for the future of private, collaborative software.
+Note: This section lists tables and key fields only. It avoids schema DDL and focuses on meaning and relationships.
 
-The focus on the Tasks View as the primary interface allows for deep optimization and polish in a single domain, while the underlying architecture remains flexible enough to support the planned expansion into Journal, Outlines, and Events views. This focused approach ensures that users receive immediate value while establishing patterns and infrastructure that will scale elegantly.
+11.1 Users & Auth
+- users: user_id, username, email, password_hash, preferences, created_at, storage_used_bytes
+- password_resets: id, user_id, token_hash, expires_at, created_at
 
-The technical architecture prioritizes security, performance, and maintainability, with clear separation of concerns between client-side encryption and server-side collaboration features. The hybrid approach to privacy—where users control what content is encrypted versus what can be shared—provides a practical balance between absolute privacy and team collaboration needs.
+11.2 Board & Tasks
+- columns: column_id, user_id, column_name, position, is_private, created_at, updated_at, deleted_at
+- tasks: task_id, user_id, column_id, encrypted_data, position, classification, is_private, due_date, snoozed_until, snoozed_at, created_at, updated_at, deleted_at
+- task_attachments: attachment_id, task_id, user_id, filename_on_server, original_filename, filesize_bytes, mime_type, created_at
 
-As development continues, this specification will evolve to reflect lessons learned, user feedback, and emerging best practices in privacy-focused application development. The goal remains constant: to create software that empowers users to focus on what matters while maintaining absolute control over their private information.
+11.3 Sharing (Foundations)
+- shared_items: id, owner_id, recipient_id, item_type, item_id, permission, ready_for_review, created_at, updated_at, unique share constraint, owner/recipient indexes
+- sharing_activity: id, shared_item_id, actor_user_id, action, payload, created_at
+
+11.4 Calendar Overlay
+- calendar_events: id, user_id, event_type, calendar_name, label, start_date, end_date, color, is_public, priority, created_at, updated_at
+- user_calendar_preferences: id, user_id, calendar_type, is_visible, created_at
+
+11.5 Zero‑Knowledge Encryption (Conceptual Store)
+- user_encryption_keys: user_id, wrapped_master_key, kdf_params, created_at, updated_at
+- item_encryption_keys: id, user_id, item_type, item_id, wrapped_dek, created_at, updated_at
+- user_security_questions: id, user_id, questions_meta, created_at
+- encryption_migration_status: id, user_id, phase, progress, last_checked_at
+- encryption_audit_log: id, user_id, item_type, item_id, operation, metadata, created_at
+- tasks privacy flags (within tasks): privacy_inherited, privacy_override
+- columns privacy aid (within columns): has_shared_tasks
+
+Relationship highlights:
+- users 1‑to‑many columns, tasks, attachments
+- tasks many‑to‑one columns; tasks optionally appear in shared_items for collaboration
+- calendar_events and preferences scoped per user
+- encryption records keyed to user and item boundaries
 
 ---
 
-*This document serves as the definitive specification for MyDayHub development. All implementation decisions should reference this document, and any deviations or additions should be documented through updates to maintain accuracy and team alignment.*
+## 12. Non‑Goals & Deferred Items
+
+- Full offline‑first data model and sync engine (IndexedDB, background sync, conflict handling)
+- End‑to‑end encrypted sharing with asymmetric keys
+- Journal, Outlines, Events full views (only foundational concepts documented)
+
+---
+
+## 13. Roadmap & Priorities
+
+Immediate priorities:
+- Fix encryption data path so task payloads are encrypted end‑to‑end for private items
+- Enforce permission‑based UI restrictions for shared items
+- Polish sharing workflow in mobile contexts
+
+Medium term:
+- End‑to‑end encrypted sharing via asymmetric key exchange
+- Enhanced recovery options (backup codes, multi‑factor)
+
+Long term:
+- Offline MVP (app shell, local cache, write queue, LWW)
+- Accessibility refinements and performance tuning at scale
+
+---
+
+## 14. Glossary
+
+- Task card: the unit of work in a column
+- Classification: Signal (highest priority), Support, Backlog, Completed
+- Private item: content encrypted client‑side; cannot be shared
+- Shared item: content visible to recipients per permission model
+- DEK: Data Encryption Key per item; wrapped by user master key
+- Recovery envelope: encrypted copy of master key protected by recovery key
+
+---
+
+Notes on this refactor:
+- Removed code snippets and DDL; retained only product, behavior, and data naming semantics
+- Consolidated scattered sections (encryption, sharing, calendar, mission focus) into single topical areas
+- Schemas expressed as table names with field lists to remain descriptive without embedding code
+
