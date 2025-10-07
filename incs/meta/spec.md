@@ -1,8 +1,8 @@
 # MyDayHub Reference Specification (Proposed)
 
-Version: Beta 7.x (Proposed Refactor)
+Version: Beta 7.7 (Optional Encryption UX)
 Audience: Internal Development & Product
-Last Updated: 2025-10-07
+Last Updated: 2025-01-28
 
 ---
 
@@ -56,6 +56,7 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 3.1 Columns
 - Create, rename, delete (soft delete with undo), reorder
 - Privacy inheritance (making a column private encrypts its tasks)
+- Privacy toggle prompts encryption setup if not configured
 
 3.2 Tasks
 - Create, rename, duplicate, delete (soft with undo), move within/between columns
@@ -63,7 +64,7 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - Complete/uncomplete with visual and audio feedback
 - Due date, snooze (preset and custom), notes via Unified Editor
 - Attachments (images, PDFs) with quotas
-- Privacy toggle with visual indicators
+- Privacy toggle with visual indicators; prompts encryption setup if not configured
 
 3.3 Filters & Toolbar
 - Show/Hide Completed, Private, Snoozed; state persists
@@ -91,9 +92,15 @@ Boundary:
 - Private data is encrypted client‑side before transit/storage
 - Per‑item data keys (DEKs) wrapped by a user master key; the master key never leaves the device
 
+Setup & User Experience:
+- Encryption setup is optional and recommendation-based, not mandatory on login
+- Triggered when users attempt to make items private for the first time
+- Available via Settings panel "Privacy & Encryption" section
+- Optional banner notification can be dismissed permanently
+- Clear user education on security vs recoverability trade‑offs
+
 Recovery (future‑complete):
 - Security questions derive a recovery key used to encrypt a copy of the master key (recovery envelope)
-- Clear user education on security vs recoverability trade‑offs
 
 Known risk to resolve: ensure data payloads are actually encrypted under the envelope structure in all create/update paths.
 
@@ -128,6 +135,7 @@ Settings:
 - Font size: global scaling controls
 - Completion sound: on/off
 - Filter state persistence
+- Privacy & Encryption: encryption setup and management
 
 Theming & Accessibility:
 - Dark‑first palette with clear hierarchy; high‑contrast variant
@@ -153,10 +161,10 @@ Single‑gateway API pattern with modular handlers. All mutating actions enforce
 
 Representative capability areas (non‑exhaustive, no request/response bodies here):
 - Authentication & User: register, login, logout, password reset flows, change password, preference persistence
-- Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy, snooze, attachments, soft‑delete and restore
+- Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy (with encryption setup prompts), snooze, attachments, soft‑delete and restore
 - Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
-- Zero‑Knowledge: encryption setup, status, migration progress, recovery questions
+- Zero‑Knowledge: optional encryption setup, status, migration progress, recovery questions
 
 ---
 
