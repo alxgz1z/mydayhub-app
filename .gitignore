@@ -1,21 +1,45 @@
-# Composer vendor directory
-/vendor/
+# Environment variables
+.env
+.env.local
+.env.production
 
-# Composer executable
-composer.phar
+# SSL Certificates - NEVER commit these
+certs/
+*.crt
+*.key
+*.csr
+*.pem
 
-# User-uploaded content
-# Ignore all files inside the imgs directory...
-/media/imgs/*
-# ...but DO NOT ignore the .gitkeep file, so the directory is tracked.
-!/media/imgs/.gitkeep
+# Logs
+logs/
+*.log
 
-# Log files
-debug.log
+# Temporary files
+temp/
+tmp/
+*.tmp
 
-# OS-specific files
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
 .DS_Store
 Thumbs.db
 
-# Environment credentials
-.env
+# Node modules (if any)
+node_modules/
+
+# Composer
+vendor/
+composer.lock
+
+# Database
+*.sqlite
+*.db
+
+# Debug files
+debug_*
+test_*

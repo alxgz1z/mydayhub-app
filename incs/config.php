@@ -193,6 +193,11 @@ define('SMTP_PORT', getenv('SMTP_PORT'));
 define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL'));
 define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME'));
 
+// --- SSL CERTIFICATES (from Environment Variables) --- //
+define('SSL_CERT_PATH', getenv('SSL_CERT_PATH'));
+define('SSL_KEY_PATH', getenv('SSL_KEY_PATH'));
+define('SSL_CSR_PATH', getenv('SSL_CSR_PATH'));
+
 
 // --- ADMIN CONFIGURATION ---
 define('ADMIN_EMAILS', array_map('trim', explode(',', getenv('ADMIN_EMAILS') ?: '')));
