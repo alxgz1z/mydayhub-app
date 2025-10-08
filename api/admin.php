@@ -7,7 +7,7 @@
  * Handles admin-only operations like user management, subscription changes,
  * and system administration.
  *
- * @version 7.4 Jaco
+ * @version 7.9 Jaco
  * @author Alex & Gemini & Claude & Cursor
  */
 

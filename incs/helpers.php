@@ -7,7 +7,7 @@
  * This file contains utility functions that are used across multiple
  * parts of the backend application.
  *
- * @version 7.4 Jaco
+ * @version 7.9 Jaco
  * @author Alex & Gemini & Claude & Cursor
  */
 

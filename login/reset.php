@@ -1,6 +1,6 @@
 <?php
 // Code for /login/reset.php
-// @version 7.4 Jaco
+// @version 7.9 Jaco
 // @author Alex & Gemini & Claude & Cursor 
 // MyDayHub - Password Reset Page
 

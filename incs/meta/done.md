@@ -3,15 +3,16 @@ Updated: 2025-10-08
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Beta 7.8 — Journal View Implementation
+- Version: Beta 7.9 — User Guide & Documentation Complete
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
-- UI: Three-theme system, responsive, touch-friendly; attachments; unified editor
+- UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
 - Mission Focus Chart: Header doughnut, real-time updates, performant
 - Network: Smart URL detection (localhost/jagmac.local), multi-device access
 - Sharing (foundation): Share/unshare, permissions, Ready-for-Review flow
 - **Zero-Knowledge Encryption: COMPLETE** — Hybrid architecture, AES-256-GCM, optional setup
 - **Journal View: COMPLETE** — Horizontal date columns, CRUD operations, privacy integration
+- **User Guide: COMPLETE** — Comprehensive accordion-style documentation in Settings panel
 
 ---
 
@@ -62,6 +63,14 @@ Order: chronological (newest at bottom)
 - **Code Separation**: Maintained clean separation between tasks and journal modules
 - **VALIDATION COMPLETE**: Journal view loads correctly, view switching works, menu positioning fixed
 
+### 2025-10-08 — User Guide & Documentation
+- **User Guide Created**: Comprehensive `/incs/userguide.php` with accordion sections
+- **Content Sections**: 10 major topics covering getting started, classification philosophy, tasks, privacy/encryption, sharing, journal, advanced features, settings, shortcuts, and troubleshooting
+- **Visual Design**: Theme-aware styling, SVG icons, classification badges, tip/warning boxes
+- **Accordion UI**: One-section-at-a-time expansion for focused reading
+- **Settings Integration**: Added "User Guide" button as last option in settings panel
+- **Tab Icon Update**: Replaced emoji icons with SVG icons for Tasks and Journal tabs
+
 
 ---
 
@@ -77,11 +86,13 @@ Order: chronological (newest at bottom)
 ---
 
 ## Next Steps
-1. Journal View Implementation — Chronological daily layout
-2. Advanced Calendar Features — Event management and scheduling
+1. ~~Journal View Implementation~~ ✅ COMPLETE
+2. ~~User Documentation~~ ✅ COMPLETE
 3. Performance Optimization — Further backend optimizations
 4. User Testing — Gather feedback on new features
-5. Documentation — Complete API documentation
+5. Advanced Calendar Features — Event badges in journal column headers
+6. Offline MVP — Service Worker, IndexedDB mirror, write queue
+7. API Documentation — Complete technical reference
 
 
 

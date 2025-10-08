@@ -5,7 +5,7 @@
  *
  * Handles form submissions for registration, login, and password reset pages.
  *
- * @version 7.4 Jaco
+ * @version 7.9 Jaco
  * @author Alex & Gemini & Claude & Cursor
  */
 document.addEventListener('DOMContentLoaded', () => {

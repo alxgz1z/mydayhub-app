@@ -1,6 +1,6 @@
-# MyDayHub Reference Specification (Proposed)
+# MyDayHub Reference Specification
 
-Version: Beta 7.8 (Journal View Implementation)
+Version: Beta 7.9 (User Guide & Documentation Complete)
 Audience: Internal Development & Product
 Last Updated: 2025-10-08
 
@@ -12,16 +12,17 @@ Last Updated: 2025-10-08
 2. Product Scope & Primary View
 3. Core Functional Specification
 4. Collaboration & Sharing (Foundations)
-5. Zero‑Knowledge Privacy & Recovery (Conceptual)
+5. Zero‑Knowledge Privacy & Recovery (Implemented)
 6. Calendar Overlay System (Conceptual)
 7. Mission Focus Chart (Conceptual)
 8. Settings, Theming, Accessibility
-9. Network & Environment
-10. API Model (Descriptions Only)
-11. Data Model (Tables and Fields)
-12. Non‑Goals & Deferred Items
-13. Roadmap & Priorities
-14. Glossary
+9. User Guide & Documentation
+10. Network & Environment
+11. API Model (Descriptions Only)
+12. Data Model (Tables and Fields)
+13. Non‑Goals & Deferred Items
+14. Roadmap & Priorities
+15. Glossary
 
 ---
 
@@ -160,14 +161,52 @@ Settings:
 - Filter state persistence
 - **Privacy & Encryption: encryption setup and management (IMPLEMENTED)**
 - **Debug Mode: task_id and column_id display for development**
+- **User Guide: accessible from Settings panel (IMPLEMENTED)**
 
 Theming & Accessibility:
 - Dark‑first palette with clear hierarchy; high‑contrast variant
 - Touch targets ≥44px, ARIA patterns, keyboard navigation support
+- SVG icons for better theme integration (replaced emoji in tab navigation)
 
 ---
 
-## 9. Network & Environment
+## 9. User Guide & Documentation
+
+**Implementation Complete:**
+- Comprehensive user manual at `/incs/userguide.php`
+- Accordion-style interface with one-section-at-a-time expansion
+- Theme-aware styling matching app design system
+- Opens in new tab from Settings panel
+
+**Content Coverage (10 sections):**
+1. **Getting Started** - Overview, philosophy, key features introduction
+2. **Task Classification** - Deep dive into Signal/Support/Backlog philosophy with examples
+3. **Working with Tasks & Columns** - Complete CRUD operations, keyboard shortcuts
+4. **Privacy & Zero-Knowledge Encryption** - Setup process, usage patterns, security model
+5. **Sharing & Collaboration** - Permissions, workflows, Ready-for-Review process
+6. **Journal View** - Daily entries, best practices, task linking
+7. **Advanced Features** - Snoozing, attachments, calendar overlays, Mission Focus Chart, mobile features
+8. **Settings & Customization** - All preferences explained with recommendations
+9. **Keyboard Shortcuts & Pro Tips** - Power user workflows, morning/weekly routines
+10. **Troubleshooting & FAQ** - Common issues, performance tips, data safety
+
+**Visual Design:**
+- SVG icons from app for section headers
+- Classification badges matching task styling
+- Tip boxes (green) and warning boxes (orange) for important information
+- Smooth accordion animations with scroll-into-view
+- Fully responsive for mobile and desktop
+- Back to MyDayHub buttons for easy navigation
+
+**User Experience:**
+- Friendly, approachable tone following industry best practices
+- Real-world examples and use cases throughout
+- Progressive disclosure via accordion prevents overwhelm
+- Searchable via browser find (all content in DOM)
+
+---
+
+## 10. Network & Environment
 
 URL detection:
 - Stable hostnames for local development and LAN testing (e.g., localhost, jagmac.local)
@@ -179,7 +218,7 @@ Environments:
 
 ---
 
-## 10. API Model (Descriptions Only)
+## 11. API Model (Descriptions Only)
 
 Single‑gateway API pattern with modular handlers. All mutating actions enforce session auth, CSRF validation, ownership checks, and consistent error semantics.
 
@@ -193,7 +232,7 @@ Representative capability areas (non‑exhaustive, no request/response bodies he
 
 ---
 
-## 11. Data Model (Tables and Fields)
+## 12. Data Model (Tables and Fields)
 
 Note: This section lists tables and key fields only. It avoids schema DDL and focuses on meaning and relationships.
 
@@ -236,7 +275,7 @@ Relationship highlights:
 
 ---
 
-## 12. Non‑Goals & Deferred Items
+## 13. Non‑Goals & Deferred Items
 
 - Full offline‑first data model and sync engine (IndexedDB, background sync, conflict handling)
 - End‑to‑end encrypted sharing with asymmetric keys
@@ -247,7 +286,7 @@ Relationship highlights:
 
 ---
 
-## 13. Roadmap & Priorities
+## 14. Roadmap & Priorities
 
 **COMPLETED:**
 - ✅ **Encryption data path fixed** - Task payloads are encrypted end‑to‑end for private items
@@ -257,6 +296,8 @@ Relationship highlights:
 - ✅ **Journal View implementation** - Horizontal date columns, CRUD operations, privacy integration
 - ✅ **View switching architecture** - Seamless transition between Tasks and Journal views
 - ✅ **Smart contextual menu positioning** - Auto-adjusting menus to prevent viewport overflow
+- ✅ **User Guide & Documentation** - Comprehensive accordion-style user manual accessible from Settings
+- ✅ **SVG tab icons** - Replaced emoji with theme-aware SVG icons for Tasks and Journal tabs
 
 Immediate priorities:
 - Implement @task[description] markup detection and smart task creation from journal entries
@@ -276,7 +317,7 @@ Long term:
 
 ---
 
-## 14. Glossary
+## 15. Glossary
 
 - Task card: the unit of work in a column
 - Classification: Signal (highest priority), Support, Backlog, Completed
@@ -287,6 +328,8 @@ Long term:
 - Journal entry: date-based entry in the Journal View with rich text content
 - Task markup: @task[description] syntax within journal entries to create linked tasks
 - View switching: seamless transition between Tasks (Kanban) and Journal (date-based) views
+- User Guide: comprehensive accordion-style documentation accessible from Settings panel
+- Accordion UI: collapsible sections that expand one at a time for focused reading
 
 ---
 

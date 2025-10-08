@@ -3,6 +3,8 @@
  * 
  * Handles switching between different views (Tasks, Journal) with tab navigation
  * Persists view preference to database for cross-session synchronization
+ * 
+ * @version 7.9 Jaco
  */
 
 class ViewManager {

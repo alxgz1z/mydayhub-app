@@ -1,7 +1,7 @@
 /**
  * Encryption Setup Wizard
  * MyDayHub - Zero-Knowledge Encryption Setup UI
- * @version 7.5 - Zero Knowledge
+ * @version 7.9 Jaco
  * @author Alex & Gemini & Claude & Cursor
  */
 

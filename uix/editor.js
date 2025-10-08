@@ -5,7 +5,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 7.4 Jaco
+ * @version 7.9 Jaco
  * @author Alex & Gemini & Claude & Cursor
  *
  * Public API:
