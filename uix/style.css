@@ -186,33 +186,37 @@ body {
 	}
 }
 
-/* View container management */
+/* View container management - use visibility instead of display */
 .view-container {
-	display: none !important;
+	visibility: hidden;
+	position: absolute;
+	top: 0;
+	left: 0;
 	width: 100%;
 	height: 100%;
+	opacity: 0;
+	transition: opacity 0.2s ease;
+}
+
+.view-container.active {
+	visibility: visible;
+	position: relative;
+	opacity: 1;
 }
 
 /* Journal view container - uses flexbox layout */
 #journal-view.view-container {
-	display: none !important;
 	flex-direction: column;
-	height: 100%;
 	overflow: hidden;
 }
 
 #journal-view.view-container.active {
-	display: flex !important;
+	display: flex;
 }
 
-/* Task board container - preserve original layout */
-#task-board-container.view-container {
-	display: none !important;
-}
-
+/* Task board container - don't interfere with its display */
 #task-board-container.view-container.active {
-	/* Don't force display type - let tasks CSS handle it */
-	display: revert !important;
+	/* Let the original tasks CSS handle all display properties */
 }
 
 /* Light mode header text styling */
