@@ -60,7 +60,8 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link rel="stylesheet" href="uix/settings.css">
 	<script>
 		window.MyDayHub_Config = {
-			appURL: "<?php echo APP_URL; ?>"
+			appURL: "<?php echo APP_URL; ?>",
+			DEV_MODE: <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>
 		};
 	</script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
