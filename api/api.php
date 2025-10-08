@@ -118,7 +118,8 @@ try {
 
 		case 'journal':
 			require_once __DIR__ . '/journal.php';
-			// Journal API handles its own routing internally
+			$result = handle_journal_action($action, $method, $pdo, $userId, $data);
+			send_json_response($result);
 			break;
 
 		default:

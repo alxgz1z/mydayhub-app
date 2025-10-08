@@ -6,120 +6,93 @@
  * with the existing zero-knowledge encryption system.
  */
 
-require_once __DIR__ . '/../incs/config.php';
-require_once __DIR__ . '/../incs/db.php';
+declare(strict_types=1);
+
 require_once __DIR__ . '/../incs/helpers.php';
 require_once __DIR__ . '/../incs/crypto.php';
 
-// Ensure user is authenticated
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    send_json_response(['status' => 'error', 'message' => 'Authentication required.'], 401);
-    exit;
-}
-
-$userId = $_SESSION['user_id'];
-$method = $_SERVER['REQUEST_METHOD'];
-
-// Get request data
-$data = null;
-if ($method === 'POST' || $method === 'PUT') {
-    $input = file_get_contents('php://input');
-    $data = json_decode($input, true);
-} elseif ($method === 'GET') {
-    $data = $_GET;
-}
-
-// Validate CSRF token for mutating operations
-if (in_array($method, ['POST', 'PUT', 'DELETE'])) {
-    $csrfToken = $data['csrf_token'] ?? $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
-    if (!validate_csrf_token($csrfToken)) {
-        send_json_response(['status' => 'error', 'message' => 'Invalid CSRF token.'], 403);
-        exit;
+/**
+ * Main handler function for journal actions
+ */
+function handle_journal_action(string $action, string $method, PDO $pdo, int $userId, array $data): array {
+    try {
+        switch ($action) {
+            case 'getEntries':
+                if ($method === 'GET') {
+                    return handle_get_journal_entries($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'createEntry':
+                if ($method === 'POST') {
+                    return handle_create_journal_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'updateEntry':
+                if ($method === 'PUT') {
+                    return handle_update_journal_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'deleteEntry':
+                if ($method === 'DELETE') {
+                    return handle_delete_journal_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'togglePrivacy':
+                if ($method === 'POST') {
+                    return handle_toggle_journal_privacy($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'moveEntry':
+                if ($method === 'POST') {
+                    return handle_move_journal_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'duplicateEntry':
+                if ($method === 'POST') {
+                    return handle_duplicate_journal_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'getPreferences':
+                if ($method === 'GET') {
+                    return handle_get_journal_preferences($pdo, $userId);
+                }
+                break;
+                
+            case 'updatePreferences':
+                if ($method === 'POST') {
+                    return handle_update_journal_preferences($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'createTaskFromMarkup':
+                if ($method === 'POST') {
+                    return handle_create_task_from_markup($pdo, $userId, $data);
+                }
+                break;
+                
+            default:
+                return ['status' => 'error', 'message' => 'Invalid action specified.'];
+        }
+        
+        return ['status' => 'error', 'message' => 'Invalid method for this action.'];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in journal.php: ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'A server error occurred.'];
     }
-}
-
-// Route the request
-$action = $data['action'] ?? $_GET['action'] ?? '';
-
-try {
-    $pdo = getDatabaseConnection();
-    
-    switch ($action) {
-        case 'getEntries':
-            if ($method === 'GET') {
-                handle_get_journal_entries($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'createEntry':
-            if ($method === 'POST') {
-                handle_create_journal_entry($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'updateEntry':
-            if ($method === 'PUT') {
-                handle_update_journal_entry($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'deleteEntry':
-            if ($method === 'DELETE') {
-                handle_delete_journal_entry($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'togglePrivacy':
-            if ($method === 'POST') {
-                handle_toggle_journal_privacy($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'moveEntry':
-            if ($method === 'POST') {
-                handle_move_journal_entry($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'duplicateEntry':
-            if ($method === 'POST') {
-                handle_duplicate_journal_entry($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'getPreferences':
-            if ($method === 'GET') {
-                handle_get_journal_preferences($pdo, $userId);
-            }
-            break;
-            
-        case 'updatePreferences':
-            if ($method === 'POST') {
-                handle_update_journal_preferences($pdo, $userId, $data);
-            }
-            break;
-            
-        case 'createTaskFromMarkup':
-            if ($method === 'POST') {
-                handle_create_task_from_markup($pdo, $userId, $data);
-            }
-            break;
-            
-        default:
-            send_json_response(['status' => 'error', 'message' => 'Invalid action specified.'], 400);
-            break;
-    }
-    
-} catch (Exception $e) {
-    log_debug_message('Error in journal.php: ' . $e->getMessage());
-    send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 }
 
 /**
  * Retrieves journal entries for a date range
  */
-function handle_get_journal_entries(PDO $pdo, int $userId, array $data): void {
+function handle_get_journal_entries(PDO $pdo, int $userId, array $data): array {
     $startDate = $data['start_date'] ?? date('Y-m-d', strtotime('-3 days'));
     $endDate = $data['end_date'] ?? date('Y-m-d', strtotime('+3 days'));
     
@@ -172,26 +145,25 @@ function handle_get_journal_entries(PDO $pdo, int $userId, array $data): void {
             $entries[] = $entry;
         }
         
-        send_json_response(['status' => 'success', 'data' => $entries], 200);
+        return ['status' => 'success', 'data' => $entries];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_get_journal_entries: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to retrieve journal entries.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to retrieve journal entries.'];
     }
 }
 
 /**
  * Creates a new journal entry
  */
-function handle_create_journal_entry(PDO $pdo, int $userId, array $data): void {
+function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array {
     $entryDate = $data['entry_date'] ?? date('Y-m-d');
     $title = trim($data['title'] ?? '');
     $content = $data['content'] ?? '';
     $isPrivate = $data['is_private'] ?? false;
     
     if (empty($title)) {
-        send_json_response(['status' => 'error', 'message' => 'Entry title is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry title is required.'];
     }
     
     try {
@@ -216,8 +188,7 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): void {
             // Encrypt private entries
             $encryptedData = encryptJournalData($pdo, $userId, $entryData);
             if (!$encryptedData) {
-                send_json_response(['status' => 'error', 'message' => 'Failed to encrypt entry data.'], 500);
-                return;
+                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
             }
             $title = 'Private Entry'; // Don't store actual title in plaintext
             $content = '';
@@ -249,7 +220,7 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): void {
             processTaskReferences($pdo, $userId, $entryId, $content);
         }
         
-        send_json_response([
+        return [
             'status' => 'success', 
             'data' => [
                 'entry_id' => $entryId,
@@ -259,30 +230,28 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): void {
                 'is_private' => $isPrivate,
                 'position' => $position
             ]
-        ], 201);
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_create_journal_entry: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to create journal entry.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to create journal entry.'];
     }
 }
 
 /**
  * Updates an existing journal entry
  */
-function handle_update_journal_entry(PDO $pdo, int $userId, array $data): void {
+function handle_update_journal_entry(PDO $pdo, int $userId, array $data): array {
     $entryId = $data['entry_id'] ?? null;
     $title = trim($data['title'] ?? '');
     $content = $data['content'] ?? '';
     
     if (!$entryId) {
-        send_json_response(['status' => 'error', 'message' => 'Entry ID is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
     }
     
     if (empty($title)) {
-        send_json_response(['status' => 'error', 'message' => 'Entry title is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry title is required.'];
     }
     
     try {
@@ -296,8 +265,7 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): void {
         $entry = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$entry || $entry['user_id'] != $userId) {
-            send_json_response(['status' => 'error', 'message' => 'Entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
         }
         
         // Prepare updated entry data
@@ -315,8 +283,7 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): void {
             // Encrypt private entries
             $encryptedData = encryptJournalData($pdo, $userId, $entryData);
             if (!$encryptedData) {
-                send_json_response(['status' => 'error', 'message' => 'Failed to encrypt entry data.'], 500);
-                return;
+                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
             }
             $updateTitle = 'Private Entry';
             $updateContent = '';
@@ -345,23 +312,22 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): void {
             processTaskReferences($pdo, $userId, $entryId, $content);
         }
         
-        send_json_response(['status' => 'success', 'message' => 'Entry updated successfully.'], 200);
+        return ['status' => 'success', 'message' => 'Entry updated successfully.'];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_update_journal_entry: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to update journal entry.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to update journal entry.'];
     }
 }
 
 /**
  * Deletes a journal entry
  */
-function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): void {
+function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): array {
     $entryId = $data['entry_id'] ?? null;
     
     if (!$entryId) {
-        send_json_response(['status' => 'error', 'message' => 'Entry ID is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
     }
     
     try {
@@ -374,27 +340,25 @@ function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): void {
         $stmt->execute([':entryId' => $entryId, ':userId' => $userId]);
         
         if ($stmt->rowCount() === 0) {
-            send_json_response(['status' => 'error', 'message' => 'Entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
         }
         
-        send_json_response(['status' => 'success', 'message' => 'Entry deleted successfully.'], 200);
+        return ['status' => 'success', 'message' => 'Entry deleted successfully.'];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_delete_journal_entry: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to delete journal entry.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to delete journal entry.'];
     }
 }
 
 /**
  * Toggles privacy status of a journal entry
  */
-function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): void {
+function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): array {
     $entryId = $data['entry_id'] ?? null;
     
     if (!$entryId) {
-        send_json_response(['status' => 'error', 'message' => 'Entry ID is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
     }
     
     try {
@@ -408,8 +372,7 @@ function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): void
         $entry = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$entry || $entry['user_id'] != $userId) {
-            send_json_response(['status' => 'error', 'message' => 'Entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
         }
         
         $newPrivacyStatus = !$entry['is_private'];
@@ -443,8 +406,7 @@ function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): void
             // Encrypt for private
             $encryptedData = encryptJournalData($pdo, $userId, $entryData);
             if (!$encryptedData) {
-                send_json_response(['status' => 'error', 'message' => 'Failed to encrypt entry data.'], 500);
-                return;
+                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
             }
             $updateTitle = 'Private Entry';
             $updateContent = '';
@@ -469,28 +431,27 @@ function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): void
             ':userId' => $userId
         ]);
         
-        send_json_response([
+        return [
             'status' => 'success', 
             'message' => 'Privacy status updated successfully.',
             'data' => ['is_private' => $newPrivacyStatus]
-        ], 200);
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_toggle_journal_privacy: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to update privacy status.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to update privacy status.'];
     }
 }
 
 /**
  * Moves a journal entry to a different date
  */
-function handle_move_journal_entry(PDO $pdo, int $userId, array $data): void {
+function handle_move_journal_entry(PDO $pdo, int $userId, array $data): array {
     $entryId = $data['entry_id'] ?? null;
     $newDate = $data['new_date'] ?? null;
     
     if (!$entryId || !$newDate) {
-        send_json_response(['status' => 'error', 'message' => 'Entry ID and new date are required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry ID and new date are required.'];
     }
     
     try {
@@ -503,8 +464,7 @@ function handle_move_journal_entry(PDO $pdo, int $userId, array $data): void {
         $entry = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$entry || $entry['user_id'] != $userId) {
-            send_json_response(['status' => 'error', 'message' => 'Entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
         }
         
         // Get next position for the new date
@@ -530,28 +490,27 @@ function handle_move_journal_entry(PDO $pdo, int $userId, array $data): void {
             ':userId' => $userId
         ]);
         
-        send_json_response([
+        return [
             'status' => 'success', 
             'message' => 'Entry moved successfully.',
             'data' => ['new_date' => $newDate, 'position' => $position]
-        ], 200);
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_move_journal_entry: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to move entry.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to move entry.'];
     }
 }
 
 /**
  * Duplicates a journal entry
  */
-function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): void {
+function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): array {
     $entryId = $data['entry_id'] ?? null;
     $targetDate = $data['target_date'] ?? null;
     
     if (!$entryId) {
-        send_json_response(['status' => 'error', 'message' => 'Entry ID is required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
     }
     
     try {
@@ -565,8 +524,7 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): voi
         $originalEntry = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$originalEntry || $originalEntry['user_id'] != $userId) {
-            send_json_response(['status' => 'error', 'message' => 'Entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
         }
         
         // Use target date or same date as original
@@ -599,22 +557,22 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): voi
         
         $newEntryId = $pdo->lastInsertId();
         
-        send_json_response([
+        return [
             'status' => 'success', 
             'message' => 'Entry duplicated successfully.',
             'data' => ['new_entry_id' => $newEntryId, 'entry_date' => $newDate]
-        ], 201);
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_duplicate_journal_entry: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to duplicate entry.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to duplicate entry.'];
     }
 }
 
 /**
  * Gets journal preferences for a user
  */
-function handle_get_journal_preferences(PDO $pdo, int $userId): void {
+function handle_get_journal_preferences(PDO $pdo, int $userId): array {
     try {
         $stmt = $pdo->prepare("
             SELECT view_mode, hide_weekends, date_format
@@ -633,25 +591,24 @@ function handle_get_journal_preferences(PDO $pdo, int $userId): void {
             ];
         }
         
-        send_json_response(['status' => 'success', 'data' => $preferences], 200);
+        return ['status' => 'success', 'data' => $preferences];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_get_journal_preferences: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to retrieve preferences.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to retrieve preferences.'];
     }
 }
 
 /**
  * Updates journal preferences for a user
  */
-function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): void {
+function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): array {
     $viewMode = $data['view_mode'] ?? null;
     $hideWeekends = $data['hide_weekends'] ?? null;
     $dateFormat = $data['date_format'] ?? null;
     
     if (!$viewMode && $hideWeekends === null && !$dateFormat) {
-        send_json_response(['status' => 'error', 'message' => 'No preferences to update.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'No preferences to update.'];
     }
     
     try {
@@ -701,25 +658,24 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
             ]);
         }
         
-        send_json_response(['status' => 'success', 'message' => 'Preferences updated successfully.'], 200);
+        return ['status' => 'success', 'message' => 'Preferences updated successfully.'];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_update_journal_preferences: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to update preferences.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to update preferences.'];
     }
 }
 
 /**
  * Creates tasks from journal entry markup
  */
-function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): void {
+function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): array {
     $journalEntryId = $data['journal_entry_id'] ?? null;
     $taskText = $data['task_text'] ?? '';
     $columnId = $data['column_id'] ?? null;
     
     if (!$journalEntryId || empty($taskText)) {
-        send_json_response(['status' => 'error', 'message' => 'Journal entry ID and task text are required.'], 400);
-        return;
+        return ['status' => 'error', 'message' => 'Journal entry ID and task text are required.'];
     }
     
     try {
@@ -732,8 +688,7 @@ function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): voi
         $journalEntry = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$journalEntry || $journalEntry['user_id'] != $userId) {
-            send_json_response(['status' => 'error', 'message' => 'Journal entry not found or access denied.'], 404);
-            return;
+            return ['status' => 'error', 'message' => 'Journal entry not found or access denied.'];
         }
         
         // Get default column if not specified
@@ -748,8 +703,7 @@ function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): voi
         }
         
         if (!$columnId) {
-            send_json_response(['status' => 'error', 'message' => 'No column available for task creation.'], 400);
-            return;
+            return ['status' => 'error', 'message' => 'No column available for task creation.'];
         }
         
         // Create task data
@@ -786,18 +740,18 @@ function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): voi
             ':taskId' => $taskId
         ]);
         
-        send_json_response([
+        return [
             'status' => 'success', 
             'message' => 'Task created successfully.',
             'data' => [
                 'task_id' => $taskId,
                 'journal_entry_id' => $journalEntryId
             ]
-        ], 201);
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_create_task_from_markup: ' . $e->getMessage());
-        send_json_response(['status' => 'error', 'message' => 'Failed to create task from markup.'], 500);
+        return ['status' => 'error', 'message' => 'Failed to create task from markup.'];
     }
 }
 
