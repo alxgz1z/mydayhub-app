@@ -43,3 +43,6 @@ composer.lock
 # Debug files
 debug_*
 test_*
+
+# Local server setup (Mac-specific, don't propagate to other environments)
+setup/
