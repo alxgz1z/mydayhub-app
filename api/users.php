@@ -24,6 +24,12 @@ function handle_users_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 		
+		case 'getUserPreferences':
+			if ($method === 'GET') {
+				handle_get_user_preferences($pdo, $userId);
+			}
+			break;
+		
 		// Modified for Change Password
 		case 'changePassword':
 			if ($method === 'POST') {
@@ -105,6 +111,40 @@ function handle_change_password(PDO $pdo, int $userId, ?array $data): void {
 	}
 }
 
+
+/**
+ * Retrieves all user preferences as a JSON object.
+ */
+function handle_get_user_preferences(PDO $pdo, int $userId): void {
+	try {
+		$stmt = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $userId]);
+		$result = $stmt->fetch(PDO::FETCH_ASSOC);
+
+		if ($result === false) {
+			http_response_code(404);
+			echo json_encode(['status' => 'error', 'message' => 'User not found.']);
+			return;
+		}
+
+		$prefsJson = $result['preferences'];
+		$prefs = json_decode($prefsJson, true);
+
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			$prefs = [];
+		}
+
+		http_response_code(200);
+		echo json_encode(['status' => 'success', 'data' => $prefs]);
+
+	} catch (Exception $e) {
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in users.php handle_get_user_preferences(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while retrieving preferences.']);
+	}
+}
 
 /**
  * Saves a single key-value pair to the user's preferences JSON blob.

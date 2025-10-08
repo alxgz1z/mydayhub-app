@@ -87,11 +87,27 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div class="header-center">
 				<nav class="view-tabs">
 					<button class="tab-btn active" data-view="tasks" id="tasks-tab">
-						<span class="tab-icon">📋</span>
+						<span class="tab-icon">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+								<path d="M9 11l3 3l8-8"></path>
+								<path d="M21 12c0 4.97-4.03 9-9 9s-9-4.03-9-9s4.03-9 9-9c1.67 0 3.24.46 4.58 1.26"></path>
+							</svg>
+						</span>
 						<span class="tab-label">Tasks</span>
 					</button>
 					<button class="tab-btn" data-view="journal" id="journal-tab">
-						<span class="tab-icon">📝</span>
+						<span class="tab-icon">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+								<!-- Back page (more visible offset) -->
+								<path d="M17 3H9a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z" opacity="0.3" stroke-width="1"></path>
+								<!-- Front page -->
+								<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+								<polyline points="14,2 14,8 20,8"></polyline>
+								<path d="M16 13H8"></path>
+								<path d="M16 17H8"></path>
+								<path d="M10 9H8"></path>
+							</svg>
+						</span>
 						<span class="tab-label">Journal</span>
 					</button>
 				</nav>
@@ -308,6 +324,18 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<path d="M8.8 10.9l6.4-3.8M8.8 13.1l6.4 3.8"></path>
 							</svg>
 							<span class="setting-label">Trust Management</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" id="btn-user-guide" class="btn" onclick="window.open('<?php echo APP_URL; ?>/incs/userguide.php', '_blank')">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="12" cy="12" r="10"></circle>
+								<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+								<line x1="12" y1="17" x2="12.01" y2="17"></line>
+							</svg>
+							<span class="setting-label">User Guide</span>
 						</button>
 					</div>
 				</div>

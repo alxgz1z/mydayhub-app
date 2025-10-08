@@ -2,17 +2,20 @@
  * View Manager
  * 
  * Handles switching between different views (Tasks, Journal) with tab navigation
+ * Persists view preference to database for cross-session synchronization
  */
 
 class ViewManager {
     constructor() {
         this.currentView = 'tasks';
+        this.isInitialized = false;
         this.init();
     }
     
-    init() {
+    async init() {
         this.setupEventListeners();
-        this.setActiveView(this.currentView);
+        await this.loadViewPreference();
+        this.isInitialized = true;
     }
     
     setupEventListeners() {
@@ -21,11 +24,22 @@ class ViewManager {
             if (e.target.matches('.tab-btn') || e.target.closest('.tab-btn')) {
                 const tab = e.target.closest('.tab-btn');
                 const view = tab.dataset.view;
-                this.setActiveView(view);
+                this.switchView(view);
             }
         });
     }
     
+    /**
+     * Switch to a different view and persist the preference
+     */
+    async switchView(view) {
+        this.setActiveView(view);
+        await this.saveViewPreference(view);
+    }
+    
+    /**
+     * Set the active view in the UI
+     */
     setActiveView(view) {
         // Update tab states
         document.querySelectorAll('.tab-btn').forEach(tab => {
@@ -40,13 +54,11 @@ class ViewManager {
         // Update view containers
         document.querySelectorAll('.view-container').forEach(container => {
             container.classList.remove('active');
-            console.log(`Removed active from: ${container.id}`);
         });
         
         const activeContainer = document.getElementById(`${view === 'tasks' ? 'task-board-container' : 'journal-view'}`);
         if (activeContainer) {
             activeContainer.classList.add('active');
-            console.log(`Added active to: ${activeContainer.id}`);
         } else {
             console.error(`Could not find container for view: ${view}`);
         }
@@ -62,30 +74,87 @@ class ViewManager {
                 }
             }, 100);
         }
+    }
+    
+    /**
+     * Load view preference from database
+     * Falls back to localStorage if DB fetch fails
+     */
+    async loadViewPreference() {
+        try {
+            // First, try to get from database (synced across sessions)
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch('/api/api.php?module=users&action=getUserPreferences', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            });
+            
+            if (response.ok) {
+                const result = await response.json();
+                if (result.status === 'success' && result.data?.current_view) {
+                    const savedView = result.data.current_view;
+                    if (savedView === 'tasks' || savedView === 'journal') {
+                        this.setActiveView(savedView);
+                        return;
+                    }
+                }
+            }
+        } catch (error) {
+            console.warn('Failed to load view preference from database, using default:', error);
+        }
         
-        // Store current view in localStorage for persistence
+        // Fallback to localStorage
+        const localView = localStorage.getItem('mydayhub-current-view');
+        if (localView && (localView === 'tasks' || localView === 'journal')) {
+            this.setActiveView(localView);
+        } else {
+            // Default to tasks view
+            this.setActiveView('tasks');
+        }
+    }
+    
+    /**
+     * Save view preference to database
+     * Also updates localStorage as backup
+     */
+    async saveViewPreference(view) {
+        // Update localStorage immediately for instant feedback
         localStorage.setItem('mydayhub-current-view', view);
+        
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch('/api/api.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    module: 'users',
+                    action: 'saveUserPreference',
+                    key: 'current_view',
+                    value: view
+                })
+            });
+            
+            if (!response.ok) {
+                console.warn('Failed to save view preference to database');
+            }
+        } catch (error) {
+            console.error('Error saving view preference:', error);
+            // Continue - localStorage backup is already set
+        }
     }
     
     getCurrentView() {
         return this.currentView;
-    }
-    
-    // Restore view from localStorage
-    restoreView() {
-        const savedView = localStorage.getItem('mydayhub-current-view');
-        if (savedView && (savedView === 'tasks' || savedView === 'journal')) {
-            this.setActiveView(savedView);
-        }
     }
 }
 
 // Initialize view manager when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.viewManager = new ViewManager();
-    
-    // Restore saved view after a short delay to ensure all components are loaded
-    setTimeout(() => {
-        window.viewManager.restoreView();
-    }, 500);
 });
