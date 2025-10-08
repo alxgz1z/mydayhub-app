@@ -265,7 +265,7 @@ async function restoreItem(type, id) {
 					hiddenColumn.style.display = 'flex';
 				} else {
 					const boardContainer = document.getElementById('task-board-container');
-					const columnEl = await createColumnElement(restoredColumn);
+					const columnEl = createColumnElement(restoredColumn);
 					boardContainer.appendChild(columnEl);
 				}
 				updateMoveButtonVisibility();
@@ -2171,16 +2171,12 @@ function renderBoard(boardData) {
 		return;
 	}
 
-	// Create columns asynchronously
-	const columnPromises = boardData.map(async (columnData) => {
-		const columnEl = await createColumnElement(columnData);
+	boardData.forEach(columnData => {
+		const columnEl = createColumnElement(columnData);
 		container.appendChild(columnEl);
 		const columnBody = columnEl.querySelector('.column-body');
 		sortTasksInColumn(columnBody);
-		return columnEl;
 	});
-	
-	await Promise.all(columnPromises);
 
 	updateMoveButtonVisibility();
 	applyAllFilters();
@@ -2258,7 +2254,7 @@ async function showSharedTaskConfirmation(sharedTaskInfo) {
  * Creates the HTML element for a single column and its tasks.
  * Modified for Sharing Foundation - Hide task input for virtual "Shared with Me" column
  */
-async function createColumnElement(columnData) {
+function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
 	const isPrivate = columnData.is_private;
 	const isVirtualColumn = columnData.column_id === 'shared-with-me';
@@ -2277,10 +2273,7 @@ async function createColumnElement(columnData) {
 				title: t.encrypted_data ? 'Encrypted' : 'No data'
 			})));
 		}
-		// Create task cards asynchronously
-		const taskPromises = columnData.tasks.map(async (taskData) => await createTaskCard(taskData));
-		const taskCards = await Promise.all(taskPromises);
-		tasksHTML = taskCards.join('');
+		tasksHTML = columnData.tasks.map(taskData => createTaskCard(taskData)).join('');
 	} else {
 		tasksHTML = isVirtualColumn 
 			? '<p class="no-tasks-message">No shared tasks yet.</p>'
@@ -2333,7 +2326,7 @@ async function createColumnElement(columnData) {
  * Creates the HTML string for a single task card.
  * Modified for Sharing Foundation - Added access_type data attribute and conditional UI elements
  */
-async function createTaskCard(taskData) {
+function createTaskCard(taskData) {
 	// Add this debug snippet here
 	if (window.MyDayHub_Config?.DEV_MODE) {
 		console.log('createTaskCard - ready_for_review value:', taskData.ready_for_review, 'type:', typeof taskData.ready_for_review);
@@ -2353,31 +2346,37 @@ async function createTaskCard(taskData) {
 		
 		// Check if this is encrypted data (has encrypted envelope structure)
 		if (data.encrypted && data.item_type === 'task') {
-			// This is encrypted data - decrypt it using frontend crypto
+			// This is encrypted data - show placeholder until decrypted
 			if (window.MyDayHub_Config?.DEV_MODE) {
-				console.log('Task', taskData.task_id, 'is encrypted, attempting frontend decryption');
+				console.log('Task', taskData.task_id, 'is encrypted, showing placeholder');
 			}
 			
-			try {
-				const decryptedData = await decryptTaskDataFrontend(data);
-				if (decryptedData) {
-					taskTitle = decryptedData.title || 'Untitled Task';
-					taskNotes = decryptedData.notes || '';
-					if (window.MyDayHub_Config?.DEV_MODE) {
-						console.log('Task', taskData.task_id, 'successfully decrypted:', decryptedData);
+			taskTitle = 'Encrypted Task';
+			taskNotes = '';
+			
+			// Schedule async decryption and re-render
+			setTimeout(async () => {
+				try {
+					const decryptedData = await decryptTaskDataFrontend(data);
+					if (decryptedData) {
+						const taskCard = document.querySelector(`[data-task-id="${taskData.task_id}"]`);
+						if (taskCard) {
+							const titleElement = taskCard.querySelector('.task-title');
+							if (titleElement) {
+								titleElement.textContent = decryptedData.title || 'Untitled Task';
+								if (window.MyDayHub_Config?.DEV_MODE) {
+									titleElement.textContent += ` (${taskData.task_id})`;
+								}
+							}
+						}
+						if (window.MyDayHub_Config?.DEV_MODE) {
+							console.log('Task', taskData.task_id, 'successfully decrypted:', decryptedData);
+						}
 					}
-				} else {
-					taskTitle = 'Decryption Failed';
-					taskNotes = '';
-					if (window.MyDayHub_Config?.DEV_MODE) {
-						console.log('Task', taskData.task_id, 'decryption returned null');
-					}
+				} catch (decryptError) {
+					console.error('Frontend decryption failed for task', taskData.task_id, ':', decryptError);
 				}
-			} catch (decryptError) {
-				console.error('Frontend decryption failed for task', taskData.task_id, ':', decryptError);
-				taskTitle = 'Decryption Error';
-				taskNotes = '';
-			}
+			}, 0);
 		} else if (data.title !== undefined) {
 			// This is plain JSON data
 			taskTitle = data.title;
