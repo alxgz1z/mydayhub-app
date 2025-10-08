@@ -248,6 +248,47 @@ function initEventListeners() {
 
 	const boardContainer = document.getElementById('task-board-container');
 	if (boardContainer) {
+		// Add expandable footer functionality
+		boardContainer.addEventListener('click', (e) => {
+			const footer = e.target.closest('.column-footer');
+			if (footer && !footer.classList.contains('expanded') && !isMoveModeActive) {
+				// Check if footer has move buttons (move task mode)
+				if (footer.querySelector('.btn-move-here') || footer.querySelector('.btn-cancel-move')) {
+					return; // Don't expand during move mode
+				}
+				
+				// Collapse any other expanded footers
+				document.querySelectorAll('.column-footer.expanded').forEach(expandedFooter => {
+					expandedFooter.classList.remove('expanded');
+				});
+				
+				// Expand clicked footer
+				footer.classList.add('expanded');
+				const input = footer.querySelector('.new-task-input');
+				if (input) {
+					setTimeout(() => input.focus(), 100); // Small delay for animation
+				}
+			}
+		});
+		
+		// Handle ESC key to collapse expanded footer
+		boardContainer.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape') {
+				document.querySelectorAll('.column-footer.expanded').forEach(footer => {
+					footer.classList.remove('expanded');
+				});
+			}
+		});
+		
+		// Handle clicks outside expanded footer to collapse it
+		boardContainer.addEventListener('click', (e) => {
+			if (!e.target.closest('.column-footer')) {
+				document.querySelectorAll('.column-footer.expanded').forEach(footer => {
+					footer.classList.remove('expanded');
+				});
+			}
+		});
+		
 		boardContainer.addEventListener('keypress', async (e) => {
 			if (e.key === 'Enter' && e.target.matches('.new-task-input')) {
 				e.preventDefault();
@@ -262,6 +303,11 @@ function initEventListeners() {
 					if (taskTitle && columnId) {
 						await createNewTask(columnId, taskTitle, columnEl);
 						input.value = '';
+						// Collapse the footer after creating task
+						const footer = input.closest('.column-footer');
+						if (footer) {
+							footer.classList.remove('expanded');
+						}
 					}
 				} finally {
 					isActionRunning = false;
@@ -1325,7 +1371,8 @@ function closeAllTaskActionMenus() {
 function updateColumnTaskCount(columnEl) {
 	if (!columnEl) return;
 	const countSpan = columnEl.querySelector('.task-count');
-	const taskCount = columnEl.querySelectorAll('.task-card:not([style*="display: none"])').length;
+	// Count all tasks except completed ones, regardless of filter visibility
+	const taskCount = columnEl.querySelectorAll('.task-card:not(.completed)').length;
 	if (countSpan) {
 		countSpan.textContent = taskCount;
 	}
@@ -1659,6 +1706,12 @@ async function toggleTaskComplete(taskId, isComplete) {
 			
 			// Re-render the card to update its content
 			rerenderTaskCard(taskCard);
+			
+			// Update column task count
+			const columnEl = taskCard.closest('.task-column');
+			if (columnEl) {
+				updateColumnTaskCount(columnEl);
+			}
 			
 			// Update mission focus chart if visible
 			if (typeof window.updateMissionFocusChart === 'function') {
@@ -2182,7 +2235,7 @@ function createColumnElement(columnData) {
 
 	// Modified for Sharing Foundation - Hide task input for virtual column
 	const footerHTML = isVirtualColumn ? '' : `
-		<div class="column-footer">
+		<div class="column-footer" data-column-id="${columnData.column_id}">
 			<input type="text" class="new-task-input" placeholder="+ New Task" />
 		</div>
 	`;
@@ -2190,8 +2243,8 @@ function createColumnElement(columnData) {
 	columnEl.innerHTML = `
 		<div class="column-header">
 			${headerControlsHTML}
-			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}</h2>
-			<span class="task-count">${columnData.tasks ? columnData.tasks.length : 0}</span>
+			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}${window.MyDayHub_Config?.DEV_MODE ? ` [${columnData.column_id}]` : ''}</h2>
+			<span class="task-count">${columnData.tasks ? columnData.tasks.filter(task => task.classification !== 'completed').length : 0}</span>
 		</div>
 		<div class="column-body">
 			${tasksHTML}
@@ -2236,6 +2289,11 @@ function createTaskCard(taskData) {
 		console.error("Could not parse task data:", taskData.encrypted_data);
 		taskTitle = 'Parse Error';
 		taskNotes = '';
+	}
+
+	// Add task_id in parentheses when DEV_MODE is enabled
+	if (window.MyDayHub_Config?.DEV_MODE) {
+		taskTitle = `${taskTitle} (${taskData.task_id})`;
 	}
 
 	const isCompleted = taskData.classification === 'completed';
@@ -3423,7 +3481,9 @@ function exitMoveMode() {
 	}
 
 	document.querySelectorAll('.column-footer').forEach(footer => {
+		const columnId = footer.dataset.columnId;
 		footer.innerHTML = `<input type="text" class="new-task-input" placeholder="+ New Task" />`;
+		footer.classList.remove('expanded'); // Ensure footer is collapsed after move mode
 	});
 
 	isMoveModeActive = false;
