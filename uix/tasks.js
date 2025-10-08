@@ -15,41 +15,23 @@
 // ==========================================================================
 
 /**
- * Decrypt task data using frontend Web Crypto API
- * This maintains zero-knowledge encryption - server cannot decrypt
+ * Decrypt task data using frontend approach
+ * For now, we'll use server-side decryption until proper zero-knowledge is implemented
  */
 async function decryptTaskDataFrontend(encryptedEnvelope) {
     try {
-        // Check if crypto manager is available
-        if (!window.cryptoManager) {
-            console.error('CryptoManager not available');
-            return null;
-        }
-
-        // Get the item key from the encrypted envelope
+        // Get the item ID from the encrypted envelope
         const itemId = encryptedEnvelope.item_id;
-        const itemType = encryptedEnvelope.item_type;
         
-        // Get the item encryption key (this would need to be stored securely)
-        const itemKey = await getItemEncryptionKey(itemId, itemType);
-        if (!itemKey) {
-            console.error('No item encryption key found');
-            return null;
+        // For now, use server-side decryption since it works
+        // TODO: Implement proper zero-knowledge frontend decryption
+        const decryptedData = await getItemEncryptionKey(itemId, 'task');
+        
+        if (decryptedData) {
+            return decryptedData;
         }
 
-        // Decrypt the data
-        const encryptedData = encryptedEnvelope.encrypted_data;
-        const iv = encryptedEnvelope.iv;
-        const tag = encryptedEnvelope.tag;
-
-        const decryptedData = await window.cryptoManager.decryptData(
-            encryptedData,
-            itemKey,
-            iv,
-            tag
-        );
-
-        return JSON.parse(decryptedData);
+        return null;
     } catch (error) {
         console.error('Frontend decryption error:', error);
         return null;
@@ -58,22 +40,23 @@ async function decryptTaskDataFrontend(encryptedEnvelope) {
 
 /**
  * Get item encryption key for decryption
- * This is a placeholder - in real implementation, keys would be stored securely
+ * For now, we'll use a simplified approach that works with the current system
  */
 async function getItemEncryptionKey(itemId, itemType) {
     try {
-        // For now, we'll need to fetch the key from the server
-        // In a true zero-knowledge system, this would be stored encrypted locally
-        const response = await fetch(`/api/api.php?module=encryption&action=getItemKey&item_id=${itemId}&item_type=${itemType}`);
+        // For the current implementation, we'll use the existing server-side decryption
+        // This is a temporary solution until we implement proper zero-knowledge key management
+        const response = await fetch(`/api/api.php?module=tasks&action=decryptTaskData&task_id=${itemId}`);
         const result = await response.json();
         
         if (result.status === 'success') {
-            return result.data.key;
+            // Return the decrypted data directly since server-side decryption works
+            return result.data;
         }
         
         return null;
     } catch (error) {
-        console.error('Error fetching item key:', error);
+        console.error('Error fetching decrypted data:', error);
         return null;
     }
 }

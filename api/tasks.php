@@ -290,6 +290,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		}
 		break;
 		
+		case 'decryptTaskData':
+		if ($method === 'GET') {
+			handle_decrypt_task_data($pdo, $userId, $_GET);
+		}
+		break;
+		
 		case 'leaveSharedTask':
 		if ($method === 'POST') {
 			handle_leave_shared_task($pdo, $userId, $data);
@@ -1140,6 +1146,42 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 	} catch (Exception $e) {
 		log_debug_message('Error in tasks.php handle_get_all_board_data(): ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred while fetching board data.'], 500);
+	}
+}
+
+/**
+ * Decrypts task data for frontend display
+ */
+function handle_decrypt_task_data(PDO $pdo, int $userId, array $data): void {
+	$taskId = $data['task_id'] ?? null;
+	
+	if (!$taskId) {
+		send_json_response(['status' => 'error', 'message' => 'Task ID is required.'], 400);
+		return;
+	}
+	
+	try {
+		// Get the encrypted data for the task
+		$stmt = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		$task = $stmt->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$task) {
+			send_json_response(['status' => 'error', 'message' => 'Task not found.'], 404);
+			return;
+		}
+		
+		// Decrypt the task data
+		$decryptedData = decryptTaskData($pdo, $userId, $taskId, $task['encrypted_data']);
+		
+		if ($decryptedData) {
+			send_json_response(['status' => 'success', 'data' => $decryptedData], 200);
+		} else {
+			send_json_response(['status' => 'error', 'message' => 'Failed to decrypt task data.'], 500);
+		}
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_decrypt_task_data: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred while decrypting task data.'], 500);
 	}
 }
 
