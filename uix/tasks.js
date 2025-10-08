@@ -420,22 +420,9 @@ function initEventListeners() {
 				const taskCard = statusIndicator.closest('.task-card');
 				const taskId = taskCard?.dataset.taskId;
 				
-				// Add debugging
-				if (window.MyDayHub_Config?.DEV_MODE) {
-					console.log('=== Status indicator clicked ===');
-					console.log('Task card found:', !!taskCard);
-					console.log('Task ID:', taskId);
-					console.log('Current ready state:', taskCard?.dataset.readyForReview);
-					console.log('isActionRunning:', isActionRunning);
-					console.log('Task card element:', taskCard);
-				}
 				
 				if (taskId && taskCard) {
 					await toggleReadyForReview(taskId, taskCard);
-				} else {
-					if (window.MyDayHub_Config?.DEV_MODE) {
-						console.log('Missing taskId or taskCard - aborting');
-					}
 				}
 				return;
 		}
@@ -494,13 +481,9 @@ function initEventListeners() {
 							} catch (error) {
 								console.error('Error in shared tasks check:', error);
 								// Continue with privacy toggle even if shared task check fails
-								console.log('Continuing with privacy toggle despite shared task check error');
 							}
-						} else {
-							console.log('Making column public - no shared task check needed');
 						}
 						
-						console.log('Calling togglePrivacy for column:', columnId);
 						await togglePrivacy('column', columnId);
 					}
 				} catch (error) {
@@ -2170,9 +2153,7 @@ function renderBoard(boardData) {
  * Checks if a column has shared tasks and returns details about them.
  */
 async function checkColumnForSharedTasks(columnId) {
-	console.log('checkColumnForSharedTasks called with columnId:', columnId);
 	try {
-		console.log('Making API call to getSharedTasksInColumn...');
 		const result = await apiFetch({
 			module: 'tasks',
 			action: 'getSharedTasksInColumn',
@@ -2188,10 +2169,8 @@ async function checkColumnForSharedTasks(columnId) {
 				completedCount: sharedTasks.filter(t => t.classification === 'completed').length,
 				activeCount: sharedTasks.filter(t => t.classification !== 'completed').length
 			};
-			console.log('Processed shared tasks data:', result_data);
 			return result_data;
 		}
-		console.log('No shared tasks found or invalid response');
 		return { hasShared: false, tasks: [], completedCount: 0, activeCount: 0 };
 	} catch (error) {
 		console.error('Error checking shared tasks:', error);
@@ -2310,12 +2289,6 @@ function createColumnElement(columnData) {
  * Modified for Sharing Foundation - Added access_type data attribute and conditional UI elements
  */
 function createTaskCard(taskData) {
-	// Add this debug snippet here
-	if (window.MyDayHub_Config?.DEV_MODE) {
-		console.log('createTaskCard - ready_for_review value:', taskData.ready_for_review, 'type:', typeof taskData.ready_for_review);
-		console.log('Full taskData object:', taskData);
-		console.log('Task ID:', taskData.task_id, 'Encrypted data preview:', taskData.encrypted_data ? taskData.encrypted_data.substring(0, 100) + '...' : 'null');
-	}
 
 	let taskTitle = 'Encrypted Task';
 	let taskNotes = '';
@@ -2323,17 +2296,9 @@ function createTaskCard(taskData) {
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
 		
-		if (window.MyDayHub_Config?.DEV_MODE) {
-			console.log('Parsed data for task', taskData.task_id, ':', data);
-		}
-		
 		// Check if this is encrypted data (has encrypted envelope structure)
 		if (data.encrypted && data.item_type === 'task') {
 			// This is encrypted data - show placeholder until decrypted
-			if (window.MyDayHub_Config?.DEV_MODE) {
-				console.log('Task', taskData.task_id, 'is encrypted, showing placeholder');
-			}
-			
 			taskTitle = 'Encrypted Task';
 			taskNotes = '';
 			
@@ -2352,9 +2317,6 @@ function createTaskCard(taskData) {
 								}
 							}
 						}
-						if (window.MyDayHub_Config?.DEV_MODE) {
-							console.log('Task', taskData.task_id, 'successfully decrypted:', decryptedData);
-						}
 					}
 				} catch (decryptError) {
 					console.error('Frontend decryption failed for task', taskData.task_id, ':', decryptError);
@@ -2364,16 +2326,10 @@ function createTaskCard(taskData) {
 			// This is plain JSON data
 			taskTitle = data.title;
 			taskNotes = data.notes || '';
-			if (window.MyDayHub_Config?.DEV_MODE) {
-				console.log('Task', taskData.task_id, 'is plain JSON data');
-			}
 		} else {
 			// Fallback for unexpected data structure
 			taskTitle = 'Invalid Task Data';
 			taskNotes = '';
-			if (window.MyDayHub_Config?.DEV_MODE) {
-				console.log('Task', taskData.task_id, 'has unexpected data structure:', data);
-			}
 		}
 	} catch (e) {
 		console.error("Could not parse task data for task", taskData.task_id, ":", taskData.encrypted_data);
@@ -2398,15 +2354,6 @@ function createTaskCard(taskData) {
 		const classification = taskData.classification === 'noise' ? 'backlog' : taskData.classification;
 		classificationClass = `classification-${classification}`;
 		
-		// Debug logging
-		if (window.MyDayHub_Config?.DEV_MODE) {
-			console.log('Task classification debug:', {
-				taskId: taskData.task_id,
-				originalClassification: taskData.classification,
-				finalClassification: classification,
-				classificationClass: classificationClass
-			});
-		}
 	}
 	
 	let footerHTML = '';
