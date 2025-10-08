@@ -544,6 +544,13 @@ body.light-mode .task-card.snoozed::before {
 		z-index: 10;
 	}
 	
+	/* Mobile task actions menu positioning */
+	.task-actions-menu {
+		min-width: 140px;
+		max-width: 200px;
+		font-size: 0.9rem;
+	}
+	
 	/* Mobile column header adjustments */
 	.column-header {
 		padding: 0.5rem 1rem; /* Reduced padding for mobile */
@@ -595,10 +602,14 @@ body.light-mode .task-card.snoozed::before {
 	z-index: 100;
 	padding: 5px;
 	min-width: 160px;
+	max-width: 250px;
 	opacity: 0;
 	transform: scale(0.95) translateY(-5px);
 	transition: transform 0.1s ease-out, opacity 0.1s ease-out;
 	transform-origin: top right;
+	/* Ensure menu stays within viewport */
+	overflow: visible;
+	white-space: nowrap;
 }
 
 .task-actions-menu.visible {

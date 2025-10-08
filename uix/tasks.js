@@ -1390,11 +1390,42 @@ function closeAllTaskActionMenus() {
 	 menu.innerHTML = menuHTML;
  
 	 document.body.appendChild(menu);
- 
+
+	 // Smart positioning to avoid viewport overflow
 	 const btnRect = buttonEl.getBoundingClientRect();
-	 menu.style.top = `${window.scrollY + btnRect.bottom + 5}px`;
-	 menu.style.left = `${window.scrollX + btnRect.right - menu.offsetWidth}px`;
- 
+	 const menuRect = menu.getBoundingClientRect();
+	 const viewportHeight = window.innerHeight;
+	 const viewportWidth = window.innerWidth;
+	 
+	 // Calculate initial position (default: below and right-aligned with button)
+	 let topPosition = window.scrollY + btnRect.bottom + 5;
+	 let leftPosition = window.scrollX + btnRect.right - menuRect.width;
+	 
+	 // Check if menu would overflow bottom of viewport
+	 const menuBottom = topPosition + menuRect.height;
+	 const viewportBottom = window.scrollY + viewportHeight;
+	 if (menuBottom > viewportBottom) {
+		 // Position above button instead
+		 topPosition = window.scrollY + btnRect.top - menuRect.height - 5;
+	 }
+	 
+	 // Check if menu would overflow right edge of viewport
+	 if (leftPosition < window.scrollX) {
+		 // Position left-aligned with button instead
+		 leftPosition = window.scrollX + btnRect.left;
+	 }
+	 
+	 // Check if menu would overflow left edge of viewport
+	 const menuRight = leftPosition + menuRect.width;
+	 const viewportRight = window.scrollX + viewportWidth;
+	 if (menuRight > viewportRight) {
+		 // Position right-aligned with button instead
+		 leftPosition = window.scrollX + btnRect.right - menuRect.width;
+	 }
+	 
+	 menu.style.top = `${topPosition}px`;
+	 menu.style.left = `${leftPosition}px`;
+
 	 setTimeout(() => menu.classList.add('visible'), 10);
  }
 
