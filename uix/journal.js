@@ -248,27 +248,29 @@ class JournalView {
         const centerDate = this.getCenterDate();
         
         return `
-            <div class="journal-header">
-                <div class="journal-nav">
-                    <button class="journal-nav-btn" data-direction="prev">‹</button>
-                    <button class="journal-nav-btn" data-direction="prev-multi">‹‹</button>
-                    <button class="journal-nav-btn" data-direction="next-multi">››</button>
-                    <button class="journal-nav-btn" data-direction="next">›</button>
+            <div class="journal-inner-container">
+                <div class="journal-header">
+                    <div class="journal-nav">
+                        <button class="journal-nav-btn" data-direction="prev">‹</button>
+                        <button class="journal-nav-btn" data-direction="prev-multi">‹‹</button>
+                        <button class="journal-nav-btn" data-direction="next-multi">››</button>
+                        <button class="journal-nav-btn" data-direction="next">›</button>
+                    </div>
+                    
+                    <div class="journal-view-modes">
+                        <button class="journal-view-mode-btn ${this.viewMode === '1-day' ? 'active' : ''}" data-mode="1-day">1 Day</button>
+                        <button class="journal-view-mode-btn ${this.viewMode === '3-day' ? 'active' : ''}" data-mode="3-day">3 Days</button>
+                        <button class="journal-view-mode-btn ${this.viewMode === '5-day' ? 'active' : ''}" data-mode="5-day">5 Days</button>
+                    </div>
+                    
+                    <div class="journal-date-display">
+                        ${this.formatDate(centerDate)}
+                    </div>
                 </div>
                 
-                <div class="journal-view-modes">
-                    <button class="journal-view-mode-btn ${this.viewMode === '1-day' ? 'active' : ''}" data-mode="1-day">1 Day</button>
-                    <button class="journal-view-mode-btn ${this.viewMode === '3-day' ? 'active' : ''}" data-mode="3-day">3 Days</button>
-                    <button class="journal-view-mode-btn ${this.viewMode === '5-day' ? 'active' : ''}" data-mode="5-day">5 Days</button>
+                <div class="journal-columns">
+                    ${dates.map(date => this.renderDateColumn(date, centerDate)).join('')}
                 </div>
-                
-                <div class="journal-date-display">
-                    ${this.formatDate(centerDate)}
-                </div>
-            </div>
-            
-            <div class="journal-columns">
-                ${dates.map(date => this.renderDateColumn(date, centerDate)).join('')}
             </div>
         `;
     }

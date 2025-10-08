@@ -9,8 +9,17 @@
 #journal-view {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    height: 100%;
+    width: 100%;
     background-color: var(--bg-color);
+    overflow: hidden;
+}
+
+.journal-inner-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
     overflow: hidden;
 }
 
