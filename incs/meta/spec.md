@@ -1,6 +1,6 @@
 # MyDayHub Reference Specification (Proposed)
 
-Version: Beta 7.7 (Optional Encryption UX)
+Version: Beta 7.8 (Journal View Implementation)
 Audience: Internal Development & Product
 Last Updated: 2025-10-08
 
@@ -41,11 +41,17 @@ Core principles:
 
 ## 2. Product Scope & Primary View
 
-Scope focuses on the Tasks View (Kanban) as the primary interface. Journal, Outlines, and Events are future expansions. The Tasks View delivers:
+Scope focuses on the Tasks View (Kanban) as the primary interface, with Journal View now implemented. The Tasks View delivers:
 - Columns with header (title, count, privacy toggle, actions)
 - Task cards with classification, completion, notes, due date, attachments, privacy indicator, and share state
 - Drag‑and‑drop and a touch‑friendly move mode
 - Snooze with visual indicators and filters
+
+The Journal View delivers:
+- Horizontal date-based columns with scrollable navigation
+- Journal entries with rich text editing and task linking via @task[description] markup
+- Same privacy/encryption system as tasks
+- Mobile-optimized collapsible tab navigation
 
 Non‑goals for the current milestone: full offline engine, full end‑to‑end encrypted sharing, and cross‑view integrations beyond the Calendar Overlay basics.
 
@@ -71,6 +77,14 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 
 3.4 Unified Editor
 - Modal editor for task notes with autosave, formatting tools, and font sizing
+
+3.5 Journal View (IMPLEMENTED)
+- Horizontal date-based columns with scrollable navigation (3-day, 1-week, 1-month views)
+- Journal entries: create, edit, delete with rich text support
+- Task linking via @task[description] markup that creates linked tasks
+- Privacy integration: private journal entries encrypted same as tasks
+- Mobile-optimized: collapsible tab navigation, responsive column layout
+- View switching: seamless transition between Tasks and Journal views
 
 ---
 
@@ -175,6 +189,7 @@ Representative capability areas (non‑exhaustive, no request/response bodies he
 - Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
 - **Zero‑Knowledge (IMPLEMENTED): optional encryption setup, status, migration progress, recovery questions, decryptTaskData endpoint**
+- **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing**
 
 ---
 
@@ -199,7 +214,7 @@ Note: This section lists tables and key fields only. It avoids schema DDL and fo
 - calendar_events: id, user_id, event_type, calendar_name, label, start_date, end_date, color, is_public, priority, created_at, updated_at
 - user_calendar_preferences: id, user_id, calendar_type, is_visible, created_at
 
-11.5 Zero‑Knowledge Encryption (Conceptual Store)
+11.5 Zero‑Knowledge Encryption (IMPLEMENTED)
 - user_encryption_keys: user_id, wrapped_master_key, kdf_params, created_at, updated_at
 - item_encryption_keys: id, user_id, item_type, item_id, wrapped_dek, created_at, updated_at
 - user_security_questions: id, user_id, questions_meta, created_at
@@ -207,6 +222,11 @@ Note: This section lists tables and key fields only. It avoids schema DDL and fo
 - encryption_audit_log: id, user_id, item_type, item_id, operation, metadata, created_at
 - tasks privacy flags (within tasks): privacy_inherited, privacy_override
 - columns privacy aid (within columns): has_shared_tasks
+
+11.6 Journal View (IMPLEMENTED)
+- journal_entries: entry_id, user_id, entry_date, title, content, is_private, encrypted_data, created_at, updated_at
+- journal_task_links: link_id, entry_id, task_id, user_id, created_at
+- journal_preferences: id, user_id, view_mode, hide_weekends, created_at, updated_at
 
 Relationship highlights:
 - users 1‑to‑many columns, tasks, attachments
@@ -220,7 +240,10 @@ Relationship highlights:
 
 - Full offline‑first data model and sync engine (IndexedDB, background sync, conflict handling)
 - End‑to‑end encrypted sharing with asymmetric keys
-- Journal, Outlines, Events full views (only foundational concepts documented)
+- Outlines, Events full views (only foundational concepts documented)
+- Voice input for journal entries (iOS Web Speech API integration)
+- Calendar integration for journal entries
+- Offline capability for journal entries
 
 ---
 
@@ -231,8 +254,12 @@ Relationship highlights:
 - ✅ **Hybrid zero-knowledge architecture implemented** - Server decrypts for display, maintains encrypted storage
 - ✅ **Optional encryption setup** - User-triggered workflow with settings panel integration
 - ✅ **Security questions recovery** - Password recovery without compromising zero-knowledge principle
+- ✅ **Journal View implementation** - Horizontal date columns, CRUD operations, privacy integration
+- ✅ **View switching architecture** - Seamless transition between Tasks and Journal views
+- ✅ **Smart contextual menu positioning** - Auto-adjusting menus to prevent viewport overflow
 
 Immediate priorities:
+- Implement @task[description] markup detection and smart task creation from journal entries
 - Enforce permission‑based UI restrictions for shared items
 - Polish sharing workflow in mobile contexts
 - Implement password change with decrypt/re-encrypt of private items
@@ -240,6 +267,8 @@ Immediate priorities:
 Medium term:
 - End‑to‑end encrypted sharing via asymmetric key exchange
 - Enhanced recovery options (backup codes, multi‑factor)
+- Voice input integration for journal entries (iOS Web Speech API)
+- Calendar integration for journal entries
 
 Long term:
 - Offline MVP (app shell, local cache, write queue, LWW)
@@ -255,6 +284,9 @@ Long term:
 - Shared item: content visible to recipients per permission model
 - DEK: Data Encryption Key per item; wrapped by user master key
 - Recovery envelope: encrypted copy of master key protected by recovery key
+- Journal entry: date-based entry in the Journal View with rich text content
+- Task markup: @task[description] syntax within journal entries to create linked tasks
+- View switching: seamless transition between Tasks (Kanban) and Journal (date-based) views
 
 ---
 
