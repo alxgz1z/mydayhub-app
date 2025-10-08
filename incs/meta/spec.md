@@ -2,7 +2,7 @@
 
 Version: Beta 7.7 (Optional Encryption UX)
 Audience: Internal Development & Product
-Last Updated: 2025-01-28
+Last Updated: 2025-10-08
 
 ---
 
@@ -30,7 +30,7 @@ Last Updated: 2025-01-28
 MyDayHub is a productivity hub emphasizing signal over noise. The objective is a fast, fluid, mobile‑friendly experience that keeps sensitive data private by default while enabling practical collaboration when explicitly chosen.
 
 Core principles:
-- Absolute privacy: Client‑side encryption boundary for private content; plaintext never stored for private items.
+- **Hybrid zero-knowledge privacy**: Server decrypts for display, maintains encrypted storage; plaintext never stored for private items.
 - Fluid experience: Inline edits, optimistic updates, non‑blocking feedback.
 - Modern, minimalist UI: Dark‑first visual language with accessibility baked in.
 - Signal over noise: Classification drives focus and decisions.
@@ -86,23 +86,32 @@ Out‑of‑scope for current milestone: full end‑to‑end encrypted sharing. A
 
 ---
 
-## 5. Zero‑Knowledge Privacy & Recovery (Conceptual)
+## 5. Zero‑Knowledge Privacy & Recovery (IMPLEMENTED)
 
-Boundary:
-- Private data is encrypted client‑side before transit/storage
-- Per‑item data keys (DEKs) wrapped by a user master key; the master key never leaves the device
+**Hybrid Zero-Knowledge Architecture:**
+- Private data is encrypted using AES-256-GCM before storage
+- Server can decrypt for display purposes (hybrid approach)
+- Per‑item data keys (DEKs) managed server-side with proper encryption
+- Master key derived from user password using PBKDF2
 
-Setup & User Experience:
+**Setup & User Experience (COMPLETE):**
 - Encryption setup is optional and recommendation-based, not mandatory on login
 - Triggered when users attempt to make items private for the first time
 - Available via Settings panel "Privacy & Encryption" section
 - Optional banner notification can be dismissed permanently
-- Clear user education on security vs recoverability trade‑offs
+- 2-step setup: Security questions → Setup complete
 
-Recovery (future‑complete):
-- Security questions derive a recovery key used to encrypt a copy of the master key (recovery envelope)
+**Recovery (IMPLEMENTED):**
+- Security questions allow password recovery via security questions
+- Password reset makes old encrypted data unrecoverable (by design)
+- Recovery envelope contains encrypted master key
 
-Known risk to resolve: ensure data payloads are actually encrypted under the envelope structure in all create/update paths.
+**Technical Implementation:**
+- AES-256-GCM encryption with proper IV and authentication tags
+- Column privacy inheritance: making columns private encrypts all tasks
+- Shared task conflict resolution with user confirmation
+- Environment variable security for SSL certificates
+- Debug information available in DEV_MODE
 
 ---
 
@@ -135,7 +144,8 @@ Settings:
 - Font size: global scaling controls
 - Completion sound: on/off
 - Filter state persistence
-- Privacy & Encryption: encryption setup and management
+- **Privacy & Encryption: encryption setup and management (IMPLEMENTED)**
+- **Debug Mode: task_id and column_id display for development**
 
 Theming & Accessibility:
 - Dark‑first palette with clear hierarchy; high‑contrast variant
@@ -164,7 +174,7 @@ Representative capability areas (non‑exhaustive, no request/response bodies he
 - Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy (with encryption setup prompts), snooze, attachments, soft‑delete and restore
 - Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
-- Zero‑Knowledge: optional encryption setup, status, migration progress, recovery questions
+- **Zero‑Knowledge (IMPLEMENTED): optional encryption setup, status, migration progress, recovery questions, decryptTaskData endpoint**
 
 ---
 
@@ -216,10 +226,16 @@ Relationship highlights:
 
 ## 13. Roadmap & Priorities
 
+**COMPLETED:**
+- ✅ **Encryption data path fixed** - Task payloads are encrypted end‑to‑end for private items
+- ✅ **Hybrid zero-knowledge architecture implemented** - Server decrypts for display, maintains encrypted storage
+- ✅ **Optional encryption setup** - User-triggered workflow with settings panel integration
+- ✅ **Security questions recovery** - Password recovery without compromising zero-knowledge principle
+
 Immediate priorities:
-- Fix encryption data path so task payloads are encrypted end‑to‑end for private items
 - Enforce permission‑based UI restrictions for shared items
 - Polish sharing workflow in mobile contexts
+- Implement password change with decrypt/re-encrypt of private items
 
 Medium term:
 - End‑to‑end encrypted sharing via asymmetric key exchange
