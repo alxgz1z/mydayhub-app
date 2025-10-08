@@ -193,11 +193,7 @@ body {
 	height: 100%;
 }
 
-.view-container.active {
-	display: block !important;
-}
-
-/* Specific styles for journal view container */
+/* Journal view container - uses flexbox layout */
 #journal-view.view-container {
 	display: none !important;
 	flex-direction: column;
@@ -209,13 +205,14 @@ body {
 	display: flex !important;
 }
 
-/* Ensure task board container follows the same pattern */
+/* Task board container - preserve original layout */
 #task-board-container.view-container {
 	display: none !important;
 }
 
 #task-board-container.view-container.active {
-	display: block !important;
+	/* Don't force display type - let tasks CSS handle it */
+	display: revert !important;
 }
 
 /* Light mode header text styling */
