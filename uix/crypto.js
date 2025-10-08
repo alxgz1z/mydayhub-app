@@ -26,9 +26,11 @@ class CryptoManager {
 
     async initWorker() {
         // Check if Web Crypto API is available
-        console.log('Checking crypto availability:');
-        console.log('window.crypto:', !!window.crypto);
-        console.log('window.crypto.subtle:', !!window.crypto?.subtle);
+        if (window.MyDayHub_Config?.DEV_MODE) {
+            console.log('Checking crypto availability:');
+            console.log('window.crypto:', !!window.crypto);
+            console.log('window.crypto.subtle:', !!window.crypto?.subtle);
+        }
         
         if (!window.crypto) {
             throw new Error('window.crypto is not available in this browser');
@@ -53,13 +55,17 @@ For localhost development, HTTPS is not required, but for other domains it is ma
                 false,
                 ['encrypt', 'decrypt']
             );
-            console.log('Crypto test successful:', !!testKey);
+            if (window.MyDayHub_Config?.DEV_MODE) {
+                console.log('Crypto test successful:', !!testKey);
+            }
         } catch (error) {
             console.error('Crypto test failed:', error);
             throw new Error('Web Crypto API test failed: ' + error.message);
         }
         
-        console.log('Crypto manager initialized successfully on main thread');
+        if (window.MyDayHub_Config?.DEV_MODE) {
+            console.log('Crypto manager initialized successfully on main thread');
+        }
         this.isInitialized = true;
     }
 

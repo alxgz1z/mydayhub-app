@@ -2227,14 +2227,6 @@ function createColumnElement(columnData) {
 
 	let tasksHTML = '';
 	if (columnData.tasks && columnData.tasks.length > 0) {
-		// Debug: Log task classification data
-		if (window.MyDayHub_Config?.DEV_MODE) {
-			console.log('Column tasks classification data:', columnData.tasks.map(t => ({
-				task_id: t.task_id,
-				classification: t.classification,
-				title: t.encrypted_data ? 'Encrypted' : 'No data'
-			})));
-		}
 		tasksHTML = columnData.tasks.map(taskData => createTaskCard(taskData)).join('');
 	} else {
 		tasksHTML = isVirtualColumn 

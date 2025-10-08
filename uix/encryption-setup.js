@@ -140,7 +140,9 @@ class EncryptionSetupWizard {
 
     async checkEncryptionStatus() {
         try {
-            console.log('Checking encryption status...');
+            if (window.MyDayHub_Config?.DEV_MODE) {
+                console.log('Checking encryption status...');
+            }
             
             // Use direct fetch with GET method for status check
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
@@ -154,7 +156,9 @@ class EncryptionSetupWizard {
             });
             
             const responseData = await response.json();
-            console.log('Encryption status response:', responseData);
+            if (window.MyDayHub_Config?.DEV_MODE) {
+                console.log('Encryption status response:', responseData);
+            }
             return responseData.data || { encryption_enabled: false };
         } catch (error) {
             console.error('Failed to check encryption status:', error);
@@ -1015,7 +1019,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Make encryption setup wizard globally available for on-demand use
     if (window.cryptoManager) {
         window.encryptionSetupWizard = new EncryptionSetupWizard();
-        console.log('Encryption setup wizard ready for on-demand use');
+        if (window.MyDayHub_Config?.DEV_MODE) {
+            console.log('Encryption setup wizard ready for on-demand use');
+        }
         
         // Check encryption status and show banner if needed
         await checkAndShowEncryptionBanner();
