@@ -156,6 +156,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				const result = await response.json();
 				logServerDebug(result); // Log debug info
 				if (response.ok) {
+					// Store password temporarily for encryption setup (if needed)
+					sessionStorage.setItem('temp_login_password', data.password);
 					window.location.href = `${appURL}/index.php`;
 				} else {
 					displayMessage(result.message || 'An unknown error occurred.', 'error');

@@ -144,8 +144,44 @@
 .column-footer {
 	padding: 0.5rem;
 	border-top: 1px solid var(--border-color);
+	position: relative;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 16px; /* Much smaller when collapsed */
+	padding: 0.25rem 0.5rem; /* Reduced padding when collapsed */
 }
 
+.column-footer:hover {
+	background-color: var(--btn-hover-bg);
+}
+
+.column-footer.expanded {
+	cursor: default;
+	min-height: 40px; /* Full height when expanded */
+	padding: 0.5rem; /* Full padding when expanded */
+}
+
+.column-footer.expanded:hover {
+	background-color: transparent;
+}
+
+/* Footer + indicator */
+.column-footer::before {
+	content: '+';
+	color: var(--accent-color);
+	font-size: 1.5rem;
+	font-weight: 600;
+	transition: all 0.2s ease;
+}
+
+.column-footer.expanded::before {
+	display: none;
+}
+
+/* New Task Input - Hidden by default */
 .column-footer input {
 	width: 100%;
 	background-color: transparent;
@@ -154,6 +190,11 @@
 	padding: 0.5rem;
 	border-radius: 4px;
 	box-sizing: border-box;
+	display: none;
+}
+
+.column-footer.expanded input {
+	display: block;
 }
 
 .column-footer input:focus {
@@ -715,6 +756,24 @@ body.dark-mode .task-actions-menu {
 	outline: 2px solid var(--accent-color);
 	box-shadow: 0 0 15px var(--accent-color);
 	animation: tremor 0.3s infinite;
+}
+
+/* Move task mode overrides */
+.column-footer:has(.btn-move-here),
+.column-footer:has(.btn-cancel-move) {
+	cursor: default;
+	min-height: 40px; /* Full height for move buttons */
+	padding: 0.5rem; /* Full padding for move buttons */
+}
+
+.column-footer:has(.btn-move-here)::before,
+.column-footer:has(.btn-cancel-move)::before {
+	display: none;
+}
+
+.column-footer:has(.btn-move-here):hover,
+.column-footer:has(.btn-cancel-move):hover {
+	background-color: transparent;
 }
 
 .column-footer .btn-move-here,

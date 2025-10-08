@@ -10,6 +10,74 @@
  * @author Alex & Gemini & Claude & Cursor
  */
 
+// ==========================================================================
+// FRONTEND ENCRYPTION/DECRYPTION
+// ==========================================================================
+
+/**
+ * Decrypt task data using frontend Web Crypto API
+ * This maintains zero-knowledge encryption - server cannot decrypt
+ */
+async function decryptTaskDataFrontend(encryptedEnvelope) {
+    try {
+        // Check if crypto manager is available
+        if (!window.cryptoManager) {
+            console.error('CryptoManager not available');
+            return null;
+        }
+
+        // Get the item key from the encrypted envelope
+        const itemId = encryptedEnvelope.item_id;
+        const itemType = encryptedEnvelope.item_type;
+        
+        // Get the item encryption key (this would need to be stored securely)
+        const itemKey = await getItemEncryptionKey(itemId, itemType);
+        if (!itemKey) {
+            console.error('No item encryption key found');
+            return null;
+        }
+
+        // Decrypt the data
+        const encryptedData = encryptedEnvelope.encrypted_data;
+        const iv = encryptedEnvelope.iv;
+        const tag = encryptedEnvelope.tag;
+
+        const decryptedData = await window.cryptoManager.decryptData(
+            encryptedData,
+            itemKey,
+            iv,
+            tag
+        );
+
+        return JSON.parse(decryptedData);
+    } catch (error) {
+        console.error('Frontend decryption error:', error);
+        return null;
+    }
+}
+
+/**
+ * Get item encryption key for decryption
+ * This is a placeholder - in real implementation, keys would be stored securely
+ */
+async function getItemEncryptionKey(itemId, itemType) {
+    try {
+        // For now, we'll need to fetch the key from the server
+        // In a true zero-knowledge system, this would be stored encrypted locally
+        const response = await fetch(`/api/api.php?module=encryption&action=getItemKey&item_id=${itemId}&item_type=${itemType}`);
+        const result = await response.json();
+        
+        if (result.status === 'success') {
+            return result.data.key;
+        }
+        
+        return null;
+    } catch (error) {
+        console.error('Error fetching item key:', error);
+        return null;
+    }
+}
+
 let dragSourceColumn = null;
 
 let filterState = {
@@ -197,7 +265,7 @@ async function restoreItem(type, id) {
 					hiddenColumn.style.display = 'flex';
 				} else {
 					const boardContainer = document.getElementById('task-board-container');
-					const columnEl = createColumnElement(restoredColumn);
+					const columnEl = await createColumnElement(restoredColumn);
 					boardContainer.appendChild(columnEl);
 				}
 				updateMoveButtonVisibility();
@@ -2103,12 +2171,16 @@ function renderBoard(boardData) {
 		return;
 	}
 
-	boardData.forEach(columnData => {
-		const columnEl = createColumnElement(columnData);
+	// Create columns asynchronously
+	const columnPromises = boardData.map(async (columnData) => {
+		const columnEl = await createColumnElement(columnData);
 		container.appendChild(columnEl);
 		const columnBody = columnEl.querySelector('.column-body');
 		sortTasksInColumn(columnBody);
+		return columnEl;
 	});
+	
+	await Promise.all(columnPromises);
 
 	updateMoveButtonVisibility();
 	applyAllFilters();
@@ -2186,7 +2258,7 @@ async function showSharedTaskConfirmation(sharedTaskInfo) {
  * Creates the HTML element for a single column and its tasks.
  * Modified for Sharing Foundation - Hide task input for virtual "Shared with Me" column
  */
-function createColumnElement(columnData) {
+async function createColumnElement(columnData) {
 	const columnEl = document.createElement('div');
 	const isPrivate = columnData.is_private;
 	const isVirtualColumn = columnData.column_id === 'shared-with-me';
@@ -2205,7 +2277,10 @@ function createColumnElement(columnData) {
 				title: t.encrypted_data ? 'Encrypted' : 'No data'
 			})));
 		}
-		tasksHTML = columnData.tasks.map(taskData => createTaskCard(taskData)).join('');
+		// Create task cards asynchronously
+		const taskPromises = columnData.tasks.map(async (taskData) => await createTaskCard(taskData));
+		const taskCards = await Promise.all(taskPromises);
+		tasksHTML = taskCards.join('');
 	} else {
 		tasksHTML = isVirtualColumn 
 			? '<p class="no-tasks-message">No shared tasks yet.</p>'
@@ -2258,7 +2333,7 @@ function createColumnElement(columnData) {
  * Creates the HTML string for a single task card.
  * Modified for Sharing Foundation - Added access_type data attribute and conditional UI elements
  */
-function createTaskCard(taskData) {
+async function createTaskCard(taskData) {
 	// Add this debug snippet here
 	if (window.MyDayHub_Config?.DEV_MODE) {
 		console.log('createTaskCard - ready_for_review value:', taskData.ready_for_review, 'type:', typeof taskData.ready_for_review);
@@ -2277,12 +2352,31 @@ function createTaskCard(taskData) {
 		}
 		
 		// Check if this is encrypted data (has encrypted envelope structure)
-		if (data.encrypted && data.item_type === 'task' && data.data) {
-			// This is encrypted data - use the decrypted data from the envelope
-			taskTitle = data.data.title || 'Untitled Task';
-			taskNotes = data.data.notes || '';
+		if (data.encrypted && data.item_type === 'task') {
+			// This is encrypted data - decrypt it using frontend crypto
 			if (window.MyDayHub_Config?.DEV_MODE) {
-				console.log('Task', taskData.task_id, 'is encrypted envelope, using data.data');
+				console.log('Task', taskData.task_id, 'is encrypted, attempting frontend decryption');
+			}
+			
+			try {
+				const decryptedData = await decryptTaskDataFrontend(data);
+				if (decryptedData) {
+					taskTitle = decryptedData.title || 'Untitled Task';
+					taskNotes = decryptedData.notes || '';
+					if (window.MyDayHub_Config?.DEV_MODE) {
+						console.log('Task', taskData.task_id, 'successfully decrypted:', decryptedData);
+					}
+				} else {
+					taskTitle = 'Decryption Failed';
+					taskNotes = '';
+					if (window.MyDayHub_Config?.DEV_MODE) {
+						console.log('Task', taskData.task_id, 'decryption returned null');
+					}
+				}
+			} catch (decryptError) {
+				console.error('Frontend decryption failed for task', taskData.task_id, ':', decryptError);
+				taskTitle = 'Decryption Error';
+				taskNotes = '';
 			}
 		} else if (data.title !== undefined) {
 			// This is plain JSON data

@@ -12,7 +12,7 @@
 class EncryptionSetupWizard {
     constructor() {
         this.currentStep = 1;
-        this.totalSteps = 3;
+        this.totalSteps = 2; // Reduced from 3 to 2 (removed password step)
         this.securityQuestions = [];
         this.answers = [];
         this.recoveryEnvelope = null;
@@ -21,6 +21,83 @@ class EncryptionSetupWizard {
     // ==========================================================================
     // 2. WIZARD INITIALIZATION
     // ==========================================================================
+
+    /**
+     * Get the current user's login password
+     * This will be stored temporarily during login for encryption setup
+     */
+    async getCurrentUserPassword() {
+        // Check if password is stored in session storage (set during login)
+        const storedPassword = sessionStorage.getItem('temp_login_password');
+        if (storedPassword) {
+            // Clear it after use for security
+            sessionStorage.removeItem('temp_login_password');
+            return storedPassword;
+        }
+        
+        // If not found, prompt user to re-enter their current password
+        return await this.promptForCurrentPassword();
+    }
+
+    /**
+     * Prompt user to enter their current login password for encryption setup
+     */
+    async promptForCurrentPassword() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.innerHTML = `
+                <div class="modal-content encryption-modal">
+                    <div class="modal-header">
+                        <h3>Enter Current Password</h3>
+                        <button class="modal-close-btn">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p>To enable encryption, please enter your current login password:</p>
+                        <div class="form-group">
+                            <input type="password" id="current-password-input" placeholder="Current Password" required autofocus>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="cancel-password">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="confirm-password">Continue</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const closeModal = () => {
+                document.body.removeChild(modal);
+            };
+            
+            const currentPasswordInput = modal.querySelector('#current-password-input');
+            const confirmBtn = modal.querySelector('#confirm-password');
+            const cancelBtn = modal.querySelector('#cancel-password');
+            const closeBtn = modal.querySelector('.modal-close-btn');
+            
+            const handleConfirm = () => {
+                const password = currentPasswordInput.value.trim();
+                closeModal();
+                resolve(password);
+            };
+            
+            const handleCancel = () => {
+                closeModal();
+                resolve(null);
+            };
+            
+            confirmBtn.addEventListener('click', handleConfirm);
+            cancelBtn.addEventListener('click', handleCancel);
+            closeBtn.addEventListener('click', handleCancel);
+            
+            currentPasswordInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    handleConfirm();
+                }
+            });
+        });
+    }
 
     async init() {
         // Check if encryption is already setup
@@ -190,8 +267,6 @@ class EncryptionSetupWizard {
             case 1:
                 return this.renderSecurityQuestionsStep();
             case 2:
-                return this.renderPasswordStep();
-            case 3:
                 return this.renderSetupCompleteStep();
             default:
                 return '<div>Unknown step</div>';
@@ -392,8 +467,7 @@ class EncryptionSetupWizard {
             if (!await this.validateSecurityQuestions()) {
                 return;
             }
-        } else if (this.currentStep === 2) {
-            // Validate password and setup encryption
+            // After security questions, validate password and setup encryption
             if (!await this.validatePasswordAndSetup()) {
                 return;
             }
@@ -407,7 +481,7 @@ class EncryptionSetupWizard {
         this.currentStep++;
         this.updateStepDisplay();
         
-        if (this.currentStep === 3) {
+        if (this.currentStep === 2) {
             // Start migration
             this.startMigration();
         }
@@ -514,31 +588,20 @@ class EncryptionSetupWizard {
     }
 
     async validatePasswordAndSetup() {
-        const passwordInput = this.modal.querySelector('#encryption-password');
-        const confirmInput = this.modal.querySelector('#confirm-password');
+        // Get the current user's login password from session storage or prompt
+        const currentPassword = await this.getCurrentUserPassword();
         
-        const password = passwordInput.value;
-        const confirmPassword = confirmInput.value;
-
-        if (password !== confirmPassword) {
+        if (!currentPassword) {
             showToast({
-                message: 'Passwords do not match',
+                message: 'Unable to retrieve current password. Please log out and log back in.',
                 type: 'error'
             });
             return false;
         }
 
-        if (!this.isStrongPassword(password)) {
-            showToast({
-                message: 'Password does not meet security requirements',
-                type: 'error'
-            });
-            return false;
-        }
-
-        // Setup encryption
+        // Setup encryption using the login password
         try {
-            await this.setupEncryption(password);
+            await this.setupEncryption(currentPassword);
             return true;
         } catch (error) {
             console.error('Encryption setup error:', error);
