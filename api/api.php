@@ -116,6 +116,11 @@ try {
 			send_json_response($result);
 			break;
 
+		case 'journal':
+			require_once __DIR__ . '/journal.php';
+			// Journal API handles its own routing internally
+			break;
+
 		default:
 			send_json_response(['status' => 'error', 'message' => "Module '{$module}' not found."], 404);
 			break;

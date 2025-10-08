@@ -1,0 +1,508 @@
+/* ==========================================================================
+   JOURNAL VIEW STYLES
+   ========================================================================== */
+
+/* ==========================================================================
+   1. JOURNAL VIEW CONTAINER
+   ========================================================================== */
+
+#journal-view {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: var(--bg-color);
+    overflow: hidden;
+}
+
+/* ==========================================================================
+   2. JOURNAL HEADER
+   ========================================================================== */
+
+.journal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background-color: var(--header-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.journal-nav {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.journal-nav-btn {
+    background: var(--button-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.5rem 0.75rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.journal-nav-btn:hover {
+    background: var(--button-bg-hover);
+    border-color: var(--accent-color);
+}
+
+.journal-view-modes {
+    display: flex;
+    gap: 0.25rem;
+    background: var(--card-bg);
+    padding: 0.25rem;
+    border-radius: 0.5rem;
+    border: 1px solid var(--border-color);
+}
+
+.journal-view-mode-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color-secondary);
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s ease;
+}
+
+.journal-view-mode-btn.active {
+    background: var(--accent-color);
+    color: white;
+}
+
+.journal-view-mode-btn:hover:not(.active) {
+    background: var(--button-bg-hover);
+    color: var(--text-color);
+}
+
+.journal-date-display {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+/* ==========================================================================
+   3. JOURNAL COLUMNS
+   ========================================================================== */
+
+.journal-columns {
+    display: flex;
+    flex: 1;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.journal-column {
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+    display: flex;
+    flex-direction: column;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.75rem;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.journal-column.center {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-color-alpha);
+    transform: scale(1.02);
+}
+
+.journal-column.weekend {
+    background: var(--card-bg-secondary);
+}
+
+.journal-column-header {
+    padding: 1rem;
+    background: var(--header-bg-color);
+    border-bottom: 1px solid var(--border-color);
+    text-align: center;
+}
+
+.journal-column-date {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-color);
+    margin-bottom: 0.25rem;
+}
+
+.journal-column-day {
+    font-size: 0.85rem;
+    color: var(--text-color-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.journal-entries-container {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.journal-column-footer {
+    padding: 1rem;
+    background: var(--header-bg-color);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    gap: 0.5rem;
+}
+
+.journal-entry-input {
+    flex: 1;
+    background: var(--input-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.journal-entry-input:focus {
+    outline: none;
+    border-color: var(--accent-color);
+}
+
+.journal-entry-create-btn {
+    background: var(--accent-color);
+    border: none;
+    color: white;
+    padding: 0.75rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: background-color 0.2s ease;
+    min-width: 44px;
+}
+
+.journal-entry-create-btn:hover {
+    background: var(--accent-color-dark);
+}
+
+/* ==========================================================================
+   4. JOURNAL ENTRY CARDS
+   ========================================================================== */
+
+.journal-entry-card {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    padding: 1rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.journal-entry-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px var(--shadow-color);
+    border-color: var(--accent-color);
+}
+
+.journal-entry-card.private {
+    background: linear-gradient(45deg, var(--card-bg) 25%, transparent 25%),
+                linear-gradient(-45deg, var(--card-bg) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, var(--card-bg) 75%),
+                linear-gradient(-45deg, transparent 75%, var(--card-bg) 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+.journal-entry-card.dragging {
+    opacity: 0.5;
+    transform: rotate(5deg);
+}
+
+.journal-entry-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+}
+
+.journal-entry-title {
+    font-weight: 600;
+    color: var(--text-color);
+    font-size: 1rem;
+    flex: 1;
+    outline: none;
+    border: 1px solid transparent;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: border-color 0.2s ease;
+}
+
+.journal-entry-title:focus {
+    border-color: var(--accent-color);
+    background: var(--input-bg);
+}
+
+.journal-entry-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-left: 0.5rem;
+}
+
+.task-ref-indicator,
+.privacy-indicator {
+    font-size: 0.8rem;
+    opacity: 0.7;
+}
+
+.journal-entry-menu {
+    background: none;
+    border: none;
+    color: var(--text-color-secondary);
+    cursor: pointer;
+    padding: 0.25rem;
+    border-radius: 0.25rem;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.journal-entry-menu:hover {
+    background: var(--button-bg-hover);
+    color: var(--text-color);
+}
+
+.journal-entry-content {
+    color: var(--text-color-secondary);
+    font-size: 0.9rem;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+}
+
+.journal-entry-teal-bar {
+    height: 3px;
+    background: var(--accent-color);
+    border-radius: 2px;
+    width: 100%;
+}
+
+.journal-entry-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: var(--dropdown-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 12px var(--shadow-color);
+    z-index: 1000;
+    min-width: 150px;
+    padding: 0.5rem 0;
+}
+
+.journal-entry-menu-dropdown button {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    padding: 0.75rem 1rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    font-size: 0.9rem;
+}
+
+.journal-entry-menu-dropdown button:hover {
+    background: var(--button-bg-hover);
+}
+
+.journal-entry-menu-dropdown button:first-child {
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+
+.journal-entry-menu-dropdown button:last-child {
+    border-radius: 0 0 0.5rem 0.5rem;
+}
+
+/* ==========================================================================
+   5. TASK REFERENCES
+   ========================================================================== */
+
+.task-reference {
+    background: var(--accent-color-alpha);
+    color: var(--accent-color);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.task-reference:hover {
+    background: var(--accent-color);
+    color: white;
+}
+
+/* ==========================================================================
+   6. MOBILE RESPONSIVENESS
+   ========================================================================== */
+
+@media (max-width: 768px) {
+    .journal-header {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    .journal-nav {
+        order: 1;
+    }
+    
+    .journal-view-modes {
+        order: 2;
+    }
+    
+    .journal-date-display {
+        order: 3;
+        font-size: 1rem;
+    }
+    
+    .journal-columns {
+        padding: 0.5rem;
+        gap: 0.5rem;
+    }
+    
+    .journal-column {
+        min-width: 250px;
+    }
+    
+    .journal-entry-card {
+        padding: 0.75rem;
+    }
+    
+    .journal-entry-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .journal-entry-actions {
+        align-self: flex-end;
+        margin-left: 0;
+    }
+}
+
+@media (max-width: 480px) {
+    .journal-columns {
+        padding: 0.25rem;
+        gap: 0.25rem;
+    }
+    
+    .journal-column {
+        min-width: 220px;
+    }
+    
+    .journal-column-header,
+    .journal-column-footer {
+        padding: 0.75rem;
+    }
+    
+    .journal-entries-container {
+        padding: 0.75rem;
+    }
+    
+    .journal-entry-card {
+        padding: 0.5rem;
+    }
+    
+    .journal-entry-title {
+        font-size: 0.9rem;
+    }
+    
+    .journal-entry-content {
+        font-size: 0.85rem;
+    }
+}
+
+/* ==========================================================================
+   7. DARK MODE ADJUSTMENTS
+   ========================================================================== */
+
+[data-theme="dark"] .journal-column.weekend {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme="dark"] .journal-entry-card.private {
+    background: linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+                linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
+                linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
+    background-size: 8px 8px;
+    background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+/* ==========================================================================
+   8. ANIMATIONS
+   ========================================================================== */
+
+@keyframes slideInFromRight {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInFromLeft {
+    from {
+        opacity: 0;
+        transform: translateX(-30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+.journal-column {
+    animation: slideInFromRight 0.3s ease-out;
+}
+
+.journal-column:first-child {
+    animation: slideInFromLeft 0.3s ease-out;
+}
+
+.journal-entry-card {
+    animation: slideInFromRight 0.2s ease-out;
+}
+
+/* ==========================================================================
+   9. UTILITY CLASSES
+   ========================================================================== */
+
+.error-message {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 200px;
+    color: var(--error-color);
+    font-size: 1.1rem;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}

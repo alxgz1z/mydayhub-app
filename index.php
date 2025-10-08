@@ -58,6 +58,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link rel="stylesheet" href="uix/editor.css">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
+	<link rel="stylesheet" href="uix/journal.css">
 	<script>
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>",
@@ -82,6 +83,20 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<h1 id="app-title">MyDayHub</h1>
 				<img src="media/leaf.svg" alt="MyDayHub Logo" id="header-logo">
 			</div>
+			
+			<div class="header-center">
+				<nav class="view-tabs">
+					<button class="tab-btn active" data-view="tasks" id="tasks-tab">
+						<span class="tab-icon">📋</span>
+						<span class="tab-label">Tasks</span>
+					</button>
+					<button class="tab-btn" data-view="journal" id="journal-tab">
+						<span class="tab-icon">📝</span>
+						<span class="tab-label">Journal</span>
+					</button>
+				</nav>
+			</div>
+			
 			<div class="header-right">
 				<div class="user-info-display">
 					<span>[<?php echo htmlspecialchars($username); ?>]</span>
@@ -119,9 +134,14 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		</div>
 
 		<main id="main-content">
-			<div id="task-board-container">
+			<div id="task-board-container" class="view-container active">
 				<p>Loading Task Board...</p>
 			</div>
+			
+			<div id="journal-view" class="view-container">
+				<p>Loading Journal View...</p>
+			</div>
+			
 			<div class="mobile-bottom-spacer"></div>
 		</main>
 
@@ -828,8 +848,10 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<script src="uix/encryption-setup.js" defer></script>
 	<script src="uix/app.js" defer></script>
 	<script src="uix/editor.js" defer></script>
+	<script src="uix/view-manager.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
 	<script src="uix/calendar.js" defer></script>
+	<script src="uix/journal.js" defer></script>
 
 </body>
 </html>
