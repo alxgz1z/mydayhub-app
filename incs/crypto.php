@@ -76,21 +76,13 @@ class CryptoEngine {
 
         $keys = $this->getUserEncryptionKeys();
         if (!$keys) {
+            log_debug_message("No encryption keys found for user during initialization");
             return false;
         }
 
         try {
-            // Create a temporary file to store keys for the crypto manager
-            $tempFile = tempnam(sys_get_temp_dir(), 'mydayhub_crypto_');
-            file_put_contents($tempFile, json_encode($keys));
-            
-            // Initialize crypto manager (this would need to be implemented in the frontend)
-            // For now, we'll return true to indicate keys are available
+            // For this simplified implementation, we just need to verify keys exist
             $this->cryptoManager = true;
-            
-            // Clean up temp file
-            unlink($tempFile);
-            
             return true;
         } catch (Exception $e) {
             log_debug_message("Error initializing crypto manager: " . $e->getMessage());
@@ -106,23 +98,45 @@ class CryptoEngine {
             return json_encode($data);
         }
 
-        if (!$this->initCryptoManager()) {
-            log_debug_message("Failed to initialize crypto manager for encryption");
-            return null;
-        }
-
         try {
-            // For now, we'll store the data as-is but mark it as encrypted
-            // The actual encryption will be handled by the frontend crypto manager
-            $encryptedData = [
+            // Get or create item encryption key
+            $itemKey = $this->getOrCreateItemKey($itemType, $itemId);
+            if (!$itemKey) {
+                log_debug_message("Failed to get or create item key");
+                return null;
+            }
+
+            // Encrypt the data using AES-256-GCM
+            $jsonData = json_encode($data);
+            $iv = random_bytes(12); // 96-bit IV for GCM
+            
+            // Use the item key to encrypt the data
+            $encryptedData = openssl_encrypt(
+                $jsonData,
+                'aes-256-gcm',
+                $itemKey,
+                OPENSSL_RAW_DATA,
+                $iv,
+                $tag
+            );
+            
+            if ($encryptedData === false) {
+                log_debug_message("Failed to encrypt data with OpenSSL");
+                return null;
+            }
+
+            // Create the encryption envelope
+            $envelope = [
                 'encrypted' => true,
                 'item_type' => $itemType,
                 'item_id' => $itemId,
-                'data' => $data,
+                'encrypted_data' => base64_encode($encryptedData),
+                'iv' => base64_encode($iv),
+                'tag' => base64_encode($tag),
                 'encrypted_at' => time()
             ];
 
-            return json_encode($encryptedData);
+            return json_encode($envelope);
         } catch (Exception $e) {
             log_debug_message("Error encrypting item: " . $e->getMessage());
             return null;
@@ -144,17 +158,86 @@ class CryptoEngine {
             return $data; // Not encrypted, return as-is
         }
 
-        if (!$this->initCryptoManager()) {
-            log_debug_message("Failed to initialize crypto manager for decryption");
-            return null;
-        }
-
         try {
-            // For now, we'll return the data as-is
-            // The actual decryption will be handled by the frontend crypto manager
-            return $data['data'] ?? null;
+            // Get item encryption key
+            $itemKey = $this->getItemKey($itemType, $itemId);
+            if (!$itemKey) {
+                log_debug_message("No item key found for decryption");
+                return null;
+            }
+
+            // Extract encryption components
+            $encryptedDataContent = base64_decode($data['encrypted_data']);
+            $iv = base64_decode($data['iv']);
+            $tag = base64_decode($data['tag']);
+
+            // Decrypt the data using item key
+            $decryptedJson = openssl_decrypt(
+                $encryptedDataContent,
+                'aes-256-gcm',
+                $itemKey,
+                OPENSSL_RAW_DATA,
+                $iv,
+                $tag
+            );
+            
+            if ($decryptedJson === false) {
+                log_debug_message("Failed to decrypt data content");
+                return null;
+            }
+
+            return json_decode($decryptedJson, true);
         } catch (Exception $e) {
             log_debug_message("Error decrypting item: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get or create an encryption key for a specific item
+     */
+    private function getOrCreateItemKey(string $itemType, int $itemId): ?string {
+        try {
+            // First, try to get existing key
+            $stmt = $this->pdo->prepare("SELECT wrapped_dek FROM item_encryption_keys WHERE item_type = ? AND item_id = ?");
+            $stmt->execute([$itemType, $itemId]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                // Key exists, return it (in a real system, you'd decrypt it with master key)
+                return base64_decode($result['wrapped_dek']);
+            }
+            
+            // Key doesn't exist, create a new one
+            $itemKey = random_bytes(32); // 256-bit key
+            
+            // Store the key (in a real system, you'd encrypt it with master key first)
+            $stmt = $this->pdo->prepare("INSERT INTO item_encryption_keys (item_type, item_id, wrapped_dek, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())");
+            $stmt->execute([$itemType, $itemId, base64_encode($itemKey)]);
+            
+            return $itemKey;
+        } catch (Exception $e) {
+            log_debug_message("Error getting or creating item key: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Get an existing encryption key for a specific item
+     */
+    private function getItemKey(string $itemType, int $itemId): ?string {
+        try {
+            $stmt = $this->pdo->prepare("SELECT wrapped_dek FROM item_encryption_keys WHERE item_type = ? AND item_id = ?");
+            $stmt->execute([$itemType, $itemId]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                return base64_decode($result['wrapped_dek']);
+            }
+            
+            return null;
+        } catch (Exception $e) {
+            log_debug_message("Error getting item key: " . $e->getMessage());
             return null;
         }
     }

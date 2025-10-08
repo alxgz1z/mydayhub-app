@@ -71,11 +71,7 @@
 }
 
 #btn-settings-close {
-	font-size: 1.8rem;
-	background: none;
-	border: none;
-	color: var(--text-primary);
-	cursor: pointer;
+	/* Inherits base .btn-icon styling for consistency */
 }
 
 .settings-panel-body {
@@ -317,7 +313,7 @@ body.light-mode .font-btn.active {
 	left: 0;
 	right: 0;
 	bottom: 0;
-	background-color: #d1d5db; /* Better contrast for off state */
+	background-color: var(--border-color);
 	transition: all 0.3s ease;
 }
 
@@ -399,7 +395,7 @@ body.light-mode .setting-control .slider:before {
 }
 
 .setting-control .btn:hover {
-	background: linear-gradient(135deg, var(--accent-color), #6366f1);
+	background: var(--accent-gradient);
 	transform: translateY(-1px);
 	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
 }
@@ -464,37 +460,20 @@ body.light-mode #trust-management-modal-container {
 	align-items: center;
 	justify-content: space-between;
 	padding: 1.5rem;
-	border-bottom: 1px solid #475569;
-	background: #0f172a;
+	border-bottom: 1px solid var(--border-color);
+	background: var(--toolbar-bg);
 	border-radius: 12px 12px 0 0;
 }
 
 .trust-management-header h4 {
 	margin: 0;
-	color: #f8fafc;
+	color: var(--text-primary);
 	font-size: 1.25rem;
 	font-weight: 600;
 }
 
 #trust-management-close-btn {
-	background: none;
-	border: none;
-	color: #cbd5e1;
-	font-size: 1.5rem;
-	cursor: pointer;
-	padding: 0.5rem;
-	border-radius: 6px;
-	transition: all 0.2s ease;
-	width: 2rem;
-	height: 2rem;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-#trust-management-close-btn:hover {
-	background: #334155;
-	color: #f8fafc;
+	/* Inherits base .btn-icon styling for consistency */
 }
 
 /* Statistics Overview */
@@ -504,22 +483,22 @@ body.light-mode #trust-management-modal-container {
 	grid-template-columns: repeat(4, 1fr);
 	gap: 1rem;
 	padding: 1.5rem;
-	background: #0f172a;
-	border-bottom: 1px solid #475569;
+	background: var(--bg-color);
+	border-bottom: 1px solid var(--border-color);
 }
 
 .stat-item {
 	text-align: center;
 	padding: 1rem 0.75rem;
 	border-radius: 8px;
-	background: #1e293b;
-	border: 1px solid #475569;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
 	transition: all 0.2s ease;
 }
 
 .stat-item:hover {
 	border-color: var(--accent-color);
-	background: #334155;
+	background: var(--btn-hover-bg);
 }
 
 .stat-value {
@@ -534,7 +513,7 @@ body.light-mode #trust-management-modal-container {
 .stat-label {
 	display: block;
 	font-size: 0.75rem;
-	color: #cbd5e1;
+	color: var(--text-secondary);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 	font-weight: 500;
@@ -543,8 +522,8 @@ body.light-mode #trust-management-modal-container {
 /* Tab Navigation */
 .trust-management-tabs {
 	display: flex;
-	background: #0f172a;
-	border-bottom: 1px solid #475569;
+	background: var(--toolbar-bg);
+	border-bottom: 1px solid var(--border-color);
 }
 
 .trust-tab {
@@ -552,7 +531,7 @@ body.light-mode #trust-management-modal-container {
 	padding: 1rem 1.5rem;
 	background: none;
 	border: none;
-	color: #cbd5e1;
+	color: var(--text-secondary);
 	font-size: 0.95rem;
 	font-weight: 500;
 	cursor: pointer;
@@ -561,14 +540,14 @@ body.light-mode #trust-management-modal-container {
 }
 
 .trust-tab:hover {
-	background: #334155;
-	color: #f8fafc;
+	background: var(--btn-hover-bg);
+	color: var(--text-primary);
 }
 
 .trust-tab.active {
 	color: var(--accent-color);
 	border-bottom-color: var(--accent-color);
-	background: #1e293b;
+	background: var(--card-bg);
 }
 
 /* Tab Content */
@@ -577,7 +556,7 @@ body.light-mode #trust-management-modal-container {
 	overflow-y: auto;
 	min-height: 300px;
 	max-height: 400px;
-	background: #1e293b;
+	background: var(--card-bg);
 }
 
 .trust-tab-content {
@@ -601,15 +580,15 @@ body.light-mode #trust-management-modal-container {
 	align-items: center;
 	justify-content: space-between;
 	padding: 1.25rem;
-	background: #0f172a;
-	border: 1px solid #475569;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
 	border-radius: 8px;
 	transition: all 0.2s ease;
 }
 
 .share-item:hover {
 	border-color: var(--accent-color);
-	background: #334155;
+	background: var(--btn-hover-bg);
 }
 
 .share-info {
@@ -619,7 +598,7 @@ body.light-mode #trust-management-modal-container {
 
 .share-task-title {
 	font-weight: 600;
-	color: #f8fafc;
+	color: var(--text-primary);
 	margin-bottom: 0.5rem;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -632,7 +611,7 @@ body.light-mode #trust-management-modal-container {
 	align-items: center;
 	gap: 1rem;
 	font-size: 0.875rem;
-	color: #cbd5e1;
+	color: var(--text-secondary);
 	flex-wrap: wrap;
 }
 
@@ -661,7 +640,7 @@ body.light-mode #trust-management-modal-container {
 
 .share-permission.edit {
 	background: rgba(34, 197, 94, 0.2);
-	color: #22c55e;
+	color: var(--accent-color);
 	border: 1px solid rgba(34, 197, 94, 0.3);
 }
 
@@ -672,7 +651,7 @@ body.light-mode #trust-management-modal-container {
 }
 
 .share-date {
-	color: #94a3b8;
+	color: var(--text-secondary);
 	font-size: 0.75rem;
 }
 

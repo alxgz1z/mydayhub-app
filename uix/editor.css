@@ -84,17 +84,34 @@
 	border: none;
 	color: var(--text-secondary);
 	cursor: pointer;
-	padding: 5px;
+	padding: 8px;
 	border-radius: 50%;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: background-color 0.2s, color 0.2s;
+	transition: all 0.2s ease;
+	font-size: 1.2rem;
+	line-height: 1;
+	min-width: 32px;
+	min-height: 32px;
 }
 
 .btn-icon:hover {
 	background-color: var(--btn-hover-bg);
 	color: var(--text-primary);
+	transform: scale(1.05);
+}
+
+/* Special styling for close buttons to make them more prominent */
+.btn-close {
+	background-color: rgba(0, 0, 0, 0.05);
+	border: 1px solid var(--border-color);
+}
+
+.btn-close:hover {
+	background-color: var(--btn-hover-bg);
+	border-color: var(--accent-color);
+	transform: scale(1.05);
 }
 
 /* Modified for "Clear Note" feature styling */

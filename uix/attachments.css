@@ -146,13 +146,7 @@ body.light-mode .file-management-quota-info {
 }
 
 .attachments-modal-header .btn-icon {
-	background: none;
-	border: none;
-	color: var(--text-secondary);
-	font-size: 1.75rem;
-	line-height: 1;
-	padding: 0 .5rem;
-	cursor: pointer;
+	/* Inherits base .btn-icon styling - no overrides needed for consistency */
 }
 
 #attachments-modal-body {
@@ -525,13 +519,7 @@ body.dark-mode #attachment-quota-bar::-webkit-progress-value {
 }
 
 .file-management-header .btn-icon {
-	background: none;
-	border: none;
-	color: var(--text-secondary);
-	font-size: 1.75rem;
-	line-height: 1;
-	padding: 0 0.5rem;
-	cursor: pointer;
+	/* Inherits base .btn-icon styling - no overrides needed for consistency */
 }
 
 #file-management-body {

@@ -1463,7 +1463,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	max-width: 400px;
 	padding: 12px 15px 12px 20px;
 	border-radius: 8px;
-	color: #ffffff;
+	color: var(--text-primary);
 	font-size: 0.9rem;
 	font-weight: 500;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
@@ -1482,7 +1482,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 .toast-action-btn {
 	background-color: rgba(0, 0, 0, 0.2);
 	border: 1px solid rgba(255, 255, 255, 0.3);
-	color: #fff;
+	color: var(--text-primary);
 	padding: 5px 10px;
 	border-radius: 5px;
 	cursor: pointer;
@@ -1498,7 +1498,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 .toast-close-btn {
 	background: none;
 	border: none;
-	color: #fff;
+	color: var(--text-primary);
 	font-size: 1.5rem;
 	font-weight: 300;
 	line-height: 1;
@@ -1834,16 +1834,10 @@ body.light-mode #app-footer.dev-mode a:hover {
 }
 
 #share-modal-container .modal-close-btn {
-	background: none;
-	border: none;
-	color: var(--text-secondary);
-	font-size: 1.2rem;
-	line-height: 1;
-	cursor: pointer;
 	position: absolute;
 	top: 10px;
 	right: 12px;
-	padding: 2px;
+	/* Inherits base .btn-icon styling for consistency */
 }
 
 
@@ -1940,13 +1934,13 @@ input:checked + .slider:before {
 
 /* Light mode specific filter menu styling */
 body.light-mode #filter-menu {
-	background-color: #ffffff;
-	border: 1px solid #e5e7eb;
+	background-color: var(--card-bg);
+	border: 1px solid var(--border-color);
 	box-shadow: 0 5px 15px rgba(0, 0, 0, 0.15);
 }
 
 body.light-mode .filter-label {
-	color: #1a1a1a;
+	color: var(--text-primary);
 }
 
 /* ==========================================================================
@@ -2196,19 +2190,7 @@ body.light-mode .filter-label {
 }
 
 #usage-stats-close-btn {
-	background: none;
-	border: none;
-	color: var(--text-secondary);
-	font-size: 1.5rem;
-	cursor: pointer;
-	padding: 0.25rem;
-	border-radius: 4px;
-	transition: color 0.2s, background-color 0.2s;
-}
-
-#usage-stats-close-btn:hover {
-	color: var(--text-primary);
-	background-color: var(--btn-hover-bg);
+	/* Inherits base .btn-icon styling for consistency */
 }
 
 .subscription-info {

@@ -156,7 +156,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="settings-panel">
 			<div class="settings-panel-header">
 				<h2>Settings</h2>
-				<button id="btn-settings-close" class="btn-icon">&times;</button>
+				<button id="btn-settings-close" class="btn-icon btn-close">&times;</button>
 			</div>
 			<div class="settings-panel-body">
 				<div class="setting-item">
@@ -207,7 +207,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 				</div>
 				<div class="setting-item">
-					<span class="setting-label">Privacy & Encryption</span>
 					<div class="setting-control">
 						<button id="btn-encryption-setup" class="btn">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
@@ -217,7 +216,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<path d="M12 1v6"></path>
 								<path d="M9 4l3-3 3 3"></path>
 							</svg>
-							<span class="setting-label">Manage Encryption</span>
+							<span class="setting-label">Manage Privacy & Encryption</span>
 						</button>
 					</div>
 				</div>
@@ -240,7 +239,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<circle cx="12" cy="12" r="10"></circle>
 								<polyline points="12,6 12,12 16,14"></polyline>
 							</svg>
-							<span class="setting-label">Timeout: 30 minutes</span>
+							<span class="setting-label">Privacy & Encryption - Timeout: 30 minutes</span>
 						</button>
 					</div>
 				</div>
@@ -321,7 +320,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					<button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline></g></svg>
 					</button>
-					<button id="editor-btn-close" class="btn-icon" title="Close">&times;</button>
+					<button id="editor-btn-close" class="btn-icon btn-close" title="Close">&times;</button>
 				</div>
 			</div>
 
@@ -407,7 +406,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="attachments-modal-container">
 			<div class="attachments-modal-header">
 				<h4 id="attachments-modal-title">Attachments</h4>
-				<button id="attachments-modal-close-btn" class="btn-icon">&times;</button>
+				<button id="attachments-modal-close-btn" class="btn-icon btn-close">&times;</button>
 			</div>
 			<div id="attachments-modal-body">
 				<div id="attachment-drop-zone">
@@ -434,7 +433,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	</div>
 
 	<div id="attachment-viewer-modal-overlay" class="hidden">
-		<button id="attachment-viewer-close-btn" class="btn-icon">&times;</button>
+		<button id="attachment-viewer-close-btn" class="btn-icon btn-close">&times;</button>
 		<div id="attachment-viewer-content"></div>
 	</div>
 
@@ -452,7 +451,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<option value="size_desc">Largest First</option>
 						<option value="size_asc">Smallest First</option>
 					</select>
-					<button id="file-management-close-btn" class="btn-icon" type="button">&times;</button>
+					<button id="file-management-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 				</div>
 			</div>
 			<div id="file-management-body">
@@ -507,7 +506,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="usage-stats-modal-container">
 			<div class="usage-stats-header">
 				<h4>Subscription Usage</h4>
-				<button id="usage-stats-close-btn" class="btn-icon" type="button">&times;</button>
+				<button id="usage-stats-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 			</div>
 			<div id="usage-stats-body">
 				<div class="subscription-info">
@@ -569,7 +568,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="trust-management-modal-container">
 			<div class="trust-management-header">
 				<h4>Trust Management</h4>
-				<button id="trust-management-close-btn" class="btn-icon" type="button">&times;</button>
+				<button id="trust-management-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 			</div>
 			<div id="trust-management-stats" class="trust-stats-overview">
 				<div class="stat-item">
@@ -613,7 +612,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="calendar-overlay-modal-container">
 			<div class="calendar-overlay-header">
 				<h4>Calendar Overlays</h4>
-				<button id="calendar-overlay-close-btn" class="btn-icon" type="button">&times;</button>
+				<button id="calendar-overlay-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 			</div>
 			<div class="calendar-overlay-body">
 					<div class="calendar-overlay-tabs">
@@ -713,7 +712,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="event-modal-container">
 			<div class="event-modal-header">
 				<h4 id="event-modal-title">Add Event</h4>
-				<button id="event-modal-close-btn" class="btn-icon" type="button">&times;</button>
+				<button id="event-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 			</div>
 			<form id="event-form" class="event-form">
 				<input type="hidden" id="event-id" name="id">
@@ -764,7 +763,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		<div id="json-import-modal-container">
 			<div class="json-import-modal-header">
 				<h4>Import Calendar Events</h4>
-				<button id="json-import-modal-close-btn" class="btn-icon" type="button">&times;</button>
+				<button id="json-import-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
 			</div>
 			<div class="json-import-modal-body">
 				<div class="import-instructions">

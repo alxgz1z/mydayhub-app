@@ -3506,7 +3506,7 @@ function exitMoveMode() {
 			<div class="modal-content snooze-modal">
 				<div class="modal-header">
 					<h3>Snooze Task</h3>
-					<button class="modal-close-btn" type="button">&times;</button>
+					<button class="modal-close-btn btn-icon btn-close" type="button">&times;</button>
 				</div>
 				<div class="modal-body">
 				${currentSnoozeDate ? `<p><strong>Currently snoozed until:</strong> ${new Date(currentSnoozeDate).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' })}</p><hr style="margin: 1rem 0; border-color: var(--border-color);">` : ''}
@@ -3671,7 +3671,7 @@ function exitMoveMode() {
  
 	 overlay.innerHTML = `
 		 <div id="share-modal-container" role="dialog" aria-modal="true" aria-label="Share Task">
-			 <button class="modal-close-btn" type="button" aria-label="Close">×</button>
+			 <button class="modal-close-btn btn-icon btn-close" type="button" aria-label="Close">×</button>
 			 <h3>Share Task</h3>
  
 			 <div class="share-add">
