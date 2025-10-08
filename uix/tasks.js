@@ -2263,6 +2263,7 @@ function createTaskCard(taskData) {
 	if (window.MyDayHub_Config?.DEV_MODE) {
 		console.log('createTaskCard - ready_for_review value:', taskData.ready_for_review, 'type:', typeof taskData.ready_for_review);
 		console.log('Full taskData object:', taskData);
+		console.log('Task ID:', taskData.task_id, 'Encrypted data preview:', taskData.encrypted_data ? taskData.encrypted_data.substring(0, 100) + '...' : 'null');
 	}
 
 	let taskTitle = 'Encrypted Task';
@@ -2271,22 +2272,35 @@ function createTaskCard(taskData) {
 	try {
 		const data = JSON.parse(taskData.encrypted_data);
 		
+		if (window.MyDayHub_Config?.DEV_MODE) {
+			console.log('Parsed data for task', taskData.task_id, ':', data);
+		}
+		
 		// Check if this is encrypted data (has encrypted envelope structure)
 		if (data.encrypted && data.item_type === 'task' && data.data) {
 			// This is encrypted data - use the decrypted data from the envelope
 			taskTitle = data.data.title || 'Untitled Task';
 			taskNotes = data.data.notes || '';
+			if (window.MyDayHub_Config?.DEV_MODE) {
+				console.log('Task', taskData.task_id, 'is encrypted envelope, using data.data');
+			}
 		} else if (data.title !== undefined) {
 			// This is plain JSON data
 			taskTitle = data.title;
 			taskNotes = data.notes || '';
+			if (window.MyDayHub_Config?.DEV_MODE) {
+				console.log('Task', taskData.task_id, 'is plain JSON data');
+			}
 		} else {
 			// Fallback for unexpected data structure
 			taskTitle = 'Invalid Task Data';
 			taskNotes = '';
+			if (window.MyDayHub_Config?.DEV_MODE) {
+				console.log('Task', taskData.task_id, 'has unexpected data structure:', data);
+			}
 		}
 	} catch (e) {
-		console.error("Could not parse task data:", taskData.encrypted_data);
+		console.error("Could not parse task data for task", taskData.task_id, ":", taskData.encrypted_data);
 		taskTitle = 'Parse Error';
 		taskNotes = '';
 	}
