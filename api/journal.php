@@ -213,7 +213,7 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array 
             ':position' => $position
         ]);
         
-        $entryId = $pdo->lastInsertId();
+        $entryId = (int)$pdo->lastInsertId();
         
         // Process task references if any
         if (!$isPrivate) {
