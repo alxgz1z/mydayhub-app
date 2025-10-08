@@ -40,11 +40,15 @@ class ViewManager {
         // Update view containers
         document.querySelectorAll('.view-container').forEach(container => {
             container.classList.remove('active');
+            console.log(`Removed active from: ${container.id}`);
         });
         
         const activeContainer = document.getElementById(`${view === 'tasks' ? 'task-board-container' : 'journal-view'}`);
         if (activeContainer) {
             activeContainer.classList.add('active');
+            console.log(`Added active to: ${activeContainer.id}`);
+        } else {
+            console.error(`Could not find container for view: ${view}`);
         }
         
         this.currentView = view;

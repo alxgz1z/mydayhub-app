@@ -188,25 +188,34 @@ body {
 
 /* View container management */
 .view-container {
-	display: none;
+	display: none !important;
 	width: 100%;
 	height: 100%;
 }
 
 .view-container.active {
-	display: block;
+	display: block !important;
 }
 
 /* Specific styles for journal view container */
 #journal-view.view-container {
-	display: none;
+	display: none !important;
 	flex-direction: column;
 	height: 100%;
 	overflow: hidden;
 }
 
 #journal-view.view-container.active {
-	display: flex;
+	display: flex !important;
+}
+
+/* Ensure task board container follows the same pattern */
+#task-board-container.view-container {
+	display: none !important;
+}
+
+#task-board-container.view-container.active {
+	display: block !important;
 }
 
 /* Light mode header text styling */
