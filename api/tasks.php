@@ -1062,9 +1062,9 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$tasksArray = [];
 		while ($task = $stmtTasks->fetch()) {
 			if (isset($columnMap[$task['column_id']])) {
-				// Decrypt task data if encrypted
-				$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
-				$task['has_notes'] = !empty($decryptedData['notes']);
+				// For zero-knowledge encryption: send encrypted data as-is to frontend
+				// Frontend will handle decryption using Web Crypto API
+				$task['has_notes'] = false; // Will be determined by frontend after decryption
 				$task['is_snoozed'] = !empty($task['snoozed_until']);
 				$tasksArray[] = $task;
 				$taskIds[] = $task['task_id'];
