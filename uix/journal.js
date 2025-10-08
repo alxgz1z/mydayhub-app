@@ -24,15 +24,25 @@ class JournalView {
     
     async loadPreferences() {
         try {
-            const response = await fetch('/api/api.php?module=journal&action=getPreferences');
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch('/api/api.php?module=journal&action=getPreferences', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            });
             const result = await response.json();
             
-            if (result.status === 'success') {
-                this.viewMode = result.data.view_mode;
-                this.hideWeekends = result.data.hide_weekends;
+            if (result.status === 'success' && result.data) {
+                this.viewMode = result.data.view_mode || '3-day';
+                this.hideWeekends = result.data.hide_weekends || false;
             }
         } catch (error) {
             console.error('Failed to load journal preferences:', error);
+            // Use defaults on error
+            this.viewMode = '3-day';
+            this.hideWeekends = false;
         }
     }
     
@@ -206,10 +216,17 @@ class JournalView {
         const endDate = dates[dates.length - 1];
         
         try {
-            const response = await fetch(`/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`);
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch(`/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            });
             const result = await response.json();
             
-            if (result.status === 'success') {
+            if (result.status === 'success' && result.data) {
                 // Group entries by date
                 this.entries.clear();
                 result.data.forEach(entry => {
@@ -222,6 +239,8 @@ class JournalView {
             }
         } catch (error) {
             console.error('Failed to load entries:', error);
+            // Continue with empty entries on error
+            this.entries.clear();
         }
     }
     
