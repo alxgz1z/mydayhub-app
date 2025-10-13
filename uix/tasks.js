@@ -6,7 +6,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

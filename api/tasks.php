@@ -7,7 +7,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

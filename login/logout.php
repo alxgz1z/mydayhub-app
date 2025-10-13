@@ -7,7 +7,7 @@
  * This script handles the user logout process by destroying the
  * current session and redirecting to the login page.
  *
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

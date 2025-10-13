@@ -4,7 +4,7 @@
  * Handles the journal view functionality with horizontal date columns,
  * entry CRUD operations, and mobile-optimized navigation.
  * 
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  */
 
 class JournalView {

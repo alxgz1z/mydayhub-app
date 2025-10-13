@@ -6,7 +6,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

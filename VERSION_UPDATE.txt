@@ -2,7 +2,7 @@ MyDayHub Version Update
 =======================
 
 Previous Version: Beta 7.9 - Jaco
-New Version: Beta 8.0 - Herradura
+New Version: Tamarindo 8.1
 
 Update Date: October 9, 2025
 
@@ -91,7 +91,7 @@ Costa Rica Beach Naming Convention:
 Version    Beach Name    Milestone
 -----------------------------------------
 Beta 7.x   Jaco          Tasks View & Encryption
-Beta 8.0   Herradura     Journal View Complete
+Tamarindo 8.1 Mission Focus Integration Complete
 Beta 8.1   Tamarindo     (Next planned release)
 
 Notes:

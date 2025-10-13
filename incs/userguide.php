@@ -5,7 +5,7 @@
  * Comprehensive user manual with accordion-style sections
  * Follows app theming and visual design patterns
  * 
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & AI Assistant
  */
 

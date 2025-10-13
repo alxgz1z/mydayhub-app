@@ -7,7 +7,7 @@
  * Admin-only interface for managing users, subscriptions, and system overview.
  * Requires admin authentication via ADMIN_EMAILS configuration.
  *
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

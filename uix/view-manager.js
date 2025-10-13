@@ -4,7 +4,7 @@
  * Handles switching between different views (Tasks, Journal) with tab navigation
  * Persists view preference to database for cross-session synchronization
  * 
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  */
 
 class ViewManager {

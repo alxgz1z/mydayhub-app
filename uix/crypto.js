@@ -1,7 +1,7 @@
 /**
  * Zero-Knowledge Encryption Module
  * MyDayHub - Client-Side Encryption for Private Tasks
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 

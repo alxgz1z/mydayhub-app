@@ -5,7 +5,7 @@
  * Handles CRUD operations for journal entries, including privacy integration
  * with the existing zero-knowledge encryption system.
  * 
- * @version 8.0 Herradura
+ * @version 8.1 Tamarindo
  */
 
 declare(strict_types=1);
