@@ -5,7 +5,7 @@
  * Handles CRUD operations for journal entries, including privacy integration
  * with the existing zero-knowledge encryption system.
  * 
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  */
 
 declare(strict_types=1);
@@ -79,6 +79,24 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
                 }
                 break;
                 
+            case 'getLinkedTasks':
+                if ($method === 'GET') {
+                    return handle_get_linked_tasks($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'getTaskOriginEntry':
+                if ($method === 'GET') {
+                    return handle_get_task_origin_entry($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'toggleClassification':
+                if ($method === 'POST') {
+                    return handle_toggle_journal_classification($pdo, $userId, $data);
+                }
+                break;
+                
             default:
                 return ['status' => 'error', 'message' => 'Invalid action specified.'];
         }
@@ -100,22 +118,48 @@ function handle_get_journal_entries(PDO $pdo, int $userId, array $data): array {
     
     try {
         // Get journal entries for the date range
-        $stmt = $pdo->prepare("
-            SELECT 
-                entry_id,
-                entry_date,
-                title,
-                content,
-                encrypted_data,
-                is_private,
-                position,
-                created_at,
-                updated_at
-            FROM journal_entries 
-            WHERE user_id = :userId 
-            AND entry_date BETWEEN :startDate AND :endDate
-            ORDER BY entry_date ASC, position ASC
-        ");
+        // Check if classification column exists
+        $columnCheck = $pdo->prepare("SHOW COLUMNS FROM journal_entries LIKE 'classification'");
+        $columnCheck->execute();
+        $hasClassification = $columnCheck->fetch() !== false;
+        
+        if ($hasClassification) {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    entry_id,
+                    entry_date,
+                    title,
+                    content,
+                    encrypted_data,
+                    is_private,
+                    classification,
+                    position,
+                    created_at,
+                    updated_at
+                FROM journal_entries 
+                WHERE user_id = :userId 
+                AND entry_date BETWEEN :startDate AND :endDate
+                ORDER BY entry_date ASC, position ASC
+            ");
+        } else {
+            $stmt = $pdo->prepare("
+                SELECT 
+                    entry_id,
+                    entry_date,
+                    title,
+                    content,
+                    encrypted_data,
+                    is_private,
+                    'support' as classification,
+                    position,
+                    created_at,
+                    updated_at
+                FROM journal_entries 
+                WHERE user_id = :userId 
+                AND entry_date BETWEEN :startDate AND :endDate
+                ORDER BY entry_date ASC, position ASC
+            ");
+        }
         
         $stmt->execute([
             ':userId' => $userId,
@@ -151,7 +195,7 @@ function handle_get_journal_entries(PDO $pdo, int $userId, array $data): array {
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_get_journal_entries: ' . $e->getMessage());
-        return ['status' => 'error', 'message' => 'Failed to retrieve journal entries.'];
+        return ['status' => 'error', 'message' => 'Failed to retrieve journal entries.', 'debug' => [$e->getMessage()]];
     }
 }
 
@@ -199,7 +243,7 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array 
             $encryptedData = json_encode($entryData);
         }
         
-        // Insert the entry
+        // Insert the entry (handle missing classification column gracefully)
         $stmt = $pdo->prepare("
             INSERT INTO journal_entries (user_id, entry_date, title, content, encrypted_data, is_private, position) 
             VALUES (:userId, :entryDate, :title, :content, :encryptedData, :isPrivate, :position)
@@ -218,15 +262,20 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array 
         $entryId = (int)$pdo->lastInsertId();
         
         // Process task references if any
+        $createdTasks = [];
         if (!$isPrivate) {
-            processTaskReferences($pdo, $userId, $entryId, $content);
+            $createdTasks = processTaskReferences($pdo, $userId, $entryId, $content);
         }
         
         return [
             'status' => 'success', 
+            'message' => count($createdTasks) > 0 ? 
+                'Entry created with ' . count($createdTasks) . ' task(s).' : 
+                'Entry created successfully.',
             'data' => [
                 'entry_id' => $entryId,
                 'entry_date' => $entryDate,
+                'created_tasks' => $createdTasks,
                 'title' => $entryData['title'],
                 'content' => $entryData['content'],
                 'is_private' => $isPrivate,
@@ -310,11 +359,20 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): array 
         ]);
         
         // Process task references if not private
+        $createdTasks = [];
         if (!$entry['is_private']) {
-            processTaskReferences($pdo, $userId, $entryId, $content);
+            $createdTasks = processTaskReferences($pdo, $userId, $entryId, $content);
         }
         
-        return ['status' => 'success', 'message' => 'Entry updated successfully.'];
+        return [
+            'status' => 'success', 
+            'message' => count($createdTasks) > 0 ? 
+                'Entry updated with ' . count($createdTasks) . ' new task(s).' : 
+                'Entry updated successfully.',
+            'data' => [
+                'created_tasks' => $createdTasks
+            ]
+        ];
         
     } catch (Exception $e) {
         log_debug_message('Error in handle_update_journal_entry: ' . $e->getMessage());
@@ -333,21 +391,51 @@ function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): array 
     }
     
     try {
-        // Verify ownership before deletion
-        $stmt = $pdo->prepare("
+        $pdo->beginTransaction();
+        
+        // Verify ownership
+        $checkStmt = $pdo->prepare("
+            SELECT entry_id FROM journal_entries 
+            WHERE entry_id = :entryId AND user_id = :userId
+        ");
+        $checkStmt->execute([':entryId' => $entryId, ':userId' => $userId]);
+        
+        if (!$checkStmt->fetch()) {
+            $pdo->rollBack();
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
+        }
+        
+        // Orphan tasks that originated from this entry (independence rule)
+        // Clear journal_entry_id but don't delete the tasks
+        $orphanStmt = $pdo->prepare("
+            UPDATE tasks 
+            SET journal_entry_id = NULL 
+            WHERE journal_entry_id = :entryId AND user_id = :userId
+        ");
+        $orphanStmt->execute([':entryId' => $entryId, ':userId' => $userId]);
+        
+        // Remove all bidirectional links
+        $unlinkStmt = $pdo->prepare("
+            DELETE FROM journal_task_links 
+            WHERE journal_entry_id = :entryId
+        ");
+        $unlinkStmt->execute([':entryId' => $entryId]);
+        
+        // Delete the journal entry
+        $deleteStmt = $pdo->prepare("
             DELETE FROM journal_entries 
             WHERE entry_id = :entryId AND user_id = :userId
         ");
+        $deleteStmt->execute([':entryId' => $entryId, ':userId' => $userId]);
         
-        $stmt->execute([':entryId' => $entryId, ':userId' => $userId]);
-        
-        if ($stmt->rowCount() === 0) {
-            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
-        }
+        $pdo->commit();
         
         return ['status' => 'success', 'message' => 'Entry deleted successfully.'];
         
     } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         log_debug_message('Error in handle_delete_journal_entry: ' . $e->getMessage());
         return ['status' => 'error', 'message' => 'Failed to delete journal entry.'];
     }
@@ -454,6 +542,17 @@ function handle_move_journal_entry(PDO $pdo, int $userId, array $data): array {
     
     if (!$entryId || !$newDate) {
         return ['status' => 'error', 'message' => 'Entry ID and new date are required.'];
+    }
+    
+    // Validate date format and prevent moves beyond 2 days in the future
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $newDate)) {
+        return ['status' => 'error', 'message' => 'Invalid date format.'];
+    }
+    
+    $today = date('Y-m-d');
+    $maxDate = date('Y-m-d', strtotime('+2 days'));
+    if ($newDate > $maxDate) {
+        return ['status' => 'error', 'message' => 'Cannot move entries more than 2 days in the future.'];
     }
     
     try {
@@ -783,12 +882,336 @@ function hasTaskReferences(string $content): bool {
 }
 
 /**
+ * Gets all tasks linked to a journal entry
+ */
+function handle_get_linked_tasks(PDO $pdo, int $userId, array $data): array {
+    $entryId = $data['entry_id'] ?? null;
+    
+    if (!$entryId) {
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
+    }
+    
+    try {
+        // Verify entry ownership
+        $checkStmt = $pdo->prepare("
+            SELECT entry_id FROM journal_entries 
+            WHERE entry_id = :entryId AND user_id = :userId
+        ");
+        $checkStmt->execute([':entryId' => $entryId, ':userId' => $userId]);
+        
+        if (!$checkStmt->fetch()) {
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
+        }
+        
+        // Get linked tasks
+        $stmt = $pdo->prepare("
+            SELECT 
+                t.task_id,
+                t.column_id,
+                t.encrypted_data,
+                t.is_private,
+                t.classification,
+                t.deleted_at,
+                c.title as column_title
+            FROM journal_task_links jtl
+            JOIN tasks t ON jtl.task_id = t.task_id
+            LEFT JOIN columns c ON t.column_id = c.column_id
+            WHERE jtl.journal_entry_id = :entryId
+            AND t.user_id = :userId
+            ORDER BY t.created_at DESC
+        ");
+        
+        $stmt->execute([
+            ':entryId' => $entryId,
+            ':userId' => $userId
+        ]);
+        
+        $tasks = [];
+        while ($task = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            // Decode task data
+            $taskData = json_decode($task['encrypted_data'], true);
+            $task['title'] = $taskData['title'] ?? 'Untitled Task';
+            $task['is_deleted'] = !empty($task['deleted_at']);
+            
+            $tasks[] = $task;
+        }
+        
+        return ['status' => 'success', 'data' => $tasks];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in handle_get_linked_tasks: ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to retrieve linked tasks.'];
+    }
+}
+
+/**
+ * Gets the origin journal entry for a task
+ */
+function handle_get_task_origin_entry(PDO $pdo, int $userId, array $data): array {
+    $taskId = $data['task_id'] ?? null;
+    
+    if (!$taskId) {
+        return ['status' => 'error', 'message' => 'Task ID is required.'];
+    }
+    
+    try {
+        // Verify task ownership and get origin entry
+        $stmt = $pdo->prepare("
+            SELECT 
+                je.entry_id,
+                je.entry_date,
+                je.title,
+                je.content,
+                je.encrypted_data,
+                je.is_private
+            FROM tasks t
+            LEFT JOIN journal_entries je ON t.journal_entry_id = je.entry_id
+            WHERE t.task_id = :taskId AND t.user_id = :userId
+        ");
+        
+        $stmt->execute([
+            ':taskId' => $taskId,
+            ':userId' => $userId
+        ]);
+        
+        $result = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$result) {
+            return ['status' => 'error', 'message' => 'Task not found or no origin entry.'];
+        }
+        
+        // If no entry_id, task has no origin
+        if (!$result['entry_id']) {
+            return ['status' => 'success', 'data' => null];
+        }
+        
+        // Decrypt entry data if private
+        if ($result['is_private']) {
+            $decryptedData = decryptJournalData($pdo, $userId, $result['entry_id'], $result['encrypted_data']);
+            if ($decryptedData) {
+                $result['title'] = $decryptedData['title'];
+                $result['content'] = $decryptedData['content'];
+            }
+        } else {
+            // For public entries, encrypted_data contains the JSON
+            if ($result['encrypted_data']) {
+                $data = json_decode($result['encrypted_data'], true);
+                $result['title'] = $data['title'] ?? $result['title'];
+                $result['content'] = $data['content'] ?? $result['content'];
+            }
+        }
+        
+        return ['status' => 'success', 'data' => $result];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in handle_get_task_origin_entry: ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to retrieve origin entry.'];
+    }
+}
+
+/**
  * Helper function to process task references in content
  */
-function processTaskReferences(PDO $pdo, int $userId, int $entryId, string $content): void {
-    // This would be called when creating/updating public entries
-    // Implementation would scan for @task[description] patterns
-    // and create tasks automatically or flag for user confirmation
-    // For now, just a placeholder
+/**
+ * Processes @task[...] markup in journal entry content
+ * Creates tasks automatically and links them bidirectionally
+ * 
+ * Supports two formats:
+ * - @task[Task Title] -> Creates task in Backlog column (default)
+ * - @task[Column Name/Task Title] -> Creates task in specified column
+ */
+function processTaskReferences(PDO $pdo, int $userId, int $entryId, string $content): array {
+    $createdTasks = [];
+    
+    // Match @task[...] patterns
+    // Supports: @task[title] or @task[column/title]
+    preg_match_all('/@task\[([^\]]+)\]/', $content, $matches);
+    
+    if (empty($matches[1])) {
+        return $createdTasks;
+    }
+    
+    try {
+        // Get all user's columns for lookup
+        $columnsStmt = $pdo->prepare("
+            SELECT column_id, title 
+            FROM columns 
+            WHERE user_id = :userId AND deleted_at IS NULL
+        ");
+        $columnsStmt->execute([':userId' => $userId]);
+        $columns = $columnsStmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Create column name -> ID map (case-insensitive)
+        $columnMap = [];
+        $backlogColumnId = null;
+        foreach ($columns as $col) {
+            $columnMap[strtolower($col['title'])] = $col['column_id'];
+            if (strtolower($col['title']) === 'backlog') {
+                $backlogColumnId = $col['column_id'];
+            }
+        }
+        
+        // If no Backlog column exists, use first column as fallback
+        if (!$backlogColumnId && !empty($columns)) {
+            $backlogColumnId = $columns[0]['column_id'];
+        }
+        
+        if (!$backlogColumnId) {
+            log_debug_message("No columns available for user {$userId} to create tasks from journal");
+            return $createdTasks;
+        }
+        
+        // Process each task markup
+        foreach ($matches[1] as $taskMarkup) {
+            $taskMarkup = trim($taskMarkup);
+            if (empty($taskMarkup)) continue;
+            
+            // Parse format: "Column Name/Task Title" or just "Task Title"
+            $columnId = $backlogColumnId; // Default to Backlog
+            $taskTitle = $taskMarkup;
+            
+            if (strpos($taskMarkup, '/') !== false) {
+                list($columnName, $taskTitle) = explode('/', $taskMarkup, 2);
+                $columnName = trim($columnName);
+                $taskTitle = trim($taskTitle);
+                
+                // Look up column by name (case-insensitive)
+                $columnKey = strtolower($columnName);
+                if (isset($columnMap[$columnKey])) {
+                    $columnId = $columnMap[$columnKey];
+                } else {
+                    // Column not found, default to Backlog
+                    log_debug_message("Column '{$columnName}' not found, defaulting to Backlog");
+                }
+            }
+            
+            if (empty($taskTitle)) continue;
+            
+            // Check if task already exists to prevent duplicates
+            $checkStmt = $pdo->prepare("
+                SELECT task_id FROM journal_task_links 
+                WHERE journal_entry_id = :entryId
+                AND task_id IN (
+                    SELECT task_id FROM tasks 
+                    WHERE user_id = :userId 
+                    AND JSON_UNQUOTE(JSON_EXTRACT(encrypted_data, '$.title')) = :taskTitle
+                    AND deleted_at IS NULL
+                )
+            ");
+            $checkStmt->execute([
+                ':entryId' => $entryId,
+                ':userId' => $userId,
+                ':taskTitle' => $taskTitle
+            ]);
+            
+            if ($checkStmt->fetch()) {
+                // Task already linked, skip
+                continue;
+            }
+            
+            // Create the task
+            $taskData = [
+                'title' => $taskTitle,
+                'notes' => '',
+                'source' => 'journal_markup',
+                'created_from_journal' => true
+            ];
+            
+            $encryptedData = json_encode($taskData);
+            
+            // Get next position in column
+            $posStmt = $pdo->prepare("
+                SELECT COALESCE(MAX(position), 0) + 1 as next_position 
+                FROM tasks 
+                WHERE column_id = :columnId AND deleted_at IS NULL
+            ");
+            $posStmt->execute([':columnId' => $columnId]);
+            $position = $posStmt->fetchColumn();
+            
+            // Insert the task
+            $taskStmt = $pdo->prepare("
+                INSERT INTO tasks (
+                    user_id, column_id, encrypted_data, classification, 
+                    journal_entry_id, position, created_at
+                ) 
+                VALUES (
+                    :userId, :columnId, :encryptedData, 'support', 
+                    :journalEntryId, :position, UTC_TIMESTAMP()
+                )
+            ");
+            
+            $taskStmt->execute([
+                ':userId' => $userId,
+                ':columnId' => $columnId,
+                ':encryptedData' => $encryptedData,
+                ':journalEntryId' => $entryId,
+                ':position' => $position
+            ]);
+            
+            $taskId = (int)$pdo->lastInsertId();
+            
+            // Create bidirectional link
+            $linkStmt = $pdo->prepare("
+                INSERT INTO journal_task_links (journal_entry_id, task_id) 
+                VALUES (:journalEntryId, :taskId)
+                ON DUPLICATE KEY UPDATE task_id = task_id
+            ");
+            $linkStmt->execute([
+                ':journalEntryId' => $entryId,
+                ':taskId' => $taskId
+            ]);
+            
+            $createdTasks[] = [
+                'task_id' => $taskId,
+                'title' => $taskTitle,
+                'column_id' => $columnId
+            ];
+        }
+        
+        return $createdTasks;
+        
+    } catch (Exception $e) {
+        log_debug_message('Error processing task references: ' . $e->getMessage());
+        return $createdTasks;
+    }
+}
+
+/**
+ * Toggles a journal entry's classification (Signal, Support, or Backlog).
+ * Based on the tasks classification system.
+ */
+function handle_toggle_journal_classification(PDO $pdo, int $userId, array $data): array {
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : 0;
+    $newClassification = $data['classification'] ?? null;
+
+    if ($entryId <= 0 || empty($newClassification) || !in_array($newClassification, ['signal', 'support', 'backlog'])) {
+        return ['status' => 'error', 'message' => 'Entry ID and a valid classification are required.'];
+    }
+
+    try {
+        $stmtUpdate = $pdo->prepare(
+            "UPDATE journal_entries 
+             SET classification = :newClassification, updated_at = UTC_TIMESTAMP() 
+             WHERE entry_id = :entryId AND user_id = :userId"
+        );
+        $stmtUpdate->execute([':newClassification' => $newClassification, ':entryId' => $entryId, ':userId' => $userId]);
+
+        if ($stmtUpdate->rowCount() === 0) {
+            return ['status' => 'error', 'message' => 'Journal entry not found or permission denied.'];
+        }
+
+        return [
+            'status' => 'success',
+            'message' => 'Classification updated successfully.',
+            'data' => [
+                'entry_id' => $entryId,
+                'new_classification' => $newClassification
+            ]
+        ];
+
+    } catch (Exception $e) {
+        log_debug_message('Error in journal.php handle_toggle_journal_classification(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'A server error occurred.'];
+    }
 }
 ?>

@@ -4,7 +4,7 @@
  * Handles switching between different views (Tasks, Journal) with tab navigation
  * Persists view preference to database for cross-session synchronization
  * 
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  */
 
 class ViewManager {
@@ -67,6 +67,9 @@ class ViewManager {
         
         this.currentView = view;
         
+        // Show/hide view-specific UI elements
+        this.toggleViewSpecificElements(view);
+        
         // Initialize the view if needed
         if (view === 'journal' && !window.journalView) {
             // Initialize journal view
@@ -75,6 +78,55 @@ class ViewManager {
                     window.journalView.renderJournalView();
                 }
             }, 100);
+        }
+    }
+    
+    /**
+     * Show/hide view-specific UI elements
+     */
+    toggleViewSpecificElements(view) {
+        // Task-specific elements (show only in tasks view)
+        const taskElements = [
+            '#add-column-container',
+            '#btn-filters',
+            '#filter-menu'
+        ];
+        
+        // Journal-specific elements (show only in journal view)
+        const journalElements = [
+            '#journal-controls'
+        ];
+        
+        if (view === 'tasks') {
+            // Show task elements, hide journal elements
+            taskElements.forEach(selector => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.classList.remove('hidden');
+                }
+            });
+            
+            journalElements.forEach(selector => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.classList.add('hidden');
+                }
+            });
+        } else if (view === 'journal') {
+            // Hide task elements, show journal elements
+            taskElements.forEach(selector => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.classList.add('hidden');
+                }
+            });
+            
+            journalElements.forEach(selector => {
+                const element = document.querySelector(selector);
+                if (element) {
+                    element.classList.remove('hidden');
+                }
+            });
         }
     }
     

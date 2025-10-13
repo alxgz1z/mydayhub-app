@@ -7,7 +7,7 @@
  * This file is the single entry point for all data-related API calls.
  * It handles error logging, session security, request routing, and dispatches to module handlers.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 

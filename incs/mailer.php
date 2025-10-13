@@ -7,7 +7,7 @@
  * This file provides a centralized function for sending emails using PHPMailer,
  * configured with credentials from the .env file.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 

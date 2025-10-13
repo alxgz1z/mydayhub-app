@@ -1,6 +1,6 @@
 /* Code for /uix/style.css */
 /* MyDayHub - Main Application Styles */
-/* @version 7.9 Jaco */
+/* @version 8.0 Herradura */
 /* @author Alex & Gemini & Claude & Cursor & Cursor */
 /* ==========================================================================
    1. THEME VARIABLES & GLOBAL STYLES
@@ -256,6 +256,7 @@ body.light-mode #app-header .btn-header:hover {
 	background-color: var(--toolbar-bg);
 	border-top: 1px solid var(--border-color);
 	transition: background-color 0.3s, border-top-color 0.3s;
+	position: relative;
 }
 
 /* ==========================================================================
@@ -1325,8 +1326,20 @@ body.light-mode #app-header .btn-header:hover {
 }
 
 .footer-center {
-	justify-content: center;
+	position: relative;
 	flex-grow: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Journal controls - absolutely center within full footer width */
+#journal-controls {
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 10;
 }
 
 .footer-right a {

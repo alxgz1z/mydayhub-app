@@ -6,7 +6,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -280,7 +280,7 @@ function loadMissionFocusPreference() {
 	if (!missionFocusOffBtn || !missionFocusOnBtn || !missionFocusChart) return;
 	
 	const savedPreference = localStorage.getItem('showMissionFocusChart');
-	const shouldShow = savedPreference !== null ? savedPreference === 'true' : false; // Default to false
+	const shouldShow = savedPreference !== null ? savedPreference === 'true' : true; // Default to true
 	
 	// Update button states
 	missionFocusOffBtn.classList.toggle('active', !shouldShow);
@@ -296,10 +296,10 @@ function loadMissionFocusPreference() {
 }
 
 /**
- * Update mission focus chart with current task data using Chart.js
+ * Update mission focus chart with current task data and journal entries from last 30 days using Chart.js
  * This function can be called manually or automatically when tasks change
  */
-function updateMissionFocusChart() {
+async function updateMissionFocusChart() {
 	const missionFocusChart = document.getElementById('mission-focus-chart');
 	if (!missionFocusChart || missionFocusChart.style.display === 'none') return;
 	
@@ -365,6 +365,40 @@ function updateMissionFocusChart() {
 					// Skip unknown classifications silently
 			}
 		});
+		
+		// Count journal entries from last 30 calendar days
+		const thirtyDaysAgo = new Date();
+		thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+		const startDate = thirtyDaysAgo.toISOString().split('T')[0];
+		const endDate = new Date().toISOString().split('T')[0];
+		
+		try {
+			const journalResponse = await fetch(`${window.MyDayHub_Config.appURL}/api/journal.php?start_date=${startDate}&end_date=${endDate}`);
+			if (journalResponse.ok) {
+				const journalEntries = await journalResponse.json();
+				
+				// Count journal entry classifications
+				journalEntries.forEach(entry => {
+					if (!entry.classification) return; // Skip entries without classification
+					
+					switch (entry.classification) {
+						case 'signal':
+							signalCount++;
+							break;
+						case 'support':
+							supportCount++;
+							break;
+						case 'backlog':
+							backlogCount++;
+							break;
+						default:
+							// Skip unknown classifications silently
+					}
+				});
+			}
+		} catch (error) {
+			console.warn('Could not fetch journal entries for mission focus chart:', error);
+		}
 		
 		const total = signalCount + supportCount + backlogCount;
 		
@@ -460,7 +494,7 @@ function updateMissionFocusChart() {
 		
 		// Set tooltip
 		missionFocusChart.setAttribute('data-tooltip', 
-			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog`
+			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog (Tasks + Last 30 Days)`
 		);
 		
 		// Clear the safety flag
@@ -471,6 +505,23 @@ function updateMissionFocusChart() {
 	}
 }
 
+
+// Suppress browser extension errors in console (specifically Comet and similar extensions)
+window.addEventListener('error', function(event) {
+    // Ignore extension-related errors, particularly from Comet
+    if (event.message && (
+        event.message.includes('Extension context invalidated') ||
+        event.message.includes('content.js') ||
+        event.filename && (
+            event.filename.includes('extension') ||
+            event.filename.includes('comet') ||
+            event.filename.includes('chrome-extension')
+        )
+    )) {
+        event.preventDefault();
+        return false;
+    }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
@@ -1112,9 +1163,6 @@ function showConfirm(message, options = {}) {
 	}
 	
 	modalOverlay.classList.remove('hidden');
-	
-	// Register confirm modal in modal stack
-	registerModal('confirm-modal', handleNo);
 
 	return new Promise(resolve => {
 		const handleYes = () => {
@@ -1126,6 +1174,9 @@ function showConfirm(message, options = {}) {
 			cleanup();
 			resolve(false);
 		};
+		
+		// Register confirm modal in modal stack
+		registerModal('confirm-modal', handleNo);
 		
 		yesBtn.addEventListener('click', handleYes, { once: true });
 		noBtn.addEventListener('click', handleNo, { once: true });

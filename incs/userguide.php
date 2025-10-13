@@ -5,7 +5,7 @@
  * Comprehensive user manual with accordion-style sections
  * Follows app theming and visual design patterns
  * 
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & AI Assistant
  */
 

@@ -7,7 +7,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -74,7 +74,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Beta 7.9 - Jaco');
+define('APP_VER', 'Beta 8.0 - Herradura');
 
 // Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
 function detectAppUrl() {

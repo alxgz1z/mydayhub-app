@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  *
  * @author Alex & Gemini & Claude & Cursor
  */ 
@@ -116,7 +116,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div class="header-right">
 				<div class="user-info-display">
 					<span>[<?php echo htmlspecialchars($username); ?>]</span>
-					<div id="mission-focus-chart" class="mission-focus-chart" style="display: none;">
+					<div id="mission-focus-chart" class="mission-focus-chart" style="display: block;">
 						<canvas id="mission-focus-canvas" width="48" height="48"></canvas>
 					</div>
 					<button id="btn-calendar-badge" class="calendar-badge" title="Calendar Overlays" style="display: none;">
@@ -173,6 +173,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<div id="add-column-container">
 					<button id="btn-add-column" class="btn-header">+ New Column</button>
 				</div>
+				
 			</div>
 			<div class="footer-center">
 				<button id="btn-filters" class="btn-footer-icon" title="Show Filters">
@@ -180,6 +181,23 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
 					</svg>
 				</button>
+				
+				<!-- Journal-specific controls (hidden by default) -->
+				<div id="journal-controls" class="hidden">
+					<button id="btn-journal-menu" class="btn-footer-icon" title="Journal Options">
+						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+							<line x1="16" y1="2" x2="16" y2="6"/>
+							<line x1="8" y1="2" x2="8" y2="6"/>
+							<line x1="3" y1="10" x2="21" y2="10"/>
+							<circle cx="8" cy="14" r="1" fill="currentColor"/>
+							<circle cx="12" cy="14" r="1" fill="currentColor"/>
+							<circle cx="16" cy="14" r="1" fill="currentColor"/>
+							<circle cx="8" cy="18" r="1" fill="currentColor"/>
+							<circle cx="12" cy="18" r="1" fill="currentColor"/>
+						</svg>
+					</button>
+				</div>
 			</div>
 			<div class="footer-right">
 				<span><?php echo APP_VER; ?></span>

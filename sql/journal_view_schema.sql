@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS journal_entries (
     content TEXT,
     encrypted_data TEXT, -- For private entries (uses existing encryption system)
     is_private BOOLEAN DEFAULT FALSE,
+    classification VARCHAR(20) DEFAULT 'support',
     position INT DEFAULT 0, -- For ordering entries within a day
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,

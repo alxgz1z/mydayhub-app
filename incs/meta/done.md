@@ -1,18 +1,20 @@
 # MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-10-08
+Updated: 2025-10-13
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Beta 7.9 — User Guide & Documentation Complete
+- Version: Beta 8.1 - Tamarindo — Mission Focus Integration Complete
+- **Next Release**: Beta 8.2 - Manuel Antonio (currently in development)
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
-- Mission Focus Chart: Header doughnut, real-time updates, performant
+- Mission Focus Chart: Header doughnut, real-time updates, tasks + journal entries (30-day window)
 - Network: Smart URL detection (localhost/jagmac.local), multi-device access
 - Sharing (foundation): Share/unshare, permissions, Ready-for-Review flow
 - **Zero-Knowledge Encryption: COMPLETE** — Hybrid architecture, AES-256-GCM, optional setup
-- **Journal View: COMPLETE** — Horizontal date columns, CRUD operations, privacy integration
+- **Journal View: COMPLETE** — Horizontal date columns, CRUD operations, privacy integration, classification system
 - **User Guide: COMPLETE** — Comprehensive accordion-style documentation in Settings panel
+- **Mission Focus Integration: COMPLETE** — Chart now includes journal entries from last 30 days for comprehensive signal tracking
 
 ---
 
@@ -70,6 +72,39 @@ Order: chronological (newest at bottom)
 - **Accordion UI**: One-section-at-a-time expansion for focused reading
 - **Settings Integration**: Added "User Guide" button as last option in settings panel
 - **Tab Icon Update**: Replaced emoji icons with SVG icons for Tasks and Journal tabs
+
+### 2025-10-09 — Journal Interface Refinement & Navigation Overhaul
+- **Journal Classification System**: Implemented Signal/Support/Backlog classification matching task cards
+- **Database Migration**: Added classification column with default 'support' value
+- **API Integration**: Full CRUD operations for journal entry classifications
+- **UI Consistency**: Color bands, popover menus, and styling match task classification patterns
+- **Custom Confirmation Dialogs**: Replaced browser dialogs with app-consistent modal system
+- **Browser Extension Error Suppression**: Added global error handler for "Extension context invalidated" errors
+- **Date Initialization Fix**: Resolved timezone issues causing journal to default to yesterday
+- **Entry Creation Enhancement**: Fixed "+" button responsiveness and Enter key handling
+- **Drag & Drop Implementation**: Full drag-and-drop support for moving entries between date columns
+- **Mobile Move Modal**: Created user-friendly modal for moving entries on mobile devices
+- **Date Range Validation**: Restricted entry movement to 2 days in future maximum
+- **Responsive View Modes**: Enforced 1-day view on mobile, 3D/5D options on desktop only
+- **Footer Icon Centering**: Achieved perfect viewport-relative centering of journal options icon
+- **Navigation Button Relocation**: Moved << and >> buttons to footer popover menu
+- **Column Navigation Integration**: Added < and > buttons inside column headers (1D: both, 3D/5D: outermost only)
+- **Vertical Space Optimization**: Removed entire header ribbon, saving significant screen real estate
+- **CSS Architecture**: Maintained clean separation between tasks and journal styling
+- **Event Handler Optimization**: Streamlined click handlers and removed redundant event listeners
+- **VALIDATION COMPLETE**: All navigation patterns working correctly across view modes, mobile responsiveness confirmed
+
+### 2025-10-13 — Mission Focus Chart Enhancement & UI Polish
+- **Mission Focus Chart Integration**: Enhanced chart to include journal entries from last 30 calendar days alongside active tasks
+- **Chart Default Visibility**: Changed Mission Focus Chart from hidden-by-default to visible-by-default for new users
+- **Real-time Updates**: Chart now updates immediately when journal entries are created, deleted, or reclassified
+- **Async Chart Updates**: Converted chart update function to async to handle journal entry API calls
+- **Enhanced Tooltip**: Updated chart tooltip to indicate "Tasks + Last 30 Days" data source
+- **Journal Entry Classification Tracking**: Added chart update triggers to journal entry classification changes
+- **Comprehensive Mission View**: Chart now provides complete picture of user's "signal over noise" ratio across both current work and recent reflection
+- **Performance Optimization**: Chart updates include error handling and graceful fallbacks for API failures
+- **User Experience**: Chart visible by default aligns with user guide recommendation for mission awareness
+- **VALIDATION COMPLETE**: Mission Focus Chart displays combined task and journal data, updates in real-time without refresh
 
 
 ---

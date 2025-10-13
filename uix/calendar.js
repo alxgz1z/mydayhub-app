@@ -3,7 +3,7 @@
  *
  * MyDayHub - Calendar Events Management
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 

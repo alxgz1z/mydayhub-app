@@ -1,0 +1,102 @@
+MyDayHub Version Update
+=======================
+
+Previous Version: Beta 7.9 - Jaco
+New Version: Beta 8.0 - Herradura
+
+Update Date: October 9, 2025
+
+Major Changes in Beta 8.0:
+---------------------------
+1. Journal View Complete Implementation
+   - Full CRUD operations for journal entries
+   - Signal/Support/Backlog classification system
+   - Drag-and-drop entry movement between dates
+   - Mobile-optimized interface with responsive view modes
+   - Navigation refinements with header/footer integration
+
+2. Journal Interface Refinements
+   - Column navigation buttons (< >) integrated in headers
+   - Multi-day navigation (<< >>) moved to footer popover
+   - Vertical space optimization (removed header ribbon)
+   - Perfect viewport-relative centering of controls
+   - Enhanced mobile responsiveness
+
+3. UI/UX Improvements
+   - Custom confirmation dialogs replacing browser alerts
+   - Browser extension error suppression
+   - Date initialization fixes for timezone handling
+   - Improved entry creation responsiveness
+
+Files Updated:
+--------------
+Core Configuration:
+- /incs/config.php
+
+Main Application:
+- /index.php
+
+CSS Files:
+- /uix/style.css
+- /uix/tasks.css
+- /uix/journal.css
+- /uix/editor.css
+- /uix/attachments.css
+- /uix/settings.css
+- /uix/login.css
+
+JavaScript Files:
+- /uix/app.js
+- /uix/tasks.js
+- /uix/journal.js
+- /uix/editor.js
+- /uix/calendar.js
+- /uix/crypto.js
+- /uix/auth.js
+- /uix/encryption-setup.js
+- /uix/view-manager.js
+
+API Files:
+- /api/api.php
+- /api/auth.php
+- /api/tasks.php
+- /api/users.php
+- /api/journal.php
+- /api/calevents.php
+- /api/calprefs.php
+- /api/encryption.php
+- /api/secquestions.php
+- /api/admin.php
+
+Login/Auth Pages:
+- /login/login.php
+- /login/register.php
+- /login/forgot.php
+- /login/reset.php
+- /login/logout.php
+
+Includes:
+- /incs/db.php
+- /incs/crypto.php
+- /incs/helpers.php
+- /incs/mailer.php
+- /incs/userguide.php
+
+Documentation:
+- /incs/meta/spec.md
+- /incs/meta/done.md
+
+Costa Rica Beach Naming Convention:
+------------------------------------
+Version    Beach Name    Milestone
+-----------------------------------------
+Beta 7.x   Jaco          Tasks View & Encryption
+Beta 8.0   Herradura     Journal View Complete
+Beta 8.1   Tamarindo     (Next planned release)
+
+Notes:
+------
+- All version annotations updated systematically
+- No breaking changes to existing functionality
+- Backward compatible with existing data
+- User Guide reflects new Journal capabilities

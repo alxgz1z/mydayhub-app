@@ -6,7 +6,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -410,6 +410,11 @@ function initEventListeners() {
 				await openAttachmentsModal(taskId, taskTitle);
 			} else if (action === 'edit-snooze') {
 				await openSnoozeModalForTask(taskCard);
+			} else if (action === 'view-journal-entry') {
+				const entryId = shortcut.dataset.entryId;
+				if (entryId) {
+					navigateToJournalEntry(entryId);
+				}
 			}
 			return;
 		}
@@ -2384,7 +2389,8 @@ function createTaskCard(taskData) {
 	const hasSharedIndicator = (taskData.shares && taskData.shares.length > 0) || (!isOwner && taskData.shared_by);
 	const hasReadyIndicator = isOwner && taskData.shares && 
 		taskData.shares.some(share => share.ready_for_review);
-	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator;
+	const hasJournalOrigin = taskData.journal_entry_id && taskData.journal_entry_id > 0;
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator || hasJournalOrigin;
 	
 	if (hasIndicators) {
 		let notesIndicator = '';
@@ -2496,12 +2502,27 @@ function createTaskCard(taskData) {
 			`;
 		}
 
+		// Journal origin indicator
+		let journalIndicator = '';
+		if (hasJournalOrigin) {
+			journalIndicator = `
+				<span class="task-indicator journal-origin-badge indicator-shortcut" data-action="view-journal-entry" data-entry-id="${taskData.journal_entry_id}" title="Created from journal entry - click to view">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+						<path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
+					</svg>
+					<span class="journal-text">Journal</span>
+				</span>
+			`;
+		}
+
 		footerHTML = `
 			<div class="task-card-footer">
 				${attachmentsIndicator}
 				${snoozeIndicator}
 				${notesIndicator}
 				${dueDateIndicator}
+				${journalIndicator}
 				${shareIndicator}
 				${readyIndicator}
 			</div>
@@ -4198,4 +4219,49 @@ function exitMoveMode() {
 	 }
 	 
 	 updateQuotaAwareUI();
- }
+}
+
+/**
+ * Navigates to a journal entry in the Journal view
+ * @param {number} entryId - The journal entry ID
+ */
+async function navigateToJournalEntry(entryId) {
+	try {
+		// Fetch the journal entry to get its date
+		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+		const response = await fetch(`/api/api.php?module=journal&action=getTaskOriginEntry&task_id=${entryId}`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-TOKEN': csrfToken
+			}
+		});
+		
+		const result = await response.json();
+		
+		if (result.status === 'success' && result.data && result.data.entry_id) {
+			// Switch to Journal view
+			if (window.viewManager) {
+				window.viewManager.switchView('journal');
+			}
+			
+			// Wait for journal view to render, then navigate to the date and highlight entry
+			setTimeout(() => {
+				const entryCard = document.querySelector(`[data-entry-id="${result.data.entry_id}"]`);
+				if (entryCard) {
+					// Scroll into view
+					entryCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					
+					// Add pulse highlight effect
+					entryCard.classList.add('highlight-pulse');
+					setTimeout(() => entryCard.classList.remove('highlight-pulse'), 2000);
+				}
+			}, 500);
+		} else {
+			showToast({ message: 'Journal entry not found or was deleted.', type: 'info' });
+		}
+	} catch (error) {
+		console.error('Failed to navigate to journal entry:', error);
+		showToast({ message: 'Failed to load journal entry.', type: 'error' });
+	}
+}

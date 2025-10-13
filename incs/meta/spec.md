@@ -1,8 +1,8 @@
 # MyDayHub Reference Specification
 
-Version: Beta 7.9 (User Guide & Documentation Complete)
+Version: Beta 8.1 - Tamarindo (Mission Focus Integration Complete)
 Audience: Internal Development & Product
-Last Updated: 2025-10-08
+Last Updated: 2025-10-13
 
 ---
 
@@ -79,13 +79,17 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 3.4 Unified Editor
 - Modal editor for task notes with autosave, formatting tools, and font sizing
 
-3.5 Journal View (IMPLEMENTED)
-- Horizontal date-based columns with scrollable navigation (3-day, 1-week, 1-month views)
-- Journal entries: create, edit, delete with rich text support
+3.5 Journal View (IMPLEMENTED & REFINED)
+- Horizontal date-based columns with scrollable navigation (1-day, 3-day, 5-day views)
+- Journal entries: create, edit, delete with rich text support and classification system
+- Classification: Signal/Support/Backlog matching task card patterns with color bands and popover menus
+- Drag-and-drop: move entries between date columns with mobile-friendly modal for date selection
 - Task linking via @task[description] markup that creates linked tasks
 - Privacy integration: private journal entries encrypted same as tasks
-- Mobile-optimized: collapsible tab navigation, responsive column layout
+- Mobile-optimized: 1-day view enforced on mobile, responsive column layout
+- Navigation: < > buttons integrated in column headers, << >> buttons in footer popover
 - View switching: seamless transition between Tasks and Journal views
+- Vertical space optimization: removed header ribbon, integrated controls into footer popover
 
 ---
 
@@ -130,25 +134,38 @@ Out‑of‑scope for current milestone: full end‑to‑end encrypted sharing. A
 
 ---
 
-## 6. Calendar Overlay System (Conceptual)
+## 6. Calendar Overlay System (IMPLEMENTED)
 
 Purpose:
 - Show contextual date information (fiscal, holidays, birthdays, custom) without disrupting task focus
 
-Key elements:
+Implementation:
 - Header badge shows highest‑priority event label for the selected date
 - Modal with tabs: Events, Preferences, Calendar Management
 - JSON import/export; calendar grouping; group priority affects badge display
+- CRUD operations for calendar events with user preference management
+- Integration with journal view column headers for event display
 
 ---
 
-## 7. Mission Focus Chart (Conceptual)
+## 7. Mission Focus Chart (IMPLEMENTED & ENHANCED)
 
 Purpose:
-- Visualize distribution of Signal/Support/Backlog among active tasks (excludes completed/deleted/received shares)
+- Visualize distribution of Signal/Support/Backlog among active tasks and journal entries from last 30 calendar days
+- Provides comprehensive "signal over noise" view across both current work and recent reflection
+
+Implementation:
+- Small header donut chart using Chart.js; visible by default for new users
+- Updates in real-time when tasks or journal entries are created, modified, deleted, or reclassified
+- Async implementation fetches journal entries from last 30 days via API
+- Enhanced tooltip indicates "Tasks + Last 30 Days" data source
+- Graceful error handling for API failures with console warnings
 
 Behavior:
-- Small header chart; optional via Settings; updates as tasks change
+- Shows combined count of active tasks (excluding completed/deleted/received shares) plus journal entries from last 30 days
+- Real-time updates without page refresh for all task and journal operations
+- Optional via Settings panel (Hide/Show toggle)
+- Performance optimized with safety guards to prevent infinite update loops
 
 ---
 
@@ -159,6 +176,7 @@ Settings:
 - Font size: global scaling controls
 - Completion sound: on/off
 - Filter state persistence
+- **Mission Focus Chart: Hide/Show toggle (visible by default for new users)**
 - **Privacy & Encryption: encryption setup and management (IMPLEMENTED)**
 - **Debug Mode: task_id and column_id display for development**
 - **User Guide: accessible from Settings panel (IMPLEMENTED)**
@@ -185,7 +203,7 @@ Theming & Accessibility:
 4. **Privacy & Zero-Knowledge Encryption** - Setup process, usage patterns, security model
 5. **Sharing & Collaboration** - Permissions, workflows, Ready-for-Review process
 6. **Journal View** - Daily entries, best practices, task linking
-7. **Advanced Features** - Snoozing, attachments, calendar overlays, Mission Focus Chart, mobile features
+7. **Advanced Features** - Snoozing, attachments, calendar overlays, Mission Focus Chart (with journal integration), mobile features
 8. **Settings & Customization** - All preferences explained with recommendations
 9. **Keyboard Shortcuts & Pro Tips** - Power user workflows, morning/weekly routines
 10. **Troubleshooting & FAQ** - Common issues, performance tips, data safety
@@ -228,7 +246,8 @@ Representative capability areas (non‑exhaustive, no request/response bodies he
 - Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
 - **Zero‑Knowledge (IMPLEMENTED): optional encryption setup, status, migration progress, recovery questions, decryptTaskData endpoint**
-- **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing**
+- **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing, classification system (Signal/Support/Backlog)**
+- **Mission Focus Chart (IMPLEMENTED): real-time updates for tasks and journal entries, 30-day journal window integration**
 
 ---
 
@@ -262,8 +281,8 @@ Note: This section lists tables and key fields only. It avoids schema DDL and fo
 - tasks privacy flags (within tasks): privacy_inherited, privacy_override
 - columns privacy aid (within columns): has_shared_tasks
 
-11.6 Journal View (IMPLEMENTED)
-- journal_entries: entry_id, user_id, entry_date, title, content, is_private, encrypted_data, created_at, updated_at
+11.6 Journal View (IMPLEMENTED & REFINED)
+- journal_entries: entry_id, user_id, entry_date, title, content, is_private, encrypted_data, classification, created_at, updated_at
 - journal_task_links: link_id, entry_id, task_id, user_id, created_at
 - journal_preferences: id, user_id, view_mode, hide_weekends, created_at, updated_at
 
@@ -294,10 +313,19 @@ Relationship highlights:
 - ✅ **Optional encryption setup** - User-triggered workflow with settings panel integration
 - ✅ **Security questions recovery** - Password recovery without compromising zero-knowledge principle
 - ✅ **Journal View implementation** - Horizontal date columns, CRUD operations, privacy integration
+- ✅ **Journal classification system** - Signal/Support/Backlog classification matching task card patterns
+- ✅ **Journal drag-and-drop** - Move entries between date columns with mobile-friendly date selection modal
+- ✅ **Journal navigation refinement** - Integrated < > buttons in column headers, << >> buttons in footer popover
+- ✅ **Mobile responsiveness** - 1-day view enforced on mobile, responsive layout optimization
+- ✅ **Vertical space optimization** - Removed header ribbon, integrated all controls into footer popover
 - ✅ **View switching architecture** - Seamless transition between Tasks and Journal views
 - ✅ **Smart contextual menu positioning** - Auto-adjusting menus to prevent viewport overflow
 - ✅ **User Guide & Documentation** - Comprehensive accordion-style user manual accessible from Settings
 - ✅ **SVG tab icons** - Replaced emoji with theme-aware SVG icons for Tasks and Journal tabs
+- ✅ **Mission Focus Chart Enhancement** - Integrated journal entries from last 30 days for comprehensive signal tracking
+- ✅ **Real-time Chart Updates** - Chart updates immediately for all task and journal operations without refresh
+- ✅ **Chart Default Visibility** - Mission Focus Chart now visible by default for new users, improving mission awareness
+- ✅ **Calendar Overlay System** - Events CRUD, preferences management, JSON import/export, header badge integration
 
 Immediate priorities:
 - Implement @task[description] markup detection and smart task creation from journal entries
@@ -325,11 +353,20 @@ Long term:
 - Shared item: content visible to recipients per permission model
 - DEK: Data Encryption Key per item; wrapped by user master key
 - Recovery envelope: encrypted copy of master key protected by recovery key
-- Journal entry: date-based entry in the Journal View with rich text content
+- Journal entry: date-based entry in the Journal View with rich text content and classification
+- Journal classification: Signal/Support/Backlog classification system matching task card patterns
 - Task markup: @task[description] syntax within journal entries to create linked tasks
 - View switching: seamless transition between Tasks (Kanban) and Journal (date-based) views
+- Navigation buttons: < > for single-day navigation, << >> for multi-day navigation
+- Footer popover: centralized controls menu for view modes, date jumping, and navigation
+- Vertical space optimization: removal of header ribbon to maximize content area
 - User Guide: comprehensive accordion-style documentation accessible from Settings panel
 - Accordion UI: collapsible sections that expand one at a time for focused reading
+- Mission Focus Chart: header donut chart showing Signal/Support/Backlog distribution across tasks and journal entries (30-day window)
+- Real-time chart updates: immediate chart refresh when tasks or journal entries are modified without page reload
+- Chart default visibility: Mission Focus Chart visible by default for new users to improve mission awareness
+- Calendar Overlay System: contextual date information display with events, preferences, and header badge integration
+- Calendar events: user-defined events with types, labels, date ranges, and visibility preferences
 
 ---
 

@@ -7,7 +7,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 7.9 Jaco
+ * @version 8.0 Herradura
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -1052,7 +1052,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
-				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, 
+				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, t.journal_entry_id,
 				COUNT(ta.attachment_id) as attachments_count,
 				'owner' as access_type
 			 FROM tasks t
@@ -1527,6 +1527,10 @@ function handle_delete_task(PDO $pdo, int $userId, ?array $data): void {
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_delete->execute([':taskId' => $taskId, ':userId' => $userId]);
+
+		// Remove journal task links (independence rule: task deletion doesn't affect journal entry)
+		$unlinkStmt = $pdo->prepare("DELETE FROM journal_task_links WHERE task_id = :taskId");
+		$unlinkStmt->execute([':taskId' => $taskId]);
 
 		$stmt_get_tasks = $pdo->prepare(
 			"SELECT task_id FROM tasks WHERE column_id = :columnId AND user_id = :userId AND deleted_at IS NULL ORDER BY position ASC"
