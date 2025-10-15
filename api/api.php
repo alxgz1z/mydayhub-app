@@ -44,6 +44,7 @@ try {
 	if ($method === 'GET') {
 		$module = $_GET['module'] ?? null;
 		$action = $_GET['action'] ?? null;
+		$data = $_GET; // Pass all GET parameters as data
 	} elseif ($method === 'POST') {
 		$csrf_token_header = $_SERVER['HTTP_X_CSRF_TOKEN'] ?? '';
 		if (!isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $csrf_token_header)) {

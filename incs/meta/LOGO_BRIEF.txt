@@ -1,0 +1,30 @@
+MyDayHub — Logo Design Brief
+=============================
+
+App Description for Graphic Designer:
+
+MyDayHub is a privacy-first productivity hub that helps teams distinguish between "signal" work (mission-advancing) and "noise" work (merely busy). 
+
+Core Identity:
+- **Signal over Noise**: Classification-driven focus on what truly matters
+- **Privacy by Design**: Zero-knowledge encryption with Costa Rican beach-inspired version names (Herradura, Tamarindo)
+- **Fluid & Minimalist**: Dark-first aesthetic, clean lines, optimistic interactions
+- **Dual Nature**: Combines task management (Kanban boards) with journaling (date-based reflection)
+- **Focus Metrics**: Visual chart showing signal/support/backlog distribution
+
+Visual Themes:
+- Modern, minimal, sophisticated
+- Green accent (#22c55e) - Costa Rica nature inspiration
+- Balance between structure (task boards) and flow (journal entries)
+- Privacy/security without feeling locked down
+- Accessibility-forward design
+
+Suggested Visual Elements:
+- Leaf motif (current logo - natural growth, Costa Rica connection)
+- Signal waves or concentric circles (focus, clarity)
+- Balanced geometric forms suggesting organization and mindfulness
+- Optional: Subtle encryption/security element
+
+Avoid: Corporate tech, overwhelming complexity, cold/clinical aesthetics
+
+

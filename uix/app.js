@@ -304,67 +304,67 @@ async function updateMissionFocusChart() {
 	if (!missionFocusChart || missionFocusChart.style.display === 'none') return;
 	
 	// Safety check to prevent infinite loops
-	if (window._updatingMissionChart) return;
+    if (window._updatingMissionChart) {
+        // Queue a trailing update so rapid changes (e.g., quick reclassification)
+        // still result in a fresh chart once the current update finishes.
+        window._pendingMissionChartUpdate = true;
+        return;
+    }
 	window._updatingMissionChart = true;
 	
 	// Chart.js available check is redundant - we already check it in waitForTaskBoardAndUpdateChart
 	
 	try {
-		// Get all tasks that are not completed, not deleted, and not received shared tasks
-		// Count ALL active tasks regardless of filter visibility (snoozed/private should be counted)
-		const allTasks = document.querySelectorAll('.task-card:not(.completed)');
-		const tasks = Array.from(allTasks).filter(task => {
-			// Exclude received shared tasks (access_type = 'recipient')
-			const accessType = task.dataset.accessType || 'owner';
-			if (accessType === 'recipient') {
-				return false;
-			}
-			
-			// Count all other tasks (including snoozed and private, even if filtered out)
-			// Note: Deleted tasks are temporarily hidden but will be removed from DOM soon
-			// We'll count them until they're actually removed
-			return true;
-		});
-		// If no tasks found, show empty state
-		if (tasks.length === 0) {
-			// Tasks may still be loading, but we'll show empty state for now
-		}
-		
-		let signalCount = 0;
-		let supportCount = 0;
-		let backlogCount = 0;
-		
-		tasks.forEach(task => {
-			// Prefer explicit data attribute if present
-			let classification = task.getAttribute('data-classification');
-			
-			// Fallback to class name parsing if data attribute is missing
-			if (!classification) {
-				const classes = Array.from(task.classList);
-				const classMatch = classes.find(c => c.startsWith('classification-'));
-				if (classMatch) {
-					classification = classMatch.replace('classification-', '').trim();
-				}
-			}
-			
-			if (!classification) {
-				return; // Skip tasks without classification
-			}
-			
-			switch (classification) {
-				case 'signal':
-					signalCount++;
-					break;
-				case 'support':
-					supportCount++;
-					break;
-				case 'backlog':
-					backlogCount++;
-					break;
-				default:
-					// Skip unknown classifications silently
-			}
-		});
+        // Prefer DOM when Tasks view is active; fallback to API when not
+        let signalCount = 0;
+        let supportCount = 0;
+        let backlogCount = 0;
+
+        const allTasks = document.querySelectorAll('.task-card:not(.completed)');
+        if (allTasks.length > 0) {
+            // Count from DOM (Tasks view loaded)
+            Array.from(allTasks).forEach(task => {
+                const accessType = task.dataset.accessType || 'owner';
+                if (accessType === 'recipient') return; // exclude received shared
+
+                let classification = task.getAttribute('data-classification');
+                if (!classification) {
+                    const classes = Array.from(task.classList);
+                    const classMatch = classes.find(c => c.startsWith('classification-'));
+                    if (classMatch) classification = classMatch.replace('classification-', '').trim();
+                }
+                if (!classification) return;
+                if (classification === 'signal') signalCount++;
+                else if (classification === 'support') supportCount++;
+                else if (classification === 'backlog') backlogCount++;
+            });
+        } else {
+            // Fallback: fetch task data via API so chart works on Journal view without rendering Tasks
+            try {
+                const appURL = window.MyDayHub_Config?.appURL || '';
+                const apiURL = `${appURL}/api/api.php?module=tasks&action=getAll`;
+                const resp = await fetch(apiURL, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
+                if (resp.ok) {
+                    const result = await resp.json();
+                    // API returns { status: 'success', data: { board: [...] } }
+                    if (result.status === 'success' && result.data && Array.isArray(result.data.board)) {
+                        result.data.board.forEach(col => {
+                            if (!Array.isArray(col.tasks)) return;
+                            col.tasks.forEach(t => {
+                                // Exclude completed tasks and received shared tasks
+                                if (t.classification === 'completed') return;
+                                if ((t.access_type || '') === 'recipient') return;
+                                if (t.classification === 'signal') signalCount++;
+                                else if (t.classification === 'support') supportCount++;
+                                else if (t.classification === 'backlog') backlogCount++;
+                            });
+                        });
+                    }
+                }
+            } catch (e) {
+                console.warn('Mission chart fallback fetch failed:', e);
+            }
+        }
 		
 		// Count journal entries from last 30 calendar days
 		const thirtyDaysAgo = new Date();
@@ -372,35 +372,47 @@ async function updateMissionFocusChart() {
 		const startDate = thirtyDaysAgo.toISOString().split('T')[0];
 		const endDate = new Date().toISOString().split('T')[0];
 		
-		try {
-			const journalResponse = await fetch(`${window.MyDayHub_Config.appURL}/api/journal.php?start_date=${startDate}&end_date=${endDate}`);
-			if (journalResponse.ok) {
-				const journalEntries = await journalResponse.json();
-				
-				// Count journal entry classifications
-				journalEntries.forEach(entry => {
-					if (!entry.classification) return; // Skip entries without classification
+	try {
+		const journalResponse = await fetch(`${window.MyDayHub_Config.appURL}/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`);
+		if (journalResponse.ok) {
+			const text = await journalResponse.text();
+			if (text && text.trim()) {
+				try {
+					const response = JSON.parse(text);
 					
-					switch (entry.classification) {
-						case 'signal':
-							signalCount++;
-							break;
-						case 'support':
-							supportCount++;
-							break;
-						case 'backlog':
-							backlogCount++;
-							break;
-						default:
-							// Skip unknown classifications silently
+					// The API returns {status: 'success', data: [...]}
+					const journalEntries = response?.data || response;
+					
+					// Count journal entry classifications
+					if (Array.isArray(journalEntries)) {
+						journalEntries.forEach(entry => {
+							if (!entry.classification) return; // Skip entries without classification
+							
+							switch (entry.classification) {
+								case 'signal':
+									signalCount++;
+									break;
+								case 'support':
+									supportCount++;
+									break;
+								case 'backlog':
+									backlogCount++;
+									break;
+								default:
+									// Skip unknown classifications silently
+							}
+						});
 					}
-				});
+				} catch (parseError) {
+					console.warn('Could not parse journal entries JSON:', parseError, 'Response:', text.substring(0, 100));
+				}
 			}
-		} catch (error) {
-			console.warn('Could not fetch journal entries for mission focus chart:', error);
 		}
+	} catch (error) {
+		console.warn('Could not fetch journal entries for mission focus chart:', error);
+	}
 		
-		const total = signalCount + supportCount + backlogCount;
+        const total = signalCount + supportCount + backlogCount;
 		
 		// Get canvas element
 		const canvas = document.getElementById('mission-focus-canvas');
@@ -453,7 +465,7 @@ async function updateMissionFocusChart() {
 					}
 				}
 			});
-			missionFocusChart.setAttribute('data-tooltip', 'No active tasks');
+            missionFocusChart.setAttribute('data-tooltip', 'No recent tasks or entries');
 			window._updatingMissionChart = false;
 			window._missionChartRetried = false; // Reset retry flag
 			return;
@@ -472,7 +484,7 @@ async function updateMissionFocusChart() {
 				datasets: [{
 					data: [signalCount, supportCount, backlogCount],
 					backgroundColor: [
-						'#22c55e', // Signal - Green
+						'#22c55e', // Signal - Fixed mission green
 						'#3b82f6', // Support - Blue
 						'#f97316'  // Backlog - Orange
 					],
@@ -497,11 +509,19 @@ async function updateMissionFocusChart() {
 			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog (Tasks + Last 30 Days)`
 		);
 		
-		// Clear the safety flag
-		window._updatingMissionChart = false;
+        // Clear the safety flag and process any pending request
+        window._updatingMissionChart = false;
+        if (window._pendingMissionChartUpdate) {
+            window._pendingMissionChartUpdate = false;
+            setTimeout(() => updateMissionFocusChart(), 0);
+        }
 	} catch (error) {
 		console.error('Error updating mission focus chart:', error);
-		window._updatingMissionChart = false;
+        window._updatingMissionChart = false;
+        if (window._pendingMissionChartUpdate) {
+            window._pendingMissionChartUpdate = false;
+            setTimeout(() => updateMissionFocusChart(), 50);
+        }
 	}
 }
 
@@ -529,11 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	updateFooterDate();
 	initSettingsPanel();
 
-	if (typeof initTasksView === 'function') {
-		initTasksView();
-		// Ensure date is updated after tasks view loads
-		setTimeout(updateFooterDate, 100);
-	}
+	// Do not eagerly initialize tasks or journal here; ViewManager will lazy-load
 	
 	// Initialize calendar overlay after settings panel and tasks view are ready
 	setTimeout(() => {
@@ -601,7 +617,8 @@ document.addEventListener('keydown', (e) => {
  * Initializes all event listeners for the settings panel.
  */
 function initSettingsPanel() {
-	const toggleBtn = document.getElementById('btn-settings-toggle');
+    const toggleBtn = document.getElementById('btn-settings-toggle');
+    const inlineToggle = document.getElementById('btn-settings-inline-toggle');
 	const closeBtn = document.getElementById('btn-settings-close');
 	const overlay = document.getElementById('settings-panel-overlay');
 	const themeDarkBtn = document.getElementById('theme-dark');
@@ -613,12 +630,30 @@ function initSettingsPanel() {
 	const encryptionSetupBtn = document.getElementById('btn-encryption-setup');
 
 
-	if (!toggleBtn || !closeBtn || !overlay || !themeDarkBtn || !themeLightBtn || !themeHighContrastBtn || !changePasswordBtn) {
+    if (!toggleBtn || !closeBtn || !overlay || !themeDarkBtn || !themeLightBtn || !themeHighContrastBtn || !changePasswordBtn) {
 		console.error('Settings panel elements could not be found.');
 		return;
 	}
 
-	toggleBtn.addEventListener('click', openSettingsPanel);
+    // Toggle behavior: clicking the hamburger closes when open
+    toggleBtn.addEventListener('click', () => {
+        const isOpen = !overlay.classList.contains('hidden');
+        if (isOpen) {
+            closeSettingsPanel();
+        } else {
+            openSettingsPanel();
+        }
+    });
+    if (inlineToggle) {
+        inlineToggle.addEventListener('click', () => {
+            const isOpen = !overlay.classList.contains('hidden');
+            if (isOpen) {
+                closeSettingsPanel();
+            } else {
+                openSettingsPanel();
+            }
+        });
+    }
 	closeBtn.addEventListener('click', closeSettingsPanel);
 	
 	overlay.addEventListener('click', (e) => {
@@ -627,7 +662,12 @@ function initSettingsPanel() {
 		}
 	});
 
-	// ESC key handling now managed by modal stack system
+    // ESC key handling via modal stack; also close if ESC pressed while panel open
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeSettingsPanel();
+        }
+    });
 
 	// Modified for Trust Management Regression Fix
 	// Initialize Trust Management button in settings
@@ -722,6 +762,17 @@ function initSettingsPanel() {
 	if (usageStatsBtn) {
 		usageStatsBtn.addEventListener('click', openUsageStatsModal);
 	}
+	
+	// Accent Color Customization - wrap in try/catch to prevent blocking
+	try {
+		initAccentColorPicker();
+	} catch (error) {
+		console.warn('Accent color picker initialization failed:', error);
+		// Apply default accent color if initialization fails
+		if (typeof applyAccentColorToUI === 'function') {
+			applyAccentColorToUI('#22c55e');
+		}
+	}
 }
 
 /**
@@ -747,6 +798,11 @@ function setTheme(theme) {
 			localStorage.setItem('high_contrast_mode', 'false');
 			saveUserPreference('light_mode', true);
 			saveUserPreference('high_contrast_mode', false);
+			// Reapply accent color to override theme-specific defaults
+			if (typeof applyAccentColorToUI === 'function') {
+				const currentAccentColor = localStorage.getItem('accent_color') || '#22c55e';
+				applyAccentColorToUI(currentAccentColor);
+			}
 			break;
 		case 'high-contrast':
 			document.body.classList.add('high-contrast');
@@ -756,6 +812,11 @@ function setTheme(theme) {
 			localStorage.setItem('high_contrast_mode', 'true');
 			saveUserPreference('light_mode', false);
 			saveUserPreference('high_contrast_mode', true);
+			// Reapply accent color to override theme-specific defaults
+			if (typeof applyAccentColorToUI === 'function') {
+				const currentAccentColor = localStorage.getItem('accent_color') || '#22c55e';
+				applyAccentColorToUI(currentAccentColor);
+			}
 			break;
 		case 'dark':
 		default:
@@ -765,6 +826,11 @@ function setTheme(theme) {
 			localStorage.setItem('high_contrast_mode', 'false');
 			saveUserPreference('light_mode', false);
 			saveUserPreference('high_contrast_mode', false);
+			// Reapply accent color to override theme-specific defaults
+			if (typeof applyAccentColorToUI === 'function') {
+				const currentAccentColor = localStorage.getItem('accent_color') || '#22c55e';
+				applyAccentColorToUI(currentAccentColor);
+			}
 			break;
 	}
 }
@@ -1073,6 +1139,149 @@ function updateFooterDate() {
 // ==========================================================================
 
 /**
+ * Calculate the appropriate text color (black or white) based on background color luminance
+ * @param {string} backgroundColor - The background color in hex format
+ * @returns {string} - '#000000' for dark backgrounds, '#ffffff' for light backgrounds
+ */
+function calculateTextColor(backgroundColor) {
+	// Remove # if present
+	const hex = backgroundColor.replace('#', '');
+	
+	// Convert hex to RGB
+	const r = parseInt(hex.substr(0, 2), 16);
+	const g = parseInt(hex.substr(2, 2), 16);
+	const b = parseInt(hex.substr(4, 2), 16);
+	
+	// Calculate relative luminance using WCAG formula
+	const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+	
+	// Return black for light backgrounds, white for dark backgrounds
+	return luminance > 0.5 ? '#000000' : '#ffffff';
+}
+
+/**
+ * Test function to demonstrate contrast calculation with different accent colors
+ * Can be called from browser console for testing
+ */
+window.testToastContrast = function() {
+	const testColors = ['#22c55e', '#8b5cf6', '#f59e0b', '#ef4444', '#ffffff', '#000000'];
+	
+	console.log('Testing toast contrast calculation:');
+	testColors.forEach(color => {
+		const textColor = calculateTextColor(color);
+		console.log(`Background: ${color} → Text: ${textColor} (luminance: ${((parseInt(color.replace('#', '').substr(0, 2), 16) * 0.299 + parseInt(color.replace('#', '').substr(2, 2), 16) * 0.587 + parseInt(color.replace('#', '').substr(4, 2), 16) * 0.114) / 255).toFixed(3)})`);
+	});
+	
+	// Show test toasts
+	testColors.forEach((color, index) => {
+		setTimeout(() => {
+			showToast({
+				message: `Test toast with ${color} background`,
+				type: 'info',
+				duration: 2000
+			});
+		}, index * 2500);
+	});
+};
+
+/**
+ * Test function to verify settings button contrast
+ * Can be called from browser console for testing
+ */
+window.testSettingsContrast = function() {
+	const testColors = ['#fbbf24', '#22c55e', '#8b5cf6', '#f59e0b', '#ef4444'];
+	
+	console.log('Testing settings button contrast:');
+	testColors.forEach((color, index) => {
+		setTimeout(() => {
+			console.log(`Testing accent color: ${color}`);
+			applyAccentColorToUI(color);
+			
+			// Show which buttons should have the calculated text color
+			const activeButtons = document.querySelectorAll('.theme-btn.active, .font-btn.active, .sound-btn.active');
+			console.log(`Found ${activeButtons.length} active buttons that should have updated text color`);
+			activeButtons.forEach((btn, i) => {
+				console.log(`Button ${i + 1}: ${btn.textContent.trim()} - Text color: ${btn.style.color}`);
+			});
+		}, index * 2000);
+	});
+};
+
+/**
+ * Debug function to check accent color application in different themes
+ * Can be called from browser console for testing
+ */
+window.debugAccentColor = function() {
+	console.log('=== Accent Color Debug ===');
+	
+	// Check current accent color
+	const currentAccent = localStorage.getItem('accent_color') || '#22c55e';
+	console.log(`Current accent color: ${currentAccent}`);
+	
+	// Check computed styles on root
+	const rootAccent = getComputedStyle(document.documentElement).getPropertyValue('--accent-color');
+	console.log(`Root --accent-color: ${rootAccent}`);
+	
+	// Check computed styles on body
+	const bodyAccent = getComputedStyle(document.body).getPropertyValue('--accent-color');
+	console.log(`Body --accent-color: ${bodyAccent}`);
+	
+	// Check if light mode is active
+	const isLightMode = document.body.classList.contains('light-mode');
+	console.log(`Light mode active: ${isLightMode}`);
+	
+	// Check active buttons
+	const activeButtons = document.querySelectorAll('.theme-btn.active, .font-btn.active, .sound-btn.active');
+	console.log(`Active buttons found: ${activeButtons.length}`);
+	activeButtons.forEach((btn, i) => {
+		const computedBg = getComputedStyle(btn).backgroundColor;
+		const computedColor = getComputedStyle(btn).color;
+		console.log(`Button ${i + 1} (${btn.textContent.trim()}): bg=${computedBg}, color=${computedColor}`);
+	});
+	
+	// Force reapply accent color
+	console.log('Reapplying accent color...');
+	applyAccentColorToUI(currentAccent);
+	
+	console.log('=== End Debug ===');
+};
+
+/**
+ * Quick test function to force accent color application
+ * Can be called from browser console: window.testAccentColor('#8b5cf6')
+ */
+window.testAccentColor = function(color = '#8b5cf6') {
+	console.log(`Testing accent color: ${color}`);
+	applyAccentColorToUI(color);
+	localStorage.setItem('accent_color', color);
+	console.log('Accent color applied. Check the settings panel buttons.');
+};
+
+/**
+ * Debug function specifically for tab button styling
+ * Can be called from browser console: window.debugTabButtons()
+ */
+window.debugTabButtons = function() {
+	console.log('=== Tab Button Debug ===');
+	
+	const tabButtons = document.querySelectorAll('.tab-btn');
+	console.log(`Found ${tabButtons.length} tab buttons`);
+	
+	tabButtons.forEach((btn, i) => {
+		const isActive = btn.classList.contains('active');
+		const computedStyle = getComputedStyle(btn);
+		console.log(`Tab ${i + 1} (${btn.textContent.trim()}):`);
+		console.log(`  - Active: ${isActive}`);
+		console.log(`  - Color: ${computedStyle.color}`);
+		console.log(`  - Background: ${computedStyle.backgroundColor}`);
+		console.log(`  - Border: ${computedStyle.border}`);
+		console.log(`  - Box-shadow: ${computedStyle.boxShadow}`);
+	});
+	
+	console.log('=== End Tab Button Debug ===');
+};
+
+/**
  * Displays a toast notification message.
  * @param {object} options - The options for the toast.
  * @param {string} options.message - The message to display.
@@ -1092,6 +1301,21 @@ function showToast(options) {
 	const toast = document.createElement('div');
 	toast.className = `toast ${type}`;
 	
+	// Set appropriate text color based on toast type for better contrast
+	if (type === 'info') {
+		const accentColor = getComputedStyle(document.documentElement).getPropertyValue('--accent-color') || '#22c55e';
+		const textColor = calculateTextColor(accentColor);
+		toast.style.color = textColor;
+	} else if (type === 'success') {
+		const successColor = getComputedStyle(document.documentElement).getPropertyValue('--toast-success-bg') || '#22c55e';
+		const textColor = calculateTextColor(successColor);
+		toast.style.color = textColor;
+	} else if (type === 'error') {
+		const errorColor = getComputedStyle(document.documentElement).getPropertyValue('--toast-error-bg') || '#ef4444';
+		const textColor = calculateTextColor(errorColor);
+		toast.style.color = textColor;
+	}
+	
 	const toastContent = document.createElement('div');
 	toastContent.className = 'toast-content';
 
@@ -1103,6 +1327,10 @@ function showToast(options) {
 		const actionBtn = document.createElement('button');
 		actionBtn.className = 'toast-action-btn';
 		actionBtn.textContent = action.text || 'Action';
+		// Apply the same text color for consistency
+		if (toast.style.color) {
+			actionBtn.style.color = toast.style.color;
+		}
 		actionBtn.addEventListener('click', () => {
 			action.callback();
 			removeToast();
@@ -1115,6 +1343,10 @@ function showToast(options) {
 	const closeBtn = document.createElement('button');
 	closeBtn.className = 'toast-close-btn';
 	closeBtn.innerHTML = '&times;';
+	// Apply the same text color for consistency
+	if (toast.style.color) {
+		closeBtn.style.color = toast.style.color;
+	}
 	closeBtn.addEventListener('click', () => removeToast(), { once: true });
 	toast.appendChild(closeBtn);
 
@@ -1923,6 +2155,317 @@ function updateFontSizeUI(size) {
 // Make font size functions globally available
 window.applyFontSize = applyFontSize;
 window.updateFontSizeUI = updateFontSizeUI;
+
+// ==========================================================================
+// --- ACCENT COLOR CUSTOMIZATION ---
+// ==========================================================================
+
+/**
+ * Default preset colors that work well across all themes
+ */
+const ACCENT_PRESETS = {
+	green: '#22c55e',
+	blue: '#3b82f6',
+	purple: '#8b5cf6',
+	amber: '#f59e0b'
+};
+
+const DEFAULT_ACCENT = '#22c55e';
+
+let currentAccentColor = DEFAULT_ACCENT;
+let tempAccentColor = DEFAULT_ACCENT;
+
+/**
+ * Initializes the accent color picker modal and its controls
+ */
+function initAccentColorPicker() {
+	const accentBtn = document.getElementById('btn-accent-color');
+	const modal = document.getElementById('accent-color-modal');
+	const closeBtn = document.getElementById('btn-close-accent-modal');
+	const applyBtn = document.getElementById('btn-apply-accent');
+	const resetBtn = document.getElementById('btn-reset-accent');
+	const customPicker = document.getElementById('custom-accent-picker');
+	const presetBtns = document.querySelectorAll('.preset-color-btn');
+	const preview = document.querySelector('.accent-color-preview');
+	
+	if (!accentBtn || !modal) {
+		console.warn('Accent color picker elements not found');
+		return;
+	}
+	
+	// Load saved accent color asynchronously - don't await to avoid blocking initialization
+	loadAccentColorPreference().catch(err => {
+		console.warn('Error loading accent color, using default:', err);
+		applyAccentColorToUI(DEFAULT_ACCENT);
+	});
+	
+	// Open modal
+	accentBtn.addEventListener('click', () => {
+		tempAccentColor = currentAccentColor;
+		updateAccentPreview(tempAccentColor);
+		updatePresetSelection(tempAccentColor);
+		customPicker.value = tempAccentColor;
+		modal.classList.remove('hidden');
+	});
+	
+	// Close modal
+	const closeModal = () => {
+		modal.classList.add('hidden');
+		// Restore current color if not applied
+		applyAccentColorToUI(currentAccentColor);
+	};
+	
+	closeBtn?.addEventListener('click', closeModal);
+	modal.addEventListener('click', (e) => {
+		if (e.target === modal) closeModal();
+	});
+	
+	// Preset color selection
+	presetBtns.forEach(btn => {
+		btn.addEventListener('click', () => {
+			const color = btn.dataset.color;
+			tempAccentColor = color;
+			customPicker.value = color;
+			updateAccentPreview(color);
+			updatePresetSelection(color);
+			applyAccentColorToUI(color);
+		});
+	});
+	
+	// Custom color picker
+	customPicker?.addEventListener('input', (e) => {
+		tempAccentColor = e.target.value;
+		updateAccentPreview(tempAccentColor);
+		updatePresetSelection(tempAccentColor);
+		applyAccentColorToUI(tempAccentColor);
+	});
+	
+	// Apply button
+	applyBtn?.addEventListener('click', async () => {
+		currentAccentColor = tempAccentColor;
+		applyAccentColorToUI(currentAccentColor);
+		await saveAccentColorPreference(currentAccentColor);
+		modal.classList.add('hidden');
+		showToast({ message: 'Accent color applied successfully', type: 'success' });
+	});
+	
+	// Reset button
+	resetBtn?.addEventListener('click', async () => {
+		tempAccentColor = DEFAULT_ACCENT;
+		currentAccentColor = DEFAULT_ACCENT;
+		customPicker.value = DEFAULT_ACCENT;
+		updateAccentPreview(DEFAULT_ACCENT);
+		updatePresetSelection(DEFAULT_ACCENT);
+		applyAccentColorToUI(DEFAULT_ACCENT);
+		// Save the reset immediately
+		await saveAccentColorPreference(DEFAULT_ACCENT);
+		showToast({ message: 'Accent color reset to default', type: 'success' });
+	});
+}
+
+/**
+ * Updates the preview elements with the selected color
+ */
+function updateAccentPreview(color) {
+	const previewBtn = document.querySelector('.preview-btn');
+	const previewIcon = document.querySelector('.preview-icon');
+	const settingsPreview = document.querySelector('.accent-color-preview');
+	
+	if (previewBtn) {
+		previewBtn.style.background = color;
+	}
+	if (previewIcon) {
+		previewIcon.style.color = color;
+	}
+	if (settingsPreview) {
+		settingsPreview.style.backgroundColor = color;
+	}
+}
+
+/**
+ * Updates the selected state of preset buttons
+ */
+function updatePresetSelection(color) {
+	const presetBtns = document.querySelectorAll('.preset-color-btn');
+	presetBtns.forEach(btn => {
+		if (btn.dataset.color === color) {
+			btn.classList.add('selected');
+		} else {
+			btn.classList.remove('selected');
+		}
+	});
+}
+
+/**
+ * Applies the accent color to the UI by updating CSS custom properties
+ */
+function applyAccentColorToUI(color) {
+	// Set the primary accent color with !important to override theme-specific values
+	document.documentElement.style.setProperty('--accent-color', color, 'important');
+	document.documentElement.style.setProperty('--accent-color-secondary', adjustBrightness(color, -10), 'important');
+	
+	// Generate variations for gradients and hover states
+	const { lighter, darker } = generateColorVariations(color);
+	document.documentElement.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${color}, ${darker})`, 'important');
+	document.documentElement.style.setProperty('--accent-gradient-light', `linear-gradient(135deg, ${lighter}, ${color})`, 'important');
+	document.documentElement.style.setProperty('--accent-gradient-hover', `linear-gradient(135deg, ${darker}, ${adjustBrightness(darker, -15)})`, 'important');
+	
+	// Also apply to body.light-mode to override theme-specific CSS
+	document.body.style.setProperty('--accent-color', color, 'important');
+	document.body.style.setProperty('--accent-gradient', `linear-gradient(135deg, ${color}, ${darker})`, 'important');
+	document.body.style.setProperty('--accent-gradient-light', `linear-gradient(135deg, ${lighter}, ${color})`, 'important');
+	document.body.style.setProperty('--accent-gradient-hover', `linear-gradient(135deg, ${darker}, ${adjustBrightness(darker, -15)})`, 'important');
+	
+	// Update button backgrounds and other accent-dependent styles
+	document.documentElement.style.setProperty('--btn-hover-bg', `${color}1a`, 'important'); // 10% opacity
+	document.documentElement.style.setProperty('--btn-success-bg', color, 'important');
+	document.documentElement.style.setProperty('--btn-success-hover-bg', darker, 'important');
+	document.documentElement.style.setProperty('--toast-success-bg', color, 'important');
+	
+	// Also apply to body for light mode override
+	document.body.style.setProperty('--btn-hover-bg', `${color}1a`, 'important');
+	document.body.style.setProperty('--btn-success-bg', color, 'important');
+	document.body.style.setProperty('--btn-success-hover-bg', darker, 'important');
+	document.body.style.setProperty('--toast-success-bg', color, 'important');
+	
+	// Update settings preview
+	const settingsPreview = document.querySelector('.accent-color-preview');
+	if (settingsPreview) {
+		settingsPreview.style.backgroundColor = color;
+	}
+	
+	// Calculate and apply appropriate text color for settings buttons
+	const textColor = calculateTextColor(color);
+	document.documentElement.style.setProperty('--accent-text-color', textColor, 'important');
+	
+	// Update all active settings buttons with the calculated text color
+	updateSettingsButtonTextColors(textColor);
+}
+
+/**
+ * Updates all active settings buttons with the calculated text color
+ */
+function updateSettingsButtonTextColors(textColor) {
+	// Update theme buttons
+	const themeButtons = document.querySelectorAll('.theme-btn.active');
+	themeButtons.forEach(btn => {
+		btn.style.color = textColor;
+	});
+	
+	// Update font size buttons
+	const fontButtons = document.querySelectorAll('.font-btn.active');
+	fontButtons.forEach(btn => {
+		btn.style.color = textColor;
+	});
+	
+	// Update sound buttons (also covers date toggle and mission focus buttons)
+	const soundButtons = document.querySelectorAll('.sound-btn.active');
+	soundButtons.forEach(btn => {
+		btn.style.color = textColor;
+	});
+	
+	// Update tab buttons (view tabs)
+	const activeTabButtons = document.querySelectorAll('.tab-btn.active');
+	activeTabButtons.forEach(btn => {
+		btn.style.color = textColor;
+	});
+	
+	// Inactive tab buttons use CSS text-secondary for proper contrast
+}
+
+/**
+ * Generates lighter and darker variations of a color
+ */
+function generateColorVariations(hex) {
+	const lighter = adjustBrightness(hex, 20);
+	const darker = adjustBrightness(hex, -15);
+	return { lighter, darker };
+}
+
+/**
+ * Adjusts the brightness of a hex color
+ */
+function adjustBrightness(hex, percent) {
+	// Remove # if present
+	hex = hex.replace('#', '');
+	
+	// Convert to RGB
+	let r = parseInt(hex.substring(0, 2), 16);
+	let g = parseInt(hex.substring(2, 4), 16);
+	let b = parseInt(hex.substring(4, 6), 16);
+	
+	// Adjust brightness
+	r = Math.max(0, Math.min(255, r + (r * percent / 100)));
+	g = Math.max(0, Math.min(255, g + (g * percent / 100)));
+	b = Math.max(0, Math.min(255, b + (b * percent / 100)));
+	
+	// Convert back to hex
+	const rr = Math.round(r).toString(16).padStart(2, '0');
+	const gg = Math.round(g).toString(16).padStart(2, '0');
+	const bb = Math.round(b).toString(16).padStart(2, '0');
+	
+	return `#${rr}${gg}${bb}`;
+}
+
+/**
+ * Loads accent color preference from backend
+ */
+async function loadAccentColorPreference() {
+	try {
+		// First apply localStorage for immediate display (if available)
+		const localColor = localStorage.getItem('accent_color');
+		if (localColor) {
+			currentAccentColor = localColor;
+			applyAccentColorToUI(localColor);
+		}
+		
+		// Then fetch from backend to sync with database
+		const response = await window.apiFetch({
+			module: 'users',
+			action: 'getUserPreferences'
+		});
+		
+		if (response?.status === 'success' && response.data?.accent_color) {
+			// Backend has a saved color - use it and sync localStorage
+			const savedColor = response.data.accent_color;
+			if (savedColor !== localColor) {
+				// Backend color differs from localStorage - update both
+				currentAccentColor = savedColor;
+				applyAccentColorToUI(savedColor);
+				localStorage.setItem('accent_color', savedColor);
+			}
+		} else if (!localColor) {
+			// No backend color and no localStorage - use default
+			currentAccentColor = DEFAULT_ACCENT;
+			applyAccentColorToUI(DEFAULT_ACCENT);
+			localStorage.setItem('accent_color', DEFAULT_ACCENT);
+		}
+	} catch (error) {
+		console.warn('Could not load accent color preference, using default:', error);
+		// Fall back to default - don't let this break the app
+		const localColor = localStorage.getItem('accent_color');
+		if (!localColor) {
+			currentAccentColor = DEFAULT_ACCENT;
+			applyAccentColorToUI(DEFAULT_ACCENT);
+		}
+	}
+}
+
+/**
+ * Saves accent color preference to backend
+ */
+async function saveAccentColorPreference(color) {
+	try {
+		// Save to localStorage immediately
+		localStorage.setItem('accent_color', color);
+		
+		// Save to backend using existing saveUserPreference function
+		await saveUserPreference('accent_color', color);
+	} catch (error) {
+		console.error('Failed to save accent color preference:', error);
+		showToast({ message: 'Failed to save accent color', type: 'error' });
+	}
+}
 
 // Make modal management functions globally available
 window.registerModal = registerModal;

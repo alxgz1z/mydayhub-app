@@ -84,20 +84,20 @@
 }
 
 .journal-column {
-	flex: 1;
-	min-width: 280px;
-	max-width: 350px;
-	height: 70vh; /* Default height as 70% of viewport */
-	min-height: 70vh; /* Ensure minimum height */
-	max-height: 95vh; /* Allow expansion up to 95% */
-	display: flex;
-	flex-direction: column;
-	background: var(--toolbar-bg);
-	border: 1px solid var(--border-color);
-	border-radius: 12px;
-	overflow: hidden; /* Hide overflow for proper scrolling */
-	box-shadow: var(--card-shadow);
-	transition: all 0.3s ease;
+    flex: 1;
+    min-width: 280px;
+    max-width: 350px;
+    height: 50vh; /* Default height target */
+    min-height: 50vh; /* Minimum 50% of available vertical space */
+    max-height: 95vh; /* Keep existing maximum */
+    display: flex;
+    flex-direction: column;
+    background: var(--toolbar-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden; /* Hide overflow for proper scrolling */
+    box-shadow: var(--card-shadow);
+    transition: all 0.3s ease;
 }
 
 /* Visual indicator when column is at maximum height */
@@ -107,13 +107,13 @@
 
 .journal-column.center {
 	border: 1px solid var(--accent-color);
-	box-shadow: 0 0 20px rgba(34, 197, 94, 0.15), 0 0 40px rgba(34, 197, 94, 0.08);
+	box-shadow: 0 0 20px var(--accent-color)25, 0 0 40px var(--accent-color)15;
 	transform: scale(1.01);
 }
 
 .journal-column.center .journal-column-header {
-	background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(37, 99, 235, 0.05));
-	border-bottom: 1px solid rgba(59, 130, 246, 0.2);
+	background: linear-gradient(135deg, var(--accent-color)15, var(--accent-color)10);
+	border-bottom: 1px solid var(--accent-color)30;
 }
 
 .journal-column.weekend {
@@ -539,9 +539,9 @@
 	background: var(--accent-gradient, var(--accent-color));
 }
 
-/* Signal classification - Accent green gradient */
+/* Signal classification - Fixed mission green gradient */
 .journal-entry-card.classification-signal .journal-entry-status-band {
-	background: var(--accent-gradient) !important; /* Accent green gradient */
+	background: linear-gradient(135deg, #22c55e, #16a34a) !important; /* Fixed mission green */
 }
 
 /* Support classification - Accent color diagonal stripes */
@@ -1301,7 +1301,7 @@ body.dark-mode .journal-actions-menu {
 }
 
 #journal-classification-popover .swatch.classification-signal {
-    background: var(--accent-gradient);
+    background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 
 #journal-classification-popover .swatch.classification-support {

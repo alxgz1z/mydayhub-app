@@ -70,15 +70,19 @@ class ViewManager {
         // Show/hide view-specific UI elements
         this.toggleViewSpecificElements(view);
         
-        // Initialize the view if needed
-        if (view === 'journal' && !window.journalView) {
-            // Initialize journal view
-            setTimeout(() => {
-                if (window.journalView) {
-                    window.journalView.renderJournalView();
-                }
-            }, 100);
+        // Initialize the view if needed (lazy loading)
+        if (view === 'tasks' && typeof window.initTasksView === 'function') {
+            window.initTasksView();
+        } else if (view === 'journal' && typeof window.initJournalView === 'function') {
+            window.initJournalView();
         }
+        
+        // Update mission focus chart after view loads
+        setTimeout(() => {
+            if (typeof window.updateMissionFocusChart === 'function') {
+                window.updateMissionFocusChart();
+            }
+        }, 100);
     }
     
     /**

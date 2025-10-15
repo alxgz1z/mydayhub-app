@@ -101,6 +101,9 @@ function initTasksView() {
 	initEventListeners();
 }
 
+// Expose to global namespace for ViewManager
+window.initTasksView = initTasksView;
+
 /**
  * Helper function to reconstruct a task data object from a DOM element.
  */
@@ -243,17 +246,18 @@ async function restoreItem(type, id) {
 				}
 			} else if (type === 'column') {
 				const restoredColumn = result.data;
-				const hiddenColumn = document.querySelector(`.task-column[data-column-id="${id}"][style*="display: none"]`);
-				if (hiddenColumn) {
-					hiddenColumn.style.display = 'flex';
-				} else {
-					const boardContainer = document.getElementById('task-board-container');
-					const columnEl = createColumnElement(restoredColumn);
-					boardContainer.appendChild(columnEl);
-				}
-				updateMoveButtonVisibility();
+			const hiddenColumn = document.querySelector(`.task-column[data-column-id="${id}"][style*="display: none"]`);
+			if (hiddenColumn) {
+				hiddenColumn.style.display = 'flex';
+			} else {
+				const boardContainer = document.getElementById('task-board-container');
+				const columnEl = createColumnElement(restoredColumn);
+				boardContainer.appendChild(columnEl);
 			}
-			showToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} restored.`, type: 'success' });
+			updateMoveButtonVisibility();
+			checkTaskBoardOverflow(); // Check overflow after column restore
+		}
+		showToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} restored.`, type: 'success' });
 		} else {
 			throw new Error(result.message);
 		}
@@ -509,18 +513,20 @@ function initEventListeners() {
 					const columnEl = deleteBtn.closest('.task-column');
 					const columnId = columnEl.dataset.columnId;
 			
-					const success = await deleteColumn(columnId);
-					if (success) {
-						columnEl.style.display = 'none';
-						updateMoveButtonVisibility();
-						
-						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
-						updateQuotaStatusAfterOperation('column', false);
+				const success = await deleteColumn(columnId);
+				if (success) {
+					columnEl.style.display = 'none';
+					updateMoveButtonVisibility();
+					checkTaskBoardOverflow(); // Check overflow after column removal
 					
-						const removalTimeout = setTimeout(() => {
-							columnEl.remove();
-							updateMoveButtonVisibility();
-						}, 7000);
+					// Modified for Subscription Quota Enforcement - Update quota tracking after delete
+					updateQuotaStatusAfterOperation('column', false);
+				
+					const removalTimeout = setTimeout(() => {
+						columnEl.remove();
+						updateMoveButtonVisibility();
+						checkTaskBoardOverflow(); // Check overflow again after DOM removal
+					}, 7000);
 					
 						showToast({
 							message: 'Column deleted.',
@@ -648,6 +654,7 @@ function initEventListeners() {
 					if (success) {
 						taskCard.style.display = 'none';
 						updateColumnTaskCount(columnEl);
+						adjustWideScreenColumnHeights();
 						
 						// Modified for Subscription Quota Enforcement - Update quota tracking after delete
 						updateQuotaStatusAfterOperation('task', false);
@@ -659,6 +666,7 @@ function initEventListeners() {
 					
 						const removalTimeout = setTimeout(() => {
 							taskCard.remove();
+                        adjustHeightsDebounced(0);
 						}, 7000);
 					
 						showToast({
@@ -1467,6 +1475,99 @@ function updateMoveButtonVisibility() {
 }
 
 /**
+ * On wide screens only: expand column height from 50vh up to 95vh
+ * if its content requires more space, then enable internal scrolling.
+ */
+function adjustWideScreenColumnHeights() {
+    // Only apply for wide screens; allow stacked/mobile to grow naturally
+    if (window.innerWidth <= 768) return;
+
+    const columns = Array.from(document.querySelectorAll('.task-column'));
+    if (columns.length === 0) return;
+
+    const baseMin = Math.round(window.innerHeight * 0.50); // 50vh
+    const maxCap = Math.round(window.innerHeight * 0.85);  // 85vh (user-tuned)
+
+    // First pass: compute desired height per column based on content
+    const desiredHeights = columns.map(col => {
+        const body = col.querySelector('.column-body');
+        if (!body) return baseMin;
+        // Clear inline styles that could influence measurements
+        col.style.height = '';
+        body.style.maxHeight = '';
+        body.style.overflowY = '';
+
+        const headerH = col.querySelector('.column-header')?.offsetHeight || 0;
+        const footerH = col.querySelector('.column-footer')?.offsetHeight || 0;
+        const contentNeeded = headerH + footerH + body.scrollHeight + 2;
+        return Math.max(baseMin, Math.min(contentNeeded, maxCap));
+    });
+
+    // Equalize height cosmetically using the tallest desired height, within cap
+    const equalized = Math.min(Math.max(...desiredHeights), maxCap);
+
+    // Second pass: apply equalized height and set per-column body scrolling
+    columns.forEach((col, idx) => {
+        const body = col.querySelector('.column-body');
+        if (!body) return;
+
+        const headerH = col.querySelector('.column-header')?.offsetHeight || 0;
+        const footerH = col.querySelector('.column-footer')?.offsetHeight || 0;
+        col.style.height = equalized + 'px';
+
+        // Compute body viewport height inside the column and set scroll when needed
+        const bodyViewport = Math.max(0, equalized - headerH - footerH - 2);
+        body.style.maxHeight = bodyViewport + 'px';
+        body.style.overflowY = (body.scrollHeight > bodyViewport) ? 'auto' : 'hidden';
+    });
+}
+
+// Debounced helper to avoid thrashing during many DOM mutations
+let _adjustHeightsTimer;
+function adjustHeightsDebounced(delay = 50) {
+    if (_adjustHeightsTimer) clearTimeout(_adjustHeightsTimer);
+    _adjustHeightsTimer = setTimeout(() => {
+        adjustWideScreenColumnHeights();
+    }, delay);
+}
+
+/**
+ * Checks if the task board container is overflowing horizontally.
+ * Adds/removes the 'overflowing' class to control centering vs left alignment.
+ * On wide screens: centered if content fits, left-aligned if it overflows.
+ * On mobile: stacked layout (handled by CSS media queries).
+ */
+function checkTaskBoardOverflow() {
+	const container = document.getElementById('task-board-container');
+	if (!container) {
+		console.log('checkTaskBoardOverflow: container not found');
+		return;
+	}
+	
+	// Only apply on non-mobile screens
+	if (window.innerWidth <= 768) {
+		container.classList.remove('overflowing');
+		console.log('checkTaskBoardOverflow: mobile view, removed overflowing class');
+		return;
+	}
+	
+	// Check if content width exceeds container width (i.e., horizontal scroll is present)
+	const isOverflowing = container.scrollWidth > container.clientWidth;
+	console.log('checkTaskBoardOverflow:', {
+		scrollWidth: container.scrollWidth,
+		clientWidth: container.clientWidth,
+		isOverflowing: isOverflowing,
+		windowWidth: window.innerWidth
+	});
+	
+	if (isOverflowing) {
+		container.classList.add('overflowing');
+	} else {
+		container.classList.remove('overflowing');
+	}
+}
+
+/**
  * Sends a request to duplicate a task.
  */
 async function duplicateTask(taskId) {
@@ -2031,6 +2132,8 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 			sortTasksInColumn(columnBody);
 			updateColumnTaskCount(columnEl);
+            // Adjust column height immediately for wide screens
+            adjustHeightsDebounced(0);
 			
 			// Modified for Subscription Quota Enforcement - Update quota tracking
 			updateQuotaStatusAfterOperation('task', true);
@@ -2182,6 +2285,14 @@ function renderBoard(boardData) {
 
 	updateMoveButtonVisibility();
 	applyAllFilters();
+	
+    // Check overflow and adjust column heights after a brief delay to ensure DOM is fully laid out
+    setTimeout(() => {
+        checkTaskBoardOverflow();
+        adjustHeightsDebounced(0);
+        // Run once more on the next frame to capture late layout changes
+        requestAnimationFrame(() => adjustHeightsDebounced(0));
+    }, 150);
 }
 
 
@@ -4265,3 +4376,19 @@ async function navigateToJournalEntry(entryId) {
 		showToast({ message: 'Failed to load journal entry.', type: 'error' });
 	}
 }
+
+/**
+ * Set up resize observer to check for overflow when viewport changes.
+ * This handles responsive centering of the task board.
+ */
+let resizeTimeout;
+window.addEventListener('resize', () => {
+	// Debounce resize events for better performance
+	clearTimeout(resizeTimeout);
+    resizeTimeout = setTimeout(() => {
+        if (document.getElementById('task-board-container')) {
+            checkTaskBoardOverflow();
+            adjustHeightsDebounced(0);
+        }
+    }, 150);
+});

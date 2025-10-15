@@ -29,16 +29,28 @@ class JournalView {
      * Sets up header control event listeners
      */
     setupHeaderControls() {
-        // Handle journal menu button click
+        // Handle journal menu button click (toggle behavior)
         document.addEventListener('click', (e) => {
             if (e.target.matches('#btn-journal-menu') || e.target.closest('#btn-journal-menu')) {
-                this.showJournalMenu();
+                const isOpen = !!document.getElementById('journal-menu-popover');
+                if (isOpen) {
+                    this.closeJournalMenu();
+                } else {
+                    this.showJournalMenu();
+                }
             }
         });
         
         // Close journal menu when clicking outside
         document.addEventListener('click', (e) => {
             if (!e.target.closest('#btn-journal-menu') && !e.target.closest('#journal-menu-popover')) {
+                this.closeJournalMenu();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
                 this.closeJournalMenu();
             }
         });
@@ -1528,9 +1540,16 @@ class JournalView {
     }
 }
 
-// Initialize journal view when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('journal-view')) {
+// Lazy initializer – called by ViewManager when Journal view is activated
+function initJournalView() {
+    if (!document.getElementById('journal-view')) return;
+    if (!window.journalView) {
         window.journalView = new JournalView();
     }
-});
+    if (typeof window.journalView.renderJournalView === 'function') {
+        window.journalView.renderJournalView();
+    }
+}
+
+// Expose to global namespace
+window.initJournalView = initJournalView;

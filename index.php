@@ -80,7 +80,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<h1 id="app-title">MyDayHub</h1>
+				<h1 id="app-title">mdh</h1>
 				<img src="media/leaf.svg" alt="MyDayHub Logo" id="header-logo">
 			</div>
 			
@@ -177,24 +177,26 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 			<div class="footer-center">
 				<button id="btn-filters" class="btn-footer-icon" title="Show Filters">
-					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-						<path d="M22 3H2l8 9.46V19l4 2v-8.46L22 3z"></path>
+					<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="View Options">
+						<line x1="4" y1="7" x2="20" y2="7"></line>
+						<circle cx="9" cy="7" r="1.75"></circle>
+						<line x1="4" y1="12" x2="20" y2="12"></line>
+						<circle cx="15" cy="12" r="1.75"></circle>
+						<line x1="4" y1="17" x2="20" y2="17"></line>
+						<circle cx="11" cy="17" r="1.75"></circle>
 					</svg>
 				</button>
 				
 				<!-- Journal-specific controls (hidden by default) -->
 				<div id="journal-controls" class="hidden">
 					<button id="btn-journal-menu" class="btn-footer-icon" title="Journal Options">
-						<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-							<line x1="16" y1="2" x2="16" y2="6"/>
-							<line x1="8" y1="2" x2="8" y2="6"/>
-							<line x1="3" y1="10" x2="21" y2="10"/>
-							<circle cx="8" cy="14" r="1" fill="currentColor"/>
-							<circle cx="12" cy="14" r="1" fill="currentColor"/>
-							<circle cx="16" cy="14" r="1" fill="currentColor"/>
-							<circle cx="8" cy="18" r="1" fill="currentColor"/>
-							<circle cx="12" cy="18" r="1" fill="currentColor"/>
+						<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="View Options">
+							<line x1="4" y1="7" x2="20" y2="7"></line>
+							<circle cx="9" cy="7" r="1.75"></circle>
+							<line x1="4" y1="12" x2="20" y2="12"></line>
+							<circle cx="15" cy="12" r="1.75"></circle>
+							<line x1="4" y1="17" x2="20" y2="17"></line>
+							<circle cx="11" cy="17" r="1.75"></circle>
 						</svg>
 					</button>
 				</div>
@@ -210,8 +212,15 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<div id="settings-panel-overlay" class="hidden">
 		<div id="settings-panel">
 			<div class="settings-panel-header">
+				<button id="btn-settings-inline-toggle" class="btn-icon" title="Close Settings">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="3" y1="6" x2="21" y2="6"></line>
+						<line x1="3" y1="12" x2="21" y2="12"></line>
+						<line x1="3" y1="18" x2="21" y2="18"></line>
+					</svg>
+				</button>
 				<h2>Settings</h2>
-				<button id="btn-settings-close" class="btn-icon btn-close">&times;</button>
+				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>
 			<div class="settings-panel-body">
 				<div class="setting-item">
@@ -222,6 +231,14 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							<button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
 							<button type="button" class="theme-btn" data-theme="high-contrast" id="theme-high-contrast">High-Contrast</button>
 						</div>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" id="btn-accent-color" class="btn-accent-color">
+							<span class="accent-color-preview"></span>
+							<span>Customize Accent Color</span>
+						</button>
 					</div>
 				</div>
 				<div class="setting-item">
@@ -357,6 +374,65 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						</button>
 					</div>
 				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Accent Color Modal -->
+	<div id="accent-color-modal" class="modal hidden">
+		<div class="modal-content accent-color-modal-content">
+			<div class="modal-header">
+				<h3>Customize Accent Color</h3>
+				<button class="btn-icon btn-close" id="btn-close-accent-modal">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p class="accent-color-description">Choose a preset or select a custom accent color. Selected colors work across all themes.</p>
+				
+				<div class="accent-presets">
+					<h4>Presets</h4>
+					<div class="preset-colors">
+						<button class="preset-color-btn" data-color="#22c55e" title="Costa Rica Green (Default)">
+							<span class="preset-color-swatch" style="background-color: #22c55e;"></span>
+							<span class="preset-color-name">Green</span>
+						</button>
+						<button class="preset-color-btn" data-color="#3b82f6" title="Ocean Blue">
+							<span class="preset-color-swatch" style="background-color: #3b82f6;"></span>
+							<span class="preset-color-name">Blue</span>
+						</button>
+						<button class="preset-color-btn" data-color="#8b5cf6" title="Mystic Purple">
+							<span class="preset-color-swatch" style="background-color: #8b5cf6;"></span>
+							<span class="preset-color-name">Purple</span>
+						</button>
+						<button class="preset-color-btn" data-color="#f59e0b" title="Sunset Amber">
+							<span class="preset-color-swatch" style="background-color: #f59e0b;"></span>
+							<span class="preset-color-name">Amber</span>
+						</button>
+					</div>
+				</div>
+				
+				<div class="accent-custom">
+					<h4>Custom Color</h4>
+					<div class="custom-color-picker">
+						<input type="color" id="custom-accent-picker" value="#22c55e">
+						<label for="custom-accent-picker">Pick any color</label>
+					</div>
+				</div>
+				
+				<div class="accent-preview">
+					<h4>Preview</h4>
+					<div class="preview-elements">
+						<button class="btn preview-btn">Sample Button</button>
+						<div class="preview-icon">
+							<svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+								<path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+							</svg>
+						</div>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-secondary" id="btn-reset-accent">Reset to Default</button>
+				<button class="btn btn-primary" id="btn-apply-accent">Apply</button>
 			</div>
 		</div>
 	</div>

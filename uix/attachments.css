@@ -357,9 +357,9 @@ body.light-mode #attachment-quota-bar::-webkit-progress-bar {
 }
 
 body.light-mode #attachment-quota-bar::-webkit-progress-value {
-	background: linear-gradient(135deg, #22c55e, #16a34a);
+	background: var(--accent-gradient);
 	border-radius: 4px;
-	box-shadow: 0 1px 3px rgba(34, 197, 94, 0.3);
+	box-shadow: 0 1px 3px var(--accent-color)30;
 }
 
 /* Dark mode attachment progress bar improvements */
@@ -369,9 +369,9 @@ body.dark-mode #attachment-quota-bar::-webkit-progress-bar {
 }
 
 body.dark-mode #attachment-quota-bar::-webkit-progress-value {
-	background: linear-gradient(135deg, #22c55e, #16a34a);
+	background: var(--accent-gradient);
 	border-radius: 4px;
-	box-shadow: 0 1px 3px rgba(34, 197, 94, 0.4);
+	box-shadow: 0 1px 3px var(--accent-color)40;
 }
 
 /* --- Attachment Viewer Modal --- */
@@ -692,9 +692,9 @@ body.light-mode #file-management-quota-bar::-webkit-progress-bar {
 }
 
 body.light-mode #file-management-quota-bar::-webkit-progress-value {
-	background: linear-gradient(135deg, #22c55e, #16a34a);
+	background: var(--accent-gradient);
 	border-radius: 5px;
-	box-shadow: 0 1px 3px rgba(34, 197, 94, 0.3);
+	box-shadow: 0 1px 3px var(--accent-color)30;
 }
 
 /* Dark mode progress bar improvements */
@@ -704,9 +704,9 @@ body.dark-mode #file-management-quota-bar::-webkit-progress-bar {
 }
 
 body.dark-mode #file-management-quota-bar::-webkit-progress-value {
-	background: linear-gradient(135deg, #22c55e, #16a34a);
+	background: var(--accent-gradient);
 	border-radius: 5px;
-	box-shadow: 0 1px 3px rgba(34, 197, 94, 0.4);
+	box-shadow: 0 1px 3px var(--accent-color)40;
 }
 
 /* Responsive Design */

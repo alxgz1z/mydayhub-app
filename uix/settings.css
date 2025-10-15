@@ -57,22 +57,22 @@
 
 .settings-panel-header {
 	display: flex;
-	justify-content: space-between;
-	align-items: center;
+    justify-content: space-between;
+    align-items: center;
 	padding: 0.75rem 1.25rem;
 	border-bottom: 1px solid var(--border-color);
 	flex-shrink: 0;
 }
 
 .settings-panel-header h2 {
-	margin: 0;
-	font-size: 1.2rem;
-	font-weight: 500;
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 500;
+    flex: 1;
+    text-align: center;
 }
 
-#btn-settings-close {
-	/* Inherits base .btn-icon styling for consistency */
-}
+/* btn-settings-close inherits base .btn-icon styling for consistency */
 
 .settings-panel-body {
 	padding: 1.25rem;
@@ -153,7 +153,7 @@
 
 .theme-btn.active {
 	background: var(--accent-gradient, var(--accent-color));
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -173,7 +173,7 @@ body.light-mode .theme-btn:hover {
 
 body.light-mode .theme-btn.active {
 	background: var(--accent-gradient);
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 }
 
 /* Sound Selector - Segmented Control (matches theme selector) */
@@ -206,7 +206,7 @@ body.light-mode .theme-btn.active {
 
 .sound-btn.active {
 	background: var(--accent-gradient, var(--accent-color));
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -226,7 +226,7 @@ body.light-mode .sound-btn:hover {
 
 body.light-mode .sound-btn.active {
 	background: var(--accent-gradient);
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 }
 
 /* Font Size Selector - Segmented Control */
@@ -259,7 +259,7 @@ body.light-mode .sound-btn.active {
 
 .font-btn.active {
 	background: var(--accent-gradient, var(--accent-color));
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
@@ -279,13 +279,48 @@ body.light-mode .font-btn:hover {
 
 body.light-mode .font-btn.active {
 	background: var(--accent-gradient);
-	color: #ffffff;
+	color: var(--accent-text-color, #ffffff);
 }
 
 .setting-label {
 	font-size: 1rem;
 	color: var(--text-primary);
 	font-weight: 500;
+}
+
+/* ==========================================================================
+   5.5 ACCENT COLOR BUTTON
+   ========================================================================== */
+
+.btn-accent-color {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.75rem 1rem;
+	background: linear-gradient(135deg, var(--border-color), var(--toolbar-bg));
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	color: var(--text-primary);
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	width: 100%;
+}
+
+.btn-accent-color:hover {
+	background: var(--accent-gradient);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px var(--accent-color)30;
+}
+
+.accent-color-preview {
+	width: 24px;
+	height: 24px;
+	border-radius: 4px;
+	background-color: var(--accent-color);
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	flex-shrink: 0;
 }
 
 /* Switch container */
@@ -360,7 +395,7 @@ body.light-mode .setting-control .slider:before {
 
 /* Focus state */
 .setting-control input:focus + .slider {
-	box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.3);
+	box-shadow: 0 0 0 2px var(--accent-color)50;
 }
 
 /* ==========================================================================
@@ -397,7 +432,7 @@ body.light-mode .setting-control .slider:before {
 .setting-control .btn:hover {
 	background: var(--accent-gradient);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.2);
+	box-shadow: 0 4px 12px var(--accent-color)30;
 }
 
 .setting-control .btn svg {
@@ -472,9 +507,7 @@ body.light-mode #trust-management-modal-container {
 	font-weight: 600;
 }
 
-#trust-management-close-btn {
-	/* Inherits base .btn-icon styling for consistency */
-}
+/* trust-management-close-btn inherits base .btn-icon styling for consistency */
 
 /* Statistics Overview */
 #trust-management-stats,
@@ -639,15 +672,15 @@ body.light-mode #trust-management-modal-container {
 }
 
 .share-permission.edit {
-	background: rgba(34, 197, 94, 0.2);
+	background: var(--accent-color)30;
 	color: var(--accent-color);
-	border: 1px solid rgba(34, 197, 94, 0.3);
+	border: 1px solid var(--accent-color)50;
 }
 
 .share-permission.view {
-	background: rgba(34, 197, 94, 0.2);
+	background: var(--accent-color)30;
 	color: var(--accent-color);
-	border: 1px solid rgba(34, 197, 94, 0.3);
+	border: 1px solid var(--accent-color)50;
 }
 
 .share-date {
@@ -683,4 +716,228 @@ body.light-mode #trust-management-modal-container {
 	cursor: pointer;
 	transition: all 0.2s ease;
 	min-width: 70px;
+}
+
+/* ==========================================================================
+   8. ACCENT COLOR MODAL STYLES
+   ========================================================================== */
+
+/* Base modal styling */
+.modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	backdrop-filter: blur(4px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 1100;
+	padding: 1rem;
+}
+
+.modal.hidden {
+	display: none;
+}
+
+.modal-content {
+	background-color: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+	max-height: 90vh;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+}
+
+.modal-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 1.5rem;
+	border-bottom: 1px solid var(--border-color);
+	background: var(--toolbar-bg);
+	border-radius: 12px 12px 0 0;
+}
+
+.modal-header h3 {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+	color: var(--text-primary);
+}
+
+.modal-body {
+	padding: 1.5rem;
+	flex: 1;
+	overflow-y: auto;
+}
+
+.modal-footer {
+	padding: 1rem 1.5rem;
+	border-top: 1px solid var(--border-color);
+	display: flex;
+	justify-content: flex-end;
+	gap: 0.75rem;
+}
+
+#accent-color-modal.modal {
+	z-index: 1100;
+}
+
+.accent-color-modal-content {
+	width: 90%;
+	max-width: 500px;
+}
+
+.accent-color-description {
+	color: var(--text-secondary);
+	font-size: 0.9rem;
+	margin-bottom: 1.5rem;
+	line-height: 1.5;
+}
+
+.accent-presets,
+.accent-custom,
+.accent-preview {
+	margin-bottom: 1.5rem;
+}
+
+.accent-presets h4,
+.accent-custom h4,
+.accent-preview h4 {
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-primary);
+	margin: 0 0 0.75rem 0;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-size: 0.85rem;
+	color: var(--text-secondary);
+}
+
+/* Preset Colors Grid */
+.preset-colors {
+	display: grid;
+	grid-template-columns: repeat(2, 1fr);
+	gap: 0.75rem;
+}
+
+.preset-color-btn {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 1rem;
+	background: var(--card-bg);
+	border: 2px solid var(--border-color);
+	border-radius: 8px;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-size: 0.9rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.preset-color-btn:hover {
+	border-color: var(--accent-color);
+	background: var(--btn-hover-bg);
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.preset-color-btn.selected {
+	border-color: var(--accent-color);
+	background: var(--btn-hover-bg);
+	box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.preset-color-swatch {
+	width: 32px;
+	height: 32px;
+	border-radius: 6px;
+	border: 2px solid rgba(255, 255, 255, 0.3);
+	flex-shrink: 0;
+}
+
+.preset-color-name {
+	flex: 1;
+}
+
+/* Custom Color Picker */
+.custom-color-picker {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+	padding: 1rem;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+#custom-accent-picker {
+	width: 60px;
+	height: 40px;
+	border: 2px solid var(--border-color);
+	border-radius: 6px;
+	cursor: pointer;
+	background: transparent;
+}
+
+#custom-accent-picker::-webkit-color-swatch-wrapper {
+	padding: 0;
+}
+
+#custom-accent-picker::-webkit-color-swatch {
+	border: none;
+	border-radius: 4px;
+}
+
+.custom-color-picker label {
+	flex: 1;
+	color: var(--text-primary);
+	font-size: 0.9rem;
+	font-weight: 500;
+	cursor: pointer;
+}
+
+/* Preview Section */
+.preview-elements {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 1.5rem;
+	padding: 1.5rem;
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.preview-btn {
+	padding: 0.75rem 1.5rem;
+	background: var(--accent-gradient, var(--accent-color));
+	color: #ffffff;
+	border: none;
+	border-radius: 8px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	cursor: default;
+}
+
+.preview-icon {
+	color: var(--accent-color);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Modal Footer - override for accent modal */
+.accent-color-modal-content .modal-footer {
+	justify-content: space-between;
+}
+
+.accent-color-modal-content .modal-footer .btn {
+	flex: 1;
 }

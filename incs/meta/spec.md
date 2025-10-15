@@ -1,8 +1,8 @@
 # MyDayHub Reference Specification
 
-Version: Beta 8.1 - Tamarindo (Mission Focus Integration Complete)
+Version: Tamarindo 8.1 (Mission Focus Integration Complete)
 Audience: Internal Development & Product
-Last Updated: 2025-10-13
+Last Updated: 2025-10-15
 
 ---
 
@@ -13,8 +13,8 @@ Last Updated: 2025-10-13
 3. Core Functional Specification
 4. Collaboration & Sharing (Foundations)
 5. Zero‑Knowledge Privacy & Recovery (Implemented)
-6. Calendar Overlay System (Conceptual)
-7. Mission Focus Chart (Conceptual)
+6. Calendar Overlay System (Implemented)
+7. Mission Focus Chart (Implemented & Enhanced)
 8. Settings, Theming, Accessibility
 9. User Guide & Documentation
 10. Network & Environment
@@ -151,40 +151,37 @@ Implementation:
 ## 7. Mission Focus Chart (IMPLEMENTED & ENHANCED)
 
 Purpose:
-- Visualize distribution of Signal/Support/Backlog among active tasks and journal entries from last 30 calendar days
-- Provides comprehensive "signal over noise" view across both current work and recent reflection
+- Visualize distribution of Signal/Support/Backlog among active tasks and journal entries from last 30 calendar days.
 
 Implementation:
-- Small header donut chart using Chart.js; visible by default for new users
-- Updates in real-time when tasks or journal entries are created, modified, deleted, or reclassified
-- Async implementation fetches journal entries from last 30 days via API
-- Enhanced tooltip indicates "Tasks + Last 30 Days" data source
-- Graceful error handling for API failures with console warnings
+- Header donut (Chart.js), visible by default for new users.
+- Real‑time updates when tasks or journal entries are created, modified, deleted, or reclassified.
+- Journal entries fetched via `/api/api.php?module=journal&action=getEntries` with GET param pass‑through in the API gateway.
+- Robust parsing and empty-response guards; console warnings without breaking app.
+- Tooltip: “Tasks + Last 30 Days”.
 
 Behavior:
-- Shows combined count of active tasks (excluding completed/deleted/received shares) plus journal entries from last 30 days
-- Real-time updates without page refresh for all task and journal operations
-- Optional via Settings panel (Hide/Show toggle)
-- Performance optimized with safety guards to prevent infinite update loops
+- Combines active tasks (excludes completed/deleted/received shares) + last‑30‑day journal entries.
+- Updates without refresh and after view switches (lazy‑loaded views supported).
+- Optional via Settings (Hide/Show).
 
 ---
 
 ## 8. Settings, Theming, Accessibility
 
 Settings:
-- Theme: Dark (default), Light, High‑Contrast
-- Font size: global scaling controls
-- Completion sound: on/off
-- Filter state persistence
-- **Mission Focus Chart: Hide/Show toggle (visible by default for new users)**
-- **Privacy & Encryption: encryption setup and management (IMPLEMENTED)**
-- **Debug Mode: task_id and column_id display for development**
-- **User Guide: accessible from Settings panel (IMPLEMENTED)**
+- Theme: Dark (default), Light, High‑Contrast (accent reapplied on theme switch).
+- Font size: global scaling controls.
+- Completion sound: on/off.
+- Mission Focus Chart: Hide/Show (default: Show for new users).
+- Privacy & Encryption management.
+- User Guide.
+- Accent Color Customization: presets + custom color picker + reset to default; persisted to localStorage and `users.preferences`; applied via dynamic CSS variables with `!important` and mirrored on `body` for light‑mode overrides.
 
 Theming & Accessibility:
-- Dark‑first palette with clear hierarchy; high‑contrast variant
-- Touch targets ≥44px, ARIA patterns, keyboard navigation support
-- SVG icons for better theme integration (replaced emoji in tab navigation)
+- Dark‑first palette; high‑contrast variant.
+- Automatic contrast for toast text; settings active buttons compute readable text color from accent.
+- SVG icons; keyboard/focus states; large touch targets.
 
 ---
 
@@ -326,6 +323,8 @@ Relationship highlights:
 - ✅ **Real-time Chart Updates** - Chart updates immediately for all task and journal operations without refresh
 - ✅ **Chart Default Visibility** - Mission Focus Chart now visible by default for new users, improving mission awareness
 - ✅ **Calendar Overlay System** - Events CRUD, preferences management, JSON import/export, header badge integration
+- ✅ **Accent Color Persistence** - Accent color preference persists across theme changes
+- ✅ **Theme Reapply** - Theme selection persists across page reloads
 
 Immediate priorities:
 - Implement @task[description] markup detection and smart task creation from journal entries

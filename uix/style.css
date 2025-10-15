@@ -7,7 +7,7 @@
    ========================================================================== */
 :root {
 	--bg-color: #202020; /* Darker main background for better contrast */
-	--app-header-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(22, 163, 74, 0.1)); /* Subtle green gradient */
+	--app-header-bg: #000000; /* Neutral black background */
 	--toolbar-bg: #2b2b2b; /* Lighter than main background for columns */
 	--text-primary: #e8eaed;
 	--text-secondary: #9aa0a6;
@@ -22,6 +22,7 @@
 	--card-bg: #363636; /* Lighter than column background for task cards */
 	--card-border: #4a4d50; /* More defined borders */
 	--card-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); /* Subtle shadows for depth */
+	--shadow-color: rgba(0, 0, 0, 0.35); /* Unified hover shadow color */
 	--toast-success-bg: #22c55e;
 	--toast-error-bg: #ef4444; 
 	--btn-danger-bg: #ef4444;
@@ -53,7 +54,7 @@ body.high-contrast {
 
 body.light-mode {
 	--bg-color: #e8e8e8; /* Darker, more comfortable background */
-	--app-header-bg: linear-gradient(135deg, rgba(34, 197, 94, 0.25), rgba(22, 163, 74, 0.2)); /* Darker green gradient */
+	--app-header-bg: #000000; /* Neutral black background */
 	--toolbar-bg: #f0f0f0; /* Darker toolbar background */
 	--text-primary: #1e293b; /* Slightly softer dark text */
 	--text-secondary: #475569; /* Better contrast secondary text */
@@ -128,10 +129,11 @@ body {
 .view-tabs {
 	display: flex;
 	gap: 0.25rem;
-	background: rgba(255, 255, 255, 0.05);
+	background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
 	padding: 0.25rem;
 	border-radius: 0.5rem;
-	border: 1px solid var(--border-color);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .tab-btn {
@@ -150,21 +152,51 @@ body {
 }
 
 .tab-btn.active {
-	background: linear-gradient(135deg, rgba(34, 197, 94, 0.25) 0%, rgba(34, 197, 94, 0.15) 100%);
-	color: var(--accent-color);
+	background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
+	color: var(--accent-text-color, var(--accent-color));
 	border: 1px solid var(--accent-color) !important;
-	box-shadow: 0 2px 8px rgba(34, 197, 94, 0.2);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 	outline: none !important;
+}
+
+/* Ensure labels and icons inherit the intended colors for each state */
+.tab-btn .tab-label { color: inherit; }
+.tab-btn .tab-icon svg { stroke: currentColor; }
+
+.tab-btn:not(.active) {
+    color: var(--text-primary) !important; /* stronger contrast for inactive */
 }
 
 .tab-btn:hover:not(.active) {
-	background: rgba(255, 255, 255, 0.1);
-	color: var(--text-primary);
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+    color: var(--text-primary) !important;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
+
+/* Mirror state colors to children to avoid any specificity leaks */
+.tab-btn:not(.active) .tab-label,
+.tab-btn:not(.active) .tab-icon svg { color: currentColor !important; stroke: currentColor !important; }
+
+.tab-btn:hover:not(.active) .tab-label,
+.tab-btn:hover:not(.active) .tab-icon svg { color: var(--text-primary) !important; stroke: var(--text-primary) !important; }
+
+.tab-btn.active .tab-label,
+.tab-btn.active .tab-icon svg { color: var(--accent-text-color, var(--accent-color)); stroke: var(--accent-text-color, var(--accent-color)); }
+
+/* Ensure the two-layer journal icon isn't dimmed by inline opacity */
+.tab-btn .tab-icon svg [opacity] { opacity: 0.6; }
+.tab-btn:hover .tab-icon svg [opacity],
+.tab-btn.active .tab-icon svg [opacity] { opacity: 1 !important; }
 
 .tab-btn:focus {
 	outline: none !important;
-	border-color: var(--accent-color) !important;
+	border: none !important;
+}
+
+.tab-btn:focus:not(.active) {
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+	color: var(--text-primary);
+	box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 
 .tab-icon {
@@ -248,15 +280,16 @@ body.light-mode #app-header .btn-header:hover {
 }
 
 #app-footer {
-	flex-shrink: 0;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	padding: 0.5rem 1.5rem;
-	background-color: var(--toolbar-bg);
-	border-top: 1px solid var(--border-color);
-	transition: background-color 0.3s, border-top-color 0.3s;
-	position: relative;
+    flex-shrink: 0;
+    /* Use grid to guarantee a truly centered center column */
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    padding: 0.5rem 1.5rem;
+    background-color: var(--toolbar-bg);
+    border-top: 1px solid var(--border-color);
+    transition: background-color 0.3s, border-top-color 0.3s;
+    position: relative;
 }
 
 /* ==========================================================================
@@ -1325,21 +1358,13 @@ body.light-mode #app-header .btn-header:hover {
 	color: var(--accent-color);
 }
 
-.footer-center {
-	position: relative;
-	flex-grow: 1;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
+.footer-left { grid-column: 1; justify-self: start; }
+.footer-center { grid-column: 2; justify-self: center; display: flex; align-items: center; justify-content: center; }
+.footer-right { grid-column: 3; justify-self: end; }
 
-/* Journal controls - absolutely center within full footer width */
+/* Journal controls - rely on footer grid centering */
 #journal-controls {
-	position: absolute;
-	left: 50%;
-	top: 50%;
-	transform: translate(-50%, -50%);
-	z-index: 10;
+    position: static;
 }
 
 .footer-right a {
@@ -2632,7 +2657,7 @@ body.light-mode .filter-label {
 
 .progress-fill {
 	height: 100%;
-	background: linear-gradient(90deg, var(--accent-color), #22c55e);
+	background: var(--accent-gradient);
 	transition: width 0.3s ease;
 	border-radius: 4px;
 }

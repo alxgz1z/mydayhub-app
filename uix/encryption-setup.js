@@ -964,7 +964,7 @@ Try refreshing the page or using a different browser.`;
                     justify-content: center;
                 ">
                     <button type="button" class="btn btn-primary" onclick="this.closest('.modal-overlay').remove(); document.body.style.overflow = '';" style="
-                        background-color: #22c55e;
+                        background-color: var(--accent-color);
                         color: white;
                         border: none;
                         padding: 0.75rem 1.5rem;

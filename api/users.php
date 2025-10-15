@@ -25,7 +25,7 @@ function handle_users_action(string $action, string $method, PDO $pdo, int $user
 			break;
 		
 		case 'getUserPreferences':
-			if ($method === 'GET') {
+			if ($method === 'GET' || $method === 'POST') {
 				handle_get_user_preferences($pdo, $userId);
 			}
 			break;
@@ -117,6 +117,7 @@ function handle_change_password(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_get_user_preferences(PDO $pdo, int $userId): void {
 	try {
+		// Check if preferences column exists, if not return empty preferences
 		$stmt = $pdo->prepare("SELECT preferences FROM users WHERE user_id = :userId");
 		$stmt->execute([':userId' => $userId]);
 		$result = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -127,16 +128,28 @@ function handle_get_user_preferences(PDO $pdo, int $userId): void {
 			return;
 		}
 
-		$prefsJson = $result['preferences'];
+		$prefsJson = $result['preferences'] ?? '{}';
 		$prefs = json_decode($prefsJson, true);
 
-		if (json_last_error() !== JSON_ERROR_NONE) {
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($prefs)) {
 			$prefs = [];
 		}
 
 		http_response_code(200);
 		echo json_encode(['status' => 'success', 'data' => $prefs]);
 
+	} catch (PDOException $e) {
+		// If preferences column doesn't exist, return empty preferences instead of error
+		if (strpos($e->getMessage(), 'Unknown column') !== false) {
+			http_response_code(200);
+			echo json_encode(['status' => 'success', 'data' => []]);
+			return;
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in users.php handle_get_user_preferences(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while retrieving preferences.']);
 	} catch (Exception $e) {
 		if (defined('DEVMODE') && DEVMODE) {
 			error_log('Error in users.php handle_get_user_preferences(): ' . $e->getMessage());
@@ -172,10 +185,10 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 			return;
 		}
 
-		$currentPrefsJson = $result['preferences'];
+		$currentPrefsJson = $result['preferences'] ?? '{}';
 		$prefs = json_decode($currentPrefsJson, true);
 
-		if (json_last_error() !== JSON_ERROR_NONE) {
+		if (json_last_error() !== JSON_ERROR_NONE || !is_array($prefs)) {
 			$prefs = [];
 		}
 
@@ -193,6 +206,21 @@ function handle_save_user_preference(PDO $pdo, int $userId, ?array $data): void 
 		http_response_code(200);
 		echo json_encode(['status' => 'success', 'message' => "Preference '{$key}' saved."]);
 
+	} catch (PDOException $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		// If preferences column doesn't exist, silently succeed (can't save without column)
+		if (strpos($e->getMessage(), 'Unknown column') !== false) {
+			http_response_code(200);
+			echo json_encode(['status' => 'success', 'message' => "Preference '{$key}' saved (localStorage only)."]);
+			return;
+		}
+		if (defined('DEVMODE') && DEVMODE) {
+			error_log('Error in users.php handle_save_user_preference(): ' . $e->getMessage());
+		}
+		http_response_code(500);
+		echo json_encode(['status' => 'error', 'message' => 'A server error occurred while saving the preference.']);
 	} catch (Exception $e) {
 		if ($pdo->inTransaction()) {
 			$pdo->rollBack();

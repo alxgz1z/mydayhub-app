@@ -13,6 +13,16 @@
 	align-items: flex-start; /* Align columns to the top */
 	overflow-x: auto; /* Allow horizontal scrolling */
 	height: 100%;
+	/* Default to left alignment (for overflow scenarios) */
+	justify-content: flex-start;
+}
+
+/* Responsive centering for task board layout */
+@media (min-width: 769px) {
+	/* Center layout on wide screens when content fits (no overflow class) */
+	#task-board-container:not(.overflowing) {
+		justify-content: center;
+	}
 }
 
 /* ==========================================================================
@@ -241,19 +251,12 @@
 }
 
 .task-card:hover {
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-	transform: translateY(-2px) scale(1.02);
-	animation: taskCardWiggle 0.3s ease-in-out;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 12px var(--shadow-color);
+	border-color: var(--accent-color);
 }
 
-/* Enhanced wiggle animation for task cards */
-@keyframes taskCardWiggle {
-	0% { transform: translateY(-2px) scale(1.02) rotate(0deg); }
-	25% { transform: translateY(-2px) scale(1.02) rotate(0.5deg); }
-	50% { transform: translateY(-2px) scale(1.02) rotate(-0.5deg); }
-	75% { transform: translateY(-2px) scale(1.02) rotate(0.3deg); }
-	100% { transform: translateY(-2px) scale(1.02) rotate(0deg); }
-}
+/* Remove wiggle; unify with journal hover */
 
 .task-card-main {
 	display: flex;
@@ -339,7 +342,7 @@
 
 
 .task-card.classification-signal .task-status-band {
-	background: var(--accent-gradient) !important; /* Accent green gradient */
+	background: linear-gradient(135deg, #22c55e, #16a34a) !important; /* Fixed mission green */
 }
 
 .task-card.classification-support .task-status-band {
@@ -591,6 +594,19 @@ body.light-mode .task-card.snoozed::before {
 	}
 }
 
+/* Wide-screen column height behavior: occupy half the viewport, expand up to 95%, then scroll internally */
+@media (min-width: 769px) {
+	.task-column {
+		height: 50vh;       /* Default height target */
+		min-height: 50vh;   /* Minimum 50% of available vertical space */
+		max-height: 90vh;   /* Allow expansion up to 90% */
+		overflow: visible;  /* Allow internal body to scroll instead */
+	}
+	.column-body {
+		max-height: calc(90vh - 120px); /* safety cap: header+footer ~120px */
+		overflow-y: auto;   /* Scroll entries inside the column when needed */
+	}
+}
 /* ==========================================================================
    6. TASK ACTIONS MENU
    ========================================================================== */
@@ -764,7 +780,7 @@ body.dark-mode .task-actions-menu {
 }
 
 .classification-option .swatch.classification-signal {
-	background: var(--accent-gradient);
+	background: linear-gradient(135deg, #22c55e, #16a34a);
 }
 .classification-option .swatch.classification-support {
 	background: repeating-linear-gradient(
@@ -822,11 +838,6 @@ body.dark-mode .task-actions-menu {
   50% { transform: rotate(-0.5deg); }
   75% { transform: rotate(0deg); }
   100% { transform: rotate(0.5deg); }
-}
-
-
-left: -6px;
-	}
 }
 
 /* ==========================================================================
@@ -1045,5 +1056,4 @@ left: -6px;
 		0%, 100% { opacity: 0.3; }
 		50% { opacity: 0.5; }
 	}
-}
 }

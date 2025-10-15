@@ -1,9 +1,9 @@
 # MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-10-13
+Updated: 2025-10-15
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Beta 8.1 - Tamarindo — Mission Focus Integration Complete
+- Version: Tamarindo 8.1 — Mission Focus Integration Complete
 - **Next Release**: Beta 8.2 - Manuel Antonio (currently in development)
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
@@ -105,6 +105,25 @@ Order: chronological (newest at bottom)
 - **Performance Optimization**: Chart updates include error handling and graceful fallbacks for API failures
 - **User Experience**: Chart visible by default aligns with user guide recommendation for mission awareness
 - **VALIDATION COMPLETE**: Mission Focus Chart displays combined task and journal data, updates in real-time without refresh
+
+### 2025-10-14 — View Initialization, Lazy Loading, Footer & Header
+- Only the active view initializes (Tasks/Journal lazy-loaded) via `view-manager.js`.
+- Exposed `window.initTasksView` and `window.initJournalView`; removed eager auto-inits.
+- Unified the footer “View Options” slider icon and ensured true visual centering.
+- Header background set to neutral black for accent-agnostic aesthetics.
+- Tasks board sizing improved on wide screens; equalized heights + in-column scrolling; preserved natural growth on mobile.
+- Unified hover effects for task cards and journal entries.
+- Journal: persisted weekend toggle; corrected focal date centering when skipping weekends.
+
+### 2025-10-15 — Accent Color, Contrast, Login & Preferences Hardening
+- Added Accent Color customization (modal, presets, custom, reset-to-default).
+- Persisted accent in localStorage and `users.preferences`; safe server fallbacks.
+- Forced dynamic CSS variables with `!important`; reapplied on theme change (light/high-contrast).
+- Login pages now adopt accent from localStorage (no auth dependency).
+- Fixed Mission Focus Chart source and GET param pass-through in API gateway; robust JSON/error handling.
+- Auto-contrast for toast text; active settings buttons compute readable text color; removed hardcoded greens across CSS/JS.
+- Repaired view init sequencing so Mission Focus renders even when only one view is loaded.
+- Known follow-up: Journal tab inactive/hover contrast to polish (tracked as pending).
 
 
 ---

@@ -141,7 +141,7 @@ input[type="password"] {
 input:focus {
 	outline: none;
 	border-color: var(--input-focus-border);
-	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+	box-shadow: 0 0 0 3px var(--accent-color)20;
 }
 
 .btn {
@@ -161,7 +161,7 @@ input:focus {
 .btn:hover {
 	background: var(--btn-hover-bg);
 	transform: translateY(-1px);
-	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+	box-shadow: 0 4px 12px var(--accent-color)50;
 }
 
 .btn-secondary {

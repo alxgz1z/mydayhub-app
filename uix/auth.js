@@ -322,6 +322,9 @@ function initAuthThemeSystem() {
 	
 	applyAuthTheme(theme);
 	
+	// Load user's accent color preference
+	loadAccentColorPreference();
+	
 	// Set up theme selector buttons
 	const themeButtons = document.querySelectorAll('.theme-btn');
 	themeButtons.forEach(button => {
@@ -379,4 +382,85 @@ function saveAuthTheme(theme) {
 			localStorage.setItem('high_contrast_mode', 'false');
 			break;
 	}
+}
+
+/**
+ * Load user's accent color preference for auth pages
+ */
+async function loadAccentColorPreference() {
+	try {
+		// For login pages, only use localStorage since user isn't authenticated yet
+		const localAccentColor = localStorage.getItem('accent_color');
+		console.log('Auth: Local accent color:', localAccentColor);
+		
+		if (localAccentColor) {
+			applyAccentColorToAuthUI(localAccentColor);
+			console.log('Auth: Applied local accent color:', localAccentColor);
+		} else {
+			// Fall back to default if no preference is stored
+			applyAccentColorToAuthUI('#22c55e');
+			console.log('Auth: No accent color found, using default green');
+		}
+	} catch (error) {
+		console.log('Auth: Could not load accent color preference:', error);
+		// Fall back to default if nothing else works
+		applyAccentColorToAuthUI('#22c55e');
+	}
+}
+
+/**
+ * Apply accent color to auth page UI elements
+ */
+function applyAccentColorToAuthUI(accentColor) {
+	console.log('Auth: Applying accent color to UI:', accentColor);
+	const root = document.documentElement;
+	
+	// Generate color variations
+	const colorVariations = generateAccentColorVariations(accentColor);
+	console.log('Auth: Generated color variations:', colorVariations);
+	
+	// Apply CSS custom properties with !important to override hardcoded values
+	root.style.setProperty('--accent-color', accentColor, 'important');
+	root.style.setProperty('--accent-gradient', colorVariations.gradient, 'important');
+	root.style.setProperty('--accent-gradient-light', colorVariations.gradientLight, 'important');
+	root.style.setProperty('--input-focus-border', accentColor, 'important');
+	root.style.setProperty('--btn-bg', accentColor, 'important');
+	root.style.setProperty('--btn-hover-bg', colorVariations.hover, 'important');
+	root.style.setProperty('--link-color', accentColor, 'important');
+	root.style.setProperty('--link-hover', colorVariations.hover, 'important');
+	
+	console.log('Auth: Applied CSS properties:', {
+		'--accent-color': accentColor,
+		'--btn-bg': accentColor,
+		'--link-color': accentColor
+	});
+}
+
+/**
+ * Generate accent color variations for auth pages
+ */
+function generateAccentColorVariations(baseColor) {
+	const hover = adjustBrightness(baseColor, -20);
+	const gradient = `linear-gradient(135deg, ${baseColor}, ${hover})`;
+	const gradientLight = `linear-gradient(135deg, ${adjustBrightness(baseColor, 20)}, ${baseColor})`;
+	
+	return {
+		hover,
+		gradient,
+		gradientLight
+	};
+}
+
+/**
+ * Adjust brightness of a color
+ */
+function adjustBrightness(color, percent) {
+	const num = parseInt(color.replace('#', ''), 16);
+	const amt = Math.round(2.55 * percent);
+	const R = (num >> 16) + amt;
+	const G = (num >> 8 & 0x00FF) + amt;
+	const B = (num & 0x0000FF) + amt;
+	return '#' + (0x1000000 + (R < 255 ? R < 1 ? 0 : R : 255) * 0x10000 +
+		(G < 255 ? G < 1 ? 0 : G : 255) * 0x100 +
+		(B < 255 ? B < 1 ? 0 : B : 255)).toString(16).slice(1);
 }
