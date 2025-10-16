@@ -7,7 +7,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 8.1 Tamarindo
+ * @version 8.3 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -74,7 +74,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Tamarindo 8.1');
+define('APP_VER', 'Tamarindo 8.3');
 
 // Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
 function detectAppUrl() {

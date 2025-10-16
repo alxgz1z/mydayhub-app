@@ -1,10 +1,10 @@
 # MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-10-15
+Updated: 2025-10-16
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Tamarindo 8.1 — Mission Focus Integration Complete
-- **Next Release**: Beta 8.2 - Manuel Antonio (currently in development)
+- Version: Tamarindo 8.3 — Privacy & UX Refinements Complete
+- **Next Release**: Beta 8.4 - TBD
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
@@ -125,6 +125,19 @@ Order: chronological (newest at bottom)
 - Repaired view init sequencing so Mission Focus renders even when only one view is loaded.
 - Known follow-up: Journal tab inactive/hover contrast to polish (tracked as pending).
 
+### 2025-10-16 — Privacy Security, Journal CRUD Fixes & UX Polish (v8.3)
+- **Privacy Lock Icons**: Private task/entry lock indicators now update immediately on toggle without refresh
+- **Duplicate Protection**: Private tasks and journal entries cannot be duplicated (UI hides option + backend validation)
+- **Classification Duplication**: Fixed journal entry duplication to properly copy classification field
+- **Title Persistence**: Journal entry title edits now save properly on blur (previously lost on refresh)
+- **Cross-hatch Pattern**: Private tasks now use elegant cross-hatch background pattern matching journal entries
+- **Delete Fix**: Journal entry deletion now works (API method mismatch resolved - POST now accepted)
+- **Backend Security**: Added server-side validation preventing private item duplication (403 responses)
+- **Journal Menu Reorganization**: "Show Weekends" moved to top, added "Jump to Today" with clock icon
+- **Navigation Enhancement**: Quick return to today's date via new menu option
+- **Favicon Update**: Changed site favicon and app icons to `leaf.svg` for brand consistency
+- **Active Tab Styling**: Selected view tab (Tasks/Journal) now uses accent color for clear visual indication
+- **VALIDATION COMPLETE**: All privacy indicators update in real-time, duplicate protection working, journal CRUD fully functional
 
 ---
 

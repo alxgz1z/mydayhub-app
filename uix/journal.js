@@ -71,15 +71,31 @@ class JournalView {
         menu.className = 'journal-menu-popover';
         
         // Create menu items
-        const menuItems = [
-            {
-                id: 'journal-view-1d',
-                icon: '1',
-                label: '1 Day View',
-                action: () => this.setViewMode('1-day'),
-                active: this.viewMode === '1-day'
-            }
-        ];
+        const menuItems = [];
+        
+        // Add weekends toggle at the top
+        const showWeekendsChecked = !this.hideWeekends ? 'checked' : '';
+        menuItems.push({
+            id: 'journal-weekends-toggle',
+            icon: '',
+            label: 'Show Weekends',
+            action: () => {
+                this.toggleWeekends();
+                this.closeJournalMenu();
+            },
+            active: false,
+            isToggle: true,
+            checked: showWeekendsChecked
+        });
+        
+        // Add view mode options
+        menuItems.push({
+            id: 'journal-view-1d',
+            icon: '1',
+            label: '1 Day View',
+            action: () => this.setViewMode('1-day'),
+            active: this.viewMode === '1-day'
+        });
         
         // Only add 3D and 5D options on desktop
         if (!this.isMobile) {
@@ -100,21 +116,6 @@ class JournalView {
                 }
             );
         }
-        
-        // Add weekends toggle
-        const showWeekendsChecked = !this.hideWeekends ? 'checked' : '';
-        menuItems.push({
-            id: 'journal-weekends-toggle',
-            icon: '',
-            label: 'Show Weekends',
-            action: () => {
-                this.toggleWeekends();
-                this.closeJournalMenu();
-            },
-            active: false,
-            isToggle: true,
-            checked: showWeekendsChecked
-        });
         
         // Add navigation options
         menuItems.push(
@@ -140,7 +141,19 @@ class JournalView {
             }
         );
         
-        // Always add date jump option
+        // Add jump to today option
+        menuItems.push({
+            id: 'journal-jump-today',
+            icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,
+            label: 'Jump to Today',
+            action: () => {
+                this.closeJournalMenu();
+                this.jumpToToday();
+            },
+            active: false
+        });
+        
+        // Add date jump option
         menuItems.push({
             id: 'journal-date-jump',
             icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><circle cx="12" cy="16" r="2"/><path d="M12 12v4"/></svg>`,
@@ -500,8 +513,36 @@ class JournalView {
             }
         });
         
+        // Save title changes when user finishes editing
+        document.addEventListener('blur', async (e) => {
+            if (e.target.matches('.journal-entry-title')) {
+                const titleEl = e.target;
+                const entryCard = titleEl.closest('.journal-entry-card');
+                if (!entryCard) return;
+                
+                const entryId = entryCard.dataset.entryId;
+                const oldTitle = entryCard.dataset.title;
+                const newTitle = titleEl.textContent.trim();
+                
+                // Only save if title actually changed and is not empty
+                if (newTitle && newTitle !== oldTitle) {
+                    await this.updateEntryTitle(entryId, newTitle);
+                } else if (!newTitle) {
+                    // Restore old title if empty
+                    titleEl.textContent = oldTitle;
+                }
+            }
+        }, true); // Use capture phase to ensure we catch blur events
+        
         // Drag and drop for entries
         this.setupDragAndDrop();
+        
+        // Listen for content saved events from the editor
+        document.addEventListener('contentSaved', (e) => {
+            if (e.detail && e.detail.entryId) {
+                this.handleContentSaved(e.detail.entryId, e.detail.hasContent);
+            }
+        });
         
         // Journal actions menu handler (separate listener like tasks view)
         document.body.addEventListener('click', async (e) => {
@@ -525,6 +566,17 @@ class JournalView {
                     this.togglePrivacy(entryId);
                 } else if (action === 'delete') {
                     this.deleteEntry(entryId);
+                }
+            }
+            
+            // Handle footer indicator clicks (similar to tasks view)
+            const indicator = e.target.closest('.journal-indicator');
+            if (indicator) {
+                const action = indicator.dataset.action;
+                const entryCard = indicator.closest('.journal-entry-card');
+                
+                if (action === 'open-content' && entryCard) {
+                    this.editEntry(entryCard.dataset.entryId);
                 }
             }
         });
@@ -830,30 +882,68 @@ class JournalView {
         const isPrivate = entry.is_private;
         const hasTaskRefs = entry.has_task_references;
         const classification = entry.classification || 'support';
+        const hasContent = entry.content && entry.content.trim().length > 0;
+        
+        // Encode data attributes to prevent XSS and parsing issues
+        const encodedTitle = encodeURIComponent(entry.title || '');
+        const encodedContent = encodeURIComponent(entry.content || '');
+        
+        // Build footer indicators (similar to task cards)
+        let footerHTML = '';
+        const hasIndicators = hasContent || hasTaskRefs;
+        
+        if (hasIndicators) {
+            let contentIndicator = '';
+            if (hasContent) {
+                contentIndicator = `
+                    <span class="journal-indicator indicator-shortcut" data-action="open-content" title="This entry has notes">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </span>
+                `;
+            }
+            
+            let taskRefsIndicator = '';
+            if (hasTaskRefs) {
+                taskRefsIndicator = `
+                    <span class="journal-indicator" title="Has linked tasks">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    </span>
+                `;
+            }
+            
+            footerHTML = `
+                <div class="journal-entry-footer">
+                    ${contentIndicator}
+                    ${taskRefsIndicator}
+                </div>
+            `;
+        }
         
         const cardHTML = `
             <div class="journal-entry-card ${isPrivate ? 'private' : ''} classification-${classification}" 
                  data-entry-id="${entry.entry_id}" 
                  data-classification="${classification}"
+                 data-title="${encodedTitle}"
+                 data-content="${encodedContent}"
+                 data-is-private="${isPrivate ? 'true' : 'false'}"
+                 data-has-content="${hasContent ? 'true' : 'false'}"
+                 data-updated-at="${entry.updated_at || ''}"
                  draggable="true">
                 
                 <div class="journal-entry-main">
                     <div class="journal-entry-status-band"></div>
                     <div class="journal-entry-title" contenteditable="true">${entry.title}</div>
                     <div class="journal-entry-actions">
-                        ${hasTaskRefs ? '<span class="task-ref-indicator" title="Has linked tasks">📋</span>' : ''}
                         ${isPrivate ? '<span class="privacy-indicator" title="Private entry">🔒</span>' : ''}
                         <button class="journal-entry-menu" aria-label="Entry actions">&vellip;</button>
                     </div>
                 </div>
                 
-                ${entry.content ? `
-                    <div class="journal-entry-content">${this.formatContent(entry.content)}</div>
-                ` : ''}
-                
                 <div class="journal-entry-tasks-container" data-entry-id="${entry.entry_id}">
                     <!-- Task badges will be loaded here -->
                 </div>
+                
+                ${footerHTML}
                 
                 <div class="journal-entry-teal-bar"></div>
             </div>
@@ -935,6 +1025,14 @@ class JournalView {
         // Save preferences and re-render - no automatic focal column adjustment
         // The user should always see today as the focal column if they want to
         await this.savePreferences();
+        this.renderJournalView();
+    }
+    
+    jumpToToday() {
+        // Reset current date to today at noon
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+        this.currentDate = today;
         this.renderJournalView();
     }
     
@@ -1027,9 +1125,67 @@ class JournalView {
         }
     }
     
+    async updateEntryTitle(entryId, newTitle) {
+        try {
+            const entryCard = document.querySelector(`.journal-entry-card[data-entry-id="${entryId}"]`);
+            if (!entryCard) return;
+            
+            // Get current content from data attribute
+            const currentContent = entryCard.dataset.content || '';
+            
+            const response = await window.apiFetch({
+                module: 'journal',
+                action: 'updateEntry',
+                entry_id: entryId,
+                title: newTitle,
+                content: currentContent
+            });
+            
+            if (response.status === 'success') {
+                // Update the data-title attribute
+                entryCard.dataset.title = newTitle;
+                showToast({ message: 'Entry title updated.', type: 'success' });
+            } else {
+                showToast({ message: response.message || 'Failed to update title.', type: 'error' });
+                // Reload to restore correct title
+                this.renderJournalView();
+            }
+        } catch (error) {
+            console.error('Failed to update entry title:', error);
+            showToast({ message: 'An error occurred while updating the title.', type: 'error' });
+            // Reload to restore correct title
+            this.renderJournalView();
+        }
+    }
+    
     async editEntry(entryId) {
-        // Implementation for entry editing
-        console.log('Edit entry:', entryId);
+        // Use the UnifiedEditor for editing journal entries (same editor as tasks)
+        if (window.UnifiedEditor && typeof window.UnifiedEditor.open === 'function') {
+            const entryCard = document.querySelector(`.journal-entry-card[data-entry-id="${entryId}"]`);
+            if (!entryCard) {
+                console.error('Entry card not found:', entryId);
+                return;
+            }
+            
+            const title = decodeURIComponent(entryCard.dataset.title || '');
+            const content = decodeURIComponent(entryCard.dataset.content || '');
+            const updatedAt = entryCard.dataset.updatedAt || '';
+            
+            // Get font size preference (reuse the same logic as tasks)
+            const journalContainer = document.getElementById('journal-view');
+            const savedFontSize = journalContainer?.dataset.editorFontSize || 16;
+            
+            UnifiedEditor.open({
+                id: entryId,
+                kind: 'journal',
+                title: `Edit Entry: ${title}`,
+                content: content,
+                updatedAt: updatedAt,
+                fontSize: parseInt(savedFontSize, 10)
+            });
+        } else {
+            showToast({ message: 'Editor component is not available.', type: 'error' });
+        }
     }
     
     async deleteEntry(entryId) {
@@ -1062,13 +1218,18 @@ class JournalView {
                     }
                 }
                 
+                showToast({ message: 'Journal entry deleted successfully.', type: 'success' });
+                
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
                     window.updateMissionFocusChart();
                 }
+            } else {
+                showToast({ message: response.message || 'Failed to delete entry.', type: 'error' });
             }
         } catch (error) {
             console.error('Failed to delete entry:', error);
+            showToast({ message: error.message || 'An error occurred while deleting the entry.', type: 'error' });
         }
     }
     
@@ -1084,14 +1245,49 @@ class JournalView {
                 // Reload entries for the affected date
                 await this.loadEntries([response.data.entry_date]);
                 this.renderJournalView();
+                showToast({ message: 'Journal entry duplicated successfully.', type: 'success' });
+                
+                // Update mission focus chart if visible
+                if (typeof window.updateMissionFocusChart === 'function') {
+                    window.updateMissionFocusChart();
+                }
+            } else {
+                showToast({ message: response.message || 'Failed to duplicate entry.', type: 'error' });
             }
         } catch (error) {
             console.error('Failed to duplicate entry:', error);
+            showToast({ message: error.message || 'An error occurred while duplicating the entry.', type: 'error' });
         }
     }
     
     async togglePrivacy(entryId) {
         try {
+            // Check if we're making the entry private (reuse tasks logic)
+            const entryCard = document.querySelector(`.journal-entry-card[data-entry-id="${entryId}"]`);
+            if (!entryCard) {
+                console.error('Entry card not found:', entryId);
+                return;
+            }
+            
+            const isCurrentlyPrivate = entryCard.dataset.isPrivate === 'true';
+            const isMakingPrivate = !isCurrentlyPrivate;
+            
+            // If making private, check if encryption setup is needed
+            if (isMakingPrivate) {
+                const needsEncryption = await this.checkEncryptionSetupNeeded();
+                if (needsEncryption) {
+                    const shouldSetup = await this.showEncryptionSetupPrompt();
+                    if (!shouldSetup) {
+                        return; // User chose not to set up encryption
+                    }
+                    // Trigger encryption setup
+                    if (window.encryptionSetupWizard) {
+                        await window.encryptionSetupWizard.triggerSetup();
+                        // After setup, continue with the privacy toggle
+                    }
+                }
+            }
+            
             const response = await window.apiFetch({
                 module: 'journal',
                 action: 'togglePrivacy',
@@ -1099,14 +1295,127 @@ class JournalView {
             });
             
             if (response.status === 'success') {
-                // Reload entries to get updated data
-                const dates = this.getDateRange();
-                await this.loadEntries(dates);
-                this.renderJournalView();
+                const { is_private } = response.data;
+                
+                // Update the entry card's privacy state
+                entryCard.classList.toggle('private', is_private);
+                entryCard.dataset.isPrivate = is_private;
+                
+                // Update privacy indicator
+                const actionsDiv = entryCard.querySelector('.journal-entry-actions');
+                const existingIndicator = actionsDiv?.querySelector('.privacy-indicator');
+                if (is_private && !existingIndicator) {
+                    // Add privacy indicator if it doesn't exist
+                    const indicator = document.createElement('span');
+                    indicator.className = 'privacy-indicator';
+                    indicator.title = 'Private entry';
+                    indicator.textContent = '🔒';
+                    actionsDiv?.insertBefore(indicator, actionsDiv.querySelector('.journal-entry-menu'));
+                } else if (!is_private && existingIndicator) {
+                    // Remove privacy indicator if entry is now public
+                    existingIndicator.remove();
+                }
+                
+                showToast({ 
+                    message: `Journal entry set to ${is_private ? 'private' : 'public'}.`, 
+                    type: 'success' 
+                });
+            } else {
+                showToast({ message: response.message || 'Failed to toggle privacy.', type: 'error' });
             }
         } catch (error) {
             console.error('Failed to toggle privacy:', error);
+            showToast({ message: error.message || 'An error occurred while updating privacy.', type: 'error' });
         }
+    }
+    
+    /**
+     * Handle content saved event from editor (similar to tasks handleNoteSaved)
+     */
+    handleContentSaved(entryId, hasContent) {
+        const entryCard = document.querySelector(`.journal-entry-card[data-entry-id="${entryId}"]`);
+        if (entryCard) {
+            entryCard.dataset.hasContent = hasContent;
+            // Re-render the entry card to show/hide the content indicator
+            this.rerenderEntryCard(entryCard);
+        }
+    }
+    
+    /**
+     * Re-renders a journal entry card (similar to tasks rerenderTaskCard)
+     */
+    rerenderEntryCard(entryCard) {
+        if (!entryCard) return;
+        
+        const column = entryCard.closest('.journal-entries-container');
+        const oldScroll = column ? { top: column.scrollTop } : { top: 0 };
+        
+        const entryId = entryCard.dataset.entryId;
+        const date = entryCard.closest('.journal-column')?.dataset.date;
+        
+        if (!date) return;
+        
+        // Find the entry data
+        const entries = this.entries.get(date);
+        if (!entries) return;
+        
+        const entryData = entries.find(e => e.entry_id == entryId);
+        if (!entryData) return;
+        
+        // Update the content from data attribute if it was just saved
+        if (entryCard.dataset.content) {
+            entryData.content = decodeURIComponent(entryCard.dataset.content);
+        }
+        
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = this.renderEntryCard(entryData);
+        const newCardEl = tempDiv.firstElementChild;
+        
+        entryCard.replaceWith(newCardEl);
+        
+        if (column) {
+            column.scrollTop = oldScroll.top;
+        }
+    }
+    
+    /**
+     * Check if encryption setup is needed (reused from tasks logic)
+     */
+    async checkEncryptionSetupNeeded() {
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const appURL = window.MyDayHub_Config?.appURL || '';
+            
+            const response = await fetch(`${appURL}/api/api.php?module=encryption&action=getEncryptionStatus`, {
+                method: 'GET',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken,
+                }
+            });
+            
+            const responseData = await response.json();
+            return !responseData.data?.encryption_enabled;
+        } catch (error) {
+            console.error('Failed to check encryption status:', error);
+            return false; // Don't block if we can't check
+        }
+    }
+    
+    /**
+     * Show encryption setup prompt (reused from tasks logic)
+     */
+    async showEncryptionSetupPrompt() {
+        const message = `To make journal entries private, you'll need to set up encryption first. This ensures your private data is secure with zero-knowledge encryption.
+
+Would you like to set up encryption now?`;
+        
+        const confirmed = await window.showConfirm(message, {
+            title: 'Encryption Setup Required',
+            confirmText: 'Set Up Encryption',
+            cancelText: 'Not Now'
+        });
+        
+        return confirmed;
     }
     
     async moveEntry(entryId, newDate) {
@@ -1369,6 +1678,16 @@ class JournalView {
             ? `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`
             : `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
 
+        // Hide duplicate option for private entries (security reasons)
+        const duplicateButtonHTML = isPrivate ? '' : `
+            <button class="journal-action-btn" data-action="duplicate">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
+                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
+                </svg>
+                <span>Duplicate</span>
+            </button>`;
+
         const menuHTML = `
             <button class="journal-action-btn" data-action="edit">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
@@ -1385,13 +1704,7 @@ class JournalView {
                 </svg>
                 <span>Move</span>
             </button>
-            <button class="journal-action-btn" data-action="duplicate">
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
-                    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
-                </svg>
-                <span>Duplicate</span>
-            </button>
+            ${duplicateButtonHTML}
             <button class="journal-action-btn" data-action="privacy">
                 ${privacyIcon}
                 <span>${privacyText}</span>

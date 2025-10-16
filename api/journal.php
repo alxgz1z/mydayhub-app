@@ -37,8 +37,14 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
                 }
                 break;
                 
+            case 'updateEntryContent':
+                if ($method === 'POST') {
+                    return handle_update_journal_entry_content($pdo, $userId, $data);
+                }
+                break;
+                
             case 'deleteEntry':
-                if ($method === 'DELETE') {
+                if ($method === 'POST' || $method === 'DELETE') {
                     return handle_delete_journal_entry($pdo, $userId, $data);
                 }
                 break;
@@ -229,37 +235,45 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array 
             'created_at' => time()
         ];
         
-        $encryptedData = null;
-        if ($isPrivate) {
-            // Encrypt private entries
-            $encryptedData = encryptJournalData($pdo, $userId, $entryData);
-            if (!$encryptedData) {
-                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
-            }
-            $title = 'Private Entry'; // Don't store actual title in plaintext
-            $content = '';
-        } else {
-            // Store public entries as JSON
-            $encryptedData = json_encode($entryData);
-        }
-        
-        // Insert the entry (handle missing classification column gracefully)
+        // Insert the entry first to get the ID (needed for encryption)
         $stmt = $pdo->prepare("
             INSERT INTO journal_entries (user_id, entry_date, title, content, encrypted_data, is_private, position) 
             VALUES (:userId, :entryDate, :title, :content, :encryptedData, :isPrivate, :position)
         ");
         
+        // Initially insert with JSON data
         $stmt->execute([
             ':userId' => $userId,
             ':entryDate' => $entryDate,
-            ':title' => $title,
-            ':content' => $content,
-            ':encryptedData' => $encryptedData,
+            ':title' => $isPrivate ? 'Private Entry' : $title,
+            ':content' => $isPrivate ? '' : $content,
+            ':encryptedData' => json_encode($entryData),
             ':isPrivate' => $isPrivate ? 1 : 0,
             ':position' => $position
         ]);
         
         $entryId = (int)$pdo->lastInsertId();
+        
+        // Now encrypt with the actual entry ID if private
+        if ($isPrivate) {
+            $encryptedData = encryptJournalData($pdo, $userId, $entryId, $entryData);
+            if (!$encryptedData) {
+                // Rollback: delete the entry we just created
+                $pdo->prepare("DELETE FROM journal_entries WHERE entry_id = :entryId")->execute([':entryId' => $entryId]);
+                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
+            }
+            
+            // Update with encrypted data
+            $updateStmt = $pdo->prepare("
+                UPDATE journal_entries 
+                SET encrypted_data = :encryptedData 
+                WHERE entry_id = :entryId
+            ");
+            $updateStmt->execute([
+                ':encryptedData' => $encryptedData,
+                ':entryId' => $entryId
+            ]);
+        }
         
         // Process task references if any
         $createdTasks = [];
@@ -293,7 +307,7 @@ function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array 
  * Updates an existing journal entry
  */
 function handle_update_journal_entry(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
     $title = trim($data['title'] ?? '');
     $content = $data['content'] ?? '';
     
@@ -332,7 +346,7 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): array 
         
         if ($entry['is_private']) {
             // Encrypt private entries
-            $encryptedData = encryptJournalData($pdo, $userId, $entryData);
+            $encryptedData = encryptJournalData($pdo, $userId, $entryId, $entryData);
             if (!$encryptedData) {
                 return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
             }
@@ -381,10 +395,93 @@ function handle_update_journal_entry(PDO $pdo, int $userId, array $data): array 
 }
 
 /**
+ * Updates only the content of a journal entry (used by the editor)
+ */
+function handle_update_journal_entry_content(PDO $pdo, int $userId, array $data): array {
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
+    $content = $data['content'] ?? '';
+    
+    if (!$entryId) {
+        return ['status' => 'error', 'message' => 'Entry ID is required.'];
+    }
+    
+    try {
+        // Get current entry to check ownership, privacy status, and title
+        $stmt = $pdo->prepare("
+            SELECT user_id, is_private, encrypted_data, title 
+            FROM journal_entries 
+            WHERE entry_id = :entryId
+        ");
+        $stmt->execute([':entryId' => $entryId]);
+        $entry = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if (!$entry || $entry['user_id'] != $userId) {
+            return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
+        }
+        
+        // Prepare updated entry data (keep existing title)
+        $entryData = [
+            'title' => $entry['title'],
+            'content' => $content,
+            'updated_at' => time()
+        ];
+        
+        $encryptedData = null;
+        $updateContent = $content;
+        
+        if ($entry['is_private']) {
+            // Encrypt private entries
+            $encryptedData = encryptJournalData($pdo, $userId, $entryId, $entryData);
+            if (!$encryptedData) {
+                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
+            }
+            $updateContent = '';
+        } else {
+            // Store public entries as JSON
+            $encryptedData = json_encode($entryData);
+        }
+        
+        // Update the entry
+        $updateStmt = $pdo->prepare("
+            UPDATE journal_entries 
+            SET content = :content, encrypted_data = :encryptedData, updated_at = CURRENT_TIMESTAMP
+            WHERE entry_id = :entryId AND user_id = :userId
+        ");
+        
+        $updateStmt->execute([
+            ':content' => $updateContent,
+            ':encryptedData' => $encryptedData,
+            ':entryId' => $entryId,
+            ':userId' => $userId
+        ]);
+        
+        // Process task references if not private
+        $createdTasks = [];
+        if (!$entry['is_private']) {
+            $createdTasks = processTaskReferences($pdo, $userId, $entryId, $content);
+        }
+        
+        return [
+            'status' => 'success', 
+            'message' => count($createdTasks) > 0 ? 
+                'Content updated with ' . count($createdTasks) . ' new task(s).' : 
+                'Content updated successfully.',
+            'data' => [
+                'created_tasks' => $createdTasks
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in handle_update_journal_entry_content: ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to update entry content.'];
+    }
+}
+
+/**
  * Deletes a journal entry
  */
 function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
     
     if (!$entryId) {
         return ['status' => 'error', 'message' => 'Entry ID is required.'];
@@ -445,7 +542,7 @@ function handle_delete_journal_entry(PDO $pdo, int $userId, array $data): array 
  * Toggles privacy status of a journal entry
  */
 function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
     
     if (!$entryId) {
         return ['status' => 'error', 'message' => 'Entry ID is required.'];
@@ -494,10 +591,32 @@ function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): arra
         
         if ($newPrivacyStatus) {
             // Encrypt for private
-            $encryptedData = encryptJournalData($pdo, $userId, $entryData);
-            if (!$encryptedData) {
-                return ['status' => 'error', 'message' => 'Failed to encrypt entry data.'];
+            log_debug_message("Attempting to encrypt journal entry ID: $entryId for user: $userId");
+            
+            // Check if encryption is enabled first
+            $cryptoEngine = new CryptoEngine($pdo, $userId);
+            $isEnabled = $cryptoEngine->isEncryptionEnabled();
+            log_debug_message("Encryption enabled status: " . ($isEnabled ? 'true' : 'false'));
+            
+            if (!$isEnabled) {
+                return ['status' => 'error', 'message' => 'Encryption is not set up. Please set up encryption in Settings before making entries private.'];
             }
+            
+            $encryptedData = encryptJournalData($pdo, $userId, $entryId, $entryData);
+            if (!$encryptedData) {
+                log_debug_message("Encryption failed for journal entry ID: $entryId");
+                // Get debug messages if available
+                global $__DEBUG_MESSAGES__;
+                $debugInfo = isset($__DEBUG_MESSAGES__) ? implode(' | ', array_slice($__DEBUG_MESSAGES__, -10)) : 'No debug info';
+                
+                // Return error with debug information in development mode
+                if (defined('DEVMODE') && DEVMODE) {
+                    return ['status' => 'error', 'message' => 'Encryption failed: ' . $debugInfo];
+                } else {
+                    return ['status' => 'error', 'message' => 'Failed to encrypt entry data. Please check server logs.'];
+                }
+            }
+            log_debug_message("Successfully encrypted journal entry ID: $entryId");
             $updateTitle = 'Private Entry';
             $updateContent = '';
         } else {
@@ -537,7 +656,7 @@ function handle_toggle_journal_privacy(PDO $pdo, int $userId, array $data): arra
  * Moves a journal entry to a different date
  */
 function handle_move_journal_entry(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
     $newDate = $data['new_date'] ?? null;
     
     if (!$entryId || !$newDate) {
@@ -607,7 +726,7 @@ function handle_move_journal_entry(PDO $pdo, int $userId, array $data): array {
  * Duplicates a journal entry
  */
 function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
     $targetDate = $data['target_date'] ?? null;
     
     if (!$entryId) {
@@ -617,7 +736,7 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): arr
     try {
         // Get the original entry
         $stmt = $pdo->prepare("
-            SELECT user_id, entry_date, title, content, encrypted_data, is_private
+            SELECT user_id, entry_date, title, content, encrypted_data, is_private, classification
             FROM journal_entries 
             WHERE entry_id = :entryId
         ");
@@ -626,6 +745,11 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): arr
         
         if (!$originalEntry || $originalEntry['user_id'] != $userId) {
             return ['status' => 'error', 'message' => 'Entry not found or access denied.'];
+        }
+        
+        // Prevent duplication of private entries for security reasons
+        if ($originalEntry['is_private']) {
+            return ['status' => 'error', 'message' => 'Private entries cannot be duplicated for security reasons.'];
         }
         
         // Use target date or same date as original
@@ -640,19 +764,57 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): arr
         $positionStmt->execute([':userId' => $userId, ':newDate' => $newDate]);
         $position = $positionStmt->fetchColumn();
         
+        // Check if an entry with the same title already exists on the target date
+        $checkStmt = $pdo->prepare("
+            SELECT COUNT(*) FROM journal_entries 
+            WHERE user_id = :userId AND entry_date = :entryDate AND title = :title
+        ");
+        $checkStmt->execute([
+            ':userId' => $userId,
+            ':entryDate' => $newDate,
+            ':title' => $originalEntry['title']
+        ]);
+        $exists = $checkStmt->fetchColumn() > 0;
+        
+        // If title exists, append " (copy)" or " (copy N)" to make it unique
+        $newTitle = $originalEntry['title'];
+        if ($exists) {
+            $copyNumber = 1;
+            $baseTitle = $originalEntry['title'];
+            
+            // Remove existing "(copy N)" suffix if present
+            if (preg_match('/^(.*) \(copy(?: (\d+))?\)$/', $baseTitle, $matches)) {
+                $baseTitle = $matches[1];
+                $copyNumber = isset($matches[2]) ? (int)$matches[2] + 1 : 2;
+            }
+            
+            // Find next available copy number
+            do {
+                $newTitle = $copyNumber === 1 ? "$baseTitle (copy)" : "$baseTitle (copy $copyNumber)";
+                $checkStmt->execute([
+                    ':userId' => $userId,
+                    ':entryDate' => $newDate,
+                    ':title' => $newTitle
+                ]);
+                $exists = $checkStmt->fetchColumn() > 0;
+                $copyNumber++;
+            } while ($exists && $copyNumber < 100); // Safety limit
+        }
+        
         // Create duplicate entry
         $duplicateStmt = $pdo->prepare("
-            INSERT INTO journal_entries (user_id, entry_date, title, content, encrypted_data, is_private, position) 
-            VALUES (:userId, :entryDate, :title, :content, :encryptedData, :isPrivate, :position)
+            INSERT INTO journal_entries (user_id, entry_date, title, content, encrypted_data, is_private, classification, position) 
+            VALUES (:userId, :entryDate, :title, :content, :encryptedData, :isPrivate, :classification, :position)
         ");
         
         $duplicateStmt->execute([
             ':userId' => $userId,
             ':entryDate' => $newDate,
-            ':title' => $originalEntry['title'],
+            ':title' => $newTitle,
             ':content' => $originalEntry['content'],
             ':encryptedData' => $originalEntry['encrypted_data'],
             ':isPrivate' => $originalEntry['is_private'],
+            ':classification' => $originalEntry['classification'] ?? 'support',
             ':position' => $position
         ]);
         
@@ -859,10 +1021,17 @@ function handle_create_task_from_markup(PDO $pdo, int $userId, array $data): arr
 /**
  * Helper function to encrypt journal data
  */
-function encryptJournalData(PDO $pdo, int $userId, array $data): ?string {
+function encryptJournalData(PDO $pdo, int $userId, int $entryId, array $data): ?string {
     // Use existing crypto system for consistency
+    log_debug_message("encryptJournalData called with entryId: $entryId, userId: $userId");
     $cryptoEngine = new CryptoEngine($pdo, $userId);
-    return $cryptoEngine->encryptItem('journal_entry', 0, $data); // 0 is placeholder for new entries
+    $result = $cryptoEngine->encryptItem('journal_entry', $entryId, $data);
+    if (!$result) {
+        log_debug_message("CryptoEngine->encryptItem returned null for journal_entry $entryId");
+    } else {
+        log_debug_message("CryptoEngine->encryptItem succeeded for journal_entry $entryId");
+    }
+    return $result;
 }
 
 /**
@@ -885,8 +1054,8 @@ function hasTaskReferences(string $content): bool {
  * Gets all tasks linked to a journal entry
  */
 function handle_get_linked_tasks(PDO $pdo, int $userId, array $data): array {
-    $entryId = $data['entry_id'] ?? null;
-    
+    $entryId = isset($data['entry_id']) ? (int)$data['entry_id'] : null;
+
     if (!$entryId) {
         return ['status' => 'error', 'message' => 'Entry ID is required.'];
     }

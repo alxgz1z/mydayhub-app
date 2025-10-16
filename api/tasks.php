@@ -1606,7 +1606,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 	try {
 		$pdo->beginTransaction();
 		$stmt_find = $pdo->prepare(
-			"SELECT column_id, encrypted_data, classification, due_date FROM tasks WHERE task_id = :taskId AND user_id = :userId"
+			"SELECT column_id, encrypted_data, classification, due_date, is_private FROM tasks WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt_find->execute([':taskId' => $taskId, ':userId' => $userId]);
 		$originalTask = $stmt_find->fetch(PDO::FETCH_ASSOC);
@@ -1614,6 +1614,13 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 		if ($originalTask === false) {
 			$pdo->rollBack();
 			send_json_response(['status' => 'error', 'message' => 'Task to duplicate not found or permission denied.'], 404);
+			return;
+		}
+		
+		// Prevent duplication of private tasks for security reasons
+		if ($originalTask['is_private']) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Private tasks cannot be duplicated for security reasons.'], 403);
 			return;
 		}
 		

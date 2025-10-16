@@ -198,15 +198,20 @@ class CryptoEngine {
      */
     private function getOrCreateItemKey(string $itemType, int $itemId): ?string {
         try {
+            log_debug_message("getOrCreateItemKey called for type: $itemType, id: $itemId");
+            
             // First, try to get existing key
             $stmt = $this->pdo->prepare("SELECT wrapped_dek FROM item_encryption_keys WHERE item_type = ? AND item_id = ?");
             $stmt->execute([$itemType, $itemId]);
             $result = $stmt->fetch();
             
             if ($result) {
+                log_debug_message("Found existing key for $itemType $itemId");
                 // Key exists, return it (in a real system, you'd decrypt it with master key)
                 return base64_decode($result['wrapped_dek']);
             }
+            
+            log_debug_message("No existing key found, creating new one for $itemType $itemId");
             
             // Key doesn't exist, create a new one
             $itemKey = random_bytes(32); // 256-bit key
@@ -215,9 +220,13 @@ class CryptoEngine {
             $stmt = $this->pdo->prepare("INSERT INTO item_encryption_keys (item_type, item_id, wrapped_dek, created_at) VALUES (?, ?, ?, UTC_TIMESTAMP())");
             $stmt->execute([$itemType, $itemId, base64_encode($itemKey)]);
             
+            log_debug_message("Successfully created and stored new key for $itemType $itemId");
+            
             return $itemKey;
         } catch (Exception $e) {
             log_debug_message("Error getting or creating item key: " . $e->getMessage());
+            log_debug_message("PDO Error Code: " . ($this->pdo->errorCode() ?? 'none'));
+            log_debug_message("PDO Error Info: " . json_encode($this->pdo->errorInfo()));
             return null;
         }
     }

@@ -700,8 +700,36 @@ body.dark-mode .task-actions-menu {
    7. PRIVACY STYLES
    ========================================================================== */
 
-.task-column.private::after,
-.task-card.private::after {
+/* Private task styling - clean lock icon approach (matching journal entries) */
+.task-privacy-indicator {
+	font-size: 0.8rem;
+	opacity: 0.7;
+	margin-left: auto;
+	margin-right: 0.25rem;
+}
+
+/* Private task card - cross-hatched background pattern (matching journal entries) */
+.task-card.private {
+	background: linear-gradient(45deg, var(--card-bg) 25%, transparent 25%),
+	            linear-gradient(-45deg, var(--card-bg) 25%, transparent 25%),
+	            linear-gradient(45deg, transparent 75%, var(--card-bg) 75%),
+	            linear-gradient(-45deg, transparent 75%, var(--card-bg) 75%);
+	background-size: 8px 8px;
+	background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+/* Dark mode private task card */
+[data-theme="dark"] .task-card.private {
+	background: linear-gradient(45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+	            linear-gradient(-45deg, rgba(255, 255, 255, 0.05) 25%, transparent 25%),
+	            linear-gradient(45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%),
+	            linear-gradient(-45deg, transparent 75%, rgba(255, 255, 255, 0.05) 75%);
+	background-size: 8px 8px;
+	background-position: 0 0, 0 4px, 4px -4px, -4px 0px;
+}
+
+/* Keep column privacy pattern for visual distinction */
+.task-column.private::after {
 	content: '';
 	position: absolute;
 	top: 0;
@@ -720,8 +748,7 @@ body.dark-mode .task-actions-menu {
 	border-radius: inherit;
 }
 
-.task-column.private,
-.task-card.private {
+.task-column.private {
 	opacity: 0.8;
 }
 

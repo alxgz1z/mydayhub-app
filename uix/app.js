@@ -746,12 +746,18 @@ function initSettingsPanel() {
 	// Encryption setup button
 	if (encryptionSetupBtn) {
 		encryptionSetupBtn.addEventListener('click', async () => {
+			console.log('Encryption setup button clicked');
+			console.log('encryptionSetupWizard exists:', !!window.encryptionSetupWizard);
 			if (window.encryptionSetupWizard) {
+				console.log('Triggering encryption setup...');
 				await window.encryptionSetupWizard.triggerSetup();
 			} else {
-				showToast({ message: 'Encryption setup not available', type: 'error' });
+				console.error('Encryption setup wizard not initialized');
+				showToast({ message: 'Encryption setup not available. Please reload the page.', type: 'error' });
 			}
 		});
+	} else {
+		console.error('Encryption setup button not found in DOM');
 	}
 	
 	// Initialize theme selector state
@@ -2364,13 +2370,8 @@ function updateSettingsButtonTextColors(textColor) {
 		btn.style.color = textColor;
 	});
 	
-	// Update tab buttons (view tabs)
-	const activeTabButtons = document.querySelectorAll('.tab-btn.active');
-	activeTabButtons.forEach(btn => {
-		btn.style.color = textColor;
-	});
-	
-	// Inactive tab buttons use CSS text-secondary for proper contrast
+	// Tab buttons now use pure CSS with --accent-color for active state
+	// No need to update them here - let CSS handle it
 }
 
 /**

@@ -29,7 +29,8 @@
 		isOpen: false,
 		isMaximized: false,
 		isDirty: false,
-		currentTaskId: null,
+		currentTaskId: null, // Legacy name, but holds either task or journal entry ID
+		currentKind: 'task', // 'task' or 'journal'
 		fontSize: 16,
 		minFontSize: 10,
 		maxFontSize: 32
@@ -107,9 +108,14 @@
 			if (result.status !== 'success') {
 				throw new Error(result.message || 'Failed to save font size.');
 			}
+			// Save to both task board and journal view containers
 			const boardContainer = document.getElementById('task-board-container');
 			if(boardContainer) {
 				boardContainer.dataset.editorFontSize = size;
+			}
+			const journalContainer = document.getElementById('journal-view');
+			if(journalContainer) {
+				journalContainer.dataset.editorFontSize = size;
 			}
 		} catch (error) {
 			console.error('Save font size error:', error);
@@ -222,39 +228,72 @@
 		elements.saveStatus.textContent = 'Saving...';
 		
 		try {
-			// Use the new global, secure apiFetch function.
-			const result = await apiFetch({
-				module: 'tasks',
-				action: 'saveTaskDetails',
-				task_id: state.currentTaskId,
-				notes: elements.textarea.value
-			});
+			let result;
 			
-			// apiFetch handles non-OK responses, so we only need to check the logical status
-			if (result.status !== 'success') {
-				throw new Error(result.message || 'Failed to save notes.');
-			}
-			
-			const taskCard = document.querySelector(`.task-card[data-task-id="${state.currentTaskId}"]`);
-			if (taskCard) {
-				taskCard.dataset.notes = encodeURIComponent(elements.textarea.value);
-				taskCard.dataset.updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+			if (state.currentKind === 'journal') {
+				// Save journal entry content
+				result = await apiFetch({
+					module: 'journal',
+					action: 'updateEntryContent',
+					entry_id: state.currentTaskId,
+					content: elements.textarea.value
+				});
+				
+				if (result.status !== 'success') {
+					throw new Error(result.message || 'Failed to save journal entry.');
+				}
+				
+				// Update the journal entry card's data attribute
+				const entryCard = document.querySelector(`.journal-entry-card[data-entry-id="${state.currentTaskId}"]`);
+				if (entryCard) {
+					entryCard.dataset.content = encodeURIComponent(elements.textarea.value);
+					entryCard.dataset.updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+				}
+				
+				// Dispatch event for journal view to handle re-rendering
+				const hasContent = elements.textarea.value.trim() !== '';
+				const event = new CustomEvent('contentSaved', {
+					detail: {
+						entryId: state.currentTaskId,
+						hasContent: hasContent
+					}
+				});
+				document.dispatchEvent(event);
+			} else {
+				// Save task notes (original behavior)
+				result = await apiFetch({
+					module: 'tasks',
+					action: 'saveTaskDetails',
+					task_id: state.currentTaskId,
+					notes: elements.textarea.value
+				});
+				
+				if (result.status !== 'success') {
+					throw new Error(result.message || 'Failed to save notes.');
+				}
+				
+				const taskCard = document.querySelector(`.task-card[data-task-id="${state.currentTaskId}"]`);
+				if (taskCard) {
+					taskCard.dataset.notes = encodeURIComponent(elements.textarea.value);
+					taskCard.dataset.updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
+				}
+
+				const hasNotes = elements.textarea.value.trim() !== '';
+				const event = new CustomEvent('noteSaved', {
+					detail: {
+						taskId: state.currentTaskId,
+						hasNotes: hasNotes
+					}
+				});
+				document.dispatchEvent(event);
 			}
 
 			state.isDirty = false;
 			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleString()}`;
 			
 			// Show a success toast notification to the user.
-			showToast({ message: 'Note saved successfully.', type: 'success' });
-
-			const hasNotes = elements.textarea.value.trim() !== '';
-			const event = new CustomEvent('noteSaved', {
-				detail: {
-					taskId: state.currentTaskId,
-					hasNotes: hasNotes
-				}
-			});
-			document.dispatchEvent(event);
+			const itemType = state.currentKind === 'journal' ? 'Journal entry' : 'Note';
+			showToast({ message: `${itemType} saved successfully.`, type: 'success' });
 
 			return true;
 
@@ -270,6 +309,7 @@
 		const { id, kind = 'task', title = 'Edit Note', content = '', updatedAt, fontSize } = options;
 		
 		state.currentTaskId = id;
+		state.currentKind = kind;
 		state.fontSize = fontSize || 16;
 
 		elements.title.textContent = title;

@@ -1331,8 +1331,8 @@ function closeAllTaskActionMenus() {
 		 </button>
 	 `;
  
-	 // Duplicate - Owner only
-	 if (isOwner) {
+	 // Duplicate - Owner only and not private (security reasons)
+	 if (isOwner && !isPrivate) {
 		 menuHTML += `
 			 <button class="task-action-btn" data-action="duplicate">
 				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1819,6 +1819,25 @@ async function togglePrivacy(type, id) {
 
 				const privacyBtnText = is_private ? 'Make Public' : 'Make Private';
 				showToast({ message: `${type.charAt(0).toUpperCase() + type.slice(1)} set to ${is_private ? 'private' : 'public'}.`, type: 'success' });
+
+				// Update lock icon for task cards (similar to journal entries)
+				if (type === 'task') {
+					const taskCardMain = element.querySelector('.task-card-main');
+					const existingIndicator = element.querySelector('.task-privacy-indicator');
+					const actionsBtn = taskCardMain?.querySelector('.btn-task-actions');
+					
+					if (is_private && !existingIndicator && actionsBtn) {
+						// Add privacy indicator if it doesn't exist
+						const indicator = document.createElement('span');
+						indicator.className = 'task-privacy-indicator';
+						indicator.title = 'Private task';
+						indicator.textContent = '🔒';
+						actionsBtn.parentNode.insertBefore(indicator, actionsBtn);
+					} else if (!is_private && existingIndicator) {
+						// Remove privacy indicator if task is now public
+						existingIndicator.remove();
+					}
+				}
 
 				if (type === 'column') {
 					const btn = element.querySelector('.btn-toggle-column-privacy');
@@ -2691,12 +2710,13 @@ function createTaskCard(taskData) {
 			data-ready-for-review="${!!(taskData.ready_for_review)}"
 			data-shared-by="${taskData.shared_by || ''}"
 			${draggableAttr}>
-			<div class="task-card-main">
-				<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>
-				${statusElement}
-				<span class="task-title ${isOwner ? 'editable' : 'readonly'}">${taskTitle}</span>
-				<button class="btn-task-actions" title="Task Actions">&vellip;</button>
-			</div>
+		<div class="task-card-main">
+			<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>
+			${statusElement}
+			<span class="task-title ${isOwner ? 'editable' : 'readonly'}">${taskTitle}</span>
+			${isPrivate ? '<span class="task-privacy-indicator" title="Private task">🔒</span>' : ''}
+			<button class="btn-task-actions" title="Task Actions">&vellip;</button>
+		</div>
 			${footerHTML}
 		</div>
 	`;

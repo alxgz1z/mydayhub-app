@@ -124,6 +124,8 @@ class EncryptionSetupWizard {
         
         if (status.encryption_enabled) {
             console.log('Encryption already enabled');
+            // Show encryption management info
+            this.showEncryptionManagementInfo(status);
             return;
         }
 
@@ -136,6 +138,29 @@ class EncryptionSetupWizard {
 
         // Show setup wizard
         this.showWizard();
+    }
+    
+    // Show encryption management information when already enabled
+    showEncryptionManagementInfo(status) {
+        const message = `Encryption is currently enabled and protecting your private data.
+        
+✓ Private tasks and journal entries are encrypted
+✓ Your encryption keys are secure
+✓ Zero-knowledge encryption is active
+
+Note: Currently, encryption cannot be disabled once enabled. This ensures your private data remains secure.
+
+If you need to reset your encryption (which will delete all encrypted data), please contact support or check the documentation.`;
+        
+        if (window.showConfirm) {
+            window.showConfirm(message, {
+                title: 'Encryption Status',
+                confirmText: 'OK',
+                cancelText: null
+            });
+        } else {
+            alert(message);
+        }
     }
 
     async checkEncryptionStatus() {

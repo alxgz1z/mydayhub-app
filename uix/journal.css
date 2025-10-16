@@ -544,15 +544,15 @@
 	background: linear-gradient(135deg, #22c55e, #16a34a) !important; /* Fixed mission green */
 }
 
-/* Support classification - Accent color diagonal stripes */
+/* Support classification - Blue diagonal stripes (match tasks) */
 .journal-entry-card.classification-support .journal-entry-status-band {
-	background: repeating-linear-gradient(
-		45deg,
-		var(--accent-color),
-		var(--accent-color) 3px,
-		rgba(0, 0, 0, 0.2) 3px,
-		rgba(0, 0, 0, 0.2) 6px
-	) !important;
+    background: repeating-linear-gradient(
+        45deg,
+        #007bff,
+        #007bff 3px,
+        rgba(0, 0, 0, 0.2) 3px,
+        rgba(0, 0, 0, 0.2) 4px
+    ) !important;
 }
 
 /* Backlog classification - Solid orange */
@@ -637,6 +637,42 @@
     font-family: monospace;
     font-size: 0.85rem;
     font-weight: 500;
+}
+
+/* ==========================================================================
+   JOURNAL ENTRY FOOTER & INDICATORS (matching task cards pattern)
+   ========================================================================== */
+
+.journal-entry-footer {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding-top: 0.4rem;
+    margin-top: 0.4rem;
+    border-top: 1px solid var(--border-color-light);
+    padding-left: calc(12px + 0.75rem); /* band + gap */
+}
+
+.journal-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.journal-indicator.indicator-shortcut {
+    cursor: pointer;
+    transition: color 0.2s ease-in-out;
+}
+
+.journal-indicator.indicator-shortcut:hover {
+    color: var(--text-primary);
+}
+
+.journal-indicator svg {
+    stroke: currentColor;
 }
 
 .journal-entry-tasks-container {
@@ -771,9 +807,6 @@
 }
 
 /* Journal controls styling - centering handled by footer-center flexbox */
-#journal-controls {
-    /* No special styling needed - footer-center handles centering */
-}
 
 /* Mobile styles for removed header elements - no longer needed */
 
@@ -1307,10 +1340,10 @@ body.dark-mode .journal-actions-menu {
 #journal-classification-popover .swatch.classification-support {
     background: repeating-linear-gradient(
         45deg,
-        var(--accent-color),
-        var(--accent-color) 2px,
+        #007bff,
+        #007bff 2px,
         rgba(0, 0, 0, 0.2) 2px,
-        rgba(0, 0, 0, 0.2) 4px
+        rgba(0, 0, 0, 0.2) 3px
     );
 }
 
