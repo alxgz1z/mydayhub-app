@@ -3,8 +3,8 @@ Updated: 2025-10-16
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Tamarindo 8.3 — Privacy & UX Refinements Complete
-- **Next Release**: Beta 8.4 - TBD
+- Version: Tamarindo 8.4 — Voice Transcription Complete
+- **Next Release**: Beta 8.5 - TBD
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
@@ -138,6 +138,22 @@ Order: chronological (newest at bottom)
 - **Favicon Update**: Changed site favicon and app icons to `leaf.svg` for brand consistency
 - **Active Tab Styling**: Selected view tab (Tasks/Journal) now uses accent color for clear visual indication
 - **VALIDATION COMPLETE**: All privacy indicators update in real-time, duplicate protection working, journal CRUD fully functional
+
+### 2025-10-16 — Voice Transcription for Apple Devices (v8.4)
+- **Web Speech API Integration**: Real-time voice-to-text transcription using browser's native speech recognition
+- **Smart Device Detection**: Automatically detects iOS/macOS Safari; microphone button only shown on compatible devices
+- **Unified Editor Enhancement**: Microphone button added to editor toolbar for seamless voice input
+- **Real-Time Transcription**: Continuous listening mode with interim results; text appears as you speak
+- **Visual Feedback**: Pulsing red microphone icon with animated ring effect during recording
+- **Text Insertion**: Transcribed text inserted at cursor position; supports multi-line editing
+- **Permission Handling**: Graceful microphone permission requests with clear error messages
+- **Auto-Stop**: Recording automatically stops when editor closes; clean state management
+- **No Audio Storage**: Text-only transcription; no audio files saved for privacy
+- **Zero Cost**: On-device processing; no server requirements or API costs
+- **Offline Support**: Works without internet connection on supported devices
+- **Toast Notifications**: Status updates for recording start, stop, and errors
+- **Language Support**: English (US) by default; extensible to other languages
+- **VALIDATION COMPLETE**: Feature ready for testing on iPhone/iPad/Mac Safari devices
 
 ---
 

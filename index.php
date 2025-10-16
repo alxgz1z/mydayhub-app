@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 8.3 Tamarindo
+ * @version 8.4 Tamarindo
  *
  * @author Alex & Gemini & Claude & Cursor
  */ 
@@ -454,6 +454,14 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div class="editor-header">
 				<h3 id="editor-title">Edit Note</h3>
 				<div class="editor-controls">
+					<button id="editor-btn-voice" class="btn-icon" title="Voice Recording" style="display: none;">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+							<path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+							<line x1="12" y1="19" x2="12" y2="23"></line>
+							<line x1="8" y1="23" x2="16" y2="23"></line>
+						</svg>
+					</button>
 					<button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
 					</button>

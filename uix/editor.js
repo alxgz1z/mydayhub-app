@@ -5,7 +5,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 8.1 Tamarindo
+ * @version 8.4 Tamarindo
  * @author Alex & Gemini & Claude & Cursor
  *
  * Public API:
@@ -33,8 +33,23 @@
 		currentKind: 'task', // 'task' or 'journal'
 		fontSize: 16,
 		minFontSize: 10,
-		maxFontSize: 32
+		maxFontSize: 32,
+		isRecording: false,
+		recognition: null
 	};
+	
+	// Detect if device is Apple (Safari, iOS, macOS)
+	function isAppleDevice() {
+		const ua = navigator.userAgent.toLowerCase();
+		const isIOS = /iphone|ipad|ipod/.test(ua);
+		const isMac = /macintosh|mac os x/.test(ua);
+		const isSafari = /safari/.test(ua) && !/chrome|chromium|edg/.test(ua);
+		
+		// Check if Web Speech API is available
+		const hasSpeechRecognition = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+		
+		return (isIOS || (isMac && isSafari)) && hasSpeechRecognition;
+	}
 
 	function bindElements() {
 		elements.overlay = document.getElementById('unified-editor-overlay');
@@ -333,6 +348,11 @@
 
 	async function close() {
 		clearTimeout(autosaveTimer);
+		
+		// Stop voice recording if active
+		if (state.isRecording) {
+			stopVoiceRecognition();
+		}
 
 		const success = await save();
 		if (!success) {
@@ -361,10 +381,160 @@
 		elements.btnRestore.style.display = 'none';
 		state.isMaximized = false;
 	}
+	
+	// Voice transcription functions
+	function initVoiceRecognition() {
+		if (!isAppleDevice()) return;
+		
+		const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+		if (!SpeechRecognition) return;
+		
+		state.recognition = new SpeechRecognition();
+		state.recognition.continuous = true; // Keep listening
+		state.recognition.interimResults = true; // Show interim results
+		state.recognition.lang = 'en-US'; // Default language
+		
+		// When recognition gets results
+		state.recognition.onresult = (event) => {
+			let interimTranscript = '';
+			let finalTranscript = '';
+			
+			for (let i = event.resultIndex; i < event.results.length; i++) {
+				const transcript = event.results[i][0].transcript;
+				if (event.results[i].isFinal) {
+					finalTranscript += transcript + ' ';
+				} else {
+					interimTranscript += transcript;
+				}
+			}
+			
+			// Insert final transcript at cursor position
+			if (finalTranscript) {
+				insertTextAtCursor(finalTranscript);
+				markAsDirtyAndQueueSave();
+			}
+		};
+		
+		state.recognition.onerror = (event) => {
+			console.error('Speech recognition error:', event.error);
+			stopVoiceRecognition();
+			
+			if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+				showToast({ 
+					message: 'Microphone access denied. Please enable it in your browser settings.', 
+					type: 'error' 
+				});
+			} else if (event.error === 'no-speech') {
+				showToast({ 
+					message: 'No speech detected. Please try again.', 
+					type: 'info' 
+				});
+			} else {
+				showToast({ 
+					message: 'Voice recognition error. Please try again.', 
+					type: 'error' 
+				});
+			}
+		};
+		
+		state.recognition.onend = () => {
+			if (state.isRecording) {
+				// Restart if we want to keep recording
+				state.recognition.start();
+			} else {
+				stopVoiceRecognition();
+			}
+		};
+	}
+	
+	function insertTextAtCursor(text) {
+		const textarea = elements.textarea;
+		const start = textarea.selectionStart;
+		const end = textarea.selectionEnd;
+		const currentValue = textarea.value;
+		
+		// Insert text at cursor position
+		textarea.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+		
+		// Move cursor to end of inserted text
+		const newCursorPos = start + text.length;
+		textarea.setSelectionRange(newCursorPos, newCursorPos);
+		textarea.focus();
+	}
+	
+	function startVoiceRecognition() {
+		if (!state.recognition) {
+			initVoiceRecognition();
+		}
+		
+		if (!state.recognition) {
+			showToast({ 
+				message: 'Voice recognition is not available on this device.', 
+				type: 'error' 
+			});
+			return;
+		}
+		
+		try {
+			state.isRecording = true;
+			state.recognition.start();
+			
+			// Update button visual state
+			const voiceBtn = document.getElementById('editor-btn-voice');
+			if (voiceBtn) {
+				voiceBtn.classList.add('recording');
+				voiceBtn.title = 'Stop Recording';
+			}
+			
+			showToast({ 
+				message: 'Listening... Speak now.', 
+				type: 'success',
+				duration: 2000
+			});
+		} catch (error) {
+			console.error('Error starting voice recognition:', error);
+			state.isRecording = false;
+		}
+	}
+	
+	function stopVoiceRecognition() {
+		if (state.recognition) {
+			state.recognition.stop();
+		}
+		
+		state.isRecording = false;
+		
+		// Update button visual state
+		const voiceBtn = document.getElementById('editor-btn-voice');
+		if (voiceBtn) {
+			voiceBtn.classList.remove('recording');
+			voiceBtn.title = 'Voice Recording';
+		}
+	}
+	
+	function toggleVoiceRecognition() {
+		if (state.isRecording) {
+			stopVoiceRecognition();
+		} else {
+			startVoiceRecognition();
+		}
+	}
 
 	function init() {
 		bindElements();
 		attachEventListeners();
+		
+		// Initialize voice recognition if on Apple device
+		if (isAppleDevice()) {
+			initVoiceRecognition();
+			
+			// Show voice button
+			const voiceBtn = document.getElementById('editor-btn-voice');
+			if (voiceBtn) {
+				voiceBtn.style.display = 'flex';
+				voiceBtn.addEventListener('click', toggleVoiceRecognition);
+			}
+		}
 	}
 
 	document.addEventListener('DOMContentLoaded', init);
