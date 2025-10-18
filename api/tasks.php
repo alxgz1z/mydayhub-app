@@ -1070,11 +1070,15 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			if (isset($columnMap[$task['column_id']])) {
 				// Decrypt task data if encrypted for display
 				// This is a hybrid approach - server can decrypt for display but maintains zero-knowledge for storage
+				$decryptedData = null;
 				if ($task['is_private']) {
 					$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
 					if ($decryptedData) {
 						$task['encrypted_data'] = json_encode($decryptedData); // Send decrypted data
 					}
+				} else {
+					// For non-private tasks, decode JSON to check for notes
+					$decryptedData = json_decode($task['encrypted_data'], true);
 				}
 				$task['has_notes'] = !empty($decryptedData['notes'] ?? '');
 				$task['is_snoozed'] = !empty($task['snoozed_until']);

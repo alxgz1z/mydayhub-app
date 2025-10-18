@@ -1,0 +1,43 @@
+{
+  "name": "MyDayHub",
+  "short_name": "MDH",
+  "description": "A personal task and journal management application with zero-knowledge encryption",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1a1a1a",
+  "theme_color": "#FD7E13",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "media/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "media/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "media/icons/icon-180x180.png",
+      "sizes": "180x180",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity"],
+  "screenshots": [
+    {
+      "src": "media/icons/icon-512x512.png",
+      "sizes": "540x720",
+      "type": "image/png"
+    },
+    {
+      "src": "media/icons/icon-512x512.png",
+      "sizes": "1080x1440",
+      "type": "image/png"
+    }
+  ]
+}

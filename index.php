@@ -37,25 +37,33 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
 	<title>MyDayHub</title>
 	
+	<!-- Web App Manifest for PWA support -->
+	<link rel="manifest" href="manifest.json">
+	
 	<!-- Favicon and App Icons -->
-	<link rel="icon" type="image/svg+xml" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="32x32" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="16x16" href="media/leaf.svg">
-	<link rel="apple-touch-icon" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="180x180" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="152x152" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="144x144" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="120x120" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="114x114" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="76x76" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="72x72" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="60x60" href="media/leaf.svg">
-	<link rel="apple-touch-icon" sizes="57x57" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="192x192" href="media/leaf.svg">
-	<link rel="icon" type="image/png" sizes="512x512" href="media/leaf.svg">
+	<link rel="icon" type="image/png" sizes="32x32" href="media/icons/icon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="media/icons/icon-16x16.png">
+	<link rel="apple-touch-icon" href="media/icons/icon-180x180.png">
+	<link rel="apple-touch-icon" sizes="180x180" href="media/icons/icon-180x180.png">
+	<link rel="apple-touch-icon" sizes="152x152" href="media/icons/icon-192x192.png">
+	<link rel="apple-touch-icon" sizes="144x144" href="media/icons/icon-192x192.png">
+	<link rel="apple-touch-icon" sizes="120x120" href="media/icons/icon-128x128.png">
+	<link rel="apple-touch-icon" sizes="114x114" href="media/icons/icon-128x128.png">
+	<link rel="apple-touch-icon" sizes="76x76" href="media/icons/icon-64x64.png">
+	<link rel="apple-touch-icon" sizes="72x72" href="media/icons/icon-64x64.png">
+	<link rel="apple-touch-icon" sizes="60x60" href="media/icons/icon-32x32.png">
+	<link rel="apple-touch-icon" sizes="57x57" href="media/icons/icon-32x32.png">
+	<link rel="icon" type="image/png" sizes="192x192" href="media/icons/icon-192x192.png">
+	<link rel="icon" type="image/png" sizes="512x512" href="media/icons/icon-512x512.png">
+	
+	<!-- Web App Meta Tags -->
+	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+	<meta name="apple-mobile-web-app-title" content="MyDayHub">
+	<meta name="theme-color" content="#FD7E13">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
-	<link rel="stylesheet" href="uix/editor.css">
+	<link rel="stylesheet" href="uix/editor.css?v=8.4.1">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
 	<link rel="stylesheet" href="uix/journal.css">
@@ -81,7 +89,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</svg>
 				</button>
 				<h1 id="app-title">mdh</h1>
-				<img src="media/leaf.svg" alt="MyDayHub Logo" id="header-logo">
+				<img src="media/icons/icon-192x192.png" alt="MyDayHub Logo" id="header-logo">
 			</div>
 			
 			<div class="header-center">
@@ -115,7 +123,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			
 			<div class="header-right">
 				<div class="user-info-display">
-					<span>[<?php echo htmlspecialchars($username); ?>]</span>
 					<div id="mission-focus-chart" class="mission-focus-chart" style="display: block;">
 						<canvas id="mission-focus-canvas" width="48" height="48"></canvas>
 					</div>
@@ -163,20 +170,26 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 
 		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>">
 			<div class="footer-left">
-				<?php if ($isCurrentUserAdmin): ?>
+			<span id="footer-username" data-username="<?php echo htmlspecialchars($username); ?>" title="Username"></span>
+			<?php if ($isCurrentUserAdmin): ?>
 				<a href="/admin/" id="admin-access-link" title="Admin Panel">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 						<path d="M12 2L15.09 8.26L22 9L17 14L18.18 21L12 17.77L5.82 21L7 14L2 9L8.91 8.26L12 2Z"/>
 					</svg>
 				</a>
 				<?php endif; ?>
-				<div id="add-column-container">
+				<?php if (defined('DEVMODE') && DEVMODE): ?>
+					<button id="btn-dev-report" class="btn-footer-icon" title="Open latest layout report" style="margin-left: 0.5rem;">
+						<span role="img" aria-label="construction">🚧</span>
+					</button>
+				<?php endif; ?>
+				<div id="add-column-container" style="display: none;">
 					<button id="btn-add-column" class="btn-header">+ New Column</button>
 				</div>
 				
 			</div>
 			<div class="footer-center">
-				<button id="btn-filters" class="btn-footer-icon" title="Show Filters">
+				<button id="btn-filters" class="btn-footer-icon" title="Tasks View Options">
 					<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="View Options">
 						<line x1="4" y1="7" x2="20" y2="7"></line>
 						<circle cx="9" cy="7" r="1.75"></circle>
@@ -462,16 +475,27 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							<line x1="8" y1="23" x2="16" y2="23"></line>
 						</svg>
 					</button>
-					<button id="btn-editor-save-close" class="btn-icon" title="Save & Close">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"></path><polyline points="8 14 11 17 16 12"></polyline></svg>
-					</button>
 					<button id="editor-btn-maximize" class="btn-icon" title="Maximize">
 						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="6 15 12 21 18 15"></polyline><polyline points="18 9 12 3 6 9"></polyline></g></svg>
 					</button>
 					<button id="editor-btn-restore" class="btn-icon" title="Restore" style="display: none;">
-						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><g transform="rotate(45 12 12)"><polyline points="15 6 21 12 15 18"></polyline><polyline points="9 18 3 12 9 6"></polyline></g></svg>
+						<svg width="24" height="24" viewBox="0 0 316 330" xmlns="http://www.w3.org/2000/svg" fill="none">
+							<g transform="translate(-1352 -838)">
+								<g>
+									<path d="M1524.5 849.5 1524.5 981.271" stroke="currentColor" stroke-width="20.625" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" fill="none"/>
+									<path d="M0 0 131.214 0.000360892" stroke="currentColor" stroke-width="20.625" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" fill="none" transform="matrix(-1 0 0 1 1655.71 982.5)"/>
+									<path d="M1496.5 1156.27 1496.5 1024.5" stroke="currentColor" stroke-width="20.625" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" fill="none"/>
+									<path d="M0 0 131.214 0.000360892" stroke="currentColor" stroke-width="20.625" stroke-linecap="round" stroke-linejoin="miter" stroke-miterlimit="8" fill="none" transform="matrix(1 -1.22465e-16 -1.22465e-16 -1 1364.5 1024.5)"/>
+								</g>
+							</g>
+						</svg>
 					</button>
-					<button id="editor-btn-close" class="btn-icon btn-close" title="Close">&times;</button>
+					<button id="editor-btn-close" class="btn-icon btn-close" title="Save and Close">
+						<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+							<line x1="18" y1="6" x2="6" y2="18"></line>
+							<line x1="6" y1="6" x2="18" y2="18"></line>
+						</svg>
+					</button>
 				</div>
 			</div>
 
@@ -498,11 +522,13 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				</div>
 			</div>
 
-			<div class="editor-body">
-				<textarea id="editor-textarea" placeholder="Start writing..."></textarea>
+			<div id="editor-content">
+				<div class="editor-body">
+					<textarea id="editor-textarea" placeholder="Start writing..."></textarea>
+				</div>
 			</div>
 
-			<div class="editor-footer" id="editor-status-bar">
+			<div id="editor-status-bar">
 				<div id="editor-doc-stats">
 					<span>Words: 0</span>
 					<span>Chars: 0</span>
@@ -973,6 +999,10 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	</div>
 	
 	
+	<script>
+		// Make username available globally for JavaScript
+		window.appUsername = '<?php echo htmlspecialchars($username); ?>';
+	</script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
 	<script src="uix/encryption-setup.js" defer></script>

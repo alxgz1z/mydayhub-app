@@ -142,7 +142,7 @@ body.light-mode .file-management-quota-info {
 .attachments-modal-header h4 {
 	margin: 0;
 	font-size: 1.2rem;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .attachments-modal-header .btn-icon {
@@ -489,7 +489,7 @@ body.dark-mode #attachment-quota-bar::-webkit-progress-value {
 .file-management-header h4 {
 	margin: 0;
 	font-size: 1.3rem;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .file-management-header-controls {
@@ -578,7 +578,7 @@ body.dark-mode #attachment-quota-bar::-webkit-progress-value {
 }
 
 .file-management-filename {
-	font-weight: 600;
+	font-weight: 400;
 	color: #f2f2f7;
 	font-size: 1rem;
 	margin-bottom: 0.25rem;

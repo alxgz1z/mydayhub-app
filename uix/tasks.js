@@ -46,7 +46,9 @@ async function getItemEncryptionKey(itemId, itemType) {
     try {
         // For the current implementation, we'll use the existing server-side decryption
         // This is a temporary solution until we implement proper zero-knowledge key management
-        const response = await fetch(`/api/api.php?module=tasks&action=decryptTaskData&task_id=${itemId}`);
+        const response = await fetch(`/api/api.php?module=tasks&action=decryptTaskData&task_id=${itemId}`, {
+            credentials: 'include'
+        });
         const result = await response.json();
         
         if (result.status === 'success') {
@@ -97,8 +99,75 @@ function formatDueDate(dateString) {
  * Initializes the Tasks view by fetching and rendering the board.
  */
 function initTasksView() {
-	fetchAndRenderBoard();
-	initEventListeners();
+	// Add a small delay to ensure session is fully established
+	setTimeout(() => {
+		fetchAndRenderBoard();
+		initEventListeners();
+
+		// DEV: layout inspector hotkey (Ctrl/Cmd + Alt + D)
+		if (window.MyDayHub_Config?.DEV_MODE) {
+			const sendLayoutReport = async () => {
+				try {
+					const container = document.getElementById('task-board-container');
+					if (!container) return;
+					const columns = Array.from(container.querySelectorAll('.task-column'));
+					const columnPayload = columns.map((col, idx) => {
+						const body = col.querySelector('.column-body');
+						const firstCard = body?.querySelector('.task-card');
+						const rect = col.getBoundingClientRect();
+						return {
+							index: idx,
+							width: rect.width,
+							computedStyles: {
+								flex: getComputedStyle(col).flex,
+								minWidth: getComputedStyle(col).minWidth,
+								maxWidth: getComputedStyle(col).maxWidth,
+								padding: getComputedStyle(body || col).padding,
+							},
+							firstCard: firstCard ? {
+								padding: getComputedStyle(firstCard).padding,
+								width: firstCard.getBoundingClientRect().width,
+							} : null
+						};
+					});
+					const payload = {
+						when: new Date().toISOString(),
+						window: { innerWidth: window.innerWidth, innerHeight: window.innerHeight, devicePixelRatio: window.devicePixelRatio },
+						container: {
+							scrollWidth: container.scrollWidth,
+							clientWidth: container.clientWidth,
+							classList: Array.from(container.classList),
+						},
+						columns: columnPayload,
+						console: (window.__consoleBuffer || []).slice(-200)
+					};
+					await fetch((window.MyDayHub_Config?.appURL || '') + '/api/debug.php', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						credentials: 'include',
+						body: JSON.stringify(payload)
+					});
+					console.log('Layout report sent.');
+				} catch (e) {
+					console.warn('Layout report failed', e);
+				}
+			};
+
+			window.addEventListener('keydown', (e) => {
+				const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+				const mod = isMac ? e.metaKey : e.ctrlKey;
+				if (mod && e.altKey && (e.key === 'd' || e.key === 'D')) {
+					e.preventDefault();
+					sendLayoutReport();
+				}
+			});
+
+			// Optionally send after first render
+			setTimeout(() => {
+				try { sendLayoutReport(); } catch (_) {}
+			}, 800);
+		}
+	}, 100);
 }
 
 // Expose to global namespace for ViewManager
@@ -1085,6 +1154,10 @@ function showFilterMenu() {
 			<span class="slider round"></span>
 		</label>
 	</div>
+	<div class="filter-divider"></div>
+	<div class="filter-item">
+		<button id="filter-menu-new-column" class="btn-add-column-menu">+ New Column</button>
+	</div>
 	`;
 
 	document.body.appendChild(menu);
@@ -1108,6 +1181,18 @@ function showFilterMenu() {
 				showSnoozed: 'filter_show_snoozed'
 			};
 			saveFilterPreference(keyMap[filter], value);
+		}
+	});
+	
+	// Handle new column button click
+	menu.addEventListener('click', (e) => {
+		const newColumnBtn = e.target.closest('#filter-menu-new-column');
+		if (newColumnBtn) {
+			e.preventDefault();
+			e.stopPropagation();
+			console.log('New column button clicked');
+			// Show modal immediately before closing menu
+			showColumnNameModal();
 		}
 	});
 }
@@ -1142,6 +1227,10 @@ function applyAllFilters() {
 	allColumns.forEach(column => {
 		updateColumnTaskCount(column);
 	});
+	
+	// Recalculate column heights after filter changes
+	checkTaskBoardOverflow();
+	adjustWideScreenColumnHeights();
 }
 
 
@@ -2186,19 +2275,25 @@ async function fetchAndRenderBoard() {
 
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
-		const apiURL = `${appURL}/api/api.php?module=tasks&action=getAll`;
+		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAll`, {
+			method: 'GET',
+			headers: {
+				'Content-Type': 'application/json',
+				'X-CSRF-TOKEN': csrfToken
+			},
+			credentials: 'include'
+		});
+		const result = await response.json();
 
-		const response = await fetch(apiURL);
-
-		if (!response.ok) {
-			if (response.status === 401) {
+		if (!result || result.status !== 'success') {
+			if (result && result.status === 'error' && result.message === 'Authentication required.') {
 				window.location.href = `${appURL}/login/login.php`;
 				return;
 			}
-			throw new Error(`API responded with status: ${response.status}`);
+			console.error('Tasks API error response:', result); // Add detailed logging
+			throw new Error(`API responded with status: ${result?.status || 'unknown'}, message: ${result?.message || 'no message'}`);
 		}
-
-		const result = await response.json();
 
 		if (result.status === 'success') {
 			const boardData = result.data.board;
@@ -2737,8 +2832,17 @@ async function deleteAttachment(attachmentId) {
 
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			const response = await fetch(`${window.MyDayHub_Config.appURL}/api/api.php?module=tasks&action=getAll`);
-			const boardResult = await response.json();
+			const appURL = window.MyDayHub_Config?.appURL || '';
+			const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+			const boardResponse = await fetch(`${appURL}/api/api.php?module=tasks&action=getAll`, {
+				method: 'GET',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-CSRF-TOKEN': csrfToken
+				},
+				credentials: 'include'
+			});
+			const boardResult = await boardResponse.json();
 			if (boardResult.status === 'success' && boardResult.data.user_storage) {
 				userStorage = boardResult.data.user_storage;
 			}
@@ -2760,7 +2864,9 @@ async function deleteAttachment(attachmentId) {
 async function getAttachments(taskId) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
-		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`);
+		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`, {
+			credentials: 'include'
+		});
 		const result = await response.json();
 		if (result.status === 'success') {
 			return result.data;
@@ -3199,8 +3305,12 @@ async function openFileManagementModal() {
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
-				const result = await response.json();
+				const result = await apiFetch({
+					module: 'tasks',
+					action: 'getAllUserAttachments',
+					sort_by: sortBy,
+					sort_order: sortOrder
+				});
 				
 				if (result.status === 'success') {
 					renderFileManagementList(result.data.attachments, listContainer);
@@ -3442,8 +3552,12 @@ async function openFileManagementModal() {
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
 				const appURL = window.MyDayHub_Config?.appURL || '';
-				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAllUserAttachments&sort_by=${sortBy}&sort_order=${sortOrder}`);
-				const result = await response.json();
+				const result = await apiFetch({
+					module: 'tasks',
+					action: 'getAllUserAttachments',
+					sort_by: sortBy,
+					sort_order: sortOrder
+				});
 				
 				if (result.status === 'success') {
 					renderFileManagementList(result.data.attachments, listContainer);
@@ -4412,3 +4526,135 @@ window.addEventListener('resize', () => {
         }
     }, 150);
 });
+
+/**
+ * Shows a modal dialog to prompt for a new column name.
+ */
+function showColumnNameModal() {
+	console.log('showColumnNameModal called');
+	
+	// Create modal overlay
+	const overlay = document.createElement('div');
+	overlay.id = 'column-name-modal-overlay';
+	overlay.style.cssText = `
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background-color: rgba(0, 0, 0, 0.5);
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		z-index: 2000;
+	`;
+	
+	// Create modal content
+	const modal = document.createElement('div');
+	modal.style.cssText = `
+		background: var(--card-bg);
+		border: 1px solid var(--border-color);
+		border-radius: 8px;
+		padding: 2rem;
+		min-width: 300px;
+		box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+	`;
+	
+	modal.innerHTML = `
+		<h3 style="margin-top: 0; color: var(--text-primary); font-size: 1.2rem; font-weight: 500;">New Column</h3>
+		<input type="text" id="column-name-input" placeholder="Enter column name..." style="
+			width: 100%;
+			padding: 0.75rem;
+			border: 1px solid var(--border-color);
+			border-radius: 6px;
+			background: var(--toolbar-bg);
+			color: var(--text-primary);
+			font-size: 1rem;
+			box-sizing: border-box;
+			margin-bottom: 1rem;
+		" autofocus />
+		<div style="display: flex; gap: 0.5rem; justify-content: flex-end;">
+			<button id="column-modal-cancel" style="
+				padding: 0.5rem 1rem;
+				border: 1px solid var(--border-color);
+				border-radius: 6px;
+				background: var(--toolbar-bg);
+				color: var(--text-primary);
+				cursor: pointer;
+				font-weight: 400;
+				transition: all 0.2s ease;
+			">Cancel</button>
+			<button id="column-modal-ok" style="
+				padding: 0.5rem 1rem;
+				border: none;
+				border-radius: 6px;
+				background: var(--accent-color);
+				color: white;
+				cursor: pointer;
+				font-weight: 400;
+				transition: all 0.2s ease;
+			">Create</button>
+		</div>
+	`;
+	
+	overlay.appendChild(modal);
+	document.body.appendChild(overlay);
+	
+	const input = document.getElementById('column-name-input');
+	const cancelBtn = document.getElementById('column-modal-cancel');
+	const okBtn = document.getElementById('column-modal-ok');
+	
+	const closeModal = () => {
+		overlay.remove();
+	};
+	
+	const handleCreate = () => {
+		const columnName = input.value.trim();
+		if (columnName) {
+			console.log('Creating column with name:', columnName);
+			closeModal();
+			createNewColumnAPI(columnName);
+		} else {
+			showToast({ message: 'Please enter a column name', type: 'error' });
+		}
+	};
+	
+	cancelBtn.addEventListener('click', closeModal);
+	okBtn.addEventListener('click', handleCreate);
+	input.addEventListener('keypress', (e) => {
+		if (e.key === 'Enter') {
+			handleCreate();
+		}
+	});
+	input.addEventListener('keydown', (e) => {
+		if (e.key === 'Escape') {
+			closeModal();
+		}
+	});
+	
+	// Focus the input
+	setTimeout(() => input.focus(), 0);
+}
+
+/**
+ * Creates a new column via API.
+ */
+async function createNewColumnAPI(columnName) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'createColumn',
+			column_name: columnName
+		});
+		if (result.status === 'success') {
+			updateQuotaStatusAfterOperation('column', true);
+			showToast({ message: 'Column created.', type: 'success' });
+			fetchAndRenderBoard();
+		} else {
+			showToast({ message: `Error: ${result.message}`, type: 'error' });
+		}
+	} catch (error) {
+		showToast({ message: `A network error occurred: ${error.message}`, type: 'error' });
+		console.error('Create column error:', error);
+	}
+}

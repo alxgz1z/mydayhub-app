@@ -1,5 +1,5 @@
 # MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-10-16
+Updated: 2025-10-18
 Order: chronological (newest at bottom)
 
 ## Current State
@@ -179,3 +179,11 @@ Order: chronological (newest at bottom)
 
 
 
+
+### 2025-10-18 — Tasks Layout Parity, Dev Telemetry, Editor Icon
+- Tasks: fixed card width utilization to mirror Journal (flex column body, stretch, min-width fixes); removed scrollbar-gutter reservation; columns now `flex:1` with `min/max` bounds.
+- UX polish: unified card padding/gaps; centered board by default on wide screens.
+- Dev tooling: added DEV_MODE layout report pipeline (JSON) with console ring buffer; footer 🚧 button to open latest report.
+- Journal → Tasks parity confirmed via telemetry (332px card inside 350px column after padding/border).
+- Editor: replaced restore/collapse SVG icon with theme-aware `currentColor` variant per provided design.
+- Misc: reduced heavy font weights; tightened column-body padding; fixed hover shimmer caused by scrollbar.

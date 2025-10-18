@@ -272,7 +272,7 @@ if (!isset($_SESSION['user_id'])) {
 		</a>
 		
 		<div class="guide-header">
-			<img src="<?php echo APP_URL; ?>/media/leaf.svg" alt="MyDayHub Logo" class="guide-logo">
+			<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="MyDayHub Logo" class="guide-logo">
 			<h1>MyDayHub User Guide</h1>
 			<p>Your comprehensive guide to mastering productivity with privacy</p>
 		</div>

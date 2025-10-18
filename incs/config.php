@@ -120,6 +120,8 @@ define('DB_PASS', getenv('DB_PASS'));
 define('SESSION_TIMEOUT_SECONDS', 28800);
 
 if (session_status() === PHP_SESSION_NONE) {
+	// Configure session cookies for HTTPS
+	session_set_cookie_params(0, '/', '', false, true); // lifetime, path, domain, secure=false (temp), httponly
 	session_start();
 }
 
@@ -182,7 +184,7 @@ if (isset($_SESSION['user_id'])) {
 }
 
 	
-$timeoutSeconds = $_SESSION['session_timeout'];
+$timeoutSeconds = $_SESSION['session_timeout'] ?? 3600; // Default to 1 hour if not set
 
 
 // --- SMTP (MAIL) SERVICE (from Environment Variables) --- //

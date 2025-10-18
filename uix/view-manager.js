@@ -77,12 +77,12 @@ class ViewManager {
             window.initJournalView();
         }
         
-        // Update mission focus chart after view loads
+        // Update mission focus chart after view loads (with longer delay for session)
         setTimeout(() => {
             if (typeof window.updateMissionFocusChart === 'function') {
                 window.updateMissionFocusChart();
             }
-        }, 100);
+        }, 500);
     }
     
     /**

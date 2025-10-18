@@ -380,7 +380,7 @@ body.light-mode #app-header .btn-header:hover {
 	padding: 0.25rem 0.5rem !important;
 	border-radius: 0.5rem !important;
 	font-size: 0.75rem !important;
-	font-weight: 600 !important;
+	font-weight: 400 !important;
 	border: none !important;
 	display: inline-flex !important;
 	align-items: center !important;
@@ -465,7 +465,7 @@ body.light-mode #app-header .btn-header:hover {
 .calendar-overlay-header h4 {
 	margin: 0;
 	font-size: 1.5rem;
-	font-weight: 700;
+	font-weight: 500;
 	color: var(--text-primary);
 	letter-spacing: -0.025em;
 }
@@ -549,7 +549,7 @@ body.light-mode #app-header .btn-header:hover {
 	color: var(--text-primary);
 	padding: 0.5rem;
 	text-align: center;
-	font-weight: 600;
+	font-weight: 400;
 	font-size: 0.875rem;
 }
 
@@ -580,7 +580,7 @@ body.light-mode #app-header .btn-header:hover {
 }
 
 .calendar-day-number {
-	font-weight: 600;
+	font-weight: 400;
 	margin-bottom: 0.25rem;
 }
 
@@ -617,7 +617,7 @@ body.light-mode #app-header .btn-header:hover {
 	margin: 0 0 0.75rem 0;
 	color: var(--text-primary);
 	font-size: 0.875rem;
-	font-weight: 600;
+	font-weight: 400;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
 }
@@ -668,7 +668,7 @@ body.light-mode #app-header .btn-header:hover {
 .calendar-management-header h5 {
 	margin: 0 0 0.5rem 0;
 	font-size: 1.125rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -710,7 +710,7 @@ body.light-mode #app-header .btn-header:hover {
 .calendar-item-info h6 {
 	margin: 0 0 0.25rem 0;
 	font-size: 1rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -730,7 +730,7 @@ body.light-mode #app-header .btn-header:hover {
 	padding: 0.25rem 0.5rem;
 	border-radius: 0.375rem;
 	font-size: 0.75rem;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .calendar-item-actions {
@@ -820,7 +820,7 @@ body.light-mode #app-header .btn-header:hover {
 }
 
 .event-item-label {
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -848,7 +848,7 @@ body.light-mode #app-header .btn-header:hover {
 	margin: 0 0 1.5rem 0;
 	color: var(--text-primary);
 	font-size: 1.125rem;
-	font-weight: 600;
+	font-weight: 400;
 	text-transform: none;
 	letter-spacing: normal;
 }
@@ -1140,7 +1140,7 @@ body.light-mode #app-header .btn-header:hover {
 .json-import-modal-header h4 {
 	margin: 0;
 	font-size: 1.25rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -1162,7 +1162,7 @@ body.light-mode #app-header .btn-header:hover {
 	margin: 0 0 0.75rem 0;
 	color: var(--text-primary);
 	font-size: 1rem;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .import-instructions p {
@@ -1203,7 +1203,7 @@ body.light-mode #app-header .btn-header:hover {
 	margin: 0 0 0.75rem 0;
 	color: var(--text-primary);
 	font-size: 1rem;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .preview-item {
@@ -1454,7 +1454,7 @@ body.light-mode #app-header .btn-header:hover {
 	padding: 2px 8px;
 	border-radius: 4px;
 	font-size: 0.7rem;
-	font-weight: 600;
+	font-weight: 400;
 	letter-spacing: 0.5px;
 }
 
@@ -1634,7 +1634,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	padding: 5px 10px;
 	border-radius: 5px;
 	cursor: pointer;
-	font-weight: bold;
+	font-weight: 400;
 	white-space: nowrap;
 	transition: background-color 0.2s;
 }
@@ -1886,7 +1886,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 #share-modal-container h3 {
 	margin: 0 0 1rem 0;
 	font-size: 1.15rem;
-	font-weight: 600;
+	font-weight: 400;
 	text-align: left;
 }
 
@@ -1924,7 +1924,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	border-radius: 6px;
 	cursor: pointer;
 	font-size: 0.95rem;
-	font-weight: 600;
+	font-weight: 400;
 	justify-self: end;
 }
 
@@ -1948,7 +1948,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 
 #share-modal-container .table-shares thead th {
 	text-align: left;
-	font-weight: 600;
+	font-weight: 400;
 	font-size: 0.9rem;
 	color: var(--text-secondary);
 	background: var(--toolbar-bg);
@@ -2088,6 +2088,54 @@ body.light-mode #filter-menu {
 
 body.light-mode .filter-label {
 	color: var(--text-primary);
+}
+
+/* Divider in filter menu */
+.filter-divider {
+	height: 1px;
+	background-color: var(--border-color);
+	margin: 0.5rem 0;
+}
+
+/* Filter item for new column button - make it full width */
+#filter-menu .filter-item:has(.btn-add-column-menu) {
+	justify-content: center;
+	padding: 0.75rem 0;
+}
+
+/* New column button in filter menu */
+.btn-add-column-menu {
+	width: calc(100% - 1rem);
+	padding: 0.65rem 0.5rem;
+	background-color: var(--accent-color);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	font-size: 0.95rem;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	font-weight: 400;
+	text-align: center;
+}
+
+.btn-add-column-menu:hover {
+	background: var(--accent-gradient);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.btn-add-column-menu:active {
+	transform: translateY(0);
+}
+
+/* Light mode button styling */
+body.light-mode .btn-add-column-menu {
+	background-color: var(--accent-color);
+	color: white;
+}
+
+body.light-mode .btn-add-column-menu:hover {
+	background-color: #16a34a;
 }
 
 /* ==========================================================================
@@ -2359,7 +2407,7 @@ body.light-mode .filter-label {
 
 .tier-value {
 	font-size: 1.1rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--accent-color);
 	text-transform: capitalize;
 }
@@ -2569,6 +2617,12 @@ body.light-mode .filter-label {
 		flex-shrink: 0; /* Keep logout button from shrinking */
 	}
 	
+	#footer-username {
+		font-size: 0.75rem;
+		margin-right: 0.5rem;
+		max-width: 60px;
+	}
+	
 	/* Mobile task board adjustments */
 	#main-content {
 		padding: 0.75rem 1rem;
@@ -2707,7 +2761,7 @@ body.light-mode .filter-label {
 	margin: 0 0 0.75rem 0;
 	color: #92400e;
 	font-size: 1rem;
-	font-weight: 700;
+	font-weight: 500;
 }
 
 .warning-content p {
@@ -2719,7 +2773,7 @@ body.light-mode .filter-label {
 
 .warning-content p:last-child {
 	margin-bottom: 0;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 .warning-content ul {
@@ -2746,7 +2800,7 @@ body.light-mode .filter-label {
 }
 
 .question-group label {
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 	font-size: 0.875rem;
 }
@@ -2810,7 +2864,7 @@ body.light-mode .filter-label {
 .form-group label {
 	display: block;
 	margin-bottom: 0.5rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -2851,13 +2905,13 @@ body.light-mode .filter-label {
 
 .strength-text {
 	font-size: 0.75rem;
-	font-weight: 600;
+	font-weight: 400;
 	color: var(--text-secondary);
 }
 
 .match-indicator {
 	font-size: 0.75rem;
-	font-weight: 600;
+	font-weight: 400;
 	padding: 0.25rem 0.5rem;
 	border-radius: 0.25rem;
 }
@@ -2937,7 +2991,7 @@ body.light-mode .filter-label {
 .setup-buttons .btn {
 	padding: 0.75rem 1.5rem;
 	border-radius: 0.5rem;
-	font-weight: 600;
+	font-weight: 400;
 	cursor: pointer;
 	transition: all 0.2s ease;
 	border: none;
@@ -3037,4 +3091,22 @@ body.light-mode .filter-label {
 	#app-footer {
 		padding: 0.25rem 0.75rem;
 	}
+}
+
+/* Footer username display */
+#footer-username {
+	color: var(--text-primary);
+	font-size: 0.85rem;
+	display: inline-block;
+	margin-right: 1rem;
+	white-space: nowrap;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	max-width: 80px;
+	min-width: 60px;
+}
+
+/* Ensure footer-right spans display properly */
+.footer-right span {
+	display: inline-block;
 }

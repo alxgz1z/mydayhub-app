@@ -152,7 +152,7 @@ input:focus {
 	border-radius: 6px;
 	color: var(--btn-text);
 	font-size: 1rem;
-	font-weight: 600;
+	font-weight: 400;
 	cursor: pointer;
 	margin-top: 1rem;
 	transition: all 0.3s ease;
@@ -201,7 +201,7 @@ input:focus {
 /* High contrast mode link styling */
 body.high-contrast .auth-link a {
 	text-decoration: underline;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 /* Modified for Forgot Password */
@@ -223,7 +223,7 @@ body.high-contrast .auth-link a {
 /* High contrast mode sub-link styling */
 body.high-contrast .auth-sub-link a {
 	text-decoration: underline;
-	font-weight: 600;
+	font-weight: 400;
 }
 
 

@@ -393,7 +393,8 @@ class JournalView {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
-                }
+                },
+                credentials: 'include'
             });
             const result = await response.json();
             
@@ -691,6 +692,9 @@ class JournalView {
                 }
             });
             
+            // Adjust column heights after rendering
+            this.adjustJournalColumnHeights();
+            
         } catch (error) {
             console.error('Failed to render journal view:', error);
             journalContainer.innerHTML = '<div class="error-message">Failed to load journal entries.</div>';
@@ -788,7 +792,8 @@ class JournalView {
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
-                }
+                },
+                credentials: 'include'
             });
             const result = await response.json();
             
@@ -1220,6 +1225,9 @@ class JournalView {
                 
                 showToast({ message: 'Journal entry deleted successfully.', type: 'success' });
                 
+                // Adjust column heights after deletion
+                this.adjustJournalColumnHeights();
+                
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
                     window.updateMissionFocusChart();
@@ -1584,7 +1592,8 @@ Would you like to set up encryption now?`;
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': csrfToken
-                }
+                },
+                credentials: 'include'
             });
             const result = await response.json();
             
@@ -1849,6 +1858,44 @@ Would you like to set up encryption now?`;
         } catch (error) {
             console.error('Failed to update journal classification:', error);
             showToast({ message: 'Failed to update classification.', type: 'error' });
+        }
+    }
+    
+    /**
+     * Adjusts the heights of journal columns to accommodate content gracefully.
+     * Called after adding/removing entries to expand or contract columns smoothly.
+     */
+    adjustJournalColumnHeights() {
+        const container = document.getElementById('journal-view');
+        if (!container) return;
+        
+        // Only apply on non-mobile screens
+        if (window.innerWidth <= 768) {
+            return;
+        }
+        
+        const columns = document.querySelectorAll('.journal-column');
+        if (columns.length === 0) return;
+        
+        // Reset all column heights to auto to measure content
+        columns.forEach(column => {
+            column.style.height = 'auto';
+        });
+        
+        // Find the tallest column and set all columns to that height
+        let maxHeight = 0;
+        columns.forEach(column => {
+            const height = column.offsetHeight;
+            if (height > maxHeight) {
+                maxHeight = height;
+            }
+        });
+        
+        // Apply the max height to all columns
+        if (maxHeight > 0) {
+            columns.forEach(column => {
+                column.style.height = `${maxHeight}px`;
+            });
         }
     }
 }

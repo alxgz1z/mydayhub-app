@@ -546,6 +546,32 @@ window.addEventListener('error', function(event) {
 document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
+	// DEV: capture console errors/warnings and unhandled errors to a ring buffer
+	if (window.MyDayHub_Config?.DEV_MODE) {
+		if (!window.__consoleBuffer) window.__consoleBuffer = [];
+		const pushLog = (level, args) => {
+			try {
+				const message = Array.from(args).map(v => {
+					if (v && typeof v === 'object') {
+						try { return JSON.stringify(v); } catch (_) { return String(v); }
+					}
+					return String(v);
+				}).join(' ');
+				window.__consoleBuffer.push({ t: new Date().toISOString(), level, message });
+				if (window.__consoleBuffer.length > 200) window.__consoleBuffer.shift();
+			} catch (_) {}
+		};
+		['error','warn'].forEach(level => {
+			const orig = console[level];
+			console[level] = function() {
+				pushLog(level, arguments);
+				orig.apply(console, arguments);
+			};
+		});
+		window.addEventListener('error', (e) => pushLog('window.onerror', [e.message || 'error', e.filename || '', e.lineno || 0]));
+		window.addEventListener('unhandledrejection', (e) => pushLog('unhandledrejection', [e.reason || 'promise rejection']));
+	}
+
 	updateFooterDate();
 	initSettingsPanel();
 
@@ -563,6 +589,48 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Initialize mobile viewport height fix
 	initMobileViewportFix();
+
+	// DEV: Footer dev report button to open latest layout report
+	if (window.MyDayHub_Config?.DEV_MODE) {
+		const btnDev = document.getElementById('btn-dev-report');
+		if (btnDev && !btnDev.hasAttribute('data-listener-added')) {
+			btnDev.addEventListener('click', async () => {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				// Open synchronously to avoid popup blockers
+				const win = window.open('', '_blank');
+				if (!win) {
+					// Fallback: navigate current tab
+					window.location.href = `${appURL}/api/debug_latest.php`;
+					return;
+				}
+				try {
+					win.document.title = 'Layout Report';
+					win.document.body.style.margin = '0';
+					win.document.body.style.background = '#121212';
+					win.document.body.style.color = '#e8eaed';
+					const pre = win.document.createElement('pre');
+					pre.style.whiteSpace = 'pre-wrap';
+					pre.style.wordBreak = 'break-word';
+					pre.style.padding = '16px';
+					pre.textContent = 'Loading latest debug report…';
+					win.document.body.appendChild(pre);
+
+					const resp = await fetch(`${appURL}/api/debug_latest.php`, { credentials: 'include' });
+					if (!resp.ok) {
+						pre.textContent = 'No debug report found yet. Trigger one from Tasks view and try again.';
+						return;
+					}
+					const json = await resp.json();
+					pre.textContent = JSON.stringify(json, null, 2);
+				} catch (e) {
+					console.warn('Open debug report failed', e);
+					try { if (win) win.close(); } catch (_) {}
+					showToast({ message: 'Failed to open debug report', type: 'error' });
+				}
+			});
+			btnDev.setAttribute('data-listener-added', 'true');
+		}
+	}
 });
 
 // ==========================================================================

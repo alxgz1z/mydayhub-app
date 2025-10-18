@@ -49,8 +49,8 @@ $token = $_GET['token'] ?? '';
 	</div>
 
 	<div class="auth-container">
-		<img src="../media/leaf.svg" alt="MyDayHub Logo" class="auth-logo">
-		<h1>Set New Password</h1>
+		<img src="../media/icons/icon-192x192.png" alt="MyDayHub Logo" class="auth-logo">
+		<h1>Reset Password</h1>
 
 		<div id="message-container"></div>
 

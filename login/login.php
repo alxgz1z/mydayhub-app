@@ -50,7 +50,7 @@ require_once __DIR__ . '/../incs/config.php';
 	</div>
 
 	<div class="auth-container">
-		<img src="../media/leaf.svg" alt="MyDayHub Logo" class="auth-logo">
+		<img src="../media/icons/icon-192x192.png" alt="MyDayHub Logo" class="auth-logo">
 		<h1>Log In</h1>
 
 		<div id="message-container"></div>
