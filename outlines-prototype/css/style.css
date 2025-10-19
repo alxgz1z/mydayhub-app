@@ -256,6 +256,16 @@ body {
     
     /* Hover effect */
     border-left-color: transparent;
+    
+    /* Show pointer cursor for expandable nodes (has children) */
+    background: linear-gradient(to right, 
+        var(--border-color) 0%, 
+        var(--border-color) 20px, 
+        transparent 20px, 
+        transparent 100%);
+    background-size: 100% 100%;
+    background-position: left;
+    background-repeat: no-repeat;
 }
 
 .node-item:hover {

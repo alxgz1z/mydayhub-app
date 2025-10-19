@@ -340,6 +340,25 @@ const TreeRender = (() => {
             itemEl.classList.remove('focused');
         });
 
+        // Click on left border area to expand/collapse entire subtree
+        itemEl.addEventListener('click', (e) => {
+            // Only if clicking the left border area (first ~20px)
+            if (e.offsetX < 20 && node.children.length > 0) {
+                e.stopPropagation();
+                // Toggle expand/collapse for entire subtree
+                const childrenContainer = itemEl.parentElement.querySelector('.node-children');
+                if (childrenContainer) {
+                    node.is_folded = !node.is_folded;
+                    childrenContainer.classList.toggle('collapsed');
+                    const freshNode = TreeModel.findNode(tree, node.id);
+                    if (freshNode) {
+                        TreeModel.toggleFold(tree, freshNode);
+                        Storage.updateOutline(outlineId, tree);
+                    }
+                }
+            }
+        });
+
         // Drag handle
         const dragHandle = document.createElement('div');
         dragHandle.className = 'node-drag-handle';
