@@ -187,3 +187,17 @@ Order: chronological (newest at bottom)
 - Journal → Tasks parity confirmed via telemetry (332px card inside 350px column after padding/border).
 - Editor: replaced restore/collapse SVG icon with theme-aware `currentColor` variant per provided design.
 - Misc: reduced heavy font weights; tightened column-body padding; fixed hover shimmer caused by scrollbar.
+
+### 2025-10-19 — Outlines Prototype: D&D Refinement & Documentation
+- **Drag & Drop Redesign**: Shifted from reparenting model to sibling-only operations
+  - Center zone (drop on top): Thick dashed border (3px), incumbent shifts down
+  - Left/Right zones (padded space): Tilted dashed outline previews, insert before/after
+  - All operations now use sibling insertion (removed `performReparent`)
+  - Visual feedback: Source card fades 50%, incumbent shows distinct border on center drop
+- **Bug Fixes**: Fixed button initialization null errors; removed references to non-existent buttons
+- **Dropdown Debugging**: Added console logging to trace outline selector issues
+- **Documentation**:
+  - Created `/outlines-prototype/docs/` folder
+  - `done.md`: 4-session development history, feature status, known issues, next session items
+  - `spec.md`: Complete v1.0 specification (200+ lines), including data model, UX workflows, accessibility targets, performance metrics, future enhancement roadmap
+- **Status**: Prototype ready for resumption; all core features complete and documented
