@@ -350,6 +350,14 @@ const TreeRender = (() => {
         const contentEl = document.createElement('div');
         contentEl.className = 'node-content';
 
+        // Child count badge (on the left)
+        if (node.children.length > 0) {
+            const badgeEl = document.createElement('span');
+            badgeEl.className = 'node-badge';
+            badgeEl.textContent = node.children.length;
+            contentEl.appendChild(badgeEl);
+        }
+
         // Node title
         const titleEl = document.createElement('span');
         titleEl.className = 'node-title';
@@ -360,14 +368,6 @@ const TreeRender = (() => {
             startInlineEdit(titleEl, node, outlineId);
         });
         contentEl.appendChild(titleEl);
-
-        // Child count badge
-        if (node.children.length > 0) {
-            const badgeEl = document.createElement('span');
-            badgeEl.className = 'node-badge';
-            badgeEl.textContent = node.children.length;
-            contentEl.appendChild(badgeEl);
-        }
 
         itemEl.appendChild(contentEl);
 

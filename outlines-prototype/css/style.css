@@ -394,14 +394,19 @@ body {
 
 /* Child Count Badge */
 .node-badge {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background-color: var(--accent-color);
     color: white;
     font-size: 11px;
     padding: 2px 6px;
     border-radius: 10px;
     font-weight: 500;
-    align-self: flex-start;
+    min-width: 22px;
+    height: 22px;
+    margin-right: var(--spacing-sm);
+    flex-shrink: 0;
 }
 
 /* Root Node Checkbox - Controls Toolbar Applicability */
