@@ -87,64 +87,7 @@ body {
     min-height: 0;
 }
 
-/* Sidebar */
-.outline-sidebar {
-    width: 280px;
-    background-color: var(--bg-secondary);
-    border-right: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    flex-shrink: 0;
-    overflow: hidden;
-}
-
-.sidebar-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
-    gap: var(--spacing-md);
-}
-
-.sidebar-header h2 {
-    font-size: 1rem;
-    font-weight: 500;
-    flex: 1;
-}
-
-.outlines-list {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--spacing-sm);
-}
-
-.outline-item {
-    padding: var(--spacing-md) var(--spacing-lg);
-    cursor: pointer;
-    border-radius: 6px;
-    margin-bottom: var(--spacing-xs);
-    transition: all var(--transition-fast);
-    background-color: transparent;
-    border: none;
-    width: 100%;
-    text-align: left;
-    color: var(--text-primary);
-    font-size: 14px;
-}
-
-.outline-item:hover {
-    background-color: var(--bg-tertiary);
-}
-
-.outline-item.active {
-    background-color: var(--accent-color);
-    color: white;
-}
-
-.outline-item.active::before {
-    content: '✓ ';
-}
+/* Sidebar - REMOVED (using dropdown selector instead) */
 
 /* Tree Container */
 .tree-container {
@@ -152,7 +95,7 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background-color: var(--bg-primary);
+    min-height: 0;
 }
 
 .tree-header {
@@ -163,6 +106,31 @@ body {
     flex-shrink: 0;
     align-items: center;
     flex-wrap: wrap;
+}
+
+/* Outline Selector Dropdown */
+.outline-selector {
+    padding: var(--spacing-md) var(--spacing-lg);
+    background-color: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 14px;
+    cursor: pointer;
+    transition: all var(--transition-fast);
+    font-weight: 500;
+    min-width: 180px;
+}
+
+.outline-selector:hover {
+    border-color: var(--accent-color);
+    background-color: rgba(74, 158, 255, 0.1);
+}
+
+.outline-selector:focus {
+    outline: none;
+    border-color: var(--accent-color);
+    background-color: rgba(74, 158, 255, 0.1);
 }
 
 /* Depth-aware fold controls */
@@ -256,16 +224,6 @@ body {
     
     /* Hover effect */
     border-left-color: transparent;
-    
-    /* Show pointer cursor for expandable nodes (has children) */
-    background: linear-gradient(to right, 
-        var(--border-color) 0%, 
-        var(--border-color) 20px, 
-        transparent 20px, 
-        transparent 100%);
-    background-size: 100% 100%;
-    background-position: left;
-    background-repeat: no-repeat;
 }
 
 .node-item:hover {

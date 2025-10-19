@@ -403,28 +403,41 @@ const UIHandlers = (() => {
      * Render outlines list
      */
     const renderOutlinesList = () => {
-        const listContainer = document.getElementById('outlines-list');
+        // Now renders to dropdown selector instead of sidebar list
+        const selector = document.getElementById('outline-selector');
         const outlines = Storage.getAllOutlines();
         const activeId = parseInt(Storage.getActiveOutlineId());
 
-        listContainer.innerHTML = '';
-
-        if (outlines.length === 0) {
-            listContainer.innerHTML = '<p style="padding: 1rem; color: var(--text-secondary); text-align: center;">No outlines yet</p>';
-            return;
-        }
+        // Keep the "+ New Outline" option
+        selector.innerHTML = '<option value="">+ New Outline</option>';
 
         outlines.forEach(outline => {
-            const button = document.createElement('button');
-            button.className = `outline-item ${outline.id === activeId ? 'active' : ''}`;
-            button.textContent = outline.name;
-            button.addEventListener('click', () => {
-                Storage.setActiveOutlineId(outline.id);
+            const option = document.createElement('option');
+            option.value = outline.id;
+            option.textContent = outline.name;
+            if (outline.id === activeId) {
+                option.selected = true;
+            }
+            selector.appendChild(option);
+        });
+
+        // Add change event listener
+        selector.onchange = (e) => {
+            if (e.target.value === '') {
+                // "+ New Outline" was selected
+                const name = prompt('Enter outline name:');
+                if (name && name.trim()) {
+                    const newOutline = Storage.createOutline(name.trim());
+                    Storage.setActiveOutlineId(newOutline.id);
+                    renderOutlinesList();
+                    renderCurrentOutline();
+                }
+            } else {
+                Storage.setActiveOutlineId(parseInt(e.target.value));
                 renderOutlinesList();
                 renderCurrentOutline();
-            });
-            listContainer.appendChild(button);
-        });
+            }
+        };
     };
 
     return {

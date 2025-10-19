@@ -28,22 +28,14 @@
 
         <!-- Main Content -->
         <main class="app-main">
-            <!-- Left Sidebar -->
-            <aside class="outline-sidebar">
-                <div class="sidebar-header">
-                    <h2>Outlines</h2>
-                    <button id="btn-new-outline" class="btn-icon btn-new" title="New Outline">
-                        <span>+</span>
-                    </button>
-                </div>
-                <div id="outlines-list" class="outlines-list">
-                    <!-- Outlines will be listed here -->
-                </div>
-            </aside>
-
-            <!-- Tree View Container -->
+            <!-- Tree View Container (full width now) -->
             <section class="tree-container">
                 <div class="tree-header">
+                    <!-- Outline Selector Dropdown -->
+                    <select id="outline-selector" class="outline-selector" title="Select outline">
+                        <option value="">+ New Outline</option>
+                    </select>
+                    
                     <button id="btn-home" class="btn-secondary" title="Go to Home">🏠 Home</button>
                     <button id="btn-expand-all" class="btn-secondary" title="Expand All">Expand All</button>
                     <button id="btn-collapse-all" class="btn-secondary" title="Collapse All">Collapse All</button>
