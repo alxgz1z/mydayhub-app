@@ -69,90 +69,138 @@ const App = (() => {
         DND.init();
         UIHandlers.init();
 
-        // Load or create default outline
+        // Load or create outlines
         let outlines = Storage.getAllOutlines();
         let activeId = Storage.getActiveOutlineId();
 
-        if (!activeId || !Storage.getOutline(parseInt(activeId))) {
-            if (outlines.length === 0) {
-                // Create a rich sample outline for testing
-                const sampleOutline = Storage.createOutline('Product Launch Plan');
-                
-                let nextId = 1;
-                
-                // Helper to create a node with proper IDs
-                const createNode = (title, parentId) => ({
-                    id: nextId++,
-                    title: title,
-                    parent_id: parentId,
-                    children: [],
-                    is_private: false,
-                    is_folded: false,
-                    created_at: new Date().toISOString()
-                });
-                
-                // Root Node 1: Planning Phase
-                const root1 = createNode('🎯 Planning Phase', null);
-                
-                const marketResearch = createNode('Market Research', root1.id);
-                const competitorAnalysis = createNode('Competitor Analysis', marketResearch.id);
-                competitorAnalysis.children.push(
-                    createNode('Feature Comparison', competitorAnalysis.id),
-                    createNode('Pricing Analysis', competitorAnalysis.id)
-                );
-                competitorAnalysis.children[0].children.push(
-                    createNode('Features vs Competitors', competitorAnalysis.children[0].id),
-                    createNode('Quality Metrics', competitorAnalysis.children[0].id)
-                );
-                marketResearch.children.push(competitorAnalysis);
-                marketResearch.children.push(createNode('Customer Interviews', marketResearch.id));
-                marketResearch.children.push(createNode('Survey Analysis', marketResearch.id));
-                root1.children.push(marketResearch);
-                
-                const budgetAlloc = createNode('Budget Allocation', root1.id);
-                budgetAlloc.children.push(
-                    createNode('Marketing Budget', budgetAlloc.id),
-                    createNode('Development Budget', budgetAlloc.id),
-                    createNode('Operations Budget', budgetAlloc.id)
-                );
-                root1.children.push(budgetAlloc);
-                
-                root1.children.push(createNode('Timeline Creation', root1.id));
-                root1.children.push(createNode('Stakeholder Alignment', root1.id));
-                
-                // Root Node 2: Execution Phase
-                const root2 = createNode('⚡ Execution Phase', null);
-                
-                const sprint1 = createNode('Development Sprint 1', root2.id);
-                
-                const backend = createNode('Backend Development', sprint1.id);
-                backend.children.push(
-                    createNode('API Endpoints', backend.id),
-                    createNode('Database Schema', backend.id),
-                    createNode('Authentication', backend.id)
-                );
-                sprint1.children.push(backend);
-                
-                const frontend = createNode('Frontend Development', sprint1.id);
-                frontend.children.push(
-                    createNode('UI Components', frontend.id),
-                    createNode('State Management', frontend.id)
-                );
-                sprint1.children.push(frontend);
-                
-                sprint1.children.push(createNode('Testing', sprint1.id));
-                root2.children.push(sprint1);
-                
-                root2.children.push(createNode('Marketing Campaign', root2.id));
-                root2.children.push(createNode('Customer Support Setup', root2.id));
-                
-                sampleOutline.root_nodes.push(root1);
-                sampleOutline.root_nodes.push(root2);
-                Storage.updateRootNodes(sampleOutline.id, sampleOutline.root_nodes);
-                Storage.setActiveOutlineId(sampleOutline.id);
-            } else {
-                Storage.setActiveOutlineId(outlines[0].id);
-            }
+        // If no outlines exist, create sample outlines for testing
+        if (outlines.length === 0) {
+            console.log('📝 Creating sample outlines for testing...');
+            
+            // Helper to create a node with proper IDs
+            const createNode = (title, parentId, id) => ({
+                id: id,
+                title: title,
+                parent_id: parentId,
+                children: [],
+                is_private: false,
+                is_folded: false,
+                created_at: new Date().toISOString()
+            });
+            
+            // OUTLINE 1: Product Launch Plan
+            const outline1 = Storage.createOutline('🚀 Product Launch Plan');
+            let nodeId = 1;
+            
+            const planning = createNode('Planning Phase', null, nodeId++);
+            const market = createNode('Market Research', planning.id, nodeId++);
+            const competitor = createNode('Competitor Analysis', market.id, nodeId++);
+            competitor.children = [
+                createNode('Feature Comparison', competitor.id, nodeId++),
+                createNode('Pricing Strategy', competitor.id, nodeId++)
+            ];
+            market.children = [competitor, createNode('Customer Surveys', market.id, nodeId++)];
+            planning.children = [
+                market,
+                createNode('Budget Planning', planning.id, nodeId++),
+                createNode('Timeline', planning.id, nodeId++)
+            ];
+            
+            const execution = createNode('Execution Phase', null, nodeId++);
+            const dev = createNode('Development', execution.id, nodeId++);
+            dev.children = [
+                createNode('Backend', dev.id, nodeId++),
+                createNode('Frontend', dev.id, nodeId++)
+            ];
+            execution.children = [
+                dev,
+                createNode('Testing', execution.id, nodeId++),
+                createNode('Launch', execution.id, nodeId++)
+            ];
+            
+            outline1.root_nodes = [planning, execution];
+            Storage.updateRootNodes(outline1.id, outline1.root_nodes);
+            
+            // OUTLINE 2: Fantasy World Building
+            const outline2 = Storage.createOutline('🐉 Fantasy World Building');
+            nodeId = 1;
+            
+            const world = createNode('World Overview', null, nodeId++);
+            const geography = createNode('Geography', world.id, nodeId++);
+            geography.children = [
+                createNode('Kingdoms', geography.id, nodeId++),
+                createNode('Mountains & Rivers', geography.id, nodeId++),
+                createNode('Magical Regions', geography.id, nodeId++)
+            ];
+            const creatures = createNode('Creatures', world.id, nodeId++);
+            creatures.children = [
+                createNode('Dragons', creatures.id, nodeId++),
+                createNode('Elves', creatures.id, nodeId++),
+                createNode('Dwarves', creatures.id, nodeId++)
+            ];
+            world.children = [geography, creatures, createNode('Magic System', world.id, nodeId++)];
+            
+            const characters = createNode('Character Profiles', null, nodeId++);
+            const hero = createNode('Hero: Aragorn', characters.id, nodeId++);
+            hero.children = [
+                createNode('Backstory', hero.id, nodeId++),
+                createNode('Powers', hero.id, nodeId++),
+                createNode('Relationships', hero.id, nodeId++)
+            ];
+            characters.children = [
+                hero,
+                createNode('Villain: Dark Lord', characters.id, nodeId++),
+                createNode('Allies', characters.id, nodeId++)
+            ];
+            
+            outline2.root_nodes = [world, characters];
+            Storage.updateRootNodes(outline2.id, outline2.root_nodes);
+            
+            // OUTLINE 3: Research Project
+            const outline3 = Storage.createOutline('🔬 AI Research Project');
+            nodeId = 1;
+            
+            const research = createNode('Research Goals', null, nodeId++);
+            const literature = createNode('Literature Review', research.id, nodeId++);
+            literature.children = [
+                createNode('Transformer Models', literature.id, nodeId++),
+                createNode('Attention Mechanisms', literature.id, nodeId++),
+                createNode('Recent Papers', literature.id, nodeId++)
+            ];
+            research.children = [
+                literature,
+                createNode('Hypothesis', research.id, nodeId++),
+                createNode('Methodology', research.id, nodeId++)
+            ];
+            
+            const experiments = createNode('Experiments', null, nodeId++);
+            const exp1 = createNode('Experiment 1: Baseline', experiments.id, nodeId++);
+            exp1.children = [
+                createNode('Setup', exp1.id, nodeId++),
+                createNode('Results', exp1.id, nodeId++),
+                createNode('Analysis', exp1.id, nodeId++)
+            ];
+            experiments.children = [
+                exp1,
+                createNode('Experiment 2: Optimized', experiments.id, nodeId++),
+                createNode('Comparative Analysis', experiments.id, nodeId++)
+            ];
+            
+            outline3.root_nodes = [research, experiments];
+            Storage.updateRootNodes(outline3.id, outline3.root_nodes);
+            
+            console.log('✅ Created 3 sample outlines');
+            
+            // Don't auto-select - let user choose
+            activeId = null;
+        }
+
+        // If we have a valid active ID, use it; otherwise don't auto-select
+        if (activeId && Storage.getOutline(parseInt(activeId))) {
+            Storage.setActiveOutlineId(activeId);
+        } else {
+            // Clear active ID so dropdown shows empty state
+            Storage.setActiveOutlineId(null);
         }
 
         // Render initial state
