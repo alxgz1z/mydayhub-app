@@ -68,11 +68,17 @@ const UIHandlers = (() => {
      * Initialize button handlers
      */
     const initButtons = () => {
-        document.getElementById('btn-add-root').addEventListener('click', handleAddRootNode);
-        document.getElementById('btn-expand-all').addEventListener('click', handleExpandAll);
-        document.getElementById('btn-collapse-all').addEventListener('click', handleCollapseAll);
-        document.getElementById('btn-new-outline').addEventListener('click', handleNewOutline);
-        document.getElementById('btn-home').addEventListener('click', handleHome);
+        const btnAddRoot = document.getElementById('btn-add-root');
+        const btnExpandAll = document.getElementById('btn-expand-all');
+        const btnCollapseAll = document.getElementById('btn-collapse-all');
+        const btnHome = document.getElementById('btn-home');
+
+        if (btnAddRoot) btnAddRoot.addEventListener('click', handleAddRootNode);
+        if (btnExpandAll) btnExpandAll.addEventListener('click', handleExpandAll);
+        if (btnCollapseAll) btnCollapseAll.addEventListener('click', handleCollapseAll);
+        if (btnHome) btnHome.addEventListener('click', handleHome);
+
+        // Outline selector change is handled in renderOutlinesList
     };
 
     /**
