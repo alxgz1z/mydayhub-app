@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MyDayHub Outlines - Prototype</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='75' fill='%234a9eff'>◇</text></svg>">
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="header-left">
+                    <h1 class="app-title">Outlines</h1>
+                </div>
+                <div class="header-right">
+                    <button id="btn-settings" class="btn-icon" title="Settings">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3"></circle>
+                            <path d="M12 1v6m0 6v6M4.22 4.22l4.24 4.24m2.12 2.12l4.24 4.24M1 12h6m6 0h6m-14.78 7.78l4.24-4.24m2.12-2.12l4.24-4.24"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="app-main">
+            <!-- Left Sidebar -->
+            <aside class="outline-sidebar">
+                <div class="sidebar-header">
+                    <h2>Outlines</h2>
+                    <button id="btn-new-outline" class="btn-icon btn-new" title="New Outline">
+                        <span>+</span>
+                    </button>
+                </div>
+                <div id="outlines-list" class="outlines-list">
+                    <!-- Outlines will be listed here -->
+                </div>
+            </aside>
+
+            <!-- Tree View Container -->
+            <section class="tree-container">
+                <div class="tree-header">
+                    <button id="btn-home" class="btn-secondary" title="Go to Home">🏠 Home</button>
+                    <button id="btn-expand-all" class="btn-secondary" title="Expand All">Expand All</button>
+                    <button id="btn-collapse-all" class="btn-secondary" title="Collapse All">Collapse All</button>
+                    
+                    <!-- Depth-aware fold controls -->
+                    <div id="depth-controls" class="depth-controls" style="display: none;">
+                        <span class="depth-label">Expand to:</span>
+                    </div>
+                    
+                    <button id="btn-add-root" class="btn-primary" title="Add Root Node">+ Add Node</button>
+                </div>
+                
+                <div id="tree-view" class="tree-view">
+                    <!-- Tree will be rendered here -->
+                </div>
+
+                <div id="empty-state" class="empty-state">
+                    <p>No outline selected. Create a new outline or select one from the left.</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Context Menu -->
+    <div id="context-menu" class="context-menu" style="display: none;">
+        <button data-action="add-child" class="context-item">Add Child Node</button>
+        <button data-action="promote" class="context-item">Promote</button>
+        <button data-action="demote" class="context-item">Demote</button>
+        <hr class="context-divider">
+        <button data-action="fold" class="context-item">Fold</button>
+        <button data-action="unfold" class="context-item">Unfold</button>
+        <hr class="context-divider">
+        <button data-action="toggle-privacy" class="context-item">Make Private</button>
+        <button data-action="duplicate" class="context-item">Duplicate</button>
+        <hr class="context-divider">
+        <button data-action="delete" class="context-item context-danger">Delete</button>
+    </div>
+
+    <!-- Inline Edit Modal -->
+    <div id="edit-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Edit Node Title</h3>
+            <input id="edit-input" type="text" placeholder="Node title..." class="modal-input">
+            <div class="modal-actions">
+                <button id="btn-edit-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-edit-save" class="btn-primary">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Outline Modal -->
+    <div id="new-outline-modal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3>Create New Outline</h3>
+            <input id="new-outline-input" type="text" placeholder="Outline name..." class="modal-input">
+            <div class="modal-actions">
+                <button id="btn-outline-cancel" class="btn-secondary">Cancel</button>
+                <button id="btn-outline-save" class="btn-primary">Create</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-overlay" class="modal-overlay" style="display: none;"></div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/tree-model.js"></script>
+    <script src="js/tree-render.js"></script>
+    <script src="js/dnd.js"></script>
+    <script src="js/ui-handlers.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Storage - Outlines</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            padding: 40px;
+            background: #1a1a1a;
+            color: #e8e8e8;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            background: #2e2e2e;
+            border: 1px solid #3a3a3a;
+            border-radius: 8px;
+            padding: 40px;
+            max-width: 500px;
+            text-align: center;
+        }
+        h1 {
+            color: #4a9eff;
+            margin-bottom: 20px;
+        }
+        p {
+            margin: 15px 0;
+            line-height: 1.6;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #4a9eff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #6ab3ff;
+        }
+        .btn-secondary {
+            background: #3a3a3a;
+            color: #e8e8e8;
+            border: 1px solid #4a9eff;
+        }
+        .btn-secondary:hover {
+            background: #4a4a4a;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 6px;
+            display: none;
+        }
+        .status.success {
+            background: #51cf66;
+            color: #1a1a1a;
+            display: block;
+        }
+        .status.info {
+            background: #4a9eff;
+            color: white;
+            display: block;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+            font-family: 'Monaco', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Reset Outlines Data</h1>
+        
+        <p>Clear all localStorage data and reload with a fresh, rich sample outline.</p>
+        
+        <p>This will:</p>
+        <ul style="text-align: left; display: inline-block; margin: 15px 0;">
+            <li>Clear all outlines from localStorage</li>
+            <li>Delete all local data</li>
+            <li>Load a new sample "Product Launch Plan"</li>
+            <li>Show you all DEV_MODE badges working</li>
+        </ul>
+
+        <div class="button-group">
+            <button class="btn-primary" onclick="clearAndReset()">✨ Clear & Reset</button>
+            <button class="btn-secondary" onclick="goBack()">← Back</button>
+        </div>
+
+        <div id="status"></div>
+    </div>
+
+    <script>
+        function clearAndReset() {
+            const status = document.getElementById('status');
+            
+            try {
+                // Clear localStorage
+                localStorage.clear();
+                status.className = 'status success';
+                status.innerHTML = '✅ Storage cleared! Redirecting to app...';
+                
+                // Redirect to app with DEV_MODE enabled
+                setTimeout(() => {
+                    window.location.href = 'index.html?dev=true';
+                }, 1500);
+            } catch (e) {
+                status.className = 'status';
+                status.innerHTML = '❌ Error: ' + e.message;
+                status.style.display = 'block';
+                status.style.background = '#ff6b6b';
+                status.style.color = '#1a1a1a';
+            }
+        }
+
+        function goBack() {
+            window.history.back();
+        }
+
+        // Show info on load
+        window.addEventListener('load', () => {
+            const status = document.getElementById('status');
+            const used = new Blob(Object.values(localStorage)).size;
+            const usedMB = (used / 1024).toFixed(2);
+            status.className = 'status info';
+            status.innerHTML = `ℹ️ Current storage: ${usedMB} KB`;
+        });
+    </script>
+</body>
+</html>

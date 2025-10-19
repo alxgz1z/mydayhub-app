@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DEV_MODE Badge Test</title>
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #e8e8e8;
+        }
+        .test-section {
+            background: #2e2e2e;
+            border: 1px solid #3a3a3a;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+        }
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .enabled {
+            background: #51cf66;
+            color: #1a1a1a;
+        }
+        .disabled {
+            background: #ff6b6b;
+            color: #1a1a1a;
+        }
+        .info {
+            background: #4a9eff;
+            color: white;
+        }
+        code {
+            background: #1a1a1a;
+            padding: 2px 6px;
+            border-radius: 3px;
+            display: inline-block;
+        }
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background-color: rgba(255, 165, 0, 0.15);
+            border: 1px solid #ffa500;
+            color: #ffa500;
+            border-radius: 3px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        button:hover {
+            background: #6ab3ff;
+        }
+        .test-link {
+            display: inline-block;
+            padding: 10px 15px;
+            background: #4a9eff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+        .test-link:hover {
+            background: #6ab3ff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 DEV_MODE Badge Diagnostic Test</h1>
+
+    <div class="test-section">
+        <h2>1. Test Tree Structure</h2>
+        <p>First, let's create sample data and see if the app initializes correctly:</p>
+        <button onclick="testTreeStructure()">Generate Test Tree</button>
+        <div id="tree-test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>2. Test DEV_MODE Status</h2>
+        <p>Check if DEV_MODE is enabled:</p>
+        <button onclick="checkDevMode()">Check DEV_MODE Status</button>
+        <div id="dev-mode-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>3. Test Label Generation</h2>
+        <p>Test the label generation logic:</p>
+        <button onclick="testLabelGeneration()">Test Label Generation</button>
+        <div id="label-test-result"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>4. Quick Links</h2>
+        <p>Open the app with DEV_MODE enabled:</p>
+        <a class="test-link" href="index.html?dev=true">Open with ?dev=true</a>
+        <a class="test-link" href="index.html">Open Normally</a>
+    </div>
+
+    <div class="test-section">
+        <h2>5. Manual Steps</h2>
+        <ol>
+            <li>Open the app normally</li>
+            <li>Create a root node (click "+ Add Node")</li>
+            <li>Add a child (click "+" on the root node)</li>
+            <li>Add a grandchild (click "+" on the child)</li>
+            <li>Press <code>Cmd+Shift+D</code> (Mac) or <code>Ctrl+Shift+D</code> (Windows)</li>
+            <li>Look for orange badges in the node footers</li>
+            <li>Open browser console (F12) to see debug logs</li>
+        </ol>
+    </div>
+
+    <script>
+        // Load the modules we need for testing
+        // Note: These are imported from the outlines prototype
+
+        function checkDevMode() {
+            const result = document.getElementById('dev-mode-result');
+            const devMode = localStorage.getItem('outlines_dev_mode') === 'true';
+            const urlParam = new URLSearchParams(window.location.search).get('dev') === 'true';
+            
+            result.innerHTML = `
+                <div class="status ${devMode ? 'enabled' : 'disabled'}">
+                    Local Storage 'outlines_dev_mode': ${devMode ? '✅ TRUE' : '❌ FALSE'}
+                </div>
+                <div class="status ${urlParam ? 'enabled' : 'disabled'}">
+                    URL Query Parameter ?dev: ${urlParam ? '✅ TRUE' : '❌ FALSE'}
+                </div>
+                <div class="status info">
+                    <strong>Next Step:</strong> If both are FALSE, visit <code>index.html?dev=true</code>
+                </div>
+            `;
+        }
+
+        function testTreeStructure() {
+            const result = document.getElementById('tree-test-result');
+            
+            // Create sample data like the app does
+            const sampleTree = [
+                {
+                    id: 1,
+                    title: 'Root Node',
+                    parent_id: null,
+                    children: [
+                        {
+                            id: 2,
+                            title: 'Child A',
+                            parent_id: 1,
+                            children: [
+                                {
+                                    id: 3,
+                                    title: 'Grandchild A1',
+                                    parent_id: 2,
+                                    children: []
+                                }
+                            ]
+                        },
+                        {
+                            id: 4,
+                            title: 'Child B',
+                            parent_id: 1,
+                            children: []
+                        }
+                    ]
+                }
+            ];
+
+            let output = '<div class="status info"><strong>Sample Tree Structure Created:</strong></div>';
+            output += '<pre>';
+            output += JSON.stringify(sampleTree, null, 2);
+            output += '</pre>';
+
+            result.innerHTML = output;
+        }
+
+        function testLabelGeneration() {
+            const result = document.getElementById('label-test-result');
+            
+            // Create a simple tree for testing
+            const tree = [
+                {
+                    id: 1,
+                    title: 'Root',
+                    parent_id: null,
+                    children: [
+                        {
+                            id: 2,
+                            title: 'A',
+                            parent_id: 1,
+                            children: [
+                                {
+                                    id: 3,
+                                    title: 'A1',
+                                    parent_id: 2,
+                                    children: [
+                                        {
+                                            id: 4,
+                                            title: 'A1a',
+                                            parent_id: 3,
+                                            children: []
+                                        }
+                                    ]
+                                },
+                                {
+                                    id: 5,
+                                    title: 'A2',
+                                    parent_id: 2,
+                                    children: []
+                                }
+                            ]
+                        },
+                        {
+                            id: 6,
+                            title: 'B',
+                            parent_id: 1,
+                            children: [
+                                {
+                                    id: 7,
+                                    title: 'B1',
+                                    parent_id: 6,
+                                    children: []
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ];
+
+            result.innerHTML = '<div class="status info"><strong>Testing Label Generation (Simulated):</strong></div>';
+            result.innerHTML += '<p>Tree structure with expected labels:</p>';
+            result.innerHTML += '<ul>';
+            result.innerHTML += '<li>Node 1 (Root): <strong>NO LABEL</strong> ✅</li>';
+            result.innerHTML += '<li>Node 2 (A): Should be <span class="badge">A</span></li>';
+            result.innerHTML += '<li>Node 3 (A1): Should be <span class="badge">A1</span></li>';
+            result.innerHTML += '<li>Node 4 (A1a): Should be <span class="badge">A1a</span></li>';
+            result.innerHTML += '<li>Node 5 (A2): Should be <span class="badge">A2</span></li>';
+            result.innerHTML += '<li>Node 6 (B): Should be <span class="badge">B</span></li>';
+            result.innerHTML += '<li>Node 7 (B1): Should be <span class="badge">B1</span></li>';
+            result.innerHTML += '</ul>';
+            result.innerHTML += '<p><strong>If these look right, the label logic is correct!</strong></p>';
+        }
+
+        // Run initial check
+        window.addEventListener('load', () => {
+            checkDevMode();
+        });
+    </script>
+</body>
+</html>

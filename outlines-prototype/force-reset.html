@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Reset</title>
+    <style>
+        body {
+            font-family: monospace;
+            background: #1a1a1a;
+            color: #e8e8e8;
+            padding: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .box {
+            background: #2e2e2e;
+            border: 1px solid #3a3a3a;
+            padding: 40px;
+            border-radius: 8px;
+            max-width: 600px;
+        }
+        h1 {
+            color: #4a9eff;
+            margin-bottom: 20px;
+        }
+        pre {
+            background: #1a1a1a;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 6px;
+        }
+        .success { background: #51cf66; color: #1a1a1a; }
+        .info { background: #4a9eff; color: white; }
+        .error { background: #ff6b6b; color: #1a1a1a; }
+        button {
+            background: #4a9eff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            margin: 5px;
+        }
+        button:hover {
+            background: #6ab3ff;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🔨 Force Reset Storage</h1>
+        
+        <p>Current localStorage status:</p>
+        <pre id="status"></pre>
+
+        <div id="actions"></div>
+    </div>
+
+    <script>
+        // Display current storage
+        function showStatus() {
+            const statusEl = document.getElementById('status');
+            const actionsEl = document.getElementById('actions');
+            
+            const outlines = localStorage.getItem('outlines_data');
+            const devMode = localStorage.getItem('outlines_dev_mode');
+            const activeId = localStorage.getItem('active_outline_id');
+            
+            let output = '';
+            output += 'outlines_data: ' + (outlines ? '✓ EXISTS (' + outlines.length + ' bytes)' : '✗ EMPTY') + '\n';
+            output += 'outlines_dev_mode: ' + (devMode ? '✓ ' + devMode : '✗ EMPTY') + '\n';
+            output += 'active_outline_id: ' + (activeId ? '✓ ' + activeId : '✗ EMPTY') + '\n\n';
+            
+            if (outlines) {
+                try {
+                    const data = JSON.parse(outlines);
+                    output += 'Parsed outlines:\n';
+                    output += JSON.stringify(data, null, 2);
+                } catch (e) {
+                    output += 'ERROR parsing JSON: ' + e.message;
+                }
+            }
+            
+            statusEl.textContent = output;
+            
+            // Show action buttons
+            actionsEl.innerHTML = `
+                <div class="status info">Click a button below:</div>
+                <button onclick="fullReset()">🔴 NUKE EVERYTHING & Reload Fresh</button>
+                <button onclick="location.reload()">🔄 Reload</button>
+            `;
+        }
+
+        function fullReset() {
+            console.log('🔴 FULL RESET: Clearing ALL localStorage...');
+            localStorage.clear();
+            
+            const statusEl = document.getElementById('status');
+            const actionsEl = document.getElementById('actions');
+            
+            statusEl.textContent = '✅ ALL STORAGE CLEARED!';
+            actionsEl.innerHTML = `
+                <div class="status success">
+                    ✅ localStorage completely cleared
+                </div>
+                <button onclick="loadFresh()">📂 Load Fresh Sample Data</button>
+            `;
+        }
+
+        function loadFresh() {
+            console.log('📂 Loading fresh sample data...');
+            window.location.href = 'index.html?dev=true&force=true';
+        }
+
+        // Run on load
+        window.addEventListener('load', showStatus);
+    </script>
+</body>
+</html>
