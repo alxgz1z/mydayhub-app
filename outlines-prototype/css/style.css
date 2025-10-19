@@ -648,7 +648,7 @@ body {
 
 /* Drop Zone Detection - Three zones per card */
 
-/* LEFT ZONE: Sibling BEFORE */
+/* LEFT ZONE: Sibling BEFORE in padded space */
 .zone-left {
     position: relative;
 }
@@ -672,17 +672,15 @@ body {
     z-index: 10;
 }
 
-/* CENTER ZONE: Reparent as child */
+/* CENTER ZONE: Drop ON TOP - thick dashed border on incumbent */
 .zone-center {
-    border: 2px solid var(--accent-color);
-    background-color: rgba(74, 158, 255, 0.08);
-    box-shadow: 
-        0 0 12px rgba(74, 158, 255, 0.4),
-        inset 0 0 12px rgba(74, 158, 255, 0.15);
+    border: 3px dashed var(--accent-color);
+    background-color: transparent;
+    box-shadow: none;
     transition: all var(--transition-fast);
 }
 
-/* RIGHT ZONE: Sibling AFTER */
+/* RIGHT ZONE: Sibling AFTER in padded space */
 .zone-right {
     position: relative;
 }

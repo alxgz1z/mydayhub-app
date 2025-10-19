@@ -920,14 +920,17 @@ const TreeRender = (() => {
         console.log('EXECUTING DROP:', { zone, draggedId: draggedNode.id, targetId: intentTarget.id });
         
         if (zone === 'center') {
-            console.log('  -> Reparenting as child...');
-            performReparent(outline.root_nodes, draggedNode, intentTarget);
+            // CENTER: Drop ON TOP - insert as sibling, shifting target down
+            console.log('  -> Inserting as sibling (center drop - target shifts down)...');
+            performSiblingInsert(outline.root_nodes, draggedNode, intentTarget, 'replace');
         } else if (zone === 'left') {
-            console.log('  -> Reordering BEFORE...');
-            performSiblingReorder(outline.root_nodes, draggedNode, intentTarget, 'before');
+            // LEFT: Insert BEFORE in padded space
+            console.log('  -> Inserting BEFORE in padded space...');
+            performSiblingInsert(outline.root_nodes, draggedNode, intentTarget, 'before');
         } else if (zone === 'right') {
-            console.log('  -> Reordering AFTER...');
-            performSiblingReorder(outline.root_nodes, draggedNode, intentTarget, 'after');
+            // RIGHT: Insert AFTER in padded space
+            console.log('  -> Inserting AFTER in padded space...');
+            performSiblingInsert(outline.root_nodes, draggedNode, intentTarget, 'after');
         }
         
         // Save and re-render
@@ -938,9 +941,10 @@ const TreeRender = (() => {
     };
 
     /**
-     * Perform sibling reordering operation
+     * Perform sibling insertion operation (replaces old performSiblingReorder)
+     * position: 'before', 'after', or 'replace' (for center drop)
      */
-    const performSiblingReorder = (rootNodes, draggedNode, targetNode, position) => {
+    const performSiblingInsert = (rootNodes, draggedNode, targetNode, position) => {
         // Find the parent that contains both nodes
         let parentArray = null;
         
@@ -966,8 +970,8 @@ const TreeRender = (() => {
             return;
         }
         
-        if (draggedIdx === targetIdx) {
-            console.log('  ! Same index');
+        if (draggedIdx === targetIdx && position !== 'replace') {
+            console.log('  ! Same index and not replacing');
             return;
         }
         
@@ -977,79 +981,17 @@ const TreeRender = (() => {
         // Calculate new position after removal
         let newIdx = parentArray.findIndex(n => n.id === targetNode.id);
         
-        // Adjust index based on direction
-        if (position === 'after') {
+        // Adjust index based on position type
+        if (position === 'after' || position === 'replace') {
             newIdx += 1;
         }
         // For 'before', use index as-is (it's already updated after removal)
         
-        console.log('  Inserting at index:', newIdx);
+        console.log('  Inserting at index:', newIdx, 'for position:', position);
         
         // Insert at new position
         parentArray.splice(newIdx, 0, draggedNode);
-        console.log('  ✓ Reorder complete');
-    };
-
-    /**
-     * Perform reparenting operation
-     */
-    const performReparent = (rootNodes, draggedNode, targetNode) => {
-        console.log('REPARENT START:', {
-            draggedNodeId: draggedNode.id,
-            draggedParentId: draggedNode.parent_id,
-            targetNodeId: targetNode.id,
-            targetParentId: targetNode.parent_id,
-            draggedHasChildren: draggedNode.children?.length || 0,
-            targetHasChildren: targetNode.children?.length || 0
-        });
-        
-        // Remove dragged node from its current location
-        if (draggedNode.parent_id === null) {
-            // Remove from root
-            const idx = rootNodes.findIndex(n => n.id === draggedNode.id);
-            console.log('  Removing from ROOT - index:', idx, 'total root nodes:', rootNodes.length);
-            if (idx !== -1) {
-                rootNodes.splice(idx, 1);
-                console.log('  ✓ Removed from root, now', rootNodes.length, 'root nodes');
-            } else {
-                console.log('  ! NOT FOUND in root nodes');
-            }
-        } else {
-            // Remove from parent's children
-            const currentParent = TreeModel.findNode(rootNodes, draggedNode.parent_id);
-            console.log('  Current parent found?', !!currentParent);
-            if (currentParent && currentParent.children) {
-                const idx = currentParent.children.findIndex(n => n.id === draggedNode.id);
-                console.log('  Removing from parent', draggedNode.parent_id, '- index:', idx, 'total children:', currentParent.children.length);
-                if (idx !== -1) {
-                    currentParent.children.splice(idx, 1);
-                    console.log('  ✓ Removed from parent, now', currentParent.children.length, 'children');
-                } else {
-                    console.log('  ! NOT FOUND in parent children');
-                }
-            } else {
-                console.log('  ! Parent not found or has no children array');
-            }
-        }
-        
-        // Add dragged node as child of target
-        console.log('  Adding as child to target', targetNode.id);
-        draggedNode.parent_id = targetNode.id;
-        console.log('  Set draggedNode.parent_id to', draggedNode.parent_id);
-        
-        if (!targetNode.children) {
-            targetNode.children = [];
-            console.log('  Created children array on target');
-        }
-        
-        targetNode.children.push(draggedNode);
-        console.log('  ✓ Added to target, now', targetNode.children.length, 'children');
-        
-        // Auto-expand the target node to show the new child
-        targetNode.is_folded = false;
-        console.log('  ✓ Expanded target node to show new child');
-        
-        console.log('REPARENT COMPLETE');
+        console.log('  ✓ Insert complete');
     };
 
     /**
