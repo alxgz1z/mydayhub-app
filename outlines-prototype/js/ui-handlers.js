@@ -408,10 +408,21 @@ const UIHandlers = (() => {
         const outlines = Storage.getAllOutlines();
         const activeId = parseInt(Storage.getActiveOutlineId());
 
+        console.log('🔍 renderOutlinesList called');
+        console.log('  - selector element:', selector);
+        console.log('  - outlines:', outlines);
+        console.log('  - activeId:', activeId);
+
+        if (!selector) {
+            console.error('❌ outline-selector element not found!');
+            return;
+        }
+
         // Keep the "+ New Outline" option
         selector.innerHTML = '<option value="">+ New Outline</option>';
 
         outlines.forEach(outline => {
+            console.log(`  - Adding outline: ${outline.name} (ID: ${outline.id})`);
             const option = document.createElement('option');
             option.value = outline.id;
             option.textContent = outline.name;
@@ -420,6 +431,8 @@ const UIHandlers = (() => {
             }
             selector.appendChild(option);
         });
+
+        console.log('  - Final selector innerHTML:', selector.innerHTML);
 
         // Add change event listener
         selector.onchange = (e) => {
