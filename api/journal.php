@@ -32,7 +32,7 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
                 break;
                 
             case 'updateEntry':
-                if ($method === 'PUT') {
+                if ($method === 'PUT' || $method === 'POST') {
                     return handle_update_journal_entry($pdo, $userId, $data);
                 }
                 break;
