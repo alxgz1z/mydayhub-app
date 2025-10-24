@@ -973,6 +973,9 @@
 
 		if (!searchText || findReplaceState.matches.length === 0) return;
 
+		// Save count before we modify the text
+		const replacementCount = findReplaceState.matches.length;
+
 		// Replace in reverse order to maintain positions
 		for (let i = findReplaceState.matches.length - 1; i >= 0; i--) {
 			const match = findReplaceState.matches[i];
@@ -984,7 +987,7 @@
 		elements.textarea.value = newText;
 		markAsDirtyAndQueueSave();
 		findMatches(searchText);
-		showToast({ message: `Replaced ${findReplaceState.matches.length} occurrences.`, type: 'success' });
+		showToast({ message: `Replaced ${replacementCount} occurrences.`, type: 'success' });
 	}
 
 	function setupFindReplaceListeners() {
