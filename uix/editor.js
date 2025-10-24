@@ -332,7 +332,24 @@
 		if (!lastSavedTime) return;
 		const now = new Date();
 		const diffInSeconds = Math.floor((now - lastSavedTime) / 1000);
-		elements.saveStatus.textContent = `Last saved: ${diffInSeconds} seconds ago`;
+		
+		// Only show relative time if saved within the last minute
+		if (diffInSeconds < 60) {
+			if (diffInSeconds === 0) {
+				elements.saveStatus.textContent = 'Last saved: just now';
+			} else if (diffInSeconds === 1) {
+				elements.saveStatus.textContent = 'Last saved: 1 second ago';
+			} else {
+				elements.saveStatus.textContent = `Last saved: ${diffInSeconds} seconds ago`;
+			}
+		} else {
+			// For older saves, show full timestamp and stop updating
+			elements.saveStatus.textContent = `Last saved: ${lastSavedTime.toLocaleString()}`;
+			if (lastSavedUpdateInterval) {
+				clearInterval(lastSavedUpdateInterval);
+				lastSavedUpdateInterval = null;
+			}
+		}
 	}
 
 	function open(options = {}) {
