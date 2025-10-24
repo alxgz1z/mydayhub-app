@@ -975,11 +975,13 @@
 	function setupFindReplaceListeners() {
 		if (!elements.findInput) return;
 
-		elements.findInput.addEventListener('input', () => {
+		elements.findInput.addEventListener('input', (e) => {
+			e.stopPropagation();
 			findMatches(elements.findInput.value);
 		});
 
 		elements.findInput.addEventListener('keydown', (e) => {
+			e.stopPropagation();
 			if (e.key === 'Enter') {
 				e.preventDefault();
 				if (e.shiftKey) {
@@ -990,17 +992,50 @@
 			}
 		});
 
-		elements.findNextBtn.addEventListener('click', findNext);
-		elements.findPrevBtn.addEventListener('click', findPrevious);
-		elements.replaceBtn.addEventListener('click', replaceCurrent);
-		elements.replaceAllBtn.addEventListener('click', replaceAll);
+		elements.replaceInput.addEventListener('keydown', (e) => {
+			e.stopPropagation();
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				replaceCurrent();
+			}
+		});
 
-		elements.caseSensitiveChk.addEventListener('change', () => {
+		elements.findNextBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			findNext();
+			elements.findInput.focus();
+		});
+
+		elements.findPrevBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			findPrevious();
+			elements.findInput.focus();
+		});
+
+		elements.replaceBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			replaceCurrent();
+			elements.findInput.focus();
+		});
+
+		elements.replaceAllBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			replaceAll();
+			elements.findInput.focus();
+		});
+
+		elements.caseSensitiveChk.addEventListener('change', (e) => {
+			e.stopPropagation();
 			findReplaceState.caseSensitive = elements.caseSensitiveChk.checked;
 			findMatches(elements.findInput.value);
 		});
 
-		elements.wholeWordChk.addEventListener('change', () => {
+		elements.wholeWordChk.addEventListener('change', (e) => {
+			e.stopPropagation();
 			findReplaceState.wholeWord = elements.wholeWordChk.checked;
 			findMatches(elements.findInput.value);
 		});
