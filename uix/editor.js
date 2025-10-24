@@ -899,7 +899,8 @@
 		elements.textarea.focus();
 		elements.textarea.setSelectionRange(match.start, match.end);
 		// Scroll into view
-		elements.textarea.scrollTop = Math.max(0, (match.start / elements.textarea.value.length) * elements.textarea.scrollHeight - 50);
+		const scrollPos = (match.start / elements.textarea.value.length) * elements.textarea.scrollHeight;
+		elements.textarea.scrollTop = Math.max(0, scrollPos - 50);
 	}
 
 	function updateMatchCount() {
@@ -1019,21 +1020,18 @@
 			e.stopPropagation();
 			e.preventDefault();
 			findNext();
-			elements.findInput.focus();
 		});
 
 		elements.findPrevBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			e.preventDefault();
 			findPrevious();
-			elements.findInput.focus();
 		});
 
 		elements.replaceBtn.addEventListener('click', (e) => {
 			e.stopPropagation();
 			e.preventDefault();
 			replaceCurrent();
-			elements.findInput.focus();
 		});
 
 		elements.replaceAllBtn.addEventListener('click', (e) => {
