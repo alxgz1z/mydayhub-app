@@ -24,6 +24,9 @@
 	let fontSizeSaveTimer = null;
 	const FONT_SAVE_DELAY = 1500;
 
+	let lastSavedTime = null;
+	let lastSavedUpdateInterval = null;
+
 	let elements = {};
 	const state = {
 		isOpen: false,
@@ -304,11 +307,16 @@
 			}
 
 			state.isDirty = false;
-			elements.saveStatus.textContent = `Saved at ${new Date().toLocaleString()}`;
+			elements.saveStatus.textContent = `Last saved: ${new Date().toLocaleString()}`;
 			
-			// Show a success toast notification to the user.
-			const itemType = state.currentKind === 'journal' ? 'Journal entry' : 'Note';
-			showToast({ message: `${itemType} saved successfully.`, type: 'success' });
+			// Store the last saved time for periodic updates
+			lastSavedTime = new Date();
+			
+			// Update the save status periodically to show "Last saved X seconds ago"
+			if (lastSavedUpdateInterval) {
+				clearInterval(lastSavedUpdateInterval);
+			}
+			lastSavedUpdateInterval = setInterval(updateLastSavedDisplay, 1000);
 
 			return true;
 
@@ -318,6 +326,13 @@
 			showToast({ message: error.message, type: 'error' });
 			return false;
 		}
+	}
+
+	function updateLastSavedDisplay() {
+		if (!lastSavedTime) return;
+		const now = new Date();
+		const diffInSeconds = Math.floor((now - lastSavedTime) / 1000);
+		elements.saveStatus.textContent = `Last saved: ${diffInSeconds} seconds ago`;
 	}
 
 	function open(options = {}) {
@@ -341,8 +356,15 @@
 		if (updatedAt) {
 			const savedDate = new Date(updatedAt.replace(' ', 'T') + 'Z'); 
 			elements.saveStatus.textContent = `Last saved: ${savedDate.toLocaleString()}`;
+			lastSavedTime = savedDate;
+			// Start the interval to show relative time
+			if (lastSavedUpdateInterval) {
+				clearInterval(lastSavedUpdateInterval);
+			}
+			lastSavedUpdateInterval = setInterval(updateLastSavedDisplay, 1000);
 		} else {
-			elements.saveStatus.textContent = 'Ready';
+			elements.saveStatus.textContent = 'Ready to edit';
+			lastSavedTime = null;
 		}
 	}
 
@@ -369,6 +391,12 @@
 		state.isOpen = false;
 		state.currentTaskId = null;
 		elements.textarea.value = '';
+		// Clean up the last saved time and interval when closing
+		lastSavedTime = null;
+		if (lastSavedUpdateInterval) {
+			clearInterval(lastSavedUpdateInterval);
+			lastSavedUpdateInterval = null;
+		}
 	}
 
 	function maximize() {
