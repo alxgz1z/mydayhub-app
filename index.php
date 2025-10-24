@@ -518,7 +518,29 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon btn-text-danger" title="Clear Note" data-action="clear-note">[clear note]</button>
 								</div>
 					</div>
-					<div class="ribbon-panel" id="editor-panel-find-replace"></div>
+					<div class="ribbon-panel" id="editor-panel-find-replace">
+						<div class="find-replace-container">
+							<div class="find-replace-row">
+								<input type="text" id="editor-find-input" placeholder="Find..." class="find-replace-input">
+								<button class="btn-icon" title="Find Next" id="editor-find-next">↓</button>
+								<button class="btn-icon" title="Find Previous" id="editor-find-prev">↑</button>
+								<span id="editor-match-count" class="match-count">0 matches</span>
+							</div>
+							<div class="find-replace-row">
+								<input type="text" id="editor-replace-input" placeholder="Replace with..." class="find-replace-input">
+								<button class="btn-primary btn-small" title="Replace Current" id="editor-replace-btn">Replace</button>
+								<button class="btn-primary btn-small" title="Replace All" id="editor-replace-all-btn">Replace All</button>
+							</div>
+							<div class="find-replace-row">
+								<label class="checkbox-label">
+									<input type="checkbox" id="editor-case-sensitive"> Case sensitive
+								</label>
+								<label class="checkbox-label">
+									<input type="checkbox" id="editor-whole-word"> Whole word
+								</label>
+							</div>
+						</div>
+					</div>
 				</div>
 			</div>
 

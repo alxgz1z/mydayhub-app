@@ -40,6 +40,14 @@
 		isRecording: false,
 		recognition: null
 	};
+
+	// Find & Replace state
+	const findReplaceState = {
+		currentMatchIndex: -1,
+		matches: [],
+		caseSensitive: false,
+		wholeWord: false
+	};
 	
 	// Detect if browser supports Web Speech API
 	function supportsVoiceRecognition() {
@@ -70,6 +78,17 @@
 		elements.wordCount = document.querySelector('#editor-doc-stats span:first-child');
 		elements.charCount = document.querySelector('#editor-doc-stats span:last-child');
 		elements.saveStatus = document.getElementById('editor-save-status');
+		
+		// Find & Replace elements
+		elements.findInput = document.getElementById('editor-find-input');
+		elements.replaceInput = document.getElementById('editor-replace-input');
+		elements.findNextBtn = document.getElementById('editor-find-next');
+		elements.findPrevBtn = document.getElementById('editor-find-prev');
+		elements.replaceBtn = document.getElementById('editor-replace-btn');
+		elements.replaceAllBtn = document.getElementById('editor-replace-all-btn');
+		elements.caseSensitiveChk = document.getElementById('editor-case-sensitive');
+		elements.wholeWordChk = document.getElementById('editor-whole-word');
+		elements.matchCount = document.getElementById('editor-match-count');
 	}
 
 	function updateStats() {
@@ -832,6 +851,161 @@
 		}
 	}
 
+	// ============================================================================
+	// FIND & REPLACE IMPLEMENTATION
+	// ============================================================================
+
+	function findMatches(searchText) {
+		if (!searchText || !elements.textarea) {
+			findReplaceState.matches = [];
+			findReplaceState.currentMatchIndex = -1;
+			updateMatchCount();
+			return;
+		}
+
+		const text = elements.textarea.value;
+		const flags = findReplaceState.caseSensitive ? 'g' : 'gi';
+		let pattern;
+
+		try {
+			if (findReplaceState.wholeWord) {
+				pattern = new RegExp(`\\b${searchText}\\b`, flags);
+			} else {
+				pattern = new RegExp(searchText, flags);
+			}
+
+			findReplaceState.matches = [];
+			let match;
+			while ((match = pattern.exec(text)) !== null) {
+				findReplaceState.matches.push({
+					start: match.index,
+					end: match.index + match[0].length,
+					text: match[0]
+				});
+			}
+		} catch (e) {
+			// Invalid regex pattern
+			findReplaceState.matches = [];
+		}
+
+		findReplaceState.currentMatchIndex = findReplaceState.matches.length > 0 ? 0 : -1;
+		updateMatchCount();
+		if (findReplaceState.currentMatchIndex !== -1) {
+			highlightMatch(findReplaceState.currentMatchIndex);
+		}
+	}
+
+	function highlightMatch(index) {
+		if (index < 0 || index >= findReplaceState.matches.length) return;
+
+		const match = findReplaceState.matches[index];
+		elements.textarea.focus();
+		elements.textarea.setSelectionRange(match.start, match.end);
+		elements.textarea.scrollTop = elements.textarea.scrollHeight;
+	}
+
+	function updateMatchCount() {
+		const count = findReplaceState.matches.length;
+		const current = findReplaceState.currentMatchIndex + 1;
+		if (count === 0) {
+			elements.matchCount.textContent = 'No matches';
+			elements.matchCount.classList.remove('active');
+		} else {
+			elements.matchCount.textContent = `${current} of ${count}`;
+			elements.matchCount.classList.add('active');
+		}
+	}
+
+	function findNext() {
+		if (findReplaceState.matches.length === 0) return;
+		findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex + 1) % findReplaceState.matches.length;
+		highlightMatch(findReplaceState.currentMatchIndex);
+		updateMatchCount();
+	}
+
+	function findPrevious() {
+		if (findReplaceState.matches.length === 0) return;
+		findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex - 1 + findReplaceState.matches.length) % findReplaceState.matches.length;
+		highlightMatch(findReplaceState.currentMatchIndex);
+		updateMatchCount();
+	}
+
+	function replaceCurrent() {
+		if (findReplaceState.currentMatchIndex < 0 || !elements.replaceInput) return;
+
+		const match = findReplaceState.matches[findReplaceState.currentMatchIndex];
+		const before = elements.textarea.value.substring(0, match.start);
+		const after = elements.textarea.value.substring(match.end);
+		elements.textarea.value = before + elements.replaceInput.value + after;
+
+		// Adjust all match positions after this replacement
+		const diff = elements.replaceInput.value.length - match.text.length;
+		findReplaceState.matches = findReplaceState.matches.map((m, idx) => ({
+			...m,
+			start: idx > findReplaceState.currentMatchIndex ? m.start + diff : m.start,
+			end: idx > findReplaceState.currentMatchIndex ? m.end + diff : m.end
+		}));
+
+		markAsDirtyAndQueueSave();
+		findNext();
+	}
+
+	function replaceAll() {
+		if (!elements.replaceInput) return;
+
+		let newText = elements.textarea.value;
+		const searchText = elements.findInput.value;
+
+		if (!searchText || findReplaceState.matches.length === 0) return;
+
+		// Replace in reverse order to maintain positions
+		for (let i = findReplaceState.matches.length - 1; i >= 0; i--) {
+			const match = findReplaceState.matches[i];
+			const before = newText.substring(0, match.start);
+			const after = newText.substring(match.end);
+			newText = before + elements.replaceInput.value + after;
+		}
+
+		elements.textarea.value = newText;
+		markAsDirtyAndQueueSave();
+		findMatches(searchText);
+		showToast({ message: `Replaced ${findReplaceState.matches.length} occurrences.`, type: 'success' });
+	}
+
+	function setupFindReplaceListeners() {
+		if (!elements.findInput) return;
+
+		elements.findInput.addEventListener('input', () => {
+			findMatches(elements.findInput.value);
+		});
+
+		elements.findInput.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				if (e.shiftKey) {
+					findPrevious();
+				} else {
+					findNext();
+				}
+			}
+		});
+
+		elements.findNextBtn.addEventListener('click', findNext);
+		elements.findPrevBtn.addEventListener('click', findPrevious);
+		elements.replaceBtn.addEventListener('click', replaceCurrent);
+		elements.replaceAllBtn.addEventListener('click', replaceAll);
+
+		elements.caseSensitiveChk.addEventListener('change', () => {
+			findReplaceState.caseSensitive = elements.caseSensitiveChk.checked;
+			findMatches(elements.findInput.value);
+		});
+
+		elements.wholeWordChk.addEventListener('change', () => {
+			findReplaceState.wholeWord = elements.wholeWordChk.checked;
+			findMatches(elements.findInput.value);
+		});
+	}
+
 	function init() {
 		bindElements();
 		attachEventListeners();
@@ -847,6 +1021,9 @@
 				voiceBtn.addEventListener('click', toggleVoiceRecognition);
 			}
 		}
+
+		// Setup Find & Replace listeners
+		setupFindReplaceListeners();
 	}
 
 	document.addEventListener('DOMContentLoaded', init);
