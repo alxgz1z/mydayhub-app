@@ -888,11 +888,8 @@
 			findReplaceState.matches = [];
 		}
 
-		findReplaceState.currentMatchIndex = findReplaceState.matches.length > 0 ? 0 : -1;
+		findReplaceState.currentMatchIndex = -1; // Don't auto-select, wait for user to click Find
 		updateMatchCount();
-		if (findReplaceState.currentMatchIndex !== -1) {
-			highlightMatch(findReplaceState.currentMatchIndex);
-		}
 	}
 
 	function highlightMatch(index) {
@@ -901,7 +898,8 @@
 		const match = findReplaceState.matches[index];
 		elements.textarea.focus();
 		elements.textarea.setSelectionRange(match.start, match.end);
-		elements.textarea.scrollTop = elements.textarea.scrollHeight;
+		// Scroll into view
+		elements.textarea.scrollTop = Math.max(0, (match.start / elements.textarea.value.length) * elements.textarea.scrollHeight - 50);
 	}
 
 	function updateMatchCount() {
@@ -910,6 +908,10 @@
 		if (count === 0) {
 			elements.matchCount.textContent = 'No matches';
 			elements.matchCount.classList.remove('active');
+		} else if (findReplaceState.currentMatchIndex === -1) {
+			// Matches found but user hasn't clicked Find yet
+			elements.matchCount.textContent = `${count} found`;
+			elements.matchCount.classList.add('active');
 		} else {
 			elements.matchCount.textContent = `${current} of ${count}`;
 			elements.matchCount.classList.add('active');
@@ -917,15 +919,27 @@
 	}
 
 	function findNext() {
-		if (findReplaceState.matches.length === 0) return;
-		findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex + 1) % findReplaceState.matches.length;
+		if (findReplaceState.matches.length === 0) {
+			// First time clicking Find - search for the term first
+			findMatches(elements.findInput.value);
+			if (findReplaceState.matches.length === 0) return;
+			findReplaceState.currentMatchIndex = 0;
+		} else {
+			findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex + 1) % findReplaceState.matches.length;
+		}
 		highlightMatch(findReplaceState.currentMatchIndex);
 		updateMatchCount();
 	}
 
 	function findPrevious() {
-		if (findReplaceState.matches.length === 0) return;
-		findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex - 1 + findReplaceState.matches.length) % findReplaceState.matches.length;
+		if (findReplaceState.matches.length === 0) {
+			// First time clicking Find - search for the term first
+			findMatches(elements.findInput.value);
+			if (findReplaceState.matches.length === 0) return;
+			findReplaceState.currentMatchIndex = findReplaceState.matches.length - 1;
+		} else {
+			findReplaceState.currentMatchIndex = (findReplaceState.currentMatchIndex - 1 + findReplaceState.matches.length) % findReplaceState.matches.length;
+		}
 		highlightMatch(findReplaceState.currentMatchIndex);
 		updateMatchCount();
 	}
@@ -977,6 +991,7 @@
 
 		elements.findInput.addEventListener('input', (e) => {
 			e.stopPropagation();
+			// Update match count in real-time as user types, but don't auto-highlight
 			findMatches(elements.findInput.value);
 		});
 
