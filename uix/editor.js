@@ -90,6 +90,9 @@
 		elements.caseSensitiveChk = document.getElementById('editor-case-sensitive');
 		elements.wholeWordChk = document.getElementById('editor-whole-word');
 		elements.regexModeChk = document.getElementById('editor-regex-mode');
+		elements.regexHelpBtn = document.getElementById('editor-regex-help');
+		elements.regexHelpModal = document.getElementById('regex-help-modal');
+		elements.regexHelpClose = document.getElementById('btn-close-regex-help');
 		elements.matchCount = document.getElementById('editor-match-count');
 	}
 
@@ -1069,6 +1072,33 @@
 				elements.wholeWordChk.checked = false;
 			}
 			findMatches(elements.findInput.value);
+		});
+
+		// Regex help modal handlers
+		elements.regexHelpBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			elements.regexHelpModal.classList.remove('hidden');
+		});
+
+		elements.regexHelpClose.addEventListener('click', (e) => {
+			e.stopPropagation();
+			e.preventDefault();
+			elements.regexHelpModal.classList.add('hidden');
+		});
+
+		// Close modal when clicking outside
+		elements.regexHelpModal.addEventListener('click', (e) => {
+			if (e.target === elements.regexHelpModal) {
+				elements.regexHelpModal.classList.add('hidden');
+			}
+		});
+
+		// Close modal on ESC key
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape' && !elements.regexHelpModal.classList.contains('hidden')) {
+				elements.regexHelpModal.classList.add('hidden');
+			}
 		});
 	}
 

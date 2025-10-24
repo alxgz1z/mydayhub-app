@@ -541,6 +541,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<label class="checkbox-label">
 									<input type="checkbox" id="editor-regex-mode" title="Use regular expressions (.*+?[](){}|^$)">
 									<code>.*</code> Regex
+									<button class="btn-icon-small" id="editor-regex-help" title="Regex help">?</button>
 								</label>
 							</div>
 						</div>
@@ -560,6 +561,76 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					<span>Chars: 0</span>
 				</div>
 				<div id="editor-save-status">Last saved: Never</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="regex-help-modal" class="modal hidden">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Regular Expression Syntax Guide</h3>
+				<button class="btn-icon btn-close" id="btn-close-regex-help">&times;</button>
+			</div>
+			<div class="modal-body regex-help-content">
+				<div class="regex-section">
+					<h4>Characters</h4>
+					<table class="regex-table">
+						<tr><td><code>.</code></td><td>Any character except newline</td></tr>
+						<tr><td><code>\d</code></td><td>Digit (0-9)</td></tr>
+						<tr><td><code>\w</code></td><td>Word character (a-z, A-Z, 0-9, _)</td></tr>
+						<tr><td><code>\s</code></td><td>Whitespace (space, tab, newline)</td></tr>
+						<tr><td><code>.</code></td><td>Literal dot (when escaped)</td></tr>
+					</table>
+				</div>
+
+				<div class="regex-section">
+					<h4>Quantifiers</h4>
+					<table class="regex-table">
+						<tr><td><code>*</code></td><td>0 or more times</td></tr>
+						<tr><td><code>+</code></td><td>1 or more times</td></tr>
+						<tr><td><code>?</code></td><td>0 or 1 time (optional)</td></tr>
+						<tr><td><code>{n}</code></td><td>Exactly n times</td></tr>
+						<tr><td><code>{n,m}</code></td><td>Between n and m times</td></tr>
+					</table>
+				</div>
+
+				<div class="regex-section">
+					<h4>Character Classes</h4>
+					<table class="regex-table">
+						<tr><td><code>[abc]</code></td><td>a, b, or c</td></tr>
+						<tr><td><code>[a-z]</code></td><td>a through z</td></tr>
+						<tr><td><code>[^abc]</code></td><td>Not a, b, or c</td></tr>
+					</table>
+				</div>
+
+				<div class="regex-section">
+					<h4>Anchors</h4>
+					<table class="regex-table">
+						<tr><td><code>^</code></td><td>Start of line</td></tr>
+						<tr><td><code>$</code></td><td>End of line</td></tr>
+						<tr><td><code>\b</code></td><td>Word boundary</td></tr>
+					</table>
+				</div>
+
+				<div class="regex-section">
+					<h4>Alternation & Grouping</h4>
+					<table class="regex-table">
+						<tr><td><code>a|b</code></td><td>a or b</td></tr>
+						<tr><td><code>(abc)</code></td><td>Group abc</td></tr>
+					</table>
+				</div>
+
+				<div class="regex-section">
+					<h4>Examples</h4>
+					<table class="regex-table">
+						<tr><td><code>^Note:</code></td><td>Lines starting with "Note:"</td></tr>
+						<tr><td><code>\d{3}-\d{4}</code></td><td>Phone numbers like 123-4567</td></tr>
+						<tr><td><code>[Dd]allas</code></td><td>"Dallas" or "dallas"</td></tr>
+						<tr><td><code>trip.*Dallas</code></td><td>"trip" followed by anything then "Dallas"</td></tr>
+						<tr><td><code>Austin|Dallas</code></td><td>Either "Austin" or "Dallas"</td></tr>
+						<tr><td><code>\b\w{4}\b</code></td><td>Exactly 4-letter words</td></tr>
+					</table>
+				</div>
 			</div>
 		</div>
 	</div>

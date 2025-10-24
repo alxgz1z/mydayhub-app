@@ -581,6 +581,145 @@
 	font-weight: 600;
 }
 
+.btn-icon-small {
+	background: none;
+	border: 1px solid #444;
+	color: #888;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	cursor: pointer;
+	font-size: 12px;
+	font-weight: 700;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: all 0.2s ease;
+	padding: 0;
+	margin-left: 4px;
+}
+
+.btn-icon-small:hover {
+	background-color: rgba(74, 158, 255, 0.15);
+	border-color: var(--accent-color, #4a9eff);
+	color: var(--accent-color, #4a9eff);
+}
+
+/* Regex Help Modal */
+#regex-help-modal {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.6);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2000;
+}
+
+#regex-help-modal.hidden {
+	display: none;
+}
+
+#regex-help-modal .modal-content {
+	background: #1a1a1a;
+	border: 1px solid #333;
+	border-radius: 12px;
+	width: 90%;
+	max-width: 700px;
+	max-height: 80vh;
+	overflow-y: auto;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+#regex-help-modal .modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-bottom: 1px solid #333;
+}
+
+#regex-help-modal .modal-header h3 {
+	margin: 0;
+	font-size: 18px;
+	color: #fff;
+}
+
+#regex-help-modal .btn-close {
+	background: none;
+	border: none;
+	color: #888;
+	font-size: 24px;
+	cursor: pointer;
+	padding: 0;
+	width: 30px;
+	height: 30px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#regex-help-modal .btn-close:hover {
+	color: #fff;
+}
+
+.regex-help-content {
+	padding: 1.5rem;
+}
+
+.regex-section {
+	margin-bottom: 1.5rem;
+}
+
+.regex-section:last-child {
+	margin-bottom: 0;
+}
+
+.regex-section h4 {
+	margin: 0 0 0.75rem 0;
+	font-size: 14px;
+	color: var(--accent-color, #4a9eff);
+	font-weight: 600;
+}
+
+.regex-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 13px;
+}
+
+.regex-table tr {
+	border-bottom: 1px solid #2a2a2a;
+}
+
+.regex-table tr:last-child {
+	border-bottom: none;
+}
+
+.regex-table td {
+	padding: 0.6rem 0.8rem;
+	text-align: left;
+	color: #ccc;
+}
+
+.regex-table td:first-child {
+	padding-left: 0;
+}
+
+.regex-table code {
+	background-color: rgba(100, 100, 100, 0.3);
+	padding: 2px 6px;
+	border-radius: 3px;
+	color: var(--accent-color, #4a9eff);
+	font-family: 'Monaco', 'Courier New', monospace;
+	font-size: 12px;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
 @media (max-width: 480px) {
 	#unified-editor-container {
 		width: 100vw;
