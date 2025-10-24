@@ -538,6 +538,10 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<label class="checkbox-label">
 									<input type="checkbox" id="editor-whole-word"> Whole word
 								</label>
+								<label class="checkbox-label">
+									<input type="checkbox" id="editor-regex-mode" title="Use regular expressions (.*+?[](){}|^$)">
+									<code>.*</code> Regex
+								</label>
 							</div>
 						</div>
 					</div>

@@ -46,7 +46,8 @@
 		currentMatchIndex: -1,
 		matches: [],
 		caseSensitive: false,
-		wholeWord: false
+		wholeWord: false,
+		regexMode: false
 	};
 	
 	// Detect if browser supports Web Speech API
@@ -88,6 +89,7 @@
 		elements.replaceAllBtn = document.getElementById('editor-replace-all-btn');
 		elements.caseSensitiveChk = document.getElementById('editor-case-sensitive');
 		elements.wholeWordChk = document.getElementById('editor-whole-word');
+		elements.regexModeChk = document.getElementById('editor-regex-mode');
 		elements.matchCount = document.getElementById('editor-match-count');
 	}
 
@@ -868,7 +870,9 @@
 		let pattern;
 
 		try {
-			if (findReplaceState.wholeWord) {
+			if (findReplaceState.regexMode) {
+				pattern = new RegExp(searchText, flags);
+			} else if (findReplaceState.wholeWord) {
 				pattern = new RegExp(`\\b${searchText}\\b`, flags);
 			} else {
 				pattern = new RegExp(searchText, flags);
@@ -1053,6 +1057,17 @@
 		elements.wholeWordChk.addEventListener('change', (e) => {
 			e.stopPropagation();
 			findReplaceState.wholeWord = elements.wholeWordChk.checked;
+			findMatches(elements.findInput.value);
+		});
+
+		elements.regexModeChk.addEventListener('change', (e) => {
+			e.stopPropagation();
+			findReplaceState.regexMode = elements.regexModeChk.checked;
+			// When enabling regex, disable whole word since they conflict
+			if (findReplaceState.regexMode) {
+				findReplaceState.wholeWord = false;
+				elements.wholeWordChk.checked = false;
+			}
 			findMatches(elements.findInput.value);
 		});
 	}
