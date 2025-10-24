@@ -27,6 +27,13 @@
 	let lastSavedTime = null;
 	let lastSavedUpdateInterval = null;
 
+	// Undo/Redo system
+	let undoStack = [];
+	let redoStack = [];
+	const MAX_UNDO_STATES = 50;
+	let undoSaveTimer = null;
+	const UNDO_SAVE_DELAY = 500; // Debounce snapshots
+
 	let elements = {};
 	const state = {
 		isOpen: false,
@@ -80,6 +87,13 @@
 		elements.charCount = document.querySelector('#editor-doc-stats span:last-child');
 		elements.saveStatus = document.getElementById('editor-save-status');
 		
+		// Undo/Redo buttons
+		elements.undoBtn = document.getElementById('editor-btn-undo');
+		elements.redoBtn = document.getElementById('editor-btn-redo');
+		
+		// Clear button
+		elements.clearBtn = document.getElementById('editor-btn-clear');
+		
 		// Find & Replace elements
 		elements.findInput = document.getElementById('editor-find-input');
 		elements.replaceInput = document.getElementById('editor-replace-input');
@@ -111,6 +125,98 @@
 		elements.saveStatus.textContent = 'Unsaved changes...';
 		clearTimeout(autosaveTimer);
 		autosaveTimer = setTimeout(save, AUTOSAVE_DELAY);
+		
+		// Queue undo snapshot (debounced)
+		clearTimeout(undoSaveTimer);
+		undoSaveTimer = setTimeout(saveUndoState, UNDO_SAVE_DELAY);
+	}
+
+	function saveUndoState() {
+		if (!elements.textarea) return;
+		
+		undoStack.push({
+			content: elements.textarea.value,
+			cursorStart: elements.textarea.selectionStart,
+			cursorEnd: elements.textarea.selectionEnd,
+			timestamp: Date.now()
+		});
+		
+		// Clear redo stack when new action taken
+		redoStack = [];
+		
+		// Limit undo stack size
+		if (undoStack.length > MAX_UNDO_STATES) {
+			undoStack.shift();
+		}
+		
+		updateUndoRedoButtons();
+	}
+
+	function performUndo() {
+		if (undoStack.length === 0) return;
+		
+		// Save current state to redo stack
+		redoStack.push({
+			content: elements.textarea.value,
+			cursorStart: elements.textarea.selectionStart,
+			cursorEnd: elements.textarea.selectionEnd,
+			timestamp: Date.now()
+		});
+		
+		// Get previous state
+		const state = undoStack.pop();
+		elements.textarea.value = state.content;
+		elements.textarea.setSelectionRange(state.cursorStart, state.cursorEnd);
+		elements.textarea.focus();
+		
+		state.isDirty = true;
+		elements.saveStatus.textContent = 'Unsaved changes...';
+		updateStats();
+		updateUndoRedoButtons();
+		
+		// Don't trigger another undo save
+		clearTimeout(undoSaveTimer);
+	}
+
+	function performRedo() {
+		if (redoStack.length === 0) return;
+		
+		// Save current state to undo stack
+		undoStack.push({
+			content: elements.textarea.value,
+			cursorStart: elements.textarea.selectionStart,
+			cursorEnd: elements.textarea.selectionEnd,
+			timestamp: Date.now()
+		});
+		
+		// Get next state
+		const redoState = redoStack.pop();
+		elements.textarea.value = redoState.content;
+		elements.textarea.setSelectionRange(redoState.cursorStart, redoState.cursorEnd);
+		elements.textarea.focus();
+		
+		state.isDirty = true;
+		elements.saveStatus.textContent = 'Unsaved changes...';
+		updateStats();
+		updateUndoRedoButtons();
+		
+		// Don't trigger another undo save
+		clearTimeout(undoSaveTimer);
+	}
+
+	function updateUndoRedoButtons() {
+		if (elements.undoBtn) {
+			elements.undoBtn.disabled = undoStack.length === 0;
+		}
+		if (elements.redoBtn) {
+			elements.redoBtn.disabled = redoStack.length === 0;
+		}
+	}
+
+	function clearUndoRedoStacks() {
+		undoStack = [];
+		redoStack = [];
+		updateUndoRedoButtons();
 	}
 
 	function attachEventListeners() {
@@ -132,8 +238,13 @@
 			button.addEventListener('click', handleFormatAction);
 		});
 
+		// Undo/Redo button handlers
+		elements.undoBtn?.addEventListener('click', performUndo);
+		elements.redoBtn?.addEventListener('click', performRedo);
+
 		elements.textarea.addEventListener('input', markAsDirtyAndQueueSave);
 		elements.textarea.addEventListener('keydown', handleTabKey);
+		elements.textarea.addEventListener('keydown', handleUndoRedoShortcuts);
 	}
 
 	// Modified for global apiFetch
@@ -181,12 +292,24 @@
 		const button = e.currentTarget;
 		const action = button.dataset.action;
 		
-		if (action === 'clear-note') {
-			const confirmed = await showConfirm('Are you sure you want to clear the entire note? This cannot be undone.');
+		if (action === 'undo') {
+			performUndo();
+			return;
+		}
+
+		if (action === 'redo') {
+			performRedo();
+			return;
+		}
+		
+		if (action === 'clear') {
+			const confirmed = await showConfirm('Clear all note contents? This will be undoable.');
 			if (confirmed) {
+				saveUndoState(); // Save current state before clearing
 				elements.textarea.value = '';
 				elements.textarea.focus();
 				markAsDirtyAndQueueSave();
+				updateStats();
 			}
 			return;
 		}
@@ -257,6 +380,17 @@
 			textarea.setRangeText('\t', start, end, 'end');
 		}
 		markAsDirtyAndQueueSave();
+	}
+
+	function handleUndoRedoShortcuts(e) {
+		if (e.key === 'z' && (e.metaKey || e.ctrlKey)) { // Cmd+Z or Ctrl+Z
+			e.preventDefault();
+			if (e.shiftKey) {
+				performRedo();
+			} else {
+				performUndo();
+			}
+		}
 	}
 
 	// Modified for global apiFetch and success toast
@@ -438,6 +572,8 @@
 			clearInterval(lastSavedUpdateInterval);
 			lastSavedUpdateInterval = null;
 		}
+		// Clear undo/redo stacks
+		clearUndoRedoStacks();
 	}
 
 	function maximize() {

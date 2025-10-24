@@ -605,6 +605,14 @@
 	color: var(--accent-color, #4a9eff);
 }
 
+/* Button disabled states */
+.btn-icon:disabled,
+.btn-primary:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
 /* Regex Help Modal */
 #regex-help-modal {
 	position: fixed;

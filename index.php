@@ -507,6 +507,8 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<div id="editor-ribbon-panels">
 					<div class="ribbon-panel active" id="editor-panel-format">
 						<div class="ribbon-button-group">
+								<button class="btn-icon" title="Undo (Ctrl+Z / Cmd+Z)" id="editor-btn-undo" data-action="undo">↶</button>
+								<button class="btn-icon" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" id="editor-btn-redo" data-action="redo">↷</button>
 								<button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
 								<button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
 								<button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
@@ -515,7 +517,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
 								<button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
 								<button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
-								<button class="btn-icon btn-text-danger" title="Clear Note" data-action="clear-note">[clear note]</button>
+								<button class="btn-icon btn-text-danger" title="Clear all note contents" id="editor-btn-clear" data-action="clear">[clear]</button>
 								</div>
 					</div>
 					<div class="ribbon-panel" id="editor-panel-find-replace">
