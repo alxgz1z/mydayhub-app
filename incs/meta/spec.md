@@ -1,8 +1,8 @@
 # MyDayHub Reference Specification
 
-Version: Tamarindo 8.1 (Mission Focus Integration Complete)
+Version: Avellanas 8.5 (Journal View Refactored & Typography Enhanced)
 Audience: Internal Development & Product
-Last Updated: 2025-10-18
+Last Updated: 2025-10-25
 
 ---
 
@@ -79,7 +79,7 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 3.4 Unified Editor
 - Modal editor for task notes with autosave, formatting tools, and font sizing
 
-3.5 Journal View (IMPLEMENTED & REFINED)
+3.5 Journal View (IMPLEMENTED & REFACTORED v8.5)
 - Horizontal date-based columns with scrollable navigation (1-day, 3-day, 5-day views)
 - Journal entries: create, edit, delete with rich text support and classification system
 - Classification: Signal/Support/Backlog matching task card patterns with color bands and popover menus
@@ -90,6 +90,10 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - Navigation: < > buttons integrated in column headers, << >> buttons in footer popover
 - View switching: seamless transition between Tasks and Journal views
 - Vertical space optimization: removed header ribbon, integrated controls into footer popover
+- **REFACTORED ARCHITECTURE**: Clean state model with dayCount (1,3,5) and filterMode ('all','weekdays','notes-only')
+- **ROBUST FILTERING**: Single-pass date calculation eliminating race conditions and navigation inconsistencies
+- **MUTUALLY EXCLUSIVE FILTERS**: Replaced confusing toggles with clear button-based filter selection
+- **ENHANCED NOTES-ONLY MODE**: Wider date range loading ensures consistent column counts during navigation
 
 ---
 
@@ -182,6 +186,8 @@ Theming & Accessibility:
 - Dark‑first palette; high‑contrast variant.
 - Automatic contrast for toast text; settings active buttons compute readable text color from accent.
 - SVG icons; keyboard/focus states; large touch targets.
+- **Typography Enhancement**: Inter font family with light (300) base weight for elegant, modern appearance
+- **Professional Icons**: Consistent SVG icon design language across all menu items and interface elements
 
 ---
 
@@ -325,8 +331,13 @@ Relationship highlights:
 - ✅ **Calendar Overlay System** - Events CRUD, preferences management, JSON import/export, header badge integration
 - ✅ **Accent Color Persistence** - Accent color preference persists across theme changes
 - ✅ **Theme Reapply** - Theme selection persists across page reloads
+- ✅ **Journal View Architecture Refactor** - Clean state model with dayCount and filterMode, single-pass date calculation
+- ✅ **Typography Modernization** - Inter font family with light base weight for elegant, professional appearance
+- ✅ **Icon Design Consistency** - Professional SVG icons matching design language across all interface elements
+- ✅ **Version Synchronization** - Updated to Avellanas 8.5 across all components and documentation
 
 Immediate priorities:
+- **Web Mirror Focus** - Ensure proper functionality across different hosting environments
 - Implement @task[description] markup detection and smart task creation from journal entries
 - Enforce permission‑based UI restrictions for shared items
 - Polish sharing workflow in mobile contexts

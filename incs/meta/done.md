@@ -3,8 +3,8 @@ Updated: 2025-10-18
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Tamarindo 8.4 — Voice Transcription Complete
-- **Next Release**: Beta 8.5 - TBD
+- Version: Avellanas 8.5 — Journal View Refactored & Typography Enhanced
+- **Next Release**: Web Mirror Focus - TBD
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
@@ -201,3 +201,27 @@ Order: chronological (newest at bottom)
   - `done.md`: 4-session development history, feature status, known issues, next session items
   - `spec.md`: Complete v1.0 specification (200+ lines), including data model, UX workflows, accessibility targets, performance metrics, future enhancement roadmap
 - **Status**: Prototype ready for resumption; all core features complete and documented
+
+### 2025-10-25 — Journal View Refactoring & Typography Enhancement (v8.5 Avellanas)
+- **Journal View Architecture Overhaul**: Comprehensive refactor of date navigation and filtering logic
+  - Replaced complex toggle system with clean `dayCount` (1,3,5) and `filterMode` ('all','weekdays','notes-only') state model
+  - Single-pass date calculation with `getFilteredDateRange()` eliminating race conditions
+  - Mutually exclusive filter buttons replacing confusing toggle switches
+  - Robust notes-only mode with wider date range loading to prevent navigation inconsistencies
+- **Typography Modernization**: Replaced heavy system fonts with elegant Inter typeface
+  - Added Google Fonts integration with Inter as primary font
+  - Reduced base font-weight to 300 (light) for refined appearance
+  - Lightened all font-weight: 500 to 400 across all CSS files
+  - Modern, professional aesthetic matching current design trends
+- **Icon Consistency**: Replaced emoji with professional SVG icons
+  - Created calendar + pencil overlay SVG matching "Jump to Date" design language
+  - Updated "Only Days with Notes" menu item to use consistent inline SVG
+  - Maintained visual hierarchy with other menu items
+- **Version Synchronization**: Updated version display to match codebase
+  - Changed APP_VER from "Tamarindo 8.4" to "Avellanas 8.5"
+  - Ensured consistency across all file headers and documentation
+- **Bug Fixes**: Resolved column header display issues
+  - Fixed duplicate `formatDate` methods causing "NaN.INVALID DATE.NaN" errors
+  - Separated internal YYYY-MM-DD formatter from display YYYY.MMM.DD formatter
+  - Added comprehensive diagnostics for date filtering troubleshooting
+- **VALIDATION COMPLETE**: Journal view now works consistently across all filter modes and day counts, typography enhanced throughout app
