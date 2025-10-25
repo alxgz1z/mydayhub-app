@@ -103,6 +103,12 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
                 }
                 break;
                 
+            case 'searchEntries':
+                if ($method === 'GET' || $method === 'POST') {
+                    return handle_search_journal_entries($pdo, $userId, $data);
+                }
+                break;
+                
             default:
                 return ['status' => 'error', 'message' => 'Invalid action specified.'];
         }
@@ -1387,6 +1393,69 @@ function handle_toggle_journal_classification(PDO $pdo, int $userId, array $data
 
     } catch (Exception $e) {
         log_debug_message('Error in journal.php handle_toggle_journal_classification(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'A server error occurred.'];
+    }
+}
+
+/**
+ * Searches journal entries by title and content
+ */
+function handle_search_journal_entries(PDO $pdo, int $userId, array $data): array {
+    try {
+        $searchTerm = $data['search_term'] ?? '';
+        
+        if (empty($searchTerm)) {
+            return ['status' => 'error', 'message' => 'Search term is required.'];
+        }
+        
+        // Search in both title and content
+        $stmt = $pdo->prepare("
+            SELECT 
+                entry_id,
+                title,
+                content,
+                entry_date,
+                classification,
+                is_private,
+                created_at,
+                updated_at
+            FROM journal_entries 
+            WHERE user_id = :userId 
+            AND deleted_at IS NULL
+            AND (
+                title LIKE :searchTerm 
+                OR content LIKE :searchTerm
+            )
+            ORDER BY entry_date DESC, created_at DESC
+            LIMIT 50
+        ");
+        
+        $searchPattern = '%' . $searchTerm . '%';
+        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+        $stmt->bindParam(':searchTerm', $searchPattern, PDO::PARAM_STR);
+        $stmt->execute();
+        
+        $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        // Decrypt private entries if encryption is available
+        if (function_exists('decrypt_content')) {
+            foreach ($entries as &$entry) {
+                if ($entry['is_private'] && !empty($entry['content'])) {
+                    $decryptedContent = decrypt_content($entry['content']);
+                    if ($decryptedContent !== false) {
+                        $entry['content'] = $decryptedContent;
+                    }
+                }
+            }
+        }
+        
+        return [
+            'status' => 'success',
+            'data' => $entries
+        ];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in journal.php handle_search_journal_entries(): ' . $e->getMessage());
         return ['status' => 'error', 'message' => 'A server error occurred.'];
     }
 }

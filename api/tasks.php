@@ -302,6 +302,12 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		}
 		break;
 		
+		case 'searchTasks':
+			if ($method === 'GET' || $method === 'POST') {
+				handle_search_tasks($pdo, $userId, $data);
+			}
+			break;
+		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
@@ -2433,5 +2439,70 @@ function handle_leave_shared_task(PDO $pdo, int $userId, ?array $data): void {
 		}
 		log_debug_message("Error in handle_leave_shared_task: " . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred while leaving the shared task.'], 500);
+	}
+}
+
+/**
+ * Searches tasks by title and description
+ */
+function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
+	try {
+		$searchTerm = $data['search_term'] ?? '';
+		
+		if (empty($searchTerm)) {
+			send_json_response(['status' => 'error', 'message' => 'Search term is required.'], 400);
+			return;
+		}
+		
+		// Search in both task_title and task_description
+		$stmt = $pdo->prepare("
+			SELECT 
+				t.task_id,
+				t.task_title,
+				t.task_description,
+				t.classification,
+				t.is_private,
+				t.created_at,
+				t.updated_at,
+				c.column_name
+			FROM tasks t
+			LEFT JOIN columns c ON t.column_id = c.column_id
+			WHERE t.user_id = :userId 
+			AND t.deleted_at IS NULL
+			AND (
+				t.task_title LIKE :searchTerm 
+				OR t.task_description LIKE :searchTerm
+			)
+			ORDER BY t.created_at DESC
+			LIMIT 50
+		");
+		
+		$searchPattern = '%' . $searchTerm . '%';
+		$stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
+		$stmt->bindParam(':searchTerm', $searchPattern, PDO::PARAM_STR);
+		$stmt->execute();
+		
+		$tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		
+		// Decrypt private tasks if encryption is available
+		if (function_exists('decrypt_content')) {
+			foreach ($tasks as &$task) {
+				if ($task['is_private'] && !empty($task['task_description'])) {
+					$decryptedContent = decrypt_content($task['task_description']);
+					if ($decryptedContent !== false) {
+						$task['task_description'] = $decryptedContent;
+					}
+				}
+			}
+		}
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => $tasks
+		], 200);
+		
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_search_tasks(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }

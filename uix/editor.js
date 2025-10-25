@@ -705,6 +705,11 @@
 			return;
 		}
 		
+		if (action === 'search-notes') {
+			openSearchNotesModal();
+			return;
+		}
+		
 		if (action === 'clear') {
 			const confirmed = await showConfirm('Clear all note contents? This will be undoable.');
 			if (confirmed) {
@@ -1663,6 +1668,293 @@
 
 		// Setup Find & Replace listeners
 		setupFindReplaceListeners();
+		
+		// Setup Search modal listeners
+		setupSearchModalListeners();
+	}
+	
+	/**
+	 * Opens the search notes modal
+	 */
+	function openSearchNotesModal() {
+		const modal = document.getElementById('search-notes-modal');
+		if (!modal) {
+			console.error('Search notes modal not found');
+			return;
+		}
+		
+		modal.classList.remove('hidden');
+		
+		// Focus the search input
+		const searchInput = document.getElementById('search-notes-input');
+		if (searchInput) {
+			searchInput.focus();
+		}
+		
+		// Clear previous results
+		const resultsContainer = document.getElementById('search-results-container');
+		if (resultsContainer) {
+			resultsContainer.innerHTML = `
+				<div class="search-placeholder">
+					<p>Enter a search term to find related notes and tasks</p>
+				</div>
+			`;
+		}
+	}
+	
+	/**
+	 * Closes the search notes modal
+	 */
+	function closeSearchNotesModal() {
+		const modal = document.getElementById('search-notes-modal');
+		if (modal) {
+			modal.classList.add('hidden');
+		}
+	}
+	
+	/**
+	 * Performs search for notes and tasks
+	 */
+	async function performSearch() {
+		const searchInput = document.getElementById('search-notes-input');
+		const journalCheckbox = document.getElementById('search-journal-entries');
+		const tasksCheckbox = document.getElementById('search-tasks');
+		const resultsContainer = document.getElementById('search-results-container');
+		
+		if (!searchInput || !resultsContainer) {
+			console.error('Search elements not found');
+			return;
+		}
+		
+		const searchTerm = searchInput.value.trim();
+		if (!searchTerm) {
+			resultsContainer.innerHTML = `
+				<div class="search-placeholder">
+					<p>Enter a search term to find related notes and tasks</p>
+				</div>
+			`;
+			return;
+		}
+		
+		// Show loading state
+		resultsContainer.innerHTML = `
+			<div class="search-loading">
+				Searching notes and tasks...
+			</div>
+		`;
+		
+		try {
+			const results = await searchNotesAndTasks(searchTerm, {
+				includeJournal: journalCheckbox?.checked ?? true,
+				includeTasks: tasksCheckbox?.checked ?? true
+			});
+			
+			displaySearchResults(results, resultsContainer);
+		} catch (error) {
+			console.error('Search error:', error);
+			resultsContainer.innerHTML = `
+				<div class="search-no-results">
+					<p>Error searching notes and tasks. Please try again.</p>
+				</div>
+			`;
+		}
+	}
+	
+	/**
+	 * Searches notes and tasks via API
+	 */
+	async function searchNotesAndTasks(searchTerm, options = {}) {
+		const { includeJournal = true, includeTasks = true } = options;
+		
+		const searchPromises = [];
+		
+		if (includeJournal) {
+			searchPromises.push(
+				window.apiFetch({
+					module: 'journal',
+					action: 'searchEntries',
+					search_term: searchTerm
+				})
+			);
+		}
+		
+		if (includeTasks) {
+			searchPromises.push(
+				window.apiFetch({
+					module: 'tasks',
+					action: 'searchTasks',
+					search_term: searchTerm
+				})
+			);
+		}
+		
+		const results = await Promise.all(searchPromises);
+		
+		// Combine and sort results by date (descending)
+		const allResults = [];
+		
+		if (includeJournal && results[0]?.status === 'success') {
+			results[0].data.forEach(entry => {
+				allResults.push({
+					...entry,
+					type: 'journal',
+					sortDate: new Date(entry.entry_date)
+				});
+			});
+		}
+		
+		if (includeTasks && results[includeJournal ? 1 : 0]?.status === 'success') {
+			const taskResults = results[includeJournal ? 1 : 0];
+			taskResults.data.forEach(task => {
+				allResults.push({
+					...task,
+					type: 'task',
+					sortDate: new Date(task.created_at)
+				});
+			});
+		}
+		
+		// Sort by date descending
+		return allResults.sort((a, b) => b.sortDate - a.sortDate);
+	}
+	
+	/**
+	 * Displays search results in accordion format
+	 */
+	function displaySearchResults(results, container) {
+		if (!results || results.length === 0) {
+			container.innerHTML = `
+				<div class="search-no-results">
+					<p>No matching notes or tasks found.</p>
+				</div>
+			`;
+			return;
+		}
+		
+		const resultsHTML = results.map(result => {
+			const date = new Date(result.sortDate);
+			const formattedDate = date.toLocaleDateString('en-US', {
+				weekday: 'short',
+				month: 'short',
+				day: 'numeric',
+				year: 'numeric'
+			});
+			
+			const title = result.type === 'journal' ? result.title : result.task_title;
+			const content = result.type === 'journal' ? result.content : result.task_description;
+			
+			return `
+				<div class="search-result-item" data-type="${result.type}" data-id="${result.type === 'journal' ? result.entry_id : result.task_id}">
+					<div class="search-result-header">
+						<div class="search-result-title">
+							<span class="search-result-type ${result.type}">${result.type === 'journal' ? 'Journal' : 'Task'}</span>
+							<span class="search-result-name">${title}</span>
+						</div>
+						<div class="search-result-meta">
+							<div class="search-result-date">
+								<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+									<line x1="16" y1="2" x2="16" y2="6"/>
+									<line x1="8" y1="2" x2="8" y2="6"/>
+									<line x1="3" y1="10" x2="21" y2="10"/>
+								</svg>
+								${formattedDate}
+							</div>
+							<svg class="search-result-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+								<polyline points="6 9 12 15 18 9"></polyline>
+							</svg>
+						</div>
+					</div>
+					<div class="search-result-content">
+						<div class="search-result-body">
+							<div class="search-result-preview">${content || 'No content available'}</div>
+							<div class="search-result-actions">
+								<button class="search-result-copy" onclick="copySearchResult('${result.type}', '${result.type === 'journal' ? result.entry_id : result.task_id}')">
+									Copy Content
+								</button>
+							</div>
+						</div>
+					</div>
+				</div>
+			`;
+		}).join('');
+		
+		container.innerHTML = resultsHTML;
+		
+		// Add click handlers for accordion functionality
+		container.querySelectorAll('.search-result-header').forEach(header => {
+			header.addEventListener('click', () => {
+				const item = header.closest('.search-result-item');
+				item.classList.toggle('expanded');
+			});
+		});
+	}
+	
+	/**
+	 * Copies search result content to clipboard
+	 */
+	window.copySearchResult = async function(type, id) {
+		try {
+			// Get the content from the search result
+			const resultItem = document.querySelector(`[data-type="${type}"][data-id="${id}"]`);
+			const preview = resultItem?.querySelector('.search-result-preview');
+			
+			if (preview) {
+				await navigator.clipboard.writeText(preview.textContent);
+				showToast({ message: 'Content copied to clipboard', type: 'success' });
+			}
+		} catch (error) {
+			console.error('Copy error:', error);
+			showToast({ message: 'Failed to copy content', type: 'error' });
+		}
+	};
+	
+	/**
+	 * Sets up search modal event listeners
+	 */
+	function setupSearchModalListeners() {
+		// Open button
+		const openBtn = document.getElementById('editor-btn-search');
+		if (openBtn && !openBtn.hasAttribute('data-listener-added')) {
+			openBtn.addEventListener('click', openSearchNotesModal);
+			openBtn.setAttribute('data-listener-added', 'true');
+		}
+		
+		// Close button
+		const closeBtn = document.getElementById('btn-close-search-notes');
+		if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
+			closeBtn.addEventListener('click', closeSearchNotesModal);
+			closeBtn.setAttribute('data-listener-added', 'true');
+		}
+		
+		// Search button
+		const searchBtn = document.getElementById('btn-search-notes');
+		if (searchBtn && !searchBtn.hasAttribute('data-listener-added')) {
+			searchBtn.addEventListener('click', performSearch);
+			searchBtn.setAttribute('data-listener-added', 'true');
+		}
+		
+		// Search input enter key
+		const searchInput = document.getElementById('search-notes-input');
+		if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
+			searchInput.addEventListener('keypress', (e) => {
+				if (e.key === 'Enter') {
+					performSearch();
+				}
+			});
+			searchInput.setAttribute('data-listener-added', 'true');
+		}
+		
+		// Close on overlay click
+		const modal = document.getElementById('search-notes-modal');
+		if (modal && !modal.hasAttribute('data-listener-added')) {
+			modal.addEventListener('click', (e) => {
+				if (e.target === modal) {
+					closeSearchNotesModal();
+				}
+			});
+			modal.setAttribute('data-listener-added', 'true');
+		}
 	}
 
 	document.addEventListener('DOMContentLoaded', init);

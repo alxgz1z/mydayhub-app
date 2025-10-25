@@ -257,6 +257,208 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				padding: 0 1rem 1rem 3rem;
 			}
 		}
+		
+		/* Search Notes Modal Styles */
+		.search-modal-content {
+			max-width: 1000px;
+			width: 90vw;
+			max-height: 90vh;
+			overflow-y: auto;
+		}
+		
+		.search-input-section {
+			margin-bottom: 1.5rem;
+		}
+		
+		.search-input-group {
+			display: flex;
+			gap: 0.75rem;
+			margin-bottom: 1rem;
+		}
+		
+		#search-notes-input {
+			flex: 1;
+			padding: 0.75rem;
+			border: 1px solid var(--border-color);
+			border-radius: 0.5rem;
+			background: var(--input-bg);
+			color: var(--text-primary);
+			font-size: 1rem;
+		}
+		
+		#search-notes-input:focus {
+			outline: none;
+			border-color: var(--accent-color);
+			box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+		}
+		
+		.search-options {
+			display: flex;
+			gap: 1.5rem;
+		}
+		
+		.search-results-section {
+			border-top: 1px solid var(--border-color);
+			padding-top: 1.5rem;
+		}
+		
+		.search-placeholder {
+			text-align: center;
+			color: var(--text-secondary);
+			padding: 2rem;
+		}
+		
+		.search-result-item {
+			background: var(--card-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 0.5rem;
+			margin-bottom: 0.75rem;
+			overflow: hidden;
+			transition: all 0.2s ease;
+		}
+		
+		.search-result-item:hover {
+			border-color: var(--accent-color);
+			box-shadow: 0 2px 8px rgba(34, 197, 94, 0.1);
+		}
+		
+		.search-result-header {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding: 1rem 1.25rem;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+		
+		.search-result-header:hover {
+			background-color: var(--hover-bg);
+		}
+		
+		.search-result-title {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+			flex: 1;
+		}
+		
+		.search-result-type {
+			background: var(--accent-color);
+			color: white;
+			padding: 0.25rem 0.5rem;
+			border-radius: 0.25rem;
+			font-size: 0.75rem;
+			font-weight: 500;
+		}
+		
+		.search-result-type.journal {
+			background: #3b82f6;
+		}
+		
+		.search-result-type.task {
+			background: #8b5cf6;
+		}
+		
+		.search-result-meta {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			color: var(--text-secondary);
+			font-size: 0.875rem;
+		}
+		
+		.search-result-date {
+			display: flex;
+			align-items: center;
+			gap: 0.25rem;
+		}
+		
+		.search-result-chevron {
+			width: 16px;
+			height: 16px;
+			color: var(--text-secondary);
+			transition: transform 0.2s ease;
+		}
+		
+		.search-result-item.expanded .search-result-chevron {
+			transform: rotate(180deg);
+		}
+		
+		.search-result-content {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.3s ease;
+		}
+		
+		.search-result-item.expanded .search-result-content {
+			max-height: 500px;
+		}
+		
+		.search-result-body {
+			padding: 0 1.25rem 1.25rem;
+			border-top: 1px solid var(--border-color);
+		}
+		
+		.search-result-preview {
+			background: var(--bg-color);
+			border: 1px solid var(--border-color);
+			border-radius: 0.375rem;
+			padding: 1rem;
+			margin-bottom: 0.75rem;
+			font-family: 'Inter', monospace;
+			font-size: 0.875rem;
+			line-height: 1.5;
+			max-height: 200px;
+			overflow-y: auto;
+		}
+		
+		.search-result-actions {
+			display: flex;
+			gap: 0.5rem;
+		}
+		
+		.search-result-copy {
+			background: var(--accent-color);
+			color: white;
+			border: none;
+			padding: 0.5rem 1rem;
+			border-radius: 0.375rem;
+			font-size: 0.875rem;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+		
+		.search-result-copy:hover {
+			background: #16a34a;
+		}
+		
+		.search-no-results {
+			text-align: center;
+			color: var(--text-secondary);
+			padding: 2rem;
+		}
+		
+		.search-loading {
+			text-align: center;
+			color: var(--text-secondary);
+			padding: 2rem;
+		}
+		
+		.search-loading::after {
+			content: '';
+			display: inline-block;
+			width: 20px;
+			height: 20px;
+			border: 2px solid var(--border-color);
+			border-radius: 50%;
+			border-top-color: var(--accent-color);
+			animation: spin 1s linear infinite;
+			margin-left: 0.5rem;
+		}
+		
+		@keyframes spin {
+			to { transform: rotate(360deg); }
+		}
 	</style>
 	<link rel="stylesheet" href="uix/journal.css">
 	<script>
@@ -704,6 +906,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon" title="Undo (Ctrl+Z / Cmd+Z)" id="editor-btn-undo" data-action="undo">↶</button>
 								<button class="btn-icon" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" id="editor-btn-redo" data-action="redo">↷</button>
 								<button class="btn-icon" title="Toggle Line Numbers" id="editor-btn-line-numbers" data-action="toggle-line-numbers">⎖</button>
+								<button class="btn-icon" title="Search Notes & Tasks" id="editor-btn-search" data-action="search-notes">🔍</button>
 								<span class="button-separator"></span>
 								<button class="btn-icon" title="Bold (**text**)" data-action="markdown-bold">**</button>
 								<button class="btn-icon" title="Italic (_text_)" data-action="markdown-italic">_</button>
@@ -2016,6 +2219,41 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							</div>
 						</div>
 						
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Search Notes & Tasks Modal -->
+	<div id="search-notes-modal" class="modal hidden">
+		<div class="modal-content search-modal-content">
+			<div class="modal-header">
+				<h3>Search Notes & Tasks</h3>
+				<button class="btn-icon btn-close" id="btn-close-search-notes">&times;</button>
+			</div>
+			<div class="modal-body">
+				<div class="search-input-section">
+					<div class="search-input-group">
+						<input type="text" id="search-notes-input" placeholder="Search journal entries and tasks..." autocomplete="off">
+						<button class="btn btn-primary" id="btn-search-notes">Search</button>
+					</div>
+					<div class="search-options">
+						<label class="checkbox-label">
+							<input type="checkbox" id="search-journal-entries" checked>
+							<span>Journal Entries</span>
+						</label>
+						<label class="checkbox-label">
+							<input type="checkbox" id="search-tasks" checked>
+							<span>Tasks</span>
+						</label>
+					</div>
+				</div>
+				<div class="search-results-section">
+					<div id="search-results-container">
+						<div class="search-placeholder">
+							<p>Enter a search term to find related notes and tasks</p>
+						</div>
 					</div>
 				</div>
 			</div>
