@@ -20,9 +20,13 @@ class JournalView {
         this.isLoading = false;
         this.isMobile = window.innerWidth < 768; // Mobile breakpoint
         
-        this.init();
+        // Setup event listeners first (doesn't need async)
+        this.setupEventListeners();
         this.setupResponsiveHandling();
         this.setupHeaderControls();
+        
+        // Load preferences and render (this is async, so it happens after constructor completes)
+        this.init();
     }
     
     /**
@@ -382,7 +386,6 @@ class JournalView {
     
     async init() {
         await this.loadPreferences();
-        this.setupEventListeners();
         this.renderJournalView();
     }
     
