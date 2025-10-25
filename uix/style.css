@@ -22,7 +22,7 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 20000; /* Much higher than all other elements */
+	z-index: 20000 !important; /* Much higher than all other elements */
 }
 
 .modal-content {
