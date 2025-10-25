@@ -1803,6 +1803,10 @@
 		
 		if (includeJournal && results[0]?.status === 'success') {
 			results[0].data.forEach(entry => {
+				// Exclude currently open entry
+				if (state.currentKind === 'journal' && state.currentTaskId === entry.entry_id) {
+					return;
+				}
 				allResults.push({
 					...entry,
 					type: 'journal',
@@ -1814,6 +1818,10 @@
 		if (includeTasks && results[includeJournal ? 1 : 0]?.status === 'success') {
 			const taskResults = results[includeJournal ? 1 : 0];
 			taskResults.data.forEach(task => {
+				// Exclude currently open task
+				if (state.currentKind === 'task' && state.currentTaskId === task.task_id) {
+					return;
+				}
 				allResults.push({
 					...task,
 					type: 'task',
