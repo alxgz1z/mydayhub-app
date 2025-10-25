@@ -27,26 +27,13 @@
 	pointer-events: none;
 }
 
-/* When search panel is visible, constrain editor height */
-#unified-editor-overlay:not(.hidden) ~ #search-results-panel:not(.hidden) {
-	/* Search panel is visible, editor should take less space */
-}
-
-#unified-editor-overlay:not(.hidden) ~ #search-results-panel:not(.hidden) + * {
-	/* This rule doesn't work with + selector, need different approach */
-}
-
 #unified-editor-container {
-	background: #1a1a1a;
-	border: 1px solid #333;
-	border-radius: 20px;
-	box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-	width: 85vw;
-	height: 85vh;
-	max-width: 1000px;
+	position: relative;
+	width: 100%;
+	height: 100%;
 	display: flex;
 	flex-direction: column;
-	overflow: hidden;
+	background: var(--card-bg);
 }
 
 #unified-editor-container.is-maximized {
@@ -1255,4 +1242,73 @@
 .btn-small:active {
 	transform: scale(0.98);
 	background: rgba(74, 158, 255, 0.3);
+}
+
+/* Search Drawer Styles */
+.search-drawer {
+	border-top: 1px solid #333;
+	background: #1a1a1a;
+	display: flex;
+	flex-direction: column;
+	max-height: 40vh;
+	overflow: hidden;
+	transition: max-height 0.3s ease, opacity 0.3s ease;
+	opacity: 1;
+}
+
+.search-drawer.hidden {
+	max-height: 0;
+	opacity: 0;
+	border: none;
+}
+
+.search-drawer-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.75rem 1rem;
+	border-bottom: 1px solid #333;
+	background: #0d0d0d;
+	gap: 1rem;
+}
+
+.search-drawer-header h3 {
+	margin: 0;
+	font-size: 0.9rem;
+	color: #e0e0e0;
+	font-weight: 500;
+}
+
+.search-drawer-controls {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.search-drawer-input {
+	padding: 0.5rem 0.75rem;
+	border: 1px solid #333;
+	border-radius: 4px;
+	background: #262626;
+	color: #e0e0e0;
+	font-size: 0.875rem;
+	width: 250px;
+}
+
+.search-drawer-input:focus {
+	outline: none;
+	border-color: #4a9eff;
+	background: #2a2a2a;
+}
+
+.search-drawer-content {
+	flex: 1;
+	overflow-y: auto;
+	padding: 1rem;
+}
+
+.search-drawer .search-placeholder {
+	text-align: center;
+	color: #888;
+	padding: 2rem 1rem;
 }

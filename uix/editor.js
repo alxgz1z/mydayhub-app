@@ -1683,35 +1683,24 @@
 	 */
 	function openSearchNotesModal() {
 		console.log('openSearchNotesModal called');
-		const panel = document.getElementById('search-results-panel');
-		const overlay = document.getElementById('unified-editor-overlay');
-		console.log('Search panel found:', panel);
-		console.log('Panel classes before:', panel?.className);
-		if (!panel) {
-			console.error('Search panel not found');
+		const drawer = document.getElementById('search-results-drawer');
+		console.log('Search drawer found:', drawer);
+		if (!drawer) {
+			console.error('Search drawer not found');
 			return;
 		}
 		
-		console.log('Opening search panel...');
-		panel.classList.remove('hidden');
-		
-		// Adjust editor overlay height to make room for panel
-		if (overlay && !overlay.classList.contains('hidden')) {
-			const panelHeight = 400; // 40vh = ~400px
-			overlay.style.height = `calc(100vh - ${panelHeight}px)`;
-			overlay.style.maxHeight = `calc(100vh - ${panelHeight}px)`;
-		}
-		
-		console.log('Panel classes after:', panel?.className);
+		console.log('Opening search drawer...');
+		drawer.classList.remove('hidden');
 		
 		// Focus the search input
-		const searchInput = document.getElementById('search-panel-input');
+		const searchInput = document.getElementById('search-drawer-input');
 		if (searchInput) {
 			searchInput.focus();
 		}
 		
 		// Clear previous results
-		const resultsContainer = document.getElementById('search-panel-content');
+		const resultsContainer = document.getElementById('search-drawer-content');
 		if (resultsContainer) {
 			resultsContainer.innerHTML = `
 				<div class="search-placeholder">
@@ -1725,16 +1714,9 @@
 	 * Closes the search notes panel
 	 */
 	function closeSearchNotesModal() {
-		const panel = document.getElementById('search-results-panel');
-		const overlay = document.getElementById('unified-editor-overlay');
-		if (panel) {
-			panel.classList.add('hidden');
-			
-			// Restore editor overlay to full height
-			if (overlay && !overlay.classList.contains('hidden')) {
-				overlay.style.height = '100%';
-				overlay.style.maxHeight = '100%';
-			}
+		const drawer = document.getElementById('search-results-drawer');
+		if (drawer) {
+			drawer.classList.add('hidden');
 		}
 	}
 	
@@ -1742,10 +1724,10 @@
 	 * Performs search for notes and tasks
 	 */
 	async function performSearch() {
-		const searchInput = document.getElementById('search-panel-input');
+		const searchInput = document.getElementById('search-drawer-input');
 		const journalCheckbox = document.getElementById('search-journal-entries');
 		const tasksCheckbox = document.getElementById('search-tasks');
-		const resultsContainer = document.getElementById('search-panel-content');
+		const resultsContainer = document.getElementById('search-drawer-content');
 		
 		if (!searchInput || !resultsContainer) {
 			console.error('Search elements not found');
@@ -1939,27 +1921,24 @@
 	 * Sets up search modal event listeners
 	 */
 	function setupSearchModalListeners() {
-		console.log('Setting up search modal listeners...');
-		
-		// Note: Search button is handled by handleFormatAction via data-action="search-notes"
-		// No need for separate click listener
+		console.log('Setting up search drawer listeners...');
 		
 		// Close button
-		const closeBtn = document.getElementById('btn-close-search-panel');
+		const closeBtn = document.getElementById('btn-close-search-drawer');
 		if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
 			closeBtn.addEventListener('click', closeSearchNotesModal);
 			closeBtn.setAttribute('data-listener-added', 'true');
 		}
 		
-		// Search button (in panel)
-		const searchBtn = document.getElementById('btn-search-notes');
+		// Search button (in drawer)
+		const searchBtn = document.getElementById('btn-search-drawer');
 		if (searchBtn && !searchBtn.hasAttribute('data-listener-added')) {
 			searchBtn.addEventListener('click', performSearch);
 			searchBtn.setAttribute('data-listener-added', 'true');
 		}
 		
 		// Search input enter key
-		const searchInput = document.getElementById('search-panel-input');
+		const searchInput = document.getElementById('search-drawer-input');
 		if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
 			searchInput.addEventListener('keypress', (e) => {
 				if (e.key === 'Enter') {
@@ -1967,17 +1946,6 @@
 				}
 			});
 			searchInput.setAttribute('data-listener-added', 'true');
-		}
-		
-		// Close on overlay click
-		const modal = document.getElementById('search-notes-modal');
-		if (modal && !modal.hasAttribute('data-listener-added')) {
-			modal.addEventListener('click', (e) => {
-				if (e.target === modal) {
-					closeSearchNotesModal();
-				}
-			});
-			modal.setAttribute('data-listener-added', 'true');
 		}
 	}
 

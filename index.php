@@ -1094,6 +1094,23 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				</div>
 				<div id="editor-save-status">Last saved: Never</div>
 			</div>
+
+			<!-- Search Drawer (slides down from editor) -->
+			<div id="search-results-drawer" class="search-drawer hidden">
+				<div class="search-drawer-header">
+					<h3>Search Results</h3>
+					<div class="search-drawer-controls">
+						<input type="text" id="search-drawer-input" placeholder="Search..." class="search-drawer-input">
+						<button class="btn btn-primary" id="btn-search-drawer" title="Search">Search</button>
+						<button class="btn-icon" id="btn-close-search-drawer" title="Close">✕</button>
+					</div>
+				</div>
+				<div id="search-drawer-content" class="search-drawer-content">
+					<div class="search-placeholder">
+						<p>Enter a search term to find related notes and tasks</p>
+					</div>
+				</div>
+			</div>
 		</div>
 	</div>
 
