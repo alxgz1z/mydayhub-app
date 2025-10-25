@@ -72,6 +72,192 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link rel="stylesheet" href="uix/editor.css?v=8.5">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
+	
+	<style>
+		/* User Guide Modal Styles */
+		.user-guide-modal-content {
+			max-width: 900px;
+			width: 90vw;
+			max-height: 90vh;
+			overflow-y: auto;
+		}
+		
+		.user-guide-modal-body {
+			padding: 0;
+		}
+		
+		.user-guide-container {
+			padding: 2rem;
+		}
+		
+		.guide-header {
+			text-align: center;
+			padding: 2rem 0 3rem;
+			border-bottom: 2px solid var(--border-color);
+			margin-bottom: 2rem;
+		}
+		
+		.guide-header h1 {
+			color: var(--accent-color);
+			font-size: 2.5rem;
+			font-weight: 600;
+			margin: 1rem 0 0.5rem;
+		}
+		
+		.guide-header p {
+			color: var(--text-secondary);
+			font-size: 1.1rem;
+			margin: 0;
+		}
+		
+		.guide-logo {
+			width: 64px;
+			height: 64px;
+			margin: 0 auto 1rem;
+			display: block;
+		}
+		
+		.accordion {
+			display: flex;
+			flex-direction: column;
+			gap: 1rem;
+		}
+		
+		.accordion-item {
+			background: var(--card-bg);
+			border: 1px solid var(--border-color);
+			border-radius: 0.5rem;
+			overflow: hidden;
+			transition: all 0.3s ease;
+		}
+		
+		.accordion-item:hover {
+			border-color: var(--accent-color);
+			box-shadow: 0 4px 12px rgba(34, 197, 94, 0.1);
+		}
+		
+		.accordion-header {
+			display: flex;
+			align-items: center;
+			gap: 1rem;
+			padding: 1.25rem 1.5rem;
+			cursor: pointer;
+			transition: background-color 0.2s ease;
+		}
+		
+		.accordion-header:hover {
+			background-color: var(--hover-bg);
+		}
+		
+		.accordion-icon {
+			width: 24px;
+			height: 24px;
+			color: var(--accent-color);
+			flex-shrink: 0;
+		}
+		
+		.accordion-title {
+			font-size: 1.1rem;
+			font-weight: 500;
+			color: var(--text-primary);
+			flex: 1;
+		}
+		
+		.accordion-chevron {
+			width: 20px;
+			height: 20px;
+			color: var(--text-secondary);
+			transition: transform 0.3s ease;
+		}
+		
+		.accordion-item.active .accordion-chevron {
+			transform: rotate(180deg);
+		}
+		
+		.accordion-content {
+			max-height: 0;
+			overflow: hidden;
+			transition: max-height 0.4s ease, padding 0.4s ease;
+		}
+		
+		.accordion-item.active .accordion-content {
+			max-height: 2000px;
+		}
+		
+		.accordion-body {
+			padding: 0 1.5rem 1.5rem 5rem;
+			color: var(--text-primary);
+			line-height: 1.7;
+		}
+		
+		.accordion-body h3 {
+			color: var(--accent-color);
+			font-size: 1.2rem;
+			font-weight: 600;
+			margin: 1.5rem 0 0.75rem;
+		}
+		
+		.accordion-body h4 {
+			color: var(--text-primary);
+			font-size: 1.1rem;
+			font-weight: 500;
+			margin: 1.25rem 0 0.5rem;
+		}
+		
+		.accordion-body ul, .accordion-body ol {
+			margin: 0.75rem 0;
+			padding-left: 1.5rem;
+		}
+		
+		.accordion-body li {
+			margin: 0.5rem 0;
+		}
+		
+		.accordion-body p {
+			margin: 0.75rem 0;
+		}
+		
+		.tip-box, .warning-box {
+			padding: 1rem;
+			border-radius: 0.5rem;
+			margin: 1rem 0;
+			border-left: 4px solid;
+		}
+		
+		.tip-box {
+			background-color: rgba(34, 197, 94, 0.1);
+			border-left-color: var(--accent-color);
+		}
+		
+		.warning-box {
+			background-color: rgba(239, 68, 68, 0.1);
+			border-left-color: #ef4444;
+		}
+		
+		.tip-box strong, .warning-box strong {
+			font-weight: 600;
+		}
+		
+		/* Responsive adjustments */
+		@media (max-width: 768px) {
+			.user-guide-modal-content {
+				width: 95vw;
+				max-height: 95vh;
+			}
+			
+			.user-guide-container {
+				padding: 1rem;
+			}
+			
+			.guide-header h1 {
+				font-size: 2rem;
+			}
+			
+			.accordion-body {
+				padding: 0 1rem 1rem 3rem;
+			}
+		}
+	</style>
 	<link rel="stylesheet" href="uix/journal.css">
 	<script>
 		window.MyDayHub_Config = {
@@ -384,7 +570,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				</div>
 				<div class="setting-item">
 					<div class="setting-control">
-						<button type="button" id="btn-user-guide" class="btn" onclick="window.open('<?php echo APP_URL; ?>/incs/userguide.php', '_blank')">
+						<button type="button" id="btn-user-guide" class="btn">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
 								<circle cx="12" cy="12" r="10"></circle>
 								<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
@@ -1230,6 +1416,608 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<button type="button" id="btn-import-cancel" class="btn">Cancel</button>
 				<button type="button" id="btn-import-preview" class="btn btn-secondary" disabled>Preview</button>
 				<button type="button" id="btn-import-execute" class="btn btn-primary" disabled>Import Events</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- User Guide Modal -->
+	<div id="user-guide-modal" class="modal hidden">
+		<div class="modal-content user-guide-modal-content">
+			<div class="modal-header">
+				<h3>MyDayHub User Guide</h3>
+				<button class="btn-icon btn-close" id="btn-close-user-guide">&times;</button>
+			</div>
+			<div class="modal-body user-guide-modal-body">
+				<div class="user-guide-container">
+					<div class="guide-header">
+						<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="MyDayHub Logo" class="guide-logo">
+						<h1>MyDayHub User Guide</h1>
+						<p>Your comprehensive guide to mastering productivity with privacy</p>
+					</div>
+					
+					<div class="accordion">
+						
+						<!-- Section 1: Getting Started -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M12 2L2 7l10 5 10-5-10-5z"/>
+									<path d="M2 17l10 5 10-5M2 12l10 5 10-5"/>
+								</svg>
+								<span class="accordion-title">Getting Started</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<p>Welcome to MyDayHub! This guide will help you understand and make the most of your privacy-focused productivity hub.</p>
+									
+									<h3>What is MyDayHub?</h3>
+									<p>MyDayHub is a privacy-first productivity application designed to help you focus on what truly matters. Unlike traditional task managers, MyDayHub emphasizes <strong>signal over noise</strong>—helping you distinguish between work that advances your mission and work that merely keeps you busy.</p>
+									
+									<h3>Key Features</h3>
+									<ul>
+										<li><strong>Tasks View:</strong> Kanban-style board with flexible columns and intelligent task classification</li>
+										<li><strong>Journal View:</strong> Daily entries organized by date for reflection and planning</li>
+										<li><strong>Privacy-First:</strong> Optional zero-knowledge encryption for sensitive content</li>
+										<li><strong>Collaboration:</strong> Controlled sharing with permission management</li>
+										<li><strong>Calendar Overlays:</strong> Contextual date information without disrupting your workflow</li>
+									</ul>
+									
+									<div class="tip-box">
+										<strong>💡 Tip:</strong> Start with the Tasks view to organize your work, then use the Journal view for daily reflections and planning.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 2: Understanding Task Classification -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+									<polyline points="22 4 12 14.01 9 11.01"></polyline>
+								</svg>
+								<span class="accordion-title">Task Classification: Signal, Support & Backlog</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<p>MyDayHub uses a three-tier classification system to help you focus on what truly matters:</p>
+									
+									<h3>Signal (Green) - Mission-Critical Work</h3>
+									<p>Tasks that directly advance your most important goals. These are your highest priority items that move the needle on your mission.</p>
+									<ul>
+										<li>Strategic projects that create lasting value</li>
+										<li>Work that builds your reputation or expertise</li>
+										<li>Tasks that open new opportunities</li>
+										<li>Activities that align with your core values</li>
+									</ul>
+									
+									<h3>Support (Blue) - Necessary Maintenance</h3>
+									<p>Important tasks that keep things running smoothly but don't directly advance your mission.</p>
+									<ul>
+										<li>Administrative tasks and paperwork</li>
+										<li>Routine maintenance and updates</li>
+										<li>Meeting preparation and follow-ups</li>
+										<li>System maintenance and organization</li>
+									</ul>
+									
+									<h3>Backlog (Gray) - Future Possibilities</h3>
+									<p>Tasks that might be valuable someday but aren't urgent or directly mission-critical.</p>
+									<ul>
+										<li>Nice-to-have improvements</li>
+										<li>Future research and exploration</li>
+										<li>Optional enhancements</li>
+										<li>Low-priority maintenance</li>
+									</ul>
+									
+									<div class="tip-box">
+										<strong>💡 Pro Tip:</strong> Aim for 70% Signal, 20% Support, and 10% Backlog. This ratio ensures you're focused on mission-critical work while maintaining necessary systems.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 3: Working with Tasks & Columns -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+									<polyline points="14 2 14 8 20 8"/>
+									<line x1="16" y1="13" x2="8" y2="13"/>
+									<line x1="16" y1="17" x2="8" y2="17"/>
+									<polyline points="10 9 9 9 8 9"/>
+								</svg>
+								<span class="accordion-title">Working with Tasks & Columns</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<h3>Creating Tasks</h3>
+									<ol>
+										<li>Click <strong>"+ New Task"</strong> at the bottom of any column</li>
+										<li>Type your task title and press Enter</li>
+										<li>Click the task to add detailed notes, due dates, or attachments</li>
+										<li>Use the classification menu to set Signal/Support/Backlog</li>
+									</ol>
+									
+									<h3>Managing Columns</h3>
+									<ul>
+										<li><strong>Create:</strong> Click the "+" button in the header</li>
+										<li><strong>Rename:</strong> Click the column title to edit</li>
+										<li><strong>Reorder:</strong> Drag columns by their headers</li>
+										<li><strong>Delete:</strong> Use the column menu (⋮) → Delete</li>
+									</ul>
+									
+									<h3>Moving Tasks</h3>
+									<p><strong>Desktop:</strong> Drag and drop tasks between columns or within columns to reorder</p>
+									<p><strong>Mobile:</strong> Use the task menu (⋮) → Move, then select destination</p>
+									
+									<h3>Keyboard Shortcuts</h3>
+									<ul>
+										<li><strong>Enter:</strong> Create new task in focused column</li>
+										<li><strong>Escape:</strong> Cancel current action</li>
+										<li><strong>Tab:</strong> Move between columns</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 4: Privacy & Zero-Knowledge Encryption -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+									<circle cx="12" cy="16" r="1"/>
+									<path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+								</svg>
+								<span class="accordion-title">Privacy & Zero-Knowledge Encryption</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<p>MyDayHub offers optional zero-knowledge encryption to protect your most sensitive information.</p>
+									
+									<h3>Setting Up Encryption</h3>
+									<ol>
+										<li>Go to Settings → <strong>"Privacy & Encryption"</strong></li>
+										<li>Click <strong>"Set Up Encryption"</strong></li>
+										<li>Create security questions for recovery</li>
+										<li>Your encryption is now active!</li>
+									</ol>
+									
+									<h3>Using Private Items</h3>
+									<ul>
+										<li>Toggle the lock icon on any task or journal entry</li>
+										<li>Private items are encrypted before storage</li>
+										<li>Only you can decrypt and view private content</li>
+										<li>Private items cannot be shared with others</li>
+									</ul>
+									
+									<h3>Recovery</h3>
+									<p>If you forget your password, use your security questions to recover access to your encrypted data.</p>
+									
+									<div class="warning-box">
+										<strong>⚠️ Important:</strong> If you change your password, old encrypted data becomes unrecoverable. This is by design for maximum security.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 5: Sharing & Collaboration -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+									<circle cx="9" cy="7" r="4"/>
+									<path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>
+								</svg>
+								<span class="accordion-title">Sharing & Collaboration</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<p>Share tasks and journal entries with team members while maintaining control over your data.</p>
+									
+									<h3>Sharing Tasks</h3>
+									<ol>
+										<li>Click the task menu (⋮) → <strong>"Share"</strong></li>
+										<li>Enter the recipient's email address</li>
+										<li>Choose permission level: View or Edit</li>
+										<li>Recipient receives email with access link</li>
+									</ol>
+									
+									<h3>Permission Levels</h3>
+									<ul>
+										<li><strong>View:</strong> Can see task content but cannot edit</li>
+										<li><strong>Edit:</strong> Can modify task content and classification</li>
+									</ul>
+									
+									<h3>Ready-for-Review Workflow</h3>
+									<p>Recipients can mark shared items as "Ready for Review" to notify you when they've completed their work.</p>
+									
+									<h3>Managing Shares</h3>
+									<ul>
+										<li>View all your shared items in Settings</li>
+										<li>Revoke access at any time</li>
+										<li>Change permission levels</li>
+										<li>See who has access to your items</li>
+									</ul>
+									
+									<div class="tip-box">
+										<strong>💡 Best Practice:</strong> Only share non-private items. Private items remain encrypted and cannot be shared for security reasons.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 6: Journal View -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+									<polyline points="14 2 14 8 20 8"/>
+									<line x1="16" y1="13" x2="8" y2="13"/>
+									<line x1="16" y1="17" x2="8" y2="17"/>
+									<polyline points="10 9 9 9 8 9"/>
+								</svg>
+								<span class="accordion-title">Journal View & Daily Entries</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<p>The Journal view provides a date-based organization system for daily reflections, planning, and notes.</p>
+									
+									<h3>Accessing Journal View</h3>
+									<p>Click the <strong>"Journal"</strong> tab in the header to switch from Tasks to Journal view. Each date gets its own column, displayed horizontally with the most recent dates on the right.</p>
+									
+									<h3>View Modes & Filtering</h3>
+									<p>Customize your journal view with flexible display options:</p>
+									<ul>
+										<li><strong>Day Count:</strong> Choose 1-day, 3-day, or 5-day views (mobile automatically uses 1-day)</li>
+										<li><strong>Filter Modes:</strong>
+											<ul>
+												<li><strong>Show All Days:</strong> Display all dates including weekends</li>
+												<li><strong>Weekdays Only:</strong> Hide Saturday and Sunday columns</li>
+												<li><strong>Only Days with Notes:</strong> Show only dates that have journal entries</li>
+											</ul>
+										</li>
+										<li><strong>Navigation:</strong> Use < and > buttons in column headers or << >> buttons in the footer menu</li>
+									</ul>
+									
+									<h3>Creating Journal Entries</h3>
+									<ol>
+										<li>Navigate to the desired date column</li>
+										<li>Click <strong>"+ New Entry"</strong> at the bottom</li>
+										<li>Enter your entry title</li>
+										<li>Press Enter to create</li>
+										<li>Click the entry to add detailed notes</li>
+									</ol>
+									
+									<h3>Journal Entry Features</h3>
+									<ul>
+										<li><strong>Rich Notes:</strong> Use the full editor for detailed content with Markdown support</li>
+										<li><strong>Classification:</strong> Organize entries as Signal, Support, or Backlog (matching task classification)</li>
+										<li><strong>Privacy:</strong> Make entries private with encryption</li>
+										<li><strong>Organization:</strong> Entries automatically sort by date</li>
+										<li><strong>Navigation:</strong> Scroll horizontally to see past and future dates</li>
+										<li><strong>Drag & Drop:</strong> Move entries between date columns</li>
+									</ul>
+									
+									<h3>Linking Tasks to Journal Entries</h3>
+									<p>Connect tasks to specific journal entries to track daily progress:</p>
+									<ul>
+										<li>Reference task IDs in journal notes</li>
+										<li>Use journal entries to plan daily task priorities</li>
+										<li>Review completed tasks in daily reflections</li>
+									</ul>
+									
+									<h3>Best Practices for Journaling</h3>
+									<ul>
+										<li><strong>Morning Planning:</strong> Start each day by reviewing priorities in a new journal entry</li>
+										<li><strong>Evening Reflection:</strong> End each day by noting accomplishments and learnings</li>
+										<li><strong>Weekly Reviews:</strong> Use Sunday/Monday entries for weekly planning</li>
+										<li><strong>Private Thoughts:</strong> Toggle sensitive entries to private for personal reflections</li>
+									</ul>
+									
+									<div class="tip-box">
+										<strong>💡 Power User Tip:</strong> Use journal entries to track your Signal task progress. Each evening, note which Signal tasks advanced and which obstacles you overcame. This creates a valuable record of your mission progress over time.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 7: Advanced Features -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="12" cy="12" r="3"/>
+									<path d="M12 1v6m0 6v6M5.64 5.64l4.24 4.24m4.24 4.24l4.24 4.24M1 12h6m6 0h6M5.64 18.36l4.24-4.24m4.24-4.24l4.24-4.24"/>
+								</svg>
+								<span class="accordion-title">Advanced Features</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<h3>Task Snoozing</h3>
+									<p>Temporarily hide tasks until a specific date:</p>
+									<ul>
+										<li>Click task menu (⋮) → <strong>"Snooze"</strong></li>
+										<li>Choose preset duration (1 week, 1 month, 1 quarter)</li>
+										<li>Or select a custom date</li>
+										<li>Task becomes semi-transparent and moves to Backlog classification</li>
+										<li>Automatically unsnoozes at 9 AM on the scheduled date</li>
+									</ul>
+									
+									<h3>File Attachments</h3>
+									<p>Add images and PDFs to tasks:</p>
+									<ul>
+										<li>Supported formats: JPEG, PNG, GIF, WebP, PDF</li>
+										<li>Maximum file size: 5MB per file</li>
+										<li>Access via task menu (⋮) → <strong>"Manage Files"</strong></li>
+										<li>Upload by browsing or drag-and-drop</li>
+										<li>View in-app (images) or new tab (PDFs)</li>
+									</ul>
+									
+									<h3>Calendar Overlays</h3>
+									<p>Add contextual calendar information without cluttering your workflow:</p>
+									<ul>
+										<li>Access via Settings → <strong>"Calendar Overlays"</strong></li>
+										<li>Create fiscal calendars, holidays, birthdays, custom events</li>
+										<li>Events appear as badges in the header</li>
+										<li>Import/export via JSON for bulk management</li>
+										<li>Set priorities to control which events display</li>
+									</ul>
+									
+									<h3>Mission Focus Chart</h3>
+									<p>Visualize your task distribution:</p>
+									<ul>
+										<li>Small doughnut chart in the header</li>
+										<li>Shows Signal/Support/Backlog proportions</li>
+										<li>Hover to see exact percentages</li>
+										<li>Toggle visibility in Settings</li>
+										<li>Updates in real-time as you work</li>
+									</ul>
+									
+									<h3>Design & Typography</h3>
+									<p>MyDayHub features a modern, elegant design system:</p>
+									<ul>
+										<li><strong>Inter Font:</strong> Professional, highly legible typeface designed for digital interfaces</li>
+										<li><strong>Light Typography:</strong> Refined font weights for a clean, modern appearance</li>
+										<li><strong>Consistent Icons:</strong> Professional SVG icons throughout the interface</li>
+										<li><strong>Theme Support:</strong> Dark (default), Light, and High-Contrast modes</li>
+										<li><strong>Accent Colors:</strong> Customizable accent colors with automatic contrast adjustment</li>
+									</ul>
+									
+									<h3>Mobile Move Mode</h3>
+									<p>Touch-friendly task movement:</p>
+									<ol>
+										<li>Open task menu (⋮) → <strong>"Move"</strong></li>
+										<li>Task enters "wiggle" state with banner at top</li>
+										<li>Column footers change to <strong>"Move here"</strong> buttons</li>
+										<li>Click destination column's button</li>
+										<li>For in-column moves, use the drop zones between tasks</li>
+									</ol>
+									
+									<h3>Filtering</h3>
+									<p>Control what you see:</p>
+									<ul>
+										<li>Bottom toolbar filter menu</li>
+										<li>Show/Hide Completed tasks</li>
+										<li>Show/Hide Private items</li>
+										<li>Show/Hide Snoozed tasks</li>
+										<li>Filter states persist across sessions</li>
+									</ul>
+									
+									<h3>Keyboard Shortcuts</h3>
+									<ul>
+										<li><strong>Ctrl/Cmd + N:</strong> Create new task</li>
+										<li><strong>Ctrl/Cmd + F:</strong> Focus search</li>
+										<li><strong>Escape:</strong> Close modals/cancel actions</li>
+										<li><strong>Tab:</strong> Navigate between elements</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 8: Settings & Customization -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="12" cy="12" r="3"/>
+									<path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1 1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+								</svg>
+								<span class="accordion-title">Settings & Customization</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<h3>Theme Selection</h3>
+									<p>Choose your preferred visual style:</p>
+									<ul>
+										<li><strong>Dark:</strong> Default theme with dark backgrounds</li>
+										<li><strong>Light:</strong> Light backgrounds for bright environments</li>
+										<li><strong>High-Contrast:</strong> Maximum contrast for accessibility</li>
+									</ul>
+									
+									<h3>Accent Color Customization</h3>
+									<p>Personalize your interface with custom accent colors:</p>
+									<ul>
+										<li>Choose from preset colors or create custom ones</li>
+										<li>Accent color affects buttons, links, and highlights</li>
+										<li>Automatic contrast adjustment for readability</li>
+										<li>Colors persist across theme changes</li>
+									</ul>
+									
+									<h3>Font Size Controls</h3>
+									<p>Adjust text size for better readability:</p>
+									<ul>
+										<li>Global font scaling affects all text</li>
+										<li>Use A- and A+ buttons in Settings</li>
+										<li>Changes apply immediately</li>
+										<li>Settings persist across sessions</li>
+									</ul>
+									
+									<h3>Mission Focus Chart</h3>
+									<p>Control the header chart visibility:</p>
+									<ul>
+										<li>Toggle on/off in Settings</li>
+										<li>Visible by default for new users</li>
+										<li>Helps track your Signal/Support/Backlog ratio</li>
+									</ul>
+									
+									<h3>Completion Sound</h3>
+									<p>Enable or disable audio feedback:</p>
+									<ul>
+										<li>Toggle completion sound in Settings</li>
+										<li>Plays when tasks are marked complete</li>
+										<li>Respects system volume settings</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 9: Keyboard Shortcuts & Pro Tips -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<path d="M9 12l2 2 4-4"/>
+									<path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"/>
+									<path d="M3 12c1 0 3-1 3-3s-2-3-3-3-3 1-3 3 2 3 3 3"/>
+									<path d="M12 3c0 1-1 3-3 3s-3-2-3-3 1-3 3-3 3 2 3 3"/>
+									<path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"/>
+								</svg>
+								<span class="accordion-title">Keyboard Shortcuts & Pro Tips</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<h3>Essential Keyboard Shortcuts</h3>
+									<ul>
+										<li><strong>Ctrl/Cmd + N:</strong> Create new task in focused column</li>
+										<li><strong>Ctrl/Cmd + F:</strong> Focus search bar</li>
+										<li><strong>Escape:</strong> Close modals, cancel actions</li>
+										<li><strong>Tab:</strong> Navigate between columns</li>
+										<li><strong>Enter:</strong> Create task or save changes</li>
+									</ul>
+									
+									<h3>Power User Workflows</h3>
+									<p><strong>Morning Routine:</strong></p>
+									<ol>
+										<li>Review yesterday's journal entry</li>
+										<li>Check Mission Focus Chart for balance</li>
+										<li>Create today's journal entry with priorities</li>
+										<li>Move Signal tasks to active columns</li>
+									</ol>
+									
+									<p><strong>Weekly Review:</strong></p>
+									<ol>
+										<li>Review all completed Signal tasks</li>
+										<li>Assess Support/Backlog balance</li>
+										<li>Plan next week's Signal priorities</li>
+										<li>Update journal entries with insights</li>
+									</ol>
+									
+									<h3>Productivity Tips</h3>
+									<ul>
+										<li><strong>Batch Similar Tasks:</strong> Group Support tasks together</li>
+										<li><strong>Time Blocking:</strong> Use journal entries to plan focused work sessions</li>
+										<li><strong>Regular Reviews:</strong> Check Mission Focus Chart daily</li>
+										<li><strong>Private Reflection:</strong> Use private journal entries for honest self-assessment</li>
+									</ul>
+									
+									<div class="tip-box">
+										<strong>💡 Pro Tip:</strong> Start each day by creating a journal entry with your top 3 Signal tasks. End each day by noting what you accomplished and what obstacles you overcame.
+									</div>
+								</div>
+							</div>
+						</div>
+						
+						<!-- Section 10: Troubleshooting & FAQ -->
+						<div class="accordion-item">
+							<div class="accordion-header">
+								<svg class="accordion-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<circle cx="12" cy="12" r="10"/>
+									<path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+									<line x1="12" y1="17" x2="12.01" y2="17"/>
+								</svg>
+								<span class="accordion-title">Troubleshooting & FAQ</span>
+								<svg class="accordion-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+									<polyline points="6 9 12 15 18 9"></polyline>
+								</svg>
+							</div>
+							<div class="accordion-content">
+								<div class="accordion-body">
+									<h3>Common Issues</h3>
+									
+									<h4>Tasks not saving?</h4>
+									<ul>
+										<li>Check your internet connection</li>
+										<li>Try refreshing the page</li>
+										<li>Clear browser cache if problems persist</li>
+									</ul>
+									
+									<h4>Can't see shared tasks?</h4>
+									<ul>
+										<li>Check your email for the share notification</li>
+										<li>Ensure you're logged in with the correct account</li>
+										<li>Contact the person who shared the task</li>
+									</ul>
+									
+									<h4>Encryption setup not working?</h4>
+									<ul>
+										<li>Ensure you have a stable internet connection</li>
+										<li>Try using a different browser</li>
+										<li>Check that JavaScript is enabled</li>
+									</ul>
+									
+									<h3>Performance Tips</h3>
+									<ul>
+										<li><strong>Regular Cleanup:</strong> Archive completed tasks periodically</li>
+										<li><strong>Limit Attachments:</strong> Keep file sizes under 5MB</li>
+										<li><strong>Browser Updates:</strong> Keep your browser updated for best performance</li>
+										<li><strong>Clear Cache:</strong> Clear browser cache if the app feels slow</li>
+									</ul>
+									
+									<h3>Data Safety</h3>
+									<ul>
+										<li>Your data is encrypted and stored securely</li>
+										<li>Regular backups are created automatically</li>
+										<li>Private items remain encrypted even on the server</li>
+										<li>You can export your data anytime via Settings</li>
+									</ul>
+									
+									<h3>Getting Help</h3>
+									<p>If you need additional support:</p>
+									<ul>
+										<li>Check this user guide for detailed instructions</li>
+										<li>Try the troubleshooting steps above</li>
+										<li>Include browser type and version for technical issues</li>
+									</ul>
+								</div>
+							</div>
+						</div>
+						
+					</div>
+				</div>
 			</div>
 		</div>
 	</div>

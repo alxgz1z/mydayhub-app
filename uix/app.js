@@ -569,6 +569,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	updateFooterDate();
 	initSettingsPanel();
+	setupUserGuideEventListeners();
 
 	// Do not eagerly initialize tasks or journal here; ViewManager will lazy-load
 	
@@ -2528,6 +2529,92 @@ async function saveAccentColorPreference(color) {
 	} catch (error) {
 		console.error('Failed to save accent color preference:', error);
 		showToast({ message: 'Failed to save accent color', type: 'error' });
+	}
+}
+
+/**
+ * Opens the User Guide modal
+ */
+function openUserGuideModal() {
+	const modal = document.getElementById('user-guide-modal');
+	if (!modal) {
+		console.error('User Guide modal not found');
+		return;
+	}
+	
+	modal.classList.remove('hidden');
+	
+	// Register User Guide modal in modal stack
+	registerModal('user-guide-modal', closeUserGuideModal);
+	
+	// Initialize accordion functionality
+	initUserGuideAccordion();
+}
+
+/**
+ * Closes the User Guide modal
+ */
+function closeUserGuideModal() {
+	const modal = document.getElementById('user-guide-modal');
+	if (modal) {
+		modal.classList.add('hidden');
+		// Unregister User Guide modal from modal stack
+		unregisterModal('user-guide-modal');
+	}
+}
+
+/**
+ * Initializes accordion functionality for the User Guide
+ */
+function initUserGuideAccordion() {
+	const accordionItems = document.querySelectorAll('#user-guide-modal .accordion-item');
+	
+	accordionItems.forEach(item => {
+		const header = item.querySelector('.accordion-header');
+		if (header && !header.hasAttribute('data-listener-added')) {
+			header.addEventListener('click', () => {
+				// Close other items
+				accordionItems.forEach(otherItem => {
+					if (otherItem !== item) {
+						otherItem.classList.remove('active');
+					}
+				});
+				
+				// Toggle current item
+				item.classList.toggle('active');
+			});
+			header.setAttribute('data-listener-added', 'true');
+		}
+	});
+}
+
+/**
+ * Sets up User Guide modal event listeners
+ */
+function setupUserGuideEventListeners() {
+	// Open button
+	const openBtn = document.getElementById('btn-user-guide');
+	if (openBtn && !openBtn.hasAttribute('data-listener-added')) {
+		openBtn.addEventListener('click', openUserGuideModal);
+		openBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Close button
+	const closeBtn = document.getElementById('btn-close-user-guide');
+	if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
+		closeBtn.addEventListener('click', closeUserGuideModal);
+		closeBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Close on overlay click
+	const modal = document.getElementById('user-guide-modal');
+	if (modal && !modal.hasAttribute('data-listener-added')) {
+		modal.addEventListener('click', (e) => {
+			if (e.target === modal) {
+				closeUserGuideModal();
+			}
+		});
+		modal.setAttribute('data-listener-added', 'true');
 	}
 }
 
