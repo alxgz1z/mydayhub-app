@@ -1422,7 +1422,6 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
                 updated_at
             FROM journal_entries 
             WHERE user_id = :userId 
-            AND deleted_at IS NULL
             AND (
                 title LIKE :searchTerm 
                 OR content LIKE :searchTerm
