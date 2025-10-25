@@ -405,7 +405,8 @@ class JournalView {
                 const savedViewMode = result.data.view_mode || '3-day';
                 // Override saved preference if on mobile - force 1-day view
                 this.viewMode = this.isMobile ? '1-day' : savedViewMode;
-                this.hideWeekends = result.data.hide_weekends || false;
+                // Convert hide_weekends to proper boolean (database returns 0/1)
+                this.hideWeekends = Boolean(result.data.hide_weekends);
                 console.log('✅ Preferences loaded:', { viewMode: this.viewMode, hideWeekends: this.hideWeekends });
             } else {
                 // Use defaults on error, respecting mobile constraint
