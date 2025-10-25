@@ -225,12 +225,13 @@ class JournalView {
         
         // Add event listener for toggle switches
         menu.addEventListener('change', (e) => {
-            if (e.target.dataset.filter === 'showWeekends') {
+            if (e.target.matches('[data-filter="showWeekends"]')) {
                 this.hideWeekends = e.target.checked;
+                console.log('🔄 Weekends toggle changed:', { hideWeekends: this.hideWeekends, checked: e.target.checked });
                 this.savePreferences();
                 this.renderJournalView();
             }
-        });
+        }, true); // Use capture phase for better event detection
         
         // Show menu with animation
         setTimeout(() => {
@@ -513,6 +514,16 @@ class JournalView {
                 }
             }
         });
+        
+        // Global listener for weekends toggle checkbox (dynamic elements)
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('[data-filter="showWeekends"]')) {
+                this.hideWeekends = e.target.checked;
+                console.log('✅ Weekends toggle changed (global listener):', { hideWeekends: this.hideWeekends, checked: e.target.checked });
+                this.savePreferences();
+                this.renderJournalView();
+            }
+        }, true);
         
         // Save title changes when user finishes editing
         document.addEventListener('blur', async (e) => {
