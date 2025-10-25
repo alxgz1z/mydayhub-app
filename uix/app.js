@@ -1518,6 +1518,7 @@ function showDueDateModal(currentDate = '') {
 		return Promise.resolve(null);
 	}
 
+	console.log('Opening date modal with date:', currentDate);
 	input.value = currentDate;
 	modalOverlay.classList.remove('hidden');
 	
@@ -1544,9 +1545,18 @@ function showDueDateModal(currentDate = '') {
 			cancelBtn.removeEventListener('click', handleCancel);
 		};
 
-		const handleSave = () => resolveOnce(input.value);
-		const handleRemove = () => resolveOnce('');
-		const handleCancel = () => resolveOnce(null);
+		const handleSave = () => {
+			console.log('Save button clicked, value:', input.value);
+			resolveOnce(input.value);
+		};
+		const handleRemove = () => {
+			console.log('Remove button clicked');
+			resolveOnce('');
+		};
+		const handleCancel = () => {
+			console.log('Cancel button clicked');
+			resolveOnce(null);
+		};
 		
 		const handleOverlayClick = (e) => {
 			if (e.target === modalOverlay) handleCancel();
@@ -1554,10 +1564,12 @@ function showDueDateModal(currentDate = '') {
 
 		// ESC key handling now managed by modal stack system
 
+		console.log('Adding event listeners to date modal buttons');
 		saveBtn.addEventListener('click', handleSave);
 		removeBtn.addEventListener('click', handleRemove);
 		cancelBtn.addEventListener('click', handleCancel);
 		modalOverlay.addEventListener('click', handleOverlayClick);
+		console.log('Event listeners added successfully');
 	});
 }
 
