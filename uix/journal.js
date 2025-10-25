@@ -16,6 +16,7 @@ class JournalView {
         
         this.viewMode = '3-day'; // 1-day, 3-day, 5-day (will be adjusted for mobile)
         this.hideWeekends = false;
+        this.showOnlyWithNotes = false; // NEW: show only dates with entries
         this.entries = new Map(); // date -> entries array
         this.isLoading = false;
         this.isMobile = window.innerWidth < 768; // Mobile breakpoint
@@ -90,6 +91,21 @@ class JournalView {
             active: false,
             isToggle: true,
             checked: hideWeekendsChecked
+        });
+        
+        // Add show only with notes toggle
+        const showOnlyWithNotesChecked = this.showOnlyWithNotes ? 'checked' : '';
+        menuItems.push({
+            id: 'journal-show-only-notes-toggle',
+            icon: '',
+            label: 'Show Only Days with Notes',
+            action: () => {
+                this.toggleShowOnlyWithNotes();
+                this.closeJournalMenu();
+            },
+            active: false,
+            isToggle: true,
+            checked: showOnlyWithNotesChecked
         });
         
         // Add view mode options
@@ -171,11 +187,13 @@ class JournalView {
         
         const menuHTML = menuItems.map(item => {
             if (item.isToggle) {
+                // Use the item id to create data-filter attribute
+                const filterId = item.id === 'journal-weekends-toggle' ? 'showWeekends' : 'showOnlyWithNotes';
                 return `
                     <div class="filter-item">
                         <span class="filter-label">${item.label}</span>
                         <label class="switch">
-                            <input type="checkbox" data-filter="showWeekends" ${item.checked}>
+                            <input type="checkbox" data-filter="${filterId}" ${item.checked}>
                             <span class="slider round"></span>
                         </label>
                     </div>
@@ -407,15 +425,19 @@ class JournalView {
                 this.viewMode = this.isMobile ? '1-day' : savedViewMode;
                 // Convert hide_weekends to proper boolean (database returns 0/1)
                 this.hideWeekends = Boolean(result.data.hide_weekends);
+                this.showOnlyWithNotes = Boolean(result.data.show_only_with_notes); // Load showOnlyWithNotes
             } else {
                 // Use defaults on error, respecting mobile constraint
                 this.viewMode = this.isMobile ? '1-day' : '3-day';
+                this.hideWeekends = false;
+                this.showOnlyWithNotes = false; // Default to false
             }
         } catch (error) {
             console.error('❌ Failed to load journal preferences:', error);
             // Use defaults on error, respecting mobile constraint
             this.viewMode = this.isMobile ? '1-day' : '3-day';
             this.hideWeekends = false;
+            this.showOnlyWithNotes = false; // Default to false
         }
     }
     
@@ -522,6 +544,15 @@ class JournalView {
         document.addEventListener('change', (e) => {
             if (e.target.matches('[data-filter="showWeekends"]')) {
                 this.hideWeekends = e.target.checked;
+                this.savePreferences();
+                this.renderJournalView();
+            }
+        }, true);
+        
+        // Global listener for show only with notes toggle
+        document.addEventListener('change', (e) => {
+            if (e.target.matches('[data-filter="showOnlyWithNotes"]')) {
+                this.showOnlyWithNotes = e.target.checked;
                 this.savePreferences();
                 this.renderJournalView();
             }
@@ -694,11 +725,14 @@ class JournalView {
             // Load entries for the date range
             await this.loadEntries(dates);
             
+            // Filter dates based on showOnlyWithNotes
+            const filteredDates = this.showOnlyWithNotes ? this.getDatesWithEntries() : dates;
+            
             // Render the view
-            journalContainer.innerHTML = this.renderJournalHTML(dates);
+            journalContainer.innerHTML = this.renderJournalHTML(filteredDates);
             
             // Add entries to columns
-            dates.forEach(date => {
+            filteredDates.forEach(date => {
                 const column = document.querySelector(`[data-date="${date}"]`);
                 if (column) {
                     const entries = this.entries.get(date) || [];
@@ -1669,7 +1703,8 @@ Would you like to set up encryption now?`;
                 module: 'journal',
                 action: 'updatePreferences',
                 view_mode: this.viewMode,
-                hide_weekends: this.hideWeekends
+                hide_weekends: this.hideWeekends,
+                show_only_with_notes: this.showOnlyWithNotes // Save showOnlyWithNotes
             };
             const response = await window.apiFetch(payload);
         } catch (error) {
@@ -1915,6 +1950,20 @@ Would you like to set up encryption now?`;
                 column.style.height = `${maxHeight}px`;
             });
         }
+    }
+    
+    toggleShowOnlyWithNotes() {
+        this.showOnlyWithNotes = !this.showOnlyWithNotes;
+        this.savePreferences();
+        this.renderJournalView();
+    }
+    
+    /**
+     * Returns only dates from the current entries map that have entries
+     */
+    getDatesWithEntries() {
+        // Get all dates that have entries from the entries map
+        return Array.from(this.entries.keys()).sort();
     }
 }
 

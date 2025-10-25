@@ -838,7 +838,7 @@ function handle_duplicate_journal_entry(PDO $pdo, int $userId, array $data): arr
 function handle_get_journal_preferences(PDO $pdo, int $userId): array {
     try {
         $stmt = $pdo->prepare("
-            SELECT view_mode, hide_weekends, date_format
+            SELECT view_mode, hide_weekends, show_only_with_notes, date_format
             FROM journal_preferences 
             WHERE user_id = :userId
         ");
@@ -850,6 +850,7 @@ function handle_get_journal_preferences(PDO $pdo, int $userId): array {
             $preferences = [
                 'view_mode' => '3-day',
                 'hide_weekends' => false,
+                'show_only_with_notes' => false,
                 'date_format' => 'YEAR.MON.DD, Day'
             ];
         }
@@ -868,9 +869,10 @@ function handle_get_journal_preferences(PDO $pdo, int $userId): array {
 function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): array {
     $viewMode = $data['view_mode'] ?? null;
     $hideWeekends = $data['hide_weekends'] ?? null;
+    $showOnlyWithNotes = $data['show_only_with_notes'] ?? null;
     $dateFormat = $data['date_format'] ?? null;
     
-    if (!$viewMode && $hideWeekends === null && !$dateFormat) {
+    if (!$viewMode && $hideWeekends === null && $showOnlyWithNotes === null && !$dateFormat) {
         return ['status' => 'error', 'message' => 'No preferences to update.'];
     }
     
@@ -893,6 +895,10 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
                 $updateFields[] = 'hide_weekends = :hideWeekends';
                 $params[':hideWeekends'] = $hideWeekends ? 1 : 0;
             }
+            if ($showOnlyWithNotes !== null) {
+                $updateFields[] = 'show_only_with_notes = :showOnlyWithNotes';
+                $params[':showOnlyWithNotes'] = $showOnlyWithNotes ? 1 : 0;
+            }
             if ($dateFormat) {
                 $updateFields[] = 'date_format = :dateFormat';
                 $params[':dateFormat'] = $dateFormat;
@@ -909,14 +915,15 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
         } else {
             // Insert new preferences
             $stmt = $pdo->prepare("
-                INSERT INTO journal_preferences (user_id, view_mode, hide_weekends, date_format) 
-                VALUES (:userId, :viewMode, :hideWeekends, :dateFormat)
+                INSERT INTO journal_preferences (user_id, view_mode, hide_weekends, show_only_with_notes, date_format) 
+                VALUES (:userId, :viewMode, :hideWeekends, :showOnlyWithNotes, :dateFormat)
             ");
             
             $stmt->execute([
                 ':userId' => $userId,
                 ':viewMode' => $viewMode ?: '3-day',
                 ':hideWeekends' => $hideWeekends !== null ? ($hideWeekends ? 1 : 0) : 0,
+                ':showOnlyWithNotes' => $showOnlyWithNotes !== null ? ($showOnlyWithNotes ? 1 : 0) : 0,
                 ':dateFormat' => $dateFormat ?: 'YEAR.MON.DD, Day'
             ]);
         }
