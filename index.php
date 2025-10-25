@@ -529,13 +529,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			padding: 2rem;
 		}
 		
-		/* Adjust editor overlay when search panel is visible */
-		#unified-editor-overlay:not(.hidden) + #search-results-panel:not(.hidden) {
-			height: 35vh;
-		}
-		
-		#unified-editor-overlay:not(.hidden) {
-			max-height: calc(100vh - 35vh - 60px);
 		}
 	</style>
 	<link rel="stylesheet" href="uix/journal.css">

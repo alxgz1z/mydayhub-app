@@ -1684,6 +1684,7 @@
 	function openSearchNotesModal() {
 		console.log('openSearchNotesModal called');
 		const panel = document.getElementById('search-results-panel');
+		const overlay = document.getElementById('unified-editor-overlay');
 		console.log('Search panel found:', panel);
 		console.log('Panel classes before:', panel?.className);
 		if (!panel) {
@@ -1693,6 +1694,14 @@
 		
 		console.log('Opening search panel...');
 		panel.classList.remove('hidden');
+		
+		// Adjust editor overlay height to make room for panel
+		if (overlay && !overlay.classList.contains('hidden')) {
+			const panelHeight = 400; // 40vh = ~400px
+			overlay.style.height = `calc(100vh - ${panelHeight}px)`;
+			overlay.style.maxHeight = `calc(100vh - ${panelHeight}px)`;
+		}
+		
 		console.log('Panel classes after:', panel?.className);
 		
 		// Focus the search input
@@ -1717,8 +1726,15 @@
 	 */
 	function closeSearchNotesModal() {
 		const panel = document.getElementById('search-results-panel');
+		const overlay = document.getElementById('unified-editor-overlay');
 		if (panel) {
 			panel.classList.add('hidden');
+			
+			// Restore editor overlay to full height
+			if (overlay && !overlay.classList.contains('hidden')) {
+				overlay.style.height = '100%';
+				overlay.style.maxHeight = '100%';
+			}
 		}
 	}
 	

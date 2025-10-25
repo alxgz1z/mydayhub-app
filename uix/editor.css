@@ -27,6 +27,15 @@
 	pointer-events: none;
 }
 
+/* When search panel is visible, constrain editor height */
+#unified-editor-overlay:not(.hidden) ~ #search-results-panel:not(.hidden) {
+	/* Search panel is visible, editor should take less space */
+}
+
+#unified-editor-overlay:not(.hidden) ~ #search-results-panel:not(.hidden) + * {
+	/* This rule doesn't work with + selector, need different approach */
+}
+
 #unified-editor-container {
 	background: #1a1a1a;
 	border: 1px solid #333;
