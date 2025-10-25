@@ -231,7 +231,6 @@ class JournalView {
         menu.addEventListener('change', (e) => {
             if (e.target.matches('[data-filter="showWeekends"]')) {
                 this.hideWeekends = e.target.checked;
-                console.log('🔄 Weekends toggle changed:', { hideWeekends: this.hideWeekends, checked: e.target.checked });
                 this.savePreferences();
                 this.renderJournalView();
             }
@@ -385,11 +384,8 @@ class JournalView {
     }
     
     async init() {
-        console.log('🚀 init() called - starting');
         await this.loadPreferences();
-        console.log('✅ Preferences loaded, now rendering journal view with:', {viewMode: this.viewMode, hideWeekends: this.hideWeekends});
         this.renderJournalView();
-        console.log('✅ init() complete');
     }
     
     async loadPreferences() {
@@ -405,19 +401,15 @@ class JournalView {
             });
             const result = await response.json();
             
-            console.log('📥 Loaded preferences from API:', result);
-            
             if (result.status === 'success' && result.data) {
                 const savedViewMode = result.data.view_mode || '3-day';
                 // Override saved preference if on mobile - force 1-day view
                 this.viewMode = this.isMobile ? '1-day' : savedViewMode;
                 // Convert hide_weekends to proper boolean (database returns 0/1)
                 this.hideWeekends = Boolean(result.data.hide_weekends);
-                console.log('✅ Preferences loaded:', { viewMode: this.viewMode, hideWeekends: this.hideWeekends });
             } else {
                 // Use defaults on error, respecting mobile constraint
                 this.viewMode = this.isMobile ? '1-day' : '3-day';
-                console.warn('⚠️ Using default preferences, API error:', result);
             }
         } catch (error) {
             console.error('❌ Failed to load journal preferences:', error);
@@ -530,7 +522,6 @@ class JournalView {
         document.addEventListener('change', (e) => {
             if (e.target.matches('[data-filter="showWeekends"]')) {
                 this.hideWeekends = e.target.checked;
-                console.log('✅ Weekends toggle changed (global listener):', { hideWeekends: this.hideWeekends, checked: e.target.checked });
                 this.savePreferences();
                 this.renderJournalView();
             }
@@ -690,11 +681,9 @@ class JournalView {
     async renderJournalView() {
         if (this.isLoading) return;
         
-        console.log('🎨 renderJournalView() called');
         this.isLoading = true;
         const journalContainer = document.getElementById('journal-view');
         if (!journalContainer) {
-            console.log('❌ journal-view container not found');
             return;
         }
         
@@ -733,13 +722,6 @@ class JournalView {
         const dayCount = this.getDayCount();
         const dates = [];
         
-        console.log('📅 getDateRange called:', {
-            dayCount: dayCount,
-            viewMode: this.viewMode,
-            hideWeekends: this.hideWeekends,
-            currentDate: this.currentDate.toDateString()
-        });
-        
         // Use the proven approach from the previous app version
         const centerIndex = Math.floor(dayCount / 2);
         
@@ -767,11 +749,8 @@ class JournalView {
             const day = String(tempDate.getDate()).padStart(2, '0');
             const dateStr = `${year}-${month}-${day}`;
             dates.push(dateStr);
-            
-            console.log(`  [${i}] offset=${offset}, tempDate=${tempDate.toDateString()}, formatted=${dateStr}`);
         }
         
-        console.log('✅ getDateRange result:', dates);
         return dates;
     }
     
@@ -785,26 +764,10 @@ class JournalView {
         let newDate = new Date(baseDate);
         newDate.setDate(newDate.getDate() + direction);
         
-        const dayBefore = newDate.getDay();
-        const isSatOrSun = newDate.getDay() === 6 || newDate.getDay() === 0;
-        
-        console.log('🔍 getOffsetDate:', {
-            baseDate: baseDate.toDateString(),
-            direction: direction,
-            newDate: newDate.toDateString(),
-            newDateDay: newDate.getDay(),
-            isSatOrSun: isSatOrSun,
-            hideWeekends: this.hideWeekends,
-            hideWeekendsType: typeof this.hideWeekends
-        });
-        
         if (this.hideWeekends) {
-            console.log('⏭️ Skipping weekends, checking if', newDate.toDateString(), 'is Sat/Sun:', isSatOrSun);
             while (newDate.getDay() === 6 || newDate.getDay() === 0) {
-                console.log('   Skipping', newDate.toDateString(), '(day:', newDate.getDay(), ')');
                 newDate.setDate(newDate.getDate() + direction);
             }
-            console.log('   Final date after skip:', newDate.toDateString());
         }
         
         return newDate;
@@ -1708,11 +1671,9 @@ Would you like to set up encryption now?`;
                 view_mode: this.viewMode,
                 hide_weekends: this.hideWeekends
             };
-            console.log('💾 Saving preferences:', payload);
             const response = await window.apiFetch(payload);
-            console.log('✅ Save response:', response);
         } catch (error) {
-            console.error('❌ Failed to save preferences:', error);
+            console.error('Failed to save preferences:', error);
         }
     }
     
