@@ -726,12 +726,7 @@ function initSettingsPanel() {
 		}
 	});
 
-    // ESC key handling via modal stack; also close if ESC pressed while panel open
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeSettingsPanel();
-        }
-    });
+    // ESC key handling is now managed by the global modal stack system
 
 	// Modified for Trust Management Regression Fix
 	// Initialize Trust Management button in settings
@@ -1524,6 +1519,7 @@ function showDueDateModal(currentDate = '') {
 	
 	// Register date modal in modal stack
 	registerModal('date-modal', handleCancel);
+	console.log('Date modal registered in modal stack');
 
 	return new Promise(resolve => {
 		let isResolved = false;
@@ -1536,6 +1532,7 @@ function showDueDateModal(currentDate = '') {
 		};
 		
 		const cleanup = () => {
+			console.log('Date modal cleanup called');
 			modalOverlay.classList.add('hidden');
 			unregisterModal('date-modal');
 			document.removeEventListener('keydown', handleEscKey);
