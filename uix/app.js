@@ -1517,6 +1517,17 @@ function showDueDateModal(currentDate = '') {
 	input.value = currentDate;
 	modalOverlay.classList.remove('hidden');
 	
+	// Test if modal is actually visible
+	setTimeout(() => {
+		console.log('Modal visibility check:');
+		console.log('- Modal overlay hidden class:', modalOverlay.classList.contains('hidden'));
+		console.log('- Modal overlay display:', getComputedStyle(modalOverlay).display);
+		console.log('- Modal overlay visibility:', getComputedStyle(modalOverlay).visibility);
+		console.log('- Modal overlay opacity:', getComputedStyle(modalOverlay).opacity);
+		console.log('- Save button display:', getComputedStyle(saveBtn).display);
+		console.log('- Save button pointer-events:', getComputedStyle(saveBtn).pointerEvents);
+	}, 100);
+	
 	// Register date modal in modal stack
 	registerModal('date-modal', handleCancel);
 	console.log('Date modal registered in modal stack');
@@ -1561,12 +1572,37 @@ function showDueDateModal(currentDate = '') {
 
 		// ESC key handling now managed by modal stack system
 
-		console.log('Adding event listeners to date modal buttons');
-		saveBtn.addEventListener('click', handleSave);
-		removeBtn.addEventListener('click', handleRemove);
-		cancelBtn.addEventListener('click', handleCancel);
-		modalOverlay.addEventListener('click', handleOverlayClick);
-		console.log('Event listeners added successfully');
+	console.log('Adding event listeners to date modal buttons');
+	console.log('Save button element:', saveBtn);
+	console.log('Remove button element:', removeBtn);
+	console.log('Cancel button element:', cancelBtn);
+	
+	// Test if buttons are clickable
+	saveBtn.addEventListener('mousedown', (e) => {
+		console.log('Save button mousedown event fired!', e);
+	});
+	saveBtn.addEventListener('click', (e) => {
+		console.log('Save button click event fired!', e);
+		handleSave();
+	});
+	
+	removeBtn.addEventListener('mousedown', (e) => {
+		console.log('Remove button mousedown event fired!', e);
+	});
+	removeBtn.addEventListener('click', (e) => {
+		console.log('Remove button click event fired!', e);
+		handleRemove();
+	});
+	
+	cancelBtn.addEventListener('mousedown', (e) => {
+		console.log('Cancel button mousedown event fired!', e);
+	});
+	cancelBtn.addEventListener('click', (e) => {
+		console.log('Cancel button click event fired!', e);
+		handleCancel();
+	});
+	modalOverlay.addEventListener('click', handleOverlayClick);
+	console.log('Event listeners added successfully');
 	});
 }
 
