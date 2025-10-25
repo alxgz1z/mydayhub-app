@@ -1105,6 +1105,16 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<button class="btn-icon" id="btn-close-search-drawer" title="Close">✕</button>
 					</div>
 				</div>
+				<div class="search-drawer-options">
+					<label class="search-option-label">
+						<input type="checkbox" id="search-exact-match" title="Exact match only">
+						<span>Exact</span>
+					</label>
+					<label class="search-option-label">
+						<input type="checkbox" id="search-regex-mode" title="Use regular expressions">
+						<span>Regex</span>
+					</label>
+				</div>
 				<div id="search-drawer-content" class="search-drawer-content">
 					<div class="search-placeholder">
 						<p>Enter a search term to find related notes and tasks</p>

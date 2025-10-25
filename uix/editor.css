@@ -1293,6 +1293,37 @@
 	gap: 0.5rem;
 }
 
+.search-drawer-options {
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+	padding: 0.5rem 1rem;
+	border-bottom: 1px solid #333;
+	background: #0d0d0d;
+	flex-shrink: 0;
+}
+
+.search-option-label {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	cursor: pointer;
+	font-size: 0.875rem;
+	color: #e0e0e0;
+	user-select: none;
+}
+
+.search-option-label input[type="checkbox"] {
+	cursor: pointer;
+	width: 18px;
+	height: 18px;
+	accent-color: #4a9eff;
+}
+
+.search-option-label:hover {
+	color: #fff;
+}
+
 .search-drawer-input {
 	padding: 0.5rem 0.75rem;
 	border: 1px solid #333;

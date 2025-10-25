@@ -1725,8 +1725,8 @@
 	 */
 	async function performSearch() {
 		const searchInput = document.getElementById('search-drawer-input');
-		const journalCheckbox = document.getElementById('search-journal-entries');
-		const tasksCheckbox = document.getElementById('search-tasks');
+		const exactMatchCheckbox = document.getElementById('search-exact-match');
+		const regexCheckbox = document.getElementById('search-regex-mode');
 		const resultsContainer = document.getElementById('search-drawer-content');
 		
 		if (!searchInput || !resultsContainer) {
@@ -1753,8 +1753,10 @@
 		
 		try {
 			const results = await searchNotesAndTasks(searchTerm, {
-				includeJournal: journalCheckbox?.checked ?? true,
-				includeTasks: tasksCheckbox?.checked ?? true
+				includeJournal: true,
+				includeTasks: true,
+				exactMatch: exactMatchCheckbox?.checked ?? false,
+				regexMode: regexCheckbox?.checked ?? false
 			});
 			
 			displaySearchResults(results, resultsContainer);
@@ -1772,7 +1774,7 @@
 	 * Searches notes and tasks via API
 	 */
 	async function searchNotesAndTasks(searchTerm, options = {}) {
-		const { includeJournal = true, includeTasks = true } = options;
+		const { includeJournal = true, includeTasks = true, exactMatch = false, regexMode = false } = options;
 		
 		const searchPromises = [];
 		
@@ -1781,7 +1783,9 @@
 				window.apiFetch({
 					module: 'journal',
 					action: 'searchEntries',
-					search_term: searchTerm
+					search_term: searchTerm,
+					exact_match: exactMatch,
+					regex_mode: regexMode
 				})
 			);
 		}
@@ -1791,7 +1795,9 @@
 				window.apiFetch({
 					module: 'tasks',
 					action: 'searchTasks',
-					search_term: searchTerm
+					search_term: searchTerm,
+					exact_match: exactMatch,
+					regex_mode: regexMode
 				})
 			);
 		}
@@ -1805,6 +1811,10 @@
 			results[0].data.forEach(entry => {
 				// Exclude currently open entry
 				if (state.currentKind === 'journal' && state.currentTaskId === entry.entry_id) {
+					return;
+				}
+				// Apply client-side filtering if needed (for partial vs exact)
+				if (!filterSearchResult(entry, searchTerm, exactMatch, regexMode)) {
 					return;
 				}
 				allResults.push({
@@ -1822,6 +1832,10 @@
 				if (state.currentKind === 'task' && state.currentTaskId === task.task_id) {
 					return;
 				}
+				// Apply client-side filtering if needed
+				if (!filterSearchResult(task, searchTerm, exactMatch, regexMode)) {
+					return;
+				}
 				allResults.push({
 					...task,
 					type: 'task',
@@ -1832,6 +1846,34 @@
 		
 		// Sort by date descending
 		return allResults.sort((a, b) => b.sortDate - a.sortDate);
+	}
+	
+	/**
+	 * Filters a search result based on search options
+	 */
+	function filterSearchResult(item, searchTerm, exactMatch, regexMode) {
+		try {
+			const content = item.type === 'journal' 
+				? `${item.title} ${item.content}`
+				: `${item.task_title} ${item.task_description || ''}`;
+			
+			if (regexMode) {
+				// Use regex matching
+				const regex = new RegExp(searchTerm, 'i');
+				return regex.test(content);
+			} else if (exactMatch) {
+				// Exact word match (case-insensitive)
+				const regex = new RegExp(`\\b${searchTerm}\\b`, 'i');
+				return regex.test(content);
+			} else {
+				// Partial match (default)
+				return content.toLowerCase().includes(searchTerm.toLowerCase());
+			}
+		} catch (error) {
+			// If regex is invalid, fall back to partial match
+			console.error('Search filter error:', error);
+			return content.toLowerCase().includes(searchTerm.toLowerCase());
+		}
 	}
 	
 	/**
