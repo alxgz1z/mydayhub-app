@@ -1685,6 +1685,7 @@
 		console.log('openSearchNotesModal called');
 		const modal = document.getElementById('search-notes-modal');
 		console.log('Search modal found:', modal);
+		console.log('Modal classes before:', modal?.className);
 		if (!modal) {
 			console.error('Search notes modal not found');
 			return;
@@ -1692,6 +1693,7 @@
 		
 		console.log('Opening search modal...');
 		modal.classList.remove('hidden');
+		console.log('Modal classes after:', modal?.className);
 		
 		// Focus the search input
 		const searchInput = document.getElementById('search-notes-input');
