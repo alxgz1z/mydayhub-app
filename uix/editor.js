@@ -1694,6 +1694,12 @@
 		console.log('Opening search modal...');
 		modal.classList.remove('hidden');
 		console.log('Modal classes after:', modal?.className);
+		console.log('Modal computed styles:', {
+			display: getComputedStyle(modal).display,
+			visibility: getComputedStyle(modal).visibility,
+			zIndex: getComputedStyle(modal).zIndex,
+			position: getComputedStyle(modal).position
+		});
 		
 		// Focus the search input
 		const searchInput = document.getElementById('search-notes-input');

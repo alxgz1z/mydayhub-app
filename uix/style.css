@@ -18,11 +18,11 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background-color: rgba(0, 0, 0, 0.5);
+	background-color: rgba(255, 0, 0, 0.8); /* Bright red for debugging */
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 1000;
+	z-index: 10003; /* Higher than all other elements */
 }
 
 .modal-content {
