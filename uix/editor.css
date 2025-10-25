@@ -34,6 +34,14 @@
 	display: flex;
 	flex-direction: column;
 	background: var(--card-bg);
+	background: #1a1a1a;
+	border: 1px solid #333;
+	border-radius: 20px;
+	box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+	width: 85vw;
+	height: 85vh;
+	max-width: 1000px;
+	overflow: hidden;
 }
 
 #unified-editor-container.is-maximized {
@@ -1311,4 +1319,27 @@
 	text-align: center;
 	color: #888;
 	padding: 2rem 1rem;
+}
+
+/* Mobile responsive for search drawer */
+@media (max-width: 768px) {
+	.search-drawer {
+		max-height: 50vh;
+	}
+	
+	.search-drawer-input {
+		width: 100%;
+		font-size: 16px; /* Prevent zoom on iOS */
+	}
+	
+	.search-drawer-header {
+		flex-direction: column;
+		align-items: flex-start;
+		gap: 0.75rem;
+	}
+	
+	.search-drawer-controls {
+		width: 100%;
+		flex-wrap: wrap;
+	}
 }
