@@ -459,6 +459,84 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		@keyframes spin {
 			to { transform: rotate(360deg); }
 		}
+		
+		/* Search Results Panel Styles */
+		.search-results-panel {
+			position: fixed;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			height: 40vh;
+			background: var(--card-bg);
+			border-top: 2px solid var(--border-color);
+			display: flex;
+			flex-direction: column;
+			z-index: 1100;
+			box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
+		}
+		
+		.search-results-panel.hidden {
+			display: none !important;
+		}
+		
+		.search-panel-header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			padding: 1rem;
+			border-bottom: 1px solid var(--border-color);
+			background: var(--toolbar-bg);
+		}
+		
+		.search-panel-header h3 {
+			margin: 0;
+			font-size: 1rem;
+			font-weight: 500;
+			color: var(--text-primary);
+		}
+		
+		.search-panel-controls {
+			display: flex;
+			align-items: center;
+			gap: 0.75rem;
+		}
+		
+		.search-panel-search-input {
+			padding: 0.5rem 0.75rem;
+			border: 1px solid var(--border-color);
+			border-radius: 0.375rem;
+			background: var(--bg-color);
+			color: var(--text-primary);
+			font-size: 0.875rem;
+			width: 200px;
+		}
+		
+		.search-panel-search-input:focus {
+			outline: none;
+			border-color: var(--accent-color);
+			box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.2);
+		}
+		
+		.search-panel-content {
+			flex: 1;
+			overflow-y: auto;
+			padding: 1rem;
+		}
+		
+		.search-placeholder {
+			text-align: center;
+			color: var(--text-secondary);
+			padding: 2rem;
+		}
+		
+		/* Adjust editor overlay when search panel is visible */
+		#unified-editor-overlay:not(.hidden) + #search-results-panel:not(.hidden) {
+			height: 35vh;
+		}
+		
+		#unified-editor-overlay:not(.hidden) {
+			max-height: calc(100vh - 35vh - 60px);
+		}
 	</style>
 	<link rel="stylesheet" href="uix/journal.css">
 	<script>
@@ -1022,6 +1100,23 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					<span>Chars: 0</span>
 				</div>
 				<div id="editor-save-status">Last saved: Never</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- Search Results Panel (appears below editor) -->
+	<div id="search-results-panel" class="search-results-panel hidden">
+		<div class="search-panel-header">
+			<h3>Search Results</h3>
+			<div class="search-panel-controls">
+				<input type="text" id="search-panel-input" placeholder="Search..." class="search-panel-search-input">
+				<button class="btn btn-primary" id="btn-search-notes" title="Search">Search</button>
+				<button class="btn-icon" id="btn-close-search-panel" title="Close search panel">✕</button>
+			</div>
+		</div>
+		<div id="search-panel-content" class="search-panel-content">
+			<div class="search-placeholder">
+				<p>Use the search button in the editor to find related notes and tasks</p>
 			</div>
 		</div>
 	</div>

@@ -1683,32 +1683,26 @@
 	 */
 	function openSearchNotesModal() {
 		console.log('openSearchNotesModal called');
-		const modal = document.getElementById('search-notes-modal');
-		console.log('Search modal found:', modal);
-		console.log('Modal classes before:', modal?.className);
-		if (!modal) {
-			console.error('Search notes modal not found');
+		const panel = document.getElementById('search-results-panel');
+		console.log('Search panel found:', panel);
+		console.log('Panel classes before:', panel?.className);
+		if (!panel) {
+			console.error('Search panel not found');
 			return;
 		}
 		
-		console.log('Opening search modal...');
-		modal.classList.remove('hidden');
-		console.log('Modal classes after:', modal?.className);
-		console.log('Modal computed styles:', {
-			display: getComputedStyle(modal).display,
-			visibility: getComputedStyle(modal).visibility,
-			zIndex: getComputedStyle(modal).zIndex,
-			position: getComputedStyle(modal).position
-		});
+		console.log('Opening search panel...');
+		panel.classList.remove('hidden');
+		console.log('Panel classes after:', panel?.className);
 		
 		// Focus the search input
-		const searchInput = document.getElementById('search-notes-input');
+		const searchInput = document.getElementById('search-panel-input');
 		if (searchInput) {
 			searchInput.focus();
 		}
 		
 		// Clear previous results
-		const resultsContainer = document.getElementById('search-results-container');
+		const resultsContainer = document.getElementById('search-panel-content');
 		if (resultsContainer) {
 			resultsContainer.innerHTML = `
 				<div class="search-placeholder">
@@ -1719,12 +1713,12 @@
 	}
 	
 	/**
-	 * Closes the search notes modal
+	 * Closes the search notes panel
 	 */
 	function closeSearchNotesModal() {
-		const modal = document.getElementById('search-notes-modal');
-		if (modal) {
-			modal.classList.add('hidden');
+		const panel = document.getElementById('search-results-panel');
+		if (panel) {
+			panel.classList.add('hidden');
 		}
 	}
 	
@@ -1732,10 +1726,10 @@
 	 * Performs search for notes and tasks
 	 */
 	async function performSearch() {
-		const searchInput = document.getElementById('search-notes-input');
+		const searchInput = document.getElementById('search-panel-input');
 		const journalCheckbox = document.getElementById('search-journal-entries');
 		const tasksCheckbox = document.getElementById('search-tasks');
-		const resultsContainer = document.getElementById('search-results-container');
+		const resultsContainer = document.getElementById('search-panel-content');
 		
 		if (!searchInput || !resultsContainer) {
 			console.error('Search elements not found');
@@ -1935,13 +1929,13 @@
 		// No need for separate click listener
 		
 		// Close button
-		const closeBtn = document.getElementById('btn-close-search-notes');
+		const closeBtn = document.getElementById('btn-close-search-panel');
 		if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
 			closeBtn.addEventListener('click', closeSearchNotesModal);
 			closeBtn.setAttribute('data-listener-added', 'true');
 		}
 		
-		// Search button
+		// Search button (in panel)
 		const searchBtn = document.getElementById('btn-search-notes');
 		if (searchBtn && !searchBtn.hasAttribute('data-listener-added')) {
 			searchBtn.addEventListener('click', performSearch);
@@ -1949,7 +1943,7 @@
 		}
 		
 		// Search input enter key
-		const searchInput = document.getElementById('search-notes-input');
+		const searchInput = document.getElementById('search-panel-input');
 		if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
 			searchInput.addEventListener('keypress', (e) => {
 				if (e.key === 'Enter') {
