@@ -3835,7 +3835,13 @@ function exitMoveMode() {
 				 // Task card is already updated in snoozeTask function
 				 const columnBody = taskCard.closest('.column-body');
 				 sortTasksInColumn(columnBody);
-				 showToast({ message: 'Task snoozed successfully.', type: 'success' });
+				 
+				 // Show appropriate success message
+				 if (snoozeSelection === 'unsnooze') {
+					 showToast({ message: 'Task unsnoozed successfully.', type: 'success' });
+				 } else {
+					 showToast({ message: 'Task snoozed successfully.', type: 'success' });
+				 }
 			 }
 		 }
 	 } finally {
@@ -3849,6 +3855,32 @@ function exitMoveMode() {
 // Modified for Snooze Feature - Fixed data synchronization
  async function snoozeTask(taskId, snoozeDate) {
 	 try {
+		 // Handle unsnooze case
+		 if (snoozeDate === 'unsnooze') {
+			 const result = await window.apiFetch({
+				 module: 'tasks',
+				 action: 'unsnoozeTask',
+				 task_id: taskId
+			 });
+			 if (result.status === 'success') {
+				 // Update task card datasets with backend response
+				 const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+				 if (taskCard) {
+					 delete taskCard.dataset.snoozedUntil;
+					 taskCard.dataset.classification = result.data.classification;
+					 taskCard.dataset.isSnoozed = 'false';
+					 
+					 // Re-render the card to update visual state
+					 rerenderTaskCard(taskCard);
+				 }
+				 return result.data;
+			 } else {
+				 showToast({ message: `Error: ${result.message}`, type: 'error' });
+				 return false;
+			 }
+		 }
+		 
+		 // Handle normal snooze case
 		 const result = await window.apiFetch({
 			 module: 'tasks',
 			 action: 'snoozeTask',
@@ -3903,6 +3935,11 @@ function exitMoveMode() {
 						<button class="snooze-preset-btn" data-duration="quarter">1 Quarter</button>
 						<button class="snooze-custom-btn">Custom Date...</button>
 					</div>
+					${currentSnoozeDate ? `
+					<div class="unsnooze-section" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border-color);">
+						<button class="btn btn-danger unsnooze-btn" style="width: 100%;">Remove Snooze</button>
+					</div>
+					` : ''}
 					<div class="custom-date-section" style="display: none;">
 						<label for="snooze-custom-date">Wake Date:</label>
 						<input type="date" id="snooze-custom-date" />
@@ -3963,6 +4000,8 @@ function exitMoveMode() {
 				if (selectedDate) {
 					closeModal(`custom:${selectedDate}`);
 				}
+			} else if (e.target.matches('.unsnooze-btn')) {
+				closeModal('unsnooze');
 			}
 		});
 
