@@ -1423,8 +1423,8 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
             FROM journal_entries 
             WHERE user_id = :userId 
             AND (
-                title LIKE :searchTerm 
-                OR content LIKE :searchTerm
+                title LIKE :searchTerm1 
+                OR content LIKE :searchTerm2
             )
             ORDER BY entry_date DESC, created_at DESC
             LIMIT 50
@@ -1432,7 +1432,8 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         
         $searchPattern = '%' . $searchTerm . '%';
         $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':searchTerm', $searchPattern, PDO::PARAM_STR);
+        $stmt->bindParam(':searchTerm1', $searchPattern, PDO::PARAM_STR);
+        $stmt->bindParam(':searchTerm2', $searchPattern, PDO::PARAM_STR);
         $stmt->execute();
         
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1456,7 +1457,8 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         
     } catch (Exception $e) {
         log_debug_message('Error in journal.php handle_search_journal_entries(): ' . $e->getMessage());
-        return ['status' => 'error', 'message' => 'A server error occurred.'];
+        log_debug_message('Stack trace: ' . $e->getTraceAsString());
+        return ['status' => 'error', 'message' => 'A server error occurred: ' . $e->getMessage()];
     }
 }
 ?>
