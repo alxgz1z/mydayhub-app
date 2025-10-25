@@ -721,6 +721,8 @@ class JournalView {
         }
         
         try {
+            console.log('🔄 renderJournalView START:', { filterMode: this.filterMode, dayCount: this.dayCount, currentDate: this.currentDate.toISOString() });
+            
             // Load all potential entries (wider range in case we filter)
             const potentialDates = this.calculatePotentialDateRange();
             console.log('📥 Loading entries for potential dates:', potentialDates);
@@ -729,6 +731,11 @@ class JournalView {
             // Calculate final dates based on filter mode
             const dates = this.getFilteredDateRange();
             console.log('📋 Final filtered dates to render:', { count: dates.length, dates, filterMode: this.filterMode, dayCount: this.dayCount });
+            
+            // DIAGNOSTIC: Ensure we got the expected number
+            if (dates.length !== this.dayCount && this.entries.size >= this.dayCount) {
+                console.warn('⚠️ MISMATCH: Expected', this.dayCount, 'dates but got', dates.length, 'Available entries:', Array.from(this.entries.keys()));
+            }
             
             // Render the view
             journalContainer.innerHTML = this.renderJournalHTML(dates);
@@ -760,7 +767,9 @@ class JournalView {
      */
     calculatePotentialDateRange() {
         const dates = [];
-        const range = this.dayCount + 4; // Get a bit more to account for skipped weekends
+        // Load more days in notes-only mode to ensure we always have enough dates with entries
+        const baseRange = this.dayCount + 4; // Base range to account for skipped weekends
+        const range = this.filterMode === 'notes-only' ? baseRange * 3 : baseRange; // 3x wider for notes-only
         const centerIndex = Math.floor(range / 2);
         
         for (let i = 0; i < range; i++) {
@@ -776,6 +785,7 @@ class JournalView {
             dates.push(`${year}-${month}-${day}`);
         }
         
+        console.log('📊 calculatePotentialDateRange:', { filterMode: this.filterMode, range: dates.length, dates: `${dates[0]} to ${dates[dates.length-1]}` });
         return dates;
     }
     
