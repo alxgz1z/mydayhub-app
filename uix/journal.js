@@ -759,7 +759,7 @@ class JournalView {
                     tempDate = this.getOffsetDate(tempDate, 1);
                 }
             }
-            // offset === 0 means we're at the center (current date)
+            // offset === 0 means we're at the center (current date) - always include it
             
             // Format the date
             const year = tempDate.getFullYear();
