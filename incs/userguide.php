@@ -5,7 +5,7 @@
  * Comprehensive user manual with accordion-style sections
  * Follows app theming and visual design patterns
  * 
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & AI Assistant
  */
 
@@ -623,6 +623,20 @@ if (!isset($_SESSION['user_id'])) {
 						<h3>Accessing Journal View</h3>
 						<p>Click the <strong>"Journal"</strong> tab in the header to switch from Tasks to Journal view. Each date gets its own column, displayed horizontally with the most recent dates on the right.</p>
 						
+						<h3>View Modes & Filtering</h3>
+						<p>Customize your journal view with flexible display options:</p>
+						<ul>
+							<li><strong>Day Count:</strong> Choose 1-day, 3-day, or 5-day views (mobile automatically uses 1-day)</li>
+							<li><strong>Filter Modes:</strong>
+								<ul>
+									<li><strong>Show All Days:</strong> Display all dates including weekends</li>
+									<li><strong>Weekdays Only:</strong> Hide Saturday and Sunday columns</li>
+									<li><strong>Only Days with Notes:</strong> Show only dates that have journal entries</li>
+								</ul>
+							</li>
+							<li><strong>Navigation:</strong> Use < and > buttons in column headers or << >> buttons in the footer menu</li>
+						</ul>
+						
 						<h3>Creating Journal Entries</h3>
 						<ol>
 							<li>Navigate to the desired date column</li>
@@ -634,10 +648,12 @@ if (!isset($_SESSION['user_id'])) {
 						
 						<h3>Journal Entry Features</h3>
 						<ul>
-							<li><strong>Rich Notes:</strong> Use the full editor for detailed content</li>
+							<li><strong>Rich Notes:</strong> Use the full editor for detailed content with Markdown support</li>
+							<li><strong>Classification:</strong> Organize entries as Signal, Support, or Backlog (matching task classification)</li>
 							<li><strong>Privacy:</strong> Make entries private with encryption</li>
 							<li><strong>Organization:</strong> Entries automatically sort by date</li>
 							<li><strong>Navigation:</strong> Scroll horizontally to see past and future dates</li>
+							<li><strong>Drag & Drop:</strong> Move entries between date columns</li>
 						</ul>
 						
 						<h3>Linking Tasks to Journal Entries</h3>
@@ -715,6 +731,16 @@ if (!isset($_SESSION['user_id'])) {
 							<li>Hover to see exact percentages</li>
 							<li>Toggle visibility in Settings</li>
 							<li>Updates in real-time as you work</li>
+						</ul>
+						
+						<h3>Design & Typography</h3>
+						<p>MyDayHub features a modern, elegant design system:</p>
+						<ul>
+							<li><strong>Inter Font:</strong> Professional, highly legible typeface designed for digital interfaces</li>
+							<li><strong>Light Typography:</strong> Refined font weights for a clean, modern appearance</li>
+							<li><strong>Consistent Icons:</strong> Professional SVG icons throughout the interface</li>
+							<li><strong>Theme Support:</strong> Dark (default), Light, and High-Contrast modes</li>
+							<li><strong>Accent Colors:</strong> Customizable accent colors with automatic contrast adjustment</li>
 						</ul>
 						
 						<h3>Mobile Move Mode</h3>
