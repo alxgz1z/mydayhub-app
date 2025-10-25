@@ -83,6 +83,8 @@
 		elements.tabs = document.querySelectorAll('#editor-ribbon-tabs .ribbon-tab');
 		elements.panels = document.querySelectorAll('#editor-ribbon-panels .ribbon-panel');
 		elements.formatActions = document.querySelectorAll('#editor-panel-format [data-action]');
+		console.log('Format actions found:', elements.formatActions.length);
+		console.log('Search button in format actions:', document.querySelector('#editor-btn-search'));
 		elements.wordCount = document.querySelector('#editor-doc-stats span:first-child');
 		elements.charCount = document.querySelector('#editor-doc-stats span:last-child');
 		elements.saveStatus = document.getElementById('editor-save-status');
@@ -543,6 +545,7 @@
 		});
 
 		elements.formatActions.forEach(button => {
+			console.log('Adding click listener to button:', button.id, 'action:', button.dataset.action);
 			button.addEventListener('click', handleFormatAction);
 		});
 
