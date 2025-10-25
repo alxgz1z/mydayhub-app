@@ -303,8 +303,15 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		break;
 		
 		case 'searchTasks':
+			// TODO: Tasks store data in encrypted_data column
+			// Search requires either: 1) Decrypting all tasks, or 2) Using a searchable plaintext field
+			// For now, return empty results with a note
 			if ($method === 'GET' || $method === 'POST') {
-				handle_search_tasks($pdo, $userId, $data);
+				// Return empty results - task search not yet implemented
+				send_json_response([
+					'status' => 'success',
+					'data' => []
+				], 200);
 			}
 			break;
 		

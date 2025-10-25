@@ -1455,10 +1455,15 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
             'data' => $entries
         ];
         
-    } catch (Exception $e) {
-        log_debug_message('Error in journal.php handle_search_journal_entries(): ' . $e->getMessage());
+    } catch (PDOException $e) {
+        log_debug_message('PDOException in handle_search_journal_entries(): ' . $e->getMessage());
+        log_debug_message('PDOException Code: ' . $e->getCode());
         log_debug_message('Stack trace: ' . $e->getTraceAsString());
-        return ['status' => 'error', 'message' => 'A server error occurred: ' . $e->getMessage()];
+        return ['status' => 'error', 'message' => 'Database error: ' . $e->getMessage(), 'code' => $e->getCode()];
+    } catch (Exception $e) {
+        log_debug_message('General Exception in handle_search_journal_entries(): ' . $e->getMessage());
+        log_debug_message('Stack trace: ' . $e->getTraceAsString());
+        return ['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()];
     }
 }
 ?>
