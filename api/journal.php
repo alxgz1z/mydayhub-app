@@ -1402,6 +1402,7 @@ function handle_toggle_journal_classification(PDO $pdo, int $userId, array $data
  */
 function handle_search_journal_entries(PDO $pdo, int $userId, array $data): array {
     try {
+        log_debug_message('Search journal entries called with: ' . json_encode($data));
         $searchTerm = $data['search_term'] ?? '';
         
         if (empty($searchTerm)) {

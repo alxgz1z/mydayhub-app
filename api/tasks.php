@@ -2447,6 +2447,7 @@ function handle_leave_shared_task(PDO $pdo, int $userId, ?array $data): void {
  */
 function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
 	try {
+		log_debug_message('Search tasks called with: ' . json_encode($data));
 		$searchTerm = $data['search_term'] ?? '';
 		
 		if (empty($searchTerm)) {
