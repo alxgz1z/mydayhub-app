@@ -385,8 +385,11 @@ class JournalView {
     }
     
     async init() {
+        console.log('🚀 init() called - starting');
         await this.loadPreferences();
+        console.log('✅ Preferences loaded, now rendering journal view with:', {viewMode: this.viewMode, hideWeekends: this.hideWeekends});
         this.renderJournalView();
+        console.log('✅ init() complete');
     }
     
     async loadPreferences() {
@@ -687,9 +690,13 @@ class JournalView {
     async renderJournalView() {
         if (this.isLoading) return;
         
+        console.log('🎨 renderJournalView() called');
         this.isLoading = true;
         const journalContainer = document.getElementById('journal-view');
-        if (!journalContainer) return;
+        if (!journalContainer) {
+            console.log('❌ journal-view container not found');
+            return;
+        }
         
         try {
             // Calculate date range based on view mode
