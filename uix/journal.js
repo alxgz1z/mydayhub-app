@@ -104,8 +104,7 @@ class JournalView {
         
         menuItems.push({
             id: 'journal-filter-notes',
-            icon: '<img src="/media/notepad-pencil.svg" alt="notepad" class="journal-menu-svg-icon" />',
-            isSvg: true,
+            icon: `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/><g transform="translate(12, 14) rotate(45)"><rect x="-1" y="0" width="2" height="8" fill="currentColor"/><polygon points="0,-1.5 -0.6,0 0.6,0" fill="currentColor"/><circle cx="0" cy="9" r="1" fill="currentColor" opacity="0.7"/></g></svg>`,
             label: 'Only Days with Notes',
             action: () => { this.filterMode = 'notes-only'; this.saveAndRender(); },
             active: this.filterMode === 'notes-only',
@@ -192,7 +191,7 @@ class JournalView {
         const menuHTML = menuItems.map(item => {
             return `
                 <button class="journal-menu-item ${item.active ? 'active' : ''}" data-action="${item.id}">
-                    <span class="journal-menu-icon">${item.isSvg ? item.icon : item.icon}</span>
+                    <span class="journal-menu-icon">${item.icon}</span>
                     <span class="journal-menu-label">${item.label}</span>
                 </button>
             `;
