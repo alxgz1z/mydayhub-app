@@ -726,6 +726,13 @@ class JournalView {
         const dayCount = this.getDayCount();
         const dates = [];
         
+        console.log('📅 getDateRange called:', {
+            dayCount: dayCount,
+            viewMode: this.viewMode,
+            hideWeekends: this.hideWeekends,
+            currentDate: this.currentDate.toDateString()
+        });
+        
         // Use the proven approach from the previous app version
         const centerIndex = Math.floor(dayCount / 2);
         
@@ -751,10 +758,13 @@ class JournalView {
             const year = tempDate.getFullYear();
             const month = String(tempDate.getMonth() + 1).padStart(2, '0');
             const day = String(tempDate.getDate()).padStart(2, '0');
-            dates.push(`${year}-${month}-${day}`);
+            const dateStr = `${year}-${month}-${day}`;
+            dates.push(dateStr);
+            
+            console.log(`  [${i}] offset=${offset}, tempDate=${tempDate.toDateString()}, formatted=${dateStr}`);
         }
         
-        console.log('getDateRange result:', dates);
+        console.log('✅ getDateRange result:', dates);
         return dates;
     }
     
@@ -768,10 +778,26 @@ class JournalView {
         let newDate = new Date(baseDate);
         newDate.setDate(newDate.getDate() + direction);
         
+        const dayBefore = newDate.getDay();
+        const isSatOrSun = newDate.getDay() === 6 || newDate.getDay() === 0;
+        
+        console.log('🔍 getOffsetDate:', {
+            baseDate: baseDate.toDateString(),
+            direction: direction,
+            newDate: newDate.toDateString(),
+            newDateDay: newDate.getDay(),
+            isSatOrSun: isSatOrSun,
+            hideWeekends: this.hideWeekends,
+            hideWeekendsType: typeof this.hideWeekends
+        });
+        
         if (this.hideWeekends) {
+            console.log('⏭️ Skipping weekends, checking if', newDate.toDateString(), 'is Sat/Sun:', isSatOrSun);
             while (newDate.getDay() === 6 || newDate.getDay() === 0) {
+                console.log('   Skipping', newDate.toDateString(), '(day:', newDate.getDay(), ')');
                 newDate.setDate(newDate.getDate() + direction);
             }
+            console.log('   Final date after skip:', newDate.toDateString());
         }
         
         return newDate;
