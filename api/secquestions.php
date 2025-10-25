@@ -2,7 +2,7 @@
 /**
  * Security Questions API
  * MyDayHub - Security Questions for Zero-Knowledge Recovery
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

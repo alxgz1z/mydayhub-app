@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Line Numbers Test - Option 3 (CSS Counter)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: #0d1117;
+            color: #c9d1d9;
+            padding: 2rem;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            margin-bottom: 1rem;
+            color: #58a6ff;
+            font-size: 24px;
+        }
+
+        .controls {
+            margin-bottom: 1rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        button {
+            padding: 0.5rem 1rem;
+            background: #238636;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2ea043;
+        }
+
+        button:active {
+            background: #1f6feb;
+        }
+
+        .editor-wrapper {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .editor-container {
+            display: flex;
+            height: 400px;
+            position: relative;
+        }
+
+        .line-numbers {
+            background: #0d1117;
+            border-right: 1px solid #30363d;
+            padding: 1rem 1rem;
+            text-align: right;
+            color: #6e7681;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            user-select: none;
+            white-space: pre;
+            overflow: hidden;
+            min-width: 50px;
+            flex-shrink: 0;
+        }
+
+        .line-numbers.hidden {
+            display: none;
+        }
+
+        .editor-content {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .text-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            padding: 1rem;
+            color: transparent;
+            background: transparent;
+            border: none;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            z-index: 1;
+            pointer-events: none;
+            counter-reset: line;
+        }
+
+        .text-overlay p {
+            margin: 0;
+            counter-increment: line;
+        }
+
+        .text-overlay p::before {
+            content: counter(line);
+            position: absolute;
+            left: 0;
+            width: 40px;
+            text-align: right;
+            padding-right: 1rem;
+            color: #6e7681;
+            user-select: none;
+        }
+
+        textarea {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            height: 100%;
+            padding: 1rem;
+            background: transparent;
+            color: #c9d1d9;
+            border: none;
+            font-family: 'Monaco', 'Courier New', monospace;
+            font-size: 14px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            resize: none;
+            outline: none;
+            z-index: 2;
+            caret-color: #58a6ff;
+        }
+
+        textarea::selection {
+            background: rgba(88, 166, 255, 0.3);
+        }
+
+        .info {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #8b949e;
+        }
+
+        .info h3 {
+            color: #58a6ff;
+            margin-bottom: 0.5rem;
+        }
+
+        .info ul {
+            margin-left: 1.5rem;
+        }
+
+        .info li {
+            margin: 0.25rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Line Numbers Test - Option 3 (CSS Counter)</h1>
+        
+        <div class="controls">
+            <button onclick="toggleLineNumbers()">Toggle Line Numbers</button>
+            <button onclick="addRandomLine()">Add Random Line</button>
+            <button onclick="clearContent()">Clear All</button>
+        </div>
+
+        <div class="editor-wrapper">
+            <div class="editor-container">
+                <div class="line-numbers" id="lineNumbers"></div>
+                <div class="editor-content">
+                    <textarea id="editor" placeholder="Type here..."></textarea>
+                </div>
+            </div>
+        </div>
+
+        <div class="info">
+            <h3>How Option 3 Works:</h3>
+            <ul>
+                <li>Uses CSS <code>counter-increment</code> to auto-number lines</li>
+                <li>Line numbers display via pseudo-elements</li>
+                <li>No JavaScript needed for numbering (only for toggle)</li>
+                <li>Each line must be wrapped in a separate element (e.g., &lt;p&gt;)</li>
+                <li>Works great for content that's already structured</li>
+            </ul>
+
+            <h3 style="margin-top: 1rem;">Pros & Cons:</h3>
+            <ul>
+                <li>✅ Pure CSS solution - elegant</li>
+                <li>✅ No sync issues between scroll positions</li>
+                <li>❌ Doesn't work with plain textarea (needs wrapped lines)</li>
+                <li>❌ Requires converting textarea to contentEditable or other solution</li>
+                <li>❌ More complex integration with current editor</li>
+            </ul>
+
+            <h3 style="margin-top: 1rem;">Recommendation:</h3>
+            <p>
+                Option 3 is elegant but would require significant refactoring of the editor. 
+                <strong>Option 1 (Fake Line Numbers)</strong> would be better for our textarea-based editor 
+                as it requires minimal changes and works seamlessly.
+            </p>
+        </div>
+    </div>
+
+    <script>
+        const editor = document.getElementById('editor');
+        const lineNumbers = document.getElementById('lineNumbers');
+
+        // Sample bogus text
+        const sampleText = `The quick brown fox jumps over the lazy dog
+While the cat watches from the windowsill
+Digital gardens grow in dimensions of code
+Electrons dance through silicon pathways
+Memories cascade like waterfalls of light
+Each keystroke echoes through the void
+Coffee steams in forgotten cups of time
+The cursor blinks in rhythm with the heartbeat
+Words flow like rivers seeking the ocean
+But sometimes they pool in quiet corners
+Waiting for someone to read them aloud
+In the garden of letters and symbols
+Where meaning takes root and grows wild
+The timeline of thought becomes visible
+As thoughts transform into persistent marks`;
+
+        editor.value = sampleText;
+        updateLineNumbers();
+
+        function updateLineNumbers() {
+            const lines = editor.value.split('\n').length;
+            let numbersText = '';
+            for (let i = 1; i <= lines; i++) {
+                numbersText += i + '\n';
+            }
+            lineNumbers.textContent = numbersText;
+        }
+
+        function toggleLineNumbers() {
+            lineNumbers.classList.toggle('hidden');
+        }
+
+        function addRandomLine() {
+            const randomLines = [
+                'The code compiles successfully',
+                'Debugging is twice as hard as coding',
+                'In the beginning was the Word',
+                'All that glitters is not gold',
+                'The answer is 42',
+                'To be or not to be',
+                'One does not simply walk into Mordor',
+                'Winter is coming',
+                'Do or do not, there is no try'
+            ];
+            const random = randomLines[Math.floor(Math.random() * randomLines.length)];
+            editor.value += '\n' + random;
+            updateLineNumbers();
+        }
+
+        function clearContent() {
+            if (confirm('Clear all content?')) {
+                editor.value = '';
+                updateLineNumbers();
+            }
+        }
+
+        editor.addEventListener('input', updateLineNumbers);
+        editor.addEventListener('keydown', (e) => {
+            // Allow Tab for indentation
+            if (e.key === 'Tab') {
+                e.preventDefault();
+                const start = editor.selectionStart;
+                const end = editor.selectionEnd;
+                editor.value = editor.value.substring(0, start) + '\t' + editor.value.substring(end);
+                editor.selectionStart = editor.selectionEnd = start + 1;
+                updateLineNumbers();
+            }
+        });
+    </script>
+</body>
+</html>

@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 8.4 Tamarindo
+ * @version 8.5 Avellanas
  *
  * @author Alex & Gemini & Claude & Cursor
  */ 
@@ -63,7 +63,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<meta name="theme-color" content="#FD7E13">
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
-	<link rel="stylesheet" href="uix/editor.css?v=8.4.1">
+	<link rel="stylesheet" href="uix/editor.css?v=8.5">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
 	<link rel="stylesheet" href="uix/journal.css">
@@ -74,6 +74,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		};
 	</script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
+	<script src="https://cdn.jsdelivr.net/npm/marked@11.1.1/marked.min.js"></script>
 </head>
 <body>
 
@@ -502,6 +503,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div id="editor-ribbon">
 				<nav id="editor-ribbon-tabs">
 					<button class="ribbon-tab active" data-panel="format">Format</button>
+					<button class="ribbon-tab" data-panel="preview">Preview</button>
 					<button class="ribbon-tab" data-panel="find-replace">Find & Replace</button>
 				</nav>
 				<div id="editor-ribbon-panels">
@@ -509,6 +511,15 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<div class="ribbon-button-group">
 								<button class="btn-icon" title="Undo (Ctrl+Z / Cmd+Z)" id="editor-btn-undo" data-action="undo">↶</button>
 								<button class="btn-icon" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" id="editor-btn-redo" data-action="redo">↷</button>
+								<button class="btn-icon" title="Toggle Line Numbers" id="editor-btn-line-numbers" data-action="toggle-line-numbers">⎖</button>
+								<span class="button-separator"></span>
+								<button class="btn-icon" title="Bold (**text**)" data-action="markdown-bold">**</button>
+								<button class="btn-icon" title="Italic (_text_)" data-action="markdown-italic">_</button>
+								<button class="btn-icon" title="Code (`text`)" data-action="markdown-code">`</button>
+								<button class="btn-icon" title="Heading 1 (# Heading)" data-action="markdown-h1">H1</button>
+								<button class="btn-icon" title="Heading 2 (## Heading)" data-action="markdown-h2">H2</button>
+								<button class="btn-icon" title="Markdown Help" id="editor-markdown-help">?</button>
+								<span class="button-separator"></span>
 								<button class="btn-icon" title="Uppercase" data-action="case" data-casetype="upper">AA</button>
 								<button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
 								<button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
@@ -518,7 +529,57 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
 								<button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
 								<button class="btn-icon btn-text-danger" title="Clear all note contents" id="editor-btn-clear" data-action="clear">[clear]</button>
+								<div class="btn-more-menu">
+								<button class="more-menu-button" id="editor-btn-more-menu" title="More options">⋯</button>
+								<div class="more-menu-dropdown" id="editor-more-menu-dropdown">
+									<button class="btn-icon" data-action="case" data-casetype="upper" title="Uppercase">
+										<span class="more-menu-icon">AA</span>
+										<span class="more-menu-label">Uppercase</span>
+									</button>
+									<button class="btn-icon" data-action="case" data-casetype="title" title="Title Case">
+										<span class="more-menu-icon">Aa</span>
+										<span class="more-menu-label">Title Case</span>
+									</button>
+									<button class="btn-icon" data-action="case" data-casetype="lower" title="lowercase">
+										<span class="more-menu-icon">aa</span>
+										<span class="more-menu-label">lowercase</span>
+									</button>
+									<button class="btn-icon" data-action="underline" title="Underline Selection">
+										<span class="more-menu-icon"><u>U</u></span>
+										<span class="more-menu-label">Underline</span>
+									</button>
+									<button class="btn-icon" data-action="frame" title="Frame Selection">
+										<span class="more-menu-icon">[]</span>
+										<span class="more-menu-label">Frame</span>
+									</button>
+									<button class="btn-icon" data-action="calculate" title="Calculate Selection">
+										<span class="more-menu-icon">🔢</span>
+										<span class="more-menu-label">Calculate</span>
+									</button>
+									<button class="btn-icon" data-action="font-size" data-change="-1" title="Decrease Font Size">
+										<span class="more-menu-icon">A-</span>
+										<span class="more-menu-label">Decrease</span>
+									</button>
+									<button class="btn-icon" data-action="font-size" data-change="1" title="Increase Font Size">
+										<span class="more-menu-icon">A+</span>
+										<span class="more-menu-label">Increase</span>
+									</button>
+									<button class="btn-icon btn-text-danger" data-action="clear" title="Clear all note contents">
+										<span class="more-menu-icon">[clear]</span>
+										<span class="more-menu-label">Clear</span>
+									</button>
 								</div>
+							</div>
+							</div>
+					</div>
+					<div class="ribbon-panel" id="editor-panel-preview">
+						<div class="preview-controls">
+							<button class="btn-small" id="editor-btn-refresh-preview">🔄 Refresh Preview</button>
+							<button class="btn-small" data-export-format="html">📄 HTML</button>
+							<button class="btn-small" data-export-format="markdown">📝 Markdown</button>
+							<button class="btn-small" data-export-format="plaintext">📋 Plain Text</button>
+						</div>
+						<div id="editor-preview-content" class="markdown-preview"></div>
 					</div>
 					<div class="ribbon-panel" id="editor-panel-find-replace">
 						<div class="find-replace-container">
@@ -553,6 +614,9 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 
 			<div id="editor-content">
 				<div class="editor-body">
+					<div class="line-numbers-wrapper" id="line-numbers-wrapper">
+						<div class="line-numbers" id="line-numbers"></div>
+					</div>
 					<textarea id="editor-textarea" placeholder="Start writing..."></textarea>
 				</div>
 			</div>
@@ -631,6 +695,73 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<tr><td><code>trip.*Dallas</code></td><td>"trip" followed by anything then "Dallas"</td></tr>
 						<tr><td><code>Austin|Dallas</code></td><td>Either "Austin" or "Dallas"</td></tr>
 						<tr><td><code>\b\w{4}\b</code></td><td>Exactly 4-letter words</td></tr>
+					</table>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="markdown-help-modal" class="modal hidden">
+		<div class="modal-content">
+			<div class="modal-header">
+				<h3>Markdown Syntax Guide</h3>
+				<button class="btn-icon btn-close" id="btn-close-markdown-help">&times;</button>
+			</div>
+			<div class="modal-body markdown-help-content">
+				<div class="markdown-section">
+					<h4>Text Formatting</h4>
+					<table class="markdown-table">
+						<tr><td><code>**bold**</code></td><td><strong>bold</strong></td></tr>
+						<tr><td><code>_italic_</code></td><td><em>italic</em></td></tr>
+						<tr><td><code>`code`</code></td><td><code>code</code></td></tr>
+						<tr><td><code>~~strikethrough~~</code></td><td><s>strikethrough</s></td></tr>
+					</table>
+				</div>
+
+				<div class="markdown-section">
+					<h4>Headings</h4>
+					<table class="markdown-table">
+						<tr><td><code># Heading 1</code></td><td>Largest heading</td></tr>
+						<tr><td><code>## Heading 2</code></td><td>Subheading</td></tr>
+						<tr><td><code>### Heading 3</code></td><td>Smaller heading</td></tr>
+						<tr><td><code>#### Heading 4</code></td><td>Even smaller</td></tr>
+						<tr><td><code>##### Heading 5</code></td><td>Very small</td></tr>
+						<tr><td><code>###### Heading 6</code></td><td>Smallest</td></tr>
+					</table>
+				</div>
+
+				<div class="markdown-section">
+					<h4>Lists</h4>
+					<table class="markdown-table">
+						<tr><td><code>- item 1<br>- item 2</code></td><td>Bullet list</td></tr>
+						<tr><td><code>1. item 1<br>2. item 2</code></td><td>Numbered list</td></tr>
+						<tr><td><code>- [ ] task<br>- [x] done</code></td><td>Checkbox list</td></tr>
+					</table>
+				</div>
+
+				<div class="markdown-section">
+					<h4>Links & Images</h4>
+					<table class="markdown-table">
+						<tr><td><code>[link text](url)</code></td><td>Hyperlink</td></tr>
+						<tr><td><code>[link](https://example.com)</code></td><td>Full URL</td></tr>
+						<tr><td><code>![alt text](image.jpg)</code></td><td>Image</td></tr>
+					</table>
+				</div>
+
+				<div class="markdown-section">
+					<h4>Code Blocks</h4>
+					<table class="markdown-table">
+						<tr><td><code>```<br>code here<br>```</code></td><td>Code block</td></tr>
+						<tr><td><code>```javascript<br>const x = 1;<br>```</code></td><td>Syntax highlighting</td></tr>
+					</table>
+				</div>
+
+				<div class="markdown-section">
+					<h4>Other</h4>
+					<table class="markdown-table">
+						<tr><td><code>&gt; quote</code></td><td>Blockquote</td></tr>
+						<tr><td><code>---</code></td><td>Horizontal rule</td></tr>
+						<tr><td><code>| a | b |</code></td><td>Tables (GitHub)</td></tr>
 					</table>
 				</div>
 			</div>

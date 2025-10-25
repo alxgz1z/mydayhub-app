@@ -7,7 +7,7 @@
  * This file contains utility functions that are used across multiple
  * parts of the backend application.
  *
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

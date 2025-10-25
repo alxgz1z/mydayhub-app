@@ -1,7 +1,7 @@
 /**
  * Encryption Setup Wizard
  * MyDayHub - Zero-Knowledge Encryption Setup UI
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

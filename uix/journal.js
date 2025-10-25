@@ -4,7 +4,7 @@
  * Handles the journal view functionality with horizontal date columns,
  * entry CRUD operations, and mobile-optimized navigation.
  * 
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  */
 
 class JournalView {
@@ -1183,7 +1183,7 @@ class JournalView {
             UnifiedEditor.open({
                 id: entryId,
                 kind: 'journal',
-                title: `Edit Entry: ${title}`,
+                title: title,
                 content: content,
                 updatedAt: updatedAt,
                 fontSize: parseInt(savedFontSize, 10)

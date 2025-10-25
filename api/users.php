@@ -7,7 +7,7 @@
  * Contains all business logic for user-related API actions,
  * such as managing preferences.
  *
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

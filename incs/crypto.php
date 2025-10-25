@@ -2,7 +2,7 @@
 /**
  * Centralized Encryption Engine
  * MyDayHub - Zero-Knowledge Encryption Backend
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

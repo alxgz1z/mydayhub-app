@@ -4,7 +4,7 @@
  *
  * MyDayHub - Calendar Events Management
  *
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

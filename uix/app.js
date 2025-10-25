@@ -6,7 +6,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -125,11 +125,6 @@ function handleSessionTimeout() {
 window.initSessionTimeout = initSessionTimeout;
 window.resetSessionTimer = resetSessionTimer;
 
-// Modified for Global apiFetch Architecture Fix
-// Make apiFetch globally available
-window.apiFetch = apiFetch;
-
-// Modified for Global apiFetch Architecture Fix
 // Make apiFetch globally available
 window.apiFetch = apiFetch;
 

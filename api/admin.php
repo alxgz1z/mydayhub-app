@@ -7,7 +7,7 @@
  * Handles admin-only operations like user management, subscription changes,
  * and system administration.
  *
- * @version 8.1 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
 

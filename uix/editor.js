@@ -5,7 +5,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 8.4 Tamarindo
+ * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  *
  * Public API:
@@ -93,6 +93,23 @@
 		
 		// Clear button
 		elements.clearBtn = document.getElementById('editor-btn-clear');
+		
+		// Line numbers
+		elements.lineNumbersWrapper = document.getElementById('line-numbers-wrapper');
+		elements.lineNumbers = document.getElementById('line-numbers');
+		elements.lineNumbersBtn = document.getElementById('editor-btn-line-numbers');
+		
+		// Markdown elements
+		elements.markdownHelpBtn = document.getElementById('editor-markdown-help');
+		elements.markdownHelpModal = document.getElementById('markdown-help-modal');
+		elements.markdownHelpClose = document.getElementById('btn-close-markdown-help');
+		
+		// Preview elements
+		elements.previewContent = document.getElementById('editor-preview-content');
+		elements.refreshPreviewBtn = document.getElementById('editor-btn-refresh-preview');
+		elements.exportBtn = document.getElementById('editor-btn-export');
+		elements.exportMenu = document.getElementById('editor-export-menu');
+		elements.exportItems = document.querySelectorAll('.dropdown-item');
 		
 		// Find & Replace elements
 		elements.findInput = document.getElementById('editor-find-input');
@@ -219,24 +236,318 @@
 		updateUndoRedoButtons();
 	}
 
+	// Line Numbers Management
+	function updateLineNumbers() {
+		if (!elements.lineNumbers || !elements.textarea) return;
+		
+		const textarea = elements.textarea;
+		
+		// Count visual lines by checking how many times text wraps
+		// Create a clone to measure line wrapping
+		const clone = textarea.cloneNode(true);
+		clone.style.visibility = 'hidden';
+		clone.style.position = 'absolute';
+		clone.style.height = 'auto';
+		clone.style.minHeight = 'auto';
+		document.body.appendChild(clone);
+		
+		// Get the number of lines from scrollHeight
+		const lineHeight = parseInt(window.getComputedStyle(textarea).lineHeight);
+		const lines = Math.ceil(clone.scrollHeight / lineHeight);
+		
+		document.body.removeChild(clone);
+		
+		// Generate line numbers
+		let numbersText = '';
+		for (let i = 1; i <= lines; i++) {
+			numbersText += i + '\n';
+		}
+		elements.lineNumbers.textContent = numbersText;
+		
+		// Sync the wrapper height with textarea
+		elements.lineNumbersWrapper.style.minHeight = textarea.scrollHeight + 'px';
+	}
+
+	function toggleLineNumbers() {
+		if (!elements.lineNumbersWrapper) {
+			return;
+		}
+		
+		elements.lineNumbersWrapper.classList.toggle('hidden');
+		
+		// Save preference
+		const isVisible = !elements.lineNumbersWrapper.classList.contains('hidden');
+		localStorage.setItem('editorLineNumbersVisible', isVisible);
+	}
+
+	function restoreLineNumbersPreference() {
+		if (!elements.lineNumbersWrapper) return;
+		
+		const isVisible = localStorage.getItem('editorLineNumbersVisible');
+		if (isVisible === 'false') {
+			elements.lineNumbersWrapper.classList.add('hidden');
+		}
+	}
+
+	// Markdown Functions
+	function insertMarkdown(before, after = '') {
+		const textarea = elements.textarea;
+		const start = textarea.selectionStart;
+		const end = textarea.selectionEnd;
+		const selectedText = textarea.value.substring(start, end);
+		const beforeText = textarea.value.substring(0, start);
+		const afterText = textarea.value.substring(end);
+		
+		textarea.value = beforeText + before + selectedText + after + afterText;
+		textarea.focus();
+		textarea.selectionStart = start + before.length;
+		textarea.selectionEnd = start + before.length + selectedText.length;
+		
+		markAsDirtyAndQueueSave();
+		updateStats();
+	}
+
+	function insertMarkdownBlock(linePrefix) {
+		const textarea = elements.textarea;
+		const start = textarea.selectionStart;
+		const beforeText = textarea.value.substring(0, start);
+		const afterText = textarea.value.substring(start);
+		
+		// Find the start of the current line
+		let lineStart = beforeText.lastIndexOf('\n');
+		lineStart = lineStart === -1 ? 0 : lineStart + 1;
+		
+		// Get everything before the line, the current line, and everything after
+		const beforeLine = beforeText.substring(0, lineStart);
+		const currentLine = beforeText.substring(lineStart);
+		
+		// Insert the prefix at the start of the line
+		textarea.value = beforeLine + linePrefix + currentLine + afterText;
+		textarea.focus();
+		textarea.selectionStart = start + linePrefix.length;
+		textarea.selectionEnd = textarea.selectionStart;
+		
+		markAsDirtyAndQueueSave();
+		updateStats();
+	}
+
+	function renderMarkdown() {
+		if (!elements.previewContent || !elements.textarea) return;
+		
+		try {
+			const markdown = elements.textarea.value;
+			const html = marked.parse(markdown, {
+				breaks: true,
+				gfm: true
+			});
+			elements.previewContent.innerHTML = html;
+		} catch (error) {
+			console.error('Markdown rendering error:', error);
+			elements.previewContent.innerHTML = '<p style="color: #ff6b6b;">Error parsing markdown</p>';
+		}
+	}
+
+	function exportContent(format) {
+		const title = elements.title.textContent.replace('Edit Entry: ', '').trim();
+		const content = elements.textarea.value;
+		const timestamp = new Date().toLocaleString();
+		
+		let fileContent, fileName, mimeType;
+		
+		if (format === 'html') {
+			const html = marked.parse(content, { breaks: true, gfm: true });
+			fileContent = `<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>${title}</title>
+	<style>
+		body {
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+			line-height: 1.6;
+			max-width: 900px;
+			margin: 0 auto;
+			padding: 2rem;
+			background: #ffffff;
+			color: #333;
+		}
+		h1, h2, h3, h4, h5, h6 { margin-top: 1.5rem; margin-bottom: 1rem; }
+		code { background: #f5f5f5; padding: 0.2rem 0.4rem; border-radius: 3px; }
+		pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; overflow-x: auto; }
+		a { color: #0066cc; text-decoration: none; }
+		a:hover { text-decoration: underline; }
+		blockquote { border-left: 4px solid #ddd; padding-left: 1rem; color: #666; }
+		.timestamp { color: #999; font-size: 0.9em; margin-top: 2rem; padding-top: 1rem; border-top: 1px solid #eee; }
+	</style>
+</head>
+<body>
+	<h1>${title}</h1>
+	<div class="content">
+		${html}
+	</div>
+	<div class="timestamp">
+		<p>Exported: ${timestamp}</p>
+	</div>
+</body>
+</html>`;
+			fileName = `${title}.html`;
+			mimeType = 'text/html';
+		} else if (format === 'markdown') {
+			fileContent = content;
+			fileName = `${title}.md`;
+			mimeType = 'text/markdown';
+		} else if (format === 'plaintext') {
+			// Remove markdown formatting
+			fileContent = content
+				.replace(/\*\*(.*?)\*\*/g, '$1')  // Remove bold
+				.replace(/_(.*?)_/g, '$1')        // Remove italic
+				.replace(/`(.*?)`/g, '$1')        // Remove inline code
+				.replace(/~~(.*?)~~/g, '$1')      // Remove strikethrough
+				.replace(/^#+\s+/gm, '')          // Remove headings
+				.replace(/\[([^\]]+)\]\([^\)]+\)/g, '$1') // Remove links
+				.replace(/```[\s\S]*?```/g, '');  // Remove code blocks
+			fileName = `${title}.txt`;
+			mimeType = 'text/plain';
+		}
+		
+		const blob = new Blob([fileContent], { type: mimeType });
+		const url = URL.createObjectURL(blob);
+		const link = document.createElement('a');
+		link.href = url;
+		link.download = fileName;
+		document.body.appendChild(link);
+		link.click();
+		document.body.removeChild(link);
+		URL.revokeObjectURL(url);
+	}
+
+	function handleTabSwitch(tab) {
+		const panelId = tab.target.dataset.panel;
+		elements.tabs.forEach(t => t.classList.remove('active'));
+		elements.panels.forEach(p => p.classList.remove('active'));
+		tab.target.classList.add('active');
+		document.getElementById(`editor-panel-${panelId}`).classList.add('active');
+	}
+
+	function startEditingTitle() {
+		if (!elements.title) return;
+		
+		const currentTitle = elements.title.textContent;
+		const input = document.createElement('input');
+		input.type = 'text';
+		input.value = currentTitle;
+		input.className = 'editor-title-input';
+		input.style.cssText = `
+			font-size: 1.25rem;
+			font-weight: 400;
+			color: #ffffff;
+			background: rgba(255,255,255,0.1);
+			border: 2px solid var(--accent-color, #4f46e5);
+			border-radius: 8px;
+			padding: 0.5rem 1rem;
+			font-family: inherit;
+			width: 100%;
+			box-sizing: border-box;
+			outline: none;
+		`;
+		
+		elements.title.textContent = '';
+		elements.title.appendChild(input);
+		input.focus();
+		input.select();
+		
+		const finishEdit = async () => {
+			const newTitle = input.value.trim() || currentTitle;
+			elements.title.textContent = newTitle;
+			
+			// Save title change if editing existing entry
+			if (state.currentKind && state.currentTaskId && newTitle !== currentTitle) {
+				try {
+					if (state.currentKind === 'journal') {
+						// Save journal entry title
+						console.log('🔄 Updating journal entry title:', { entry_id: state.currentTaskId, title: newTitle });
+						const response = await apiFetch({
+							module: 'journal',
+							action: 'updateEntry',
+							entry_id: state.currentTaskId,
+							title: newTitle,
+							content: elements.textarea.value || ''
+						}, 'POST');
+						
+						console.log('📝 Journal update response:', response);
+						
+						if (response.status !== 'success') {
+							throw new Error(response.message || 'Failed to update title');
+						}
+						
+						// Update the journal entry card in the view
+						const entryCard = document.querySelector(`[data-entry-id="${state.currentTaskId}"] .journal-entry-title`);
+						if (entryCard) {
+							entryCard.textContent = newTitle;
+						}
+						
+						// Show success toast
+						showToast(`✅ Title updated to "${newTitle}"`);
+					} else if (state.currentKind === 'task') {
+						// Save task title
+						console.log('🔄 Updating task title:', { task_id: state.currentTaskId, title: newTitle });
+						const response = await apiFetch({
+							module: 'tasks',
+							action: 'renameTaskTitle',
+							task_id: state.currentTaskId,
+							title: newTitle
+						}, 'POST');
+						
+						console.log('📝 Task update response:', response);
+						
+						if (response.status !== 'success') {
+							throw new Error(response.message || 'Failed to update title');
+						}
+						
+						// Update the task card in the view
+						const taskCard = document.querySelector(`[data-task-id="${state.currentTaskId}"] .task-title`);
+						if (taskCard) {
+							taskCard.textContent = newTitle;
+						}
+						
+						// Show success toast
+						showToast(`✅ Title updated to "${newTitle}"`);
+					}
+				} catch (error) {
+					console.error('❌ Error saving title:', error);
+					// Revert on error
+					elements.title.textContent = currentTitle;
+					showToast(`❌ ${error.message || 'Failed to update title'}`);
+				}
+			}
+		};
+		
+		input.addEventListener('blur', finishEdit);
+		input.addEventListener('keydown', (e) => {
+			if (e.key === 'Enter') {
+				finishEdit();
+			} else if (e.key === 'Escape') {
+				elements.title.textContent = currentTitle;
+			}
+		});
+	}
+
 	function attachEventListeners() {
 		elements.btnClose.addEventListener('click', close);
 		elements.btnMaximize.addEventListener('click', maximize);
 		elements.btnRestore.addEventListener('click', restore);
 
 		elements.tabs.forEach(tab => {
-			tab.addEventListener('click', () => {
-				const panelId = tab.dataset.panel;
-				elements.tabs.forEach(t => t.classList.remove('active'));
-				elements.panels.forEach(p => p.classList.remove('active'));
-				tab.classList.add('active');
-				document.getElementById(`editor-panel-${panelId}`).classList.add('active');
-			});
+			tab.addEventListener('click', handleTabSwitch);
 		});
 
 		elements.formatActions.forEach(button => {
 			button.addEventListener('click', handleFormatAction);
 		});
+
+		// Double-click to edit title
+		elements.title?.addEventListener('dblclick', startEditingTitle);
 
 		// Undo/Redo button handlers
 		elements.undoBtn?.addEventListener('click', performUndo);
@@ -245,6 +556,93 @@
 		elements.textarea.addEventListener('input', markAsDirtyAndQueueSave);
 		elements.textarea.addEventListener('keydown', handleTabKey);
 		elements.textarea.addEventListener('keydown', handleUndoRedoShortcuts);
+		
+		// Line numbers sync and updates
+		elements.textarea.addEventListener('scroll', () => {
+			if (elements.lineNumbersWrapper) {
+				elements.lineNumbersWrapper.scrollTop = elements.textarea.scrollTop;
+			}
+		});
+		elements.textarea.addEventListener('input', updateLineNumbers);
+		
+		// Markdown buttons
+		document.querySelectorAll('[data-action^="markdown-"]').forEach(button => {
+			button.addEventListener('click', (e) => {
+				const action = e.target.dataset.action;
+				if (action === 'markdown-bold') insertMarkdown('**', '**');
+				else if (action === 'markdown-italic') insertMarkdown('_', '_');
+				else if (action === 'markdown-code') insertMarkdown('`', '`');
+				else if (action === 'markdown-h1') insertMarkdownBlock('# ');
+				else if (action === 'markdown-h2') insertMarkdownBlock('## ');
+			});
+		});
+		
+		// More menu toggle
+		const moreMenuBtn = document.getElementById('editor-btn-more-menu');
+		const moreMenuDropdown = document.getElementById('editor-more-menu-dropdown');
+		
+		moreMenuBtn?.addEventListener('click', (e) => {
+			e.stopPropagation();
+			moreMenuDropdown?.classList.toggle('visible');
+		});
+		
+		// Close more menu when a button is clicked (before handleFormatAction runs)
+		moreMenuDropdown?.querySelectorAll('button').forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				e.stopPropagation();
+				setTimeout(() => {
+					moreMenuDropdown.classList.remove('visible');
+				}, 50);
+			}, true); // Use capture phase
+		});
+		
+		// Close more menu when clicking outside
+		document.addEventListener('click', (e) => {
+			if (!e.target.closest('.btn-more-menu')) {
+				moreMenuDropdown?.classList.remove('visible');
+			}
+		});
+		
+		// Markdown help modal
+		elements.markdownHelpBtn?.addEventListener('click', () => {
+			elements.markdownHelpModal?.classList.remove('hidden');
+		});
+		
+		elements.markdownHelpClose?.addEventListener('click', () => {
+			elements.markdownHelpModal?.classList.add('hidden');
+		});
+		
+		elements.markdownHelpModal?.addEventListener('click', (e) => {
+			if (e.target === elements.markdownHelpModal) {
+				elements.markdownHelpModal.classList.add('hidden');
+			}
+		});
+		
+		// Preview controls
+		elements.refreshPreviewBtn?.addEventListener('click', renderMarkdown);
+		
+		// Export buttons - handle direct export without dropdown
+		const exportButtons = document.querySelectorAll('[data-export-format]');
+		exportButtons.forEach(btn => {
+			btn.addEventListener('click', (e) => {
+				const format = e.target.dataset.exportFormat;
+				if (format) {
+					exportContent(format);
+				}
+			});
+		});
+		
+		// Close export menu when clicking outside
+		document.addEventListener('click', () => {
+			elements.exportMenu?.classList.remove('visible');
+		});
+		
+		// Keyboard shortcut for escape to close markdown help
+		document.addEventListener('keydown', (e) => {
+			if (e.key === 'Escape') {
+				elements.markdownHelpModal?.classList.add('hidden');
+			}
+		});
 	}
 
 	// Modified for global apiFetch
@@ -299,6 +697,11 @@
 
 		if (action === 'redo') {
 			performRedo();
+			return;
+		}
+		
+		if (action === 'toggle-line-numbers') {
+			toggleLineNumbers();
 			return;
 		}
 		
@@ -527,6 +930,10 @@
 		updateStats();
 		state.isOpen = true;
 		state.isDirty = false;
+		
+		// Initialize line numbers
+		updateLineNumbers();
+		restoreLineNumbersPreference();
 		
 		if (updatedAt) {
 			const savedDate = new Date(updatedAt.replace(' ', 'T') + 'Z'); 

@@ -1,0 +1,61 @@
+{
+    "when": "2025-10-24T03:15:16.798Z",
+    "window": {
+        "innerWidth": 1387,
+        "innerHeight": 1248,
+        "devicePixelRatio": 2
+    },
+    "container": {
+        "scrollWidth": 1339,
+        "clientWidth": 1339,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [
+        {
+            "index": 0,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 342
+            }
+        },
+        {
+            "index": 1,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 342
+            }
+        },
+        {
+            "index": 2,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 342
+            }
+        }
+    ],
+    "console": []
+}
