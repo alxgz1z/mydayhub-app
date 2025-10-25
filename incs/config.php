@@ -74,7 +74,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Tamarindo 8.4');
+define('APP_VER', 'Avellanas 8.5');
 
 // Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
 function detectAppUrl() {
