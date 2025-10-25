@@ -689,6 +689,7 @@
 	async function handleFormatAction(e) {
 		const button = e.currentTarget;
 		const action = button.dataset.action;
+		console.log('handleFormatAction called with action:', action);
 		
 		if (action === 'undo') {
 			performUndo();
@@ -706,6 +707,7 @@
 		}
 		
 		if (action === 'search-notes') {
+			console.log('Search notes action triggered');
 			openSearchNotesModal();
 			return;
 		}
@@ -1677,12 +1679,15 @@
 	 * Opens the search notes modal
 	 */
 	function openSearchNotesModal() {
+		console.log('openSearchNotesModal called');
 		const modal = document.getElementById('search-notes-modal');
+		console.log('Search modal found:', modal);
 		if (!modal) {
 			console.error('Search notes modal not found');
 			return;
 		}
 		
+		console.log('Opening search modal...');
 		modal.classList.remove('hidden');
 		
 		// Focus the search input
@@ -1913,12 +1918,10 @@
 	 * Sets up search modal event listeners
 	 */
 	function setupSearchModalListeners() {
-		// Open button
-		const openBtn = document.getElementById('editor-btn-search');
-		if (openBtn && !openBtn.hasAttribute('data-listener-added')) {
-			openBtn.addEventListener('click', openSearchNotesModal);
-			openBtn.setAttribute('data-listener-added', 'true');
-		}
+		console.log('Setting up search modal listeners...');
+		
+		// Note: Search button is handled by handleFormatAction via data-action="search-notes"
+		// No need for separate click listener
 		
 		// Close button
 		const closeBtn = document.getElementById('btn-close-search-notes');
