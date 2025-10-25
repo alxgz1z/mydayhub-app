@@ -919,7 +919,7 @@ class JournalView {
                 <div class="journal-column-header">
                     ${prevButton || '<div></div>'}
                     <div class="journal-header-content">
-                        <div class="journal-column-date">${this.formatDate(dateObj)}</div>
+                        <div class="journal-column-date">${this.formatDateForDisplay(dateObj)}</div>
                         <div class="journal-column-day">${this.getDayName(dateObj)}</div>
                     </div>
                     ${nextButton || '<div></div>'}
@@ -1021,18 +1021,6 @@ class JournalView {
         return content.replace(/@task\[([^\]]+)\]/g, '<span class="task-reference">@task[$1]</span>');
     }
     
-    formatDate(date) {
-        if (typeof date === 'string') {
-            // IMPORTANT: Append 'T12:00:00' to avoid timezone issues
-            date = new Date(date + 'T12:00:00');
-        }
-        
-        const year = date.getFullYear();
-        const month = date.toLocaleString('default', { month: 'short' }).toUpperCase();
-        const day = date.getDate().toString().padStart(2, '0');
-        
-        return `${year}.${month}.${day}`;
-    }
     
     getDayName(date) {
         return date.toLocaleString('default', { weekday: 'long' });
@@ -2031,6 +2019,22 @@ Would you like to set up encryption now?`;
     getDatesWithEntries() {
         // Get all dates that have entries from the entries map
         return Array.from(this.entries.keys()).sort();
+    }
+
+    /**
+     * Helper to format date for display: YYYY.MMM.DD
+     */
+    formatDateForDisplay(date) {
+        if (typeof date === 'string') {
+            // IMPORTANT: Append 'T12:00:00' to avoid timezone issues
+            date = new Date(date + 'T12:00:00');
+        }
+        
+        const year = date.getFullYear();
+        const month = date.toLocaleString('default', { month: 'short' }).toUpperCase();
+        const day = date.getDate().toString().padStart(2, '0');
+        
+        return `${year}.${month}.${day}`;
     }
 }
 
