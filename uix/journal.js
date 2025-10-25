@@ -723,10 +723,12 @@ class JournalView {
         try {
             // Load all potential entries (wider range in case we filter)
             const potentialDates = this.calculatePotentialDateRange();
+            console.log('📥 Loading entries for potential dates:', potentialDates);
             await this.loadEntries(potentialDates);
             
             // Calculate final dates based on filter mode
             const dates = this.getFilteredDateRange();
+            console.log('📋 Final filtered dates to render:', { count: dates.length, dates, filterMode: this.filterMode, dayCount: this.dayCount });
             
             // Render the view
             journalContainer.innerHTML = this.renderJournalHTML(dates);
@@ -791,24 +793,49 @@ class JournalView {
         if (this.filterMode === 'notes-only') {
             // Get all dates with entries, sorted
             const datesWithEntries = Array.from(this.entries.keys()).sort();
+            console.log('🔍 notes-only mode:', { dayCount: this.dayCount, totalDatesWithEntries: datesWithEntries.length, datesWithEntries });
             
-            // Find today's position
+            if (datesWithEntries.length === 0) {
+                console.log('⚠️ No dates with entries found');
+                return [];
+            }
+            
+            // Find closest date with entries to today (could be today itself or a nearby date)
             const today = this.formatDate(this.currentDate);
-            const todayIndex = datesWithEntries.indexOf(today);
+            let bestIndex = 0;
+            let bestDistance = Infinity;
+            
+            // Parse today's date for comparison
+            const todayDate = new Date(today + 'T12:00:00');
+            
+            // Find the closest date with entries to today
+            datesWithEntries.forEach((dateStr, index) => {
+                const entryDate = new Date(dateStr + 'T12:00:00');
+                const distance = Math.abs(todayDate - entryDate);
+                if (distance < bestDistance) {
+                    bestDistance = distance;
+                    bestIndex = index;
+                }
+            });
+            
+            console.log('📍 Today closest match:', { today, closestIndex: bestIndex, closestDate: datesWithEntries[bestIndex], distance: bestDistance });
             
             // Calculate how many to show on each side
             const sideDates = Math.floor(this.dayCount / 2);
             
-            // Start from center (or as close as possible)
-            let startIndex = Math.max(0, todayIndex - sideDates);
+            // Start from the closest date
+            let startIndex = Math.max(0, bestIndex - sideDates);
             let endIndex = Math.min(datesWithEntries.length, startIndex + this.dayCount);
             
-            // Adjust if we hit the boundary
-            if (endIndex - startIndex < this.dayCount) {
+            // Adjust if we hit the boundary to always show dayCount items if possible
+            if (endIndex - startIndex < this.dayCount && datesWithEntries.length >= this.dayCount) {
                 startIndex = Math.max(0, endIndex - this.dayCount);
             }
             
-            return datesWithEntries.slice(startIndex, endIndex);
+            console.log('📊 notes-only calculation:', { sideDates, bestIndex, startIndex, endIndex, resultCount: endIndex - startIndex });
+            const result = datesWithEntries.slice(startIndex, endIndex);
+            console.log('✅ notes-only result:', { returned: result.length, dates: result });
+            return result;
         }
         
         // For 'all' and 'weekdays' modes: calculate from center date outward
