@@ -14,9 +14,14 @@ class JournalView {
         today.setHours(12, 0, 0, 0);
         this.currentDate = today;
         
-        this.viewMode = '3-day'; // 1-day, 3-day, 5-day (will be adjusted for mobile)
-        this.hideWeekends = false;
-        this.showOnlyWithNotes = false; // NEW: show only dates with entries
+        // REFACTORED: Cleaner state management
+        this.dayCount = 3; // Number of days to display: 1, 3, or 5
+        // Filter mode controls what dates are shown:
+        // 'all' = show all days (including weekends)
+        // 'weekdays' = skip weekends
+        // 'notes-only' = show only dates with entries (overrides weekday filter)
+        this.filterMode = 'all';
+        
         this.entries = new Map(); // date -> entries array
         this.isLoading = false;
         this.isMobile = window.innerWidth < 768; // Mobile breakpoint
@@ -78,43 +83,41 @@ class JournalView {
         // Create menu items
         const menuItems = [];
         
-        // Add weekends toggle at the top
-        const hideWeekendsChecked = this.hideWeekends ? 'checked' : '';
+        // Add filter mode toggles - they're mutually exclusive
         menuItems.push({
-            id: 'journal-weekends-toggle',
-            icon: '',
-            label: 'Hide Weekends',
-            action: () => {
-                this.toggleWeekends();
-                this.closeJournalMenu();
-            },
-            active: false,
-            isToggle: true,
-            checked: hideWeekendsChecked
+            id: 'journal-filter-all',
+            icon: '∴',
+            label: 'Show All Days',
+            action: () => { this.filterMode = 'all'; this.saveAndRender(); },
+            active: this.filterMode === 'all',
+            isToggle: false
         });
         
-        // Add show only with notes toggle
-        const showOnlyWithNotesChecked = this.showOnlyWithNotes ? 'checked' : '';
         menuItems.push({
-            id: 'journal-show-only-notes-toggle',
-            icon: '',
-            label: 'Show Only Days with Notes',
-            action: () => {
-                this.toggleShowOnlyWithNotes();
-                this.closeJournalMenu();
-            },
-            active: false,
-            isToggle: true,
-            checked: showOnlyWithNotesChecked
+            id: 'journal-filter-weekdays',
+            icon: '⊗',
+            label: 'Weekdays Only',
+            action: () => { this.filterMode = 'weekdays'; this.saveAndRender(); },
+            active: this.filterMode === 'weekdays',
+            isToggle: false
         });
         
-        // Add view mode options
+        menuItems.push({
+            id: 'journal-filter-notes',
+            icon: '📝',
+            label: 'Only Days with Notes',
+            action: () => { this.filterMode = 'notes-only'; this.saveAndRender(); },
+            active: this.filterMode === 'notes-only',
+            isToggle: false
+        });
+        
+        // Add view size options
         menuItems.push({
             id: 'journal-view-1d',
             icon: '1',
             label: '1 Day View',
-            action: () => this.setViewMode('1-day'),
-            active: this.viewMode === '1-day'
+            action: () => this.setDayCount(1),
+            active: this.dayCount === 1
         });
         
         // Only add 3D and 5D options on desktop
@@ -124,15 +127,15 @@ class JournalView {
                     id: 'journal-view-3d',
                     icon: '3',
                     label: '3 Day View',
-                    action: () => this.setViewMode('3-day'),
-                    active: this.viewMode === '3-day'
+                    action: () => this.setDayCount(3),
+                    active: this.dayCount === 3
                 },
                 {
                     id: 'journal-view-5d',
                     icon: '5',
                     label: '5 Day View',
-                    action: () => this.setViewMode('5-day'),
-                    active: this.viewMode === '5-day'
+                    action: () => this.setDayCount(5),
+                    active: this.dayCount === 5
                 }
             );
         }
@@ -186,26 +189,12 @@ class JournalView {
         });
         
         const menuHTML = menuItems.map(item => {
-            if (item.isToggle) {
-                // Use the item id to create data-filter attribute
-                const filterId = item.id === 'journal-weekends-toggle' ? 'showWeekends' : 'showOnlyWithNotes';
-                return `
-                    <div class="filter-item">
-                        <span class="filter-label">${item.label}</span>
-                        <label class="switch">
-                            <input type="checkbox" data-filter="${filterId}" ${item.checked}>
-                            <span class="slider round"></span>
-                        </label>
-                    </div>
-                `;
-            } else {
-                return `
-                    <button class="journal-menu-item ${item.active ? 'active' : ''}" data-action="${item.id}">
-                        <span class="journal-menu-icon">${item.icon}</span>
-                        <span class="journal-menu-label">${item.label}</span>
-                    </button>
-                `;
-            }
+            return `
+                <button class="journal-menu-item ${item.active ? 'active' : ''}" data-action="${item.id}">
+                    <span class="journal-menu-icon">${item.icon}</span>
+                    <span class="journal-menu-label">${item.label}</span>
+                </button>
+            `;
         }).join('');
         
         menu.innerHTML = menuHTML;
@@ -420,24 +409,37 @@ class JournalView {
             const result = await response.json();
             
             if (result.status === 'success' && result.data) {
-                const savedViewMode = result.data.view_mode || '3-day';
-                // Override saved preference if on mobile - force 1-day view
-                this.viewMode = this.isMobile ? '1-day' : savedViewMode;
-                // Convert hide_weekends to proper boolean (database returns 0/1)
-                this.hideWeekends = Boolean(result.data.hide_weekends);
-                this.showOnlyWithNotes = Boolean(result.data.show_only_with_notes); // Load showOnlyWithNotes
+                // Load day count preference (convert 'view_mode' to dayCount)
+                const viewMode = result.data.view_mode || '3-day';
+                const dayCountMap = { '1-day': 1, '3-day': 3, '5-day': 5 };
+                this.dayCount = dayCountMap[viewMode] || 3;
+                
+                // On mobile, force 1-day view
+                if (this.isMobile) {
+                    this.dayCount = 1;
+                }
+                
+                // Load filter mode
+                const hideWeekends = Boolean(result.data.hide_weekends);
+                const showOnlyWithNotes = Boolean(result.data.show_only_with_notes);
+                
+                if (showOnlyWithNotes) {
+                    this.filterMode = 'notes-only';
+                } else if (hideWeekends) {
+                    this.filterMode = 'weekdays';
+                } else {
+                    this.filterMode = 'all';
+                }
             } else {
                 // Use defaults on error, respecting mobile constraint
-                this.viewMode = this.isMobile ? '1-day' : '3-day';
-                this.hideWeekends = false;
-                this.showOnlyWithNotes = false; // Default to false
+                this.dayCount = this.isMobile ? 1 : 3;
+                this.filterMode = 'all';
             }
         } catch (error) {
-            console.error('❌ Failed to load journal preferences:', error);
+            console.error('Failed to load journal preferences:', error);
             // Use defaults on error, respecting mobile constraint
-            this.viewMode = this.isMobile ? '1-day' : '3-day';
-            this.hideWeekends = false;
-            this.showOnlyWithNotes = false; // Default to false
+            this.dayCount = this.isMobile ? 1 : 3;
+            this.filterMode = 'all';
         }
     }
     
@@ -719,20 +721,18 @@ class JournalView {
         }
         
         try {
-            // Calculate date range based on view mode
-            const dates = this.getDateRange();
+            // Load all potential entries (wider range in case we filter)
+            const potentialDates = this.calculatePotentialDateRange();
+            await this.loadEntries(potentialDates);
             
-            // Load entries for the date range
-            await this.loadEntries(dates);
-            
-            // Filter dates based on showOnlyWithNotes
-            const filteredDates = this.showOnlyWithNotes ? this.getDatesWithEntries() : dates;
+            // Calculate final dates based on filter mode
+            const dates = this.getFilteredDateRange();
             
             // Render the view
-            journalContainer.innerHTML = this.renderJournalHTML(filteredDates);
+            journalContainer.innerHTML = this.renderJournalHTML(dates);
             
             // Add entries to columns
-            filteredDates.forEach(date => {
+            dates.forEach(date => {
                 const column = document.querySelector(`[data-date="${date}"]`);
                 if (column) {
                     const entries = this.entries.get(date) || [];
@@ -752,120 +752,124 @@ class JournalView {
         }
     }
     
-    getDateRange() {
-        const dayCount = this.getDayCount();
+    /**
+     * Calculate a wider date range for loading entries
+     * This ensures we have entries loaded before filtering
+     */
+    calculatePotentialDateRange() {
         const dates = [];
+        const range = this.dayCount + 4; // Get a bit more to account for skipped weekends
+        const centerIndex = Math.floor(range / 2);
         
-        // Use the proven approach from the previous app version
-        const centerIndex = Math.floor(dayCount / 2);
-        
-        for (let i = 0; i < dayCount; i++) {
+        for (let i = 0; i < range; i++) {
             const offset = i - centerIndex;
             let tempDate = new Date(this.currentDate);
             
-            // Apply the offset, skipping weekends if needed
-            if (offset < 0) {
-                // Going backwards
-                for (let j = 0; j < Math.abs(offset); j++) {
-                    tempDate = this.getOffsetDate(tempDate, -1);
-                }
-            } else if (offset > 0) {
-                // Going forwards
-                for (let j = 0; j < offset; j++) {
-                    tempDate = this.getOffsetDate(tempDate, 1);
-                }
-            }
-            // offset === 0 means we're at the center (current date) - always include it
+            // Simple date offset (no weekend skipping yet)
+            tempDate.setDate(tempDate.getDate() + offset);
             
-            // Format the date
             const year = tempDate.getFullYear();
             const month = String(tempDate.getMonth() + 1).padStart(2, '0');
             const day = String(tempDate.getDate()).padStart(2, '0');
-            const dateStr = `${year}-${month}-${day}`;
-            dates.push(dateStr);
+            dates.push(`${year}-${month}-${day}`);
         }
         
         return dates;
     }
     
     /**
-     * Calculates a new date by adding or subtracting days, optionally skipping weekends.
-     * @param {Date} baseDate The starting date.
-     * @param {number} direction The direction to move (-1 for previous, 1 for next).
-     * @returns {Date} The new calculated Date object.
+     * Get the final filtered date range based on filterMode and dayCount
+     * Single-pass logic handles all permutations consistently
      */
-    getOffsetDate(baseDate, direction) {
-        let newDate = new Date(baseDate);
-        newDate.setDate(newDate.getDate() + direction);
+    getFilteredDateRange() {
+        const dates = [];
+        let datesFound = 0;
+        let offset = 0;
+        const maxIterations = 365; // Safety limit
         
-        if (this.hideWeekends) {
-            while (newDate.getDay() === 6 || newDate.getDay() === 0) {
-                newDate.setDate(newDate.getDate() + direction);
+        // Handle notes-only mode differently
+        if (this.filterMode === 'notes-only') {
+            // Get all dates with entries, sorted
+            const datesWithEntries = Array.from(this.entries.keys()).sort();
+            
+            // Find today's position
+            const today = this.formatDate(this.currentDate);
+            const todayIndex = datesWithEntries.indexOf(today);
+            
+            // Calculate how many to show on each side
+            const sideDates = Math.floor(this.dayCount / 2);
+            
+            // Start from center (or as close as possible)
+            let startIndex = Math.max(0, todayIndex - sideDates);
+            let endIndex = Math.min(datesWithEntries.length, startIndex + this.dayCount);
+            
+            // Adjust if we hit the boundary
+            if (endIndex - startIndex < this.dayCount) {
+                startIndex = Math.max(0, endIndex - this.dayCount);
             }
-        }
-        
-        return newDate;
-    }
-
-    getStartOffset() {
-        // Calculate offset to center the focal column
-        switch (this.viewMode) {
-            case '1-day': return 0; // Shows [Today]
-            case '3-day': return -1; // Shows [Day-1, Today, Day+1] - focal column at index 1 (center)
-            case '5-day': return -2; // Shows [Day-2, Day-1, Today, Day+1, Day+2] - focal column at index 2 (center)
-            default: return -1;
-        }
-    }
-    
-    getDayCount() {
-        switch (this.viewMode) {
-            case '1-day': return 1;
-            case '3-day': return 3;
-            case '5-day': return 5;
-            default: return 3;
-        }
-    }
-    
-    async loadEntries(dates) {
-        if (dates.length === 0) return;
-        
-        const startDate = dates[0];
-        const endDate = dates[dates.length - 1];
-        
-        console.log('Loading entries for date range:', { startDate, endDate, dates });
-        
-        try {
-            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-            const response = await fetch(`/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken
-                },
-                credentials: 'include'
-            });
-            const result = await response.json();
             
-            console.log('Entries API response:', result);
-            
-            if (result.status === 'success' && result.data) {
-                // Group entries by date
-                this.entries.clear();
-                result.data.forEach(entry => {
-                    const date = entry.entry_date;
-                    if (!this.entries.has(date)) {
-                        this.entries.set(date, []);
-                    }
-                    this.entries.get(date).push(entry);
-                });
+            return datesWithEntries.slice(startIndex, endIndex);
+        }
+        
+        // For 'all' and 'weekdays' modes: calculate from center date outward
+        const centerIndex = Math.floor(this.dayCount / 2);
+        
+        // Always include today (center)
+        let tempDate = new Date(this.currentDate);
+        if (this.shouldIncludeDate(tempDate)) {
+            dates.push(this.formatDate(tempDate));
+            datesFound++;
+        }
+        
+        // Expand outward (go back, then forward)
+        for (offset = 1; datesFound < this.dayCount && offset < maxIterations; offset++) {
+            // Go backwards
+            if (datesFound < this.dayCount) {
+                let backDate = new Date(this.currentDate);
+                backDate.setDate(backDate.getDate() - offset);
                 
-                console.log('Loaded entries map:', this.entries);
+                if (this.shouldIncludeDate(backDate)) {
+                    dates.unshift(this.formatDate(backDate));
+                    datesFound++;
+                }
             }
-        } catch (error) {
-            console.error('Failed to load entries:', error);
-            // Continue with empty entries on error
-            this.entries.clear();
+            
+            // Go forwards
+            if (datesFound < this.dayCount) {
+                let forwardDate = new Date(this.currentDate);
+                forwardDate.setDate(forwardDate.getDate() + offset);
+                
+                if (this.shouldIncludeDate(forwardDate)) {
+                    dates.push(this.formatDate(forwardDate));
+                    datesFound++;
+                }
+            }
         }
+        
+        return dates.sort();
+    }
+    
+    /**
+     * Check if a date should be included based on current filter mode
+     */
+    shouldIncludeDate(dateObj) {
+        if (this.filterMode === 'weekdays') {
+            const dayOfWeek = dateObj.getDay();
+            // Sunday = 0, Saturday = 6, so skip 0 and 6
+            return dayOfWeek !== 0 && dayOfWeek !== 6;
+        }
+        // 'all' mode includes all dates
+        return true;
+    }
+    
+    /**
+     * Helper to format date as YYYY-MM-DD
+     */
+    formatDate(dateObj) {
+        const year = dateObj.getFullYear();
+        const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+        const day = String(dateObj.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
     }
     
     renderJournalHTML(dates) {
@@ -1084,6 +1088,62 @@ class JournalView {
         this.renderJournalView();
     }
     
+    /**
+     * Set day count and save/render
+     */
+    setDayCount(count) {
+        this.dayCount = count;
+        this.saveAndRender();
+    }
+    
+    /**
+     * Save preferences and re-render the view
+     */
+    async saveAndRender() {
+        this.closeJournalMenu();
+        await this.savePreferences();
+        this.renderJournalView();
+    }
+    
+    /**
+     * Load entries for a date range
+     */
+    async loadEntries(dates) {
+        if (dates.length === 0) return;
+        
+        const startDate = dates[0];
+        const endDate = dates[dates.length - 1];
+        
+        try {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+            const response = await fetch(`/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                credentials: 'include'
+            });
+            const result = await response.json();
+            
+            if (result.status === 'success' && result.data) {
+                // Group entries by date
+                this.entries.clear();
+                result.data.forEach(entry => {
+                    const date = entry.entry_date;
+                    if (!this.entries.has(date)) {
+                        this.entries.set(date, []);
+                    }
+                    this.entries.get(date).push(entry);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load entries:', error);
+            // Continue with empty entries on error
+            this.entries.clear();
+        }
+    }
+    
     jumpToToday() {
         // Reset current date to today at noon
         const today = new Date();
@@ -1103,10 +1163,10 @@ class JournalView {
                 days = 1;
                 break;
             case 'prev-multi':
-                days = -this.getDayCount();
+                days = -this.dayCount;
                 break;
             case 'next-multi':
-                days = this.getDayCount();
+                days = this.dayCount;
                 break;
         }
         
@@ -1699,12 +1759,19 @@ Would you like to set up encryption now?`;
     
     async savePreferences() {
         try {
+            // Convert new state model to database format
+            const dayCountMap = { 1: '1-day', 3: '3-day', 5: '5-day' };
+            const viewMode = dayCountMap[this.dayCount] || '3-day';
+            
+            const hideWeekends = this.filterMode === 'weekdays';
+            const showOnlyWithNotes = this.filterMode === 'notes-only';
+            
             const payload = {
                 module: 'journal',
                 action: 'updatePreferences',
-                view_mode: this.viewMode,
-                hide_weekends: this.hideWeekends,
-                show_only_with_notes: this.showOnlyWithNotes // Save showOnlyWithNotes
+                view_mode: viewMode,
+                hide_weekends: hideWeekends,
+                show_only_with_notes: showOnlyWithNotes
             };
             const response = await window.apiFetch(payload);
         } catch (error) {
