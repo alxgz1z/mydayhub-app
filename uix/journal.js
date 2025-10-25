@@ -1961,10 +1961,10 @@ Would you like to set up encryption now?`;
 function initJournalView() {
     if (!document.getElementById('journal-view')) return;
     if (!window.journalView) {
+        console.log('📌 Creating new JournalView instance');
         window.journalView = new JournalView();
-    }
-    if (typeof window.journalView.renderJournalView === 'function') {
-        window.journalView.renderJournalView();
+        // The constructor calls init() which loads preferences and renders
+        // Don't call renderJournalView() here - let init() handle it
     }
 }
 
