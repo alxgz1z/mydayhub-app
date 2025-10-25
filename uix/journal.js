@@ -399,17 +399,21 @@ class JournalView {
             });
             const result = await response.json();
             
+            console.log('📥 Loaded preferences from API:', result);
+            
             if (result.status === 'success' && result.data) {
                 const savedViewMode = result.data.view_mode || '3-day';
                 // Override saved preference if on mobile - force 1-day view
                 this.viewMode = this.isMobile ? '1-day' : savedViewMode;
                 this.hideWeekends = result.data.hide_weekends || false;
+                console.log('✅ Preferences loaded:', { viewMode: this.viewMode, hideWeekends: this.hideWeekends });
             } else {
                 // Use defaults on error, respecting mobile constraint
                 this.viewMode = this.isMobile ? '1-day' : '3-day';
+                console.warn('⚠️ Using default preferences, API error:', result);
             }
         } catch (error) {
-            console.error('Failed to load journal preferences:', error);
+            console.error('❌ Failed to load journal preferences:', error);
             // Use defaults on error, respecting mobile constraint
             this.viewMode = this.isMobile ? '1-day' : '3-day';
             this.hideWeekends = false;
@@ -1006,7 +1010,7 @@ class JournalView {
     }
     
     async setViewMode(mode) {
-        if (this.viewMode === mode) return;
+        console.log('🔄 setViewMode called:', { newMode: mode, currentMode: this.viewMode, isMobile: this.isMobile });
         
         // Prevent view mode changes on mobile - always force 1-day
         if (this.isMobile) {
@@ -1014,6 +1018,8 @@ class JournalView {
         } else {
             this.viewMode = mode;
         }
+        
+        console.log('✅ View mode set to:', this.viewMode);
         
         // Close and reopen popover if it's currently open to update active state
         const wasPopoverOpen = !!this.journalMenu;
@@ -1659,14 +1665,17 @@ Would you like to set up encryption now?`;
     
     async savePreferences() {
         try {
-            await window.apiFetch({
+            const payload = {
                 module: 'journal',
                 action: 'updatePreferences',
                 view_mode: this.viewMode,
                 hide_weekends: this.hideWeekends
-            });
+            };
+            console.log('💾 Saving preferences:', payload);
+            const response = await window.apiFetch(payload);
+            console.log('✅ Save response:', response);
         } catch (error) {
-            console.error('Failed to save preferences:', error);
+            console.error('❌ Failed to save preferences:', error);
         }
     }
     
