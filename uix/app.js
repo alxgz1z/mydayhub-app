@@ -1542,7 +1542,6 @@ function showDueDateModal(currentDate = '') {
 			console.log('Date modal cleanup called');
 			modalOverlay.classList.add('hidden');
 			unregisterModal('date-modal');
-			document.removeEventListener('keydown', handleEscKey);
 			modalOverlay.removeEventListener('click', handleOverlayClick);
 			saveBtn.removeEventListener('click', handleSave);
 			removeBtn.removeEventListener('click', handleRemove);
