@@ -22,7 +22,7 @@
 	display: flex;
 	justify-content: center;
 	align-items: center;
-	z-index: 10003; /* Higher than all other elements */
+	z-index: 20000; /* Much higher than all other elements */
 }
 
 .modal-content {
@@ -32,6 +32,7 @@
 	max-width: 90vw;
 	max-height: 90vh;
 	overflow-y: auto;
+	border: 5px solid #00ff00; /* Bright green border for debugging */
 }
 :root {
 	--bg-color: #202020; /* Darker main background for better contrast */
