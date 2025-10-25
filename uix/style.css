@@ -86,7 +86,8 @@ body.light-mode #date-modal-input::-webkit-calendar-picker-indicator {
 body {
 	background-color: var(--bg-color);
 	color: var(--text-primary);
-	font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-family: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+	font-weight: 300;
 	margin: 0;
 	height: 100vh;
 	height: 100dvh; /* Dynamic viewport height for mobile browsers */
@@ -313,7 +314,7 @@ body.light-mode #app-header .btn-header:hover {
 	gap: 0.5rem;
 	color: var(--text-primary);
 	font-size: 0.9rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 /* Mission Focus Chart */
@@ -465,7 +466,7 @@ body.light-mode #app-header .btn-header:hover {
 .calendar-overlay-header h4 {
 	margin: 0;
 	font-size: 1.5rem;
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--text-primary);
 	letter-spacing: -0.025em;
 }
@@ -492,7 +493,7 @@ body.light-mode #app-header .btn-header:hover {
 	transition: all 0.2s ease;
 	border-bottom: 2px solid transparent;
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .calendar-tab:hover {
@@ -783,7 +784,7 @@ body.light-mode #app-header .btn-header:hover {
 .calendar-detail-label {
 	font-size: 0.75rem;
 	color: var(--text-secondary);
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .calendar-detail-value {
@@ -899,7 +900,7 @@ body.light-mode #app-header .btn-header:hover {
 
 .preference-label span {
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--text-primary);
 	line-height: 1.4;
 }
@@ -981,7 +982,7 @@ body.light-mode #app-header .btn-header:hover {
 	display: block;
 	margin-bottom: 0.5rem;
 	color: var(--text-primary);
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .form-group input,
@@ -1078,7 +1079,7 @@ body.light-mode #app-header .btn-header:hover {
 .event-modal-buttons .btn {
 	min-width: 100px;
 	padding: 0.75rem 1rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .event-modal-buttons .btn-danger {
@@ -1232,7 +1233,7 @@ body.light-mode #app-header .btn-header:hover {
 .json-import-modal-buttons .btn {
 	min-width: 100px;
 	padding: 0.75rem 1rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .manage-controls-left,
@@ -1323,7 +1324,7 @@ body.light-mode #app-header .btn-header:hover {
 
 #app-title {
 	font-size: 1.5rem;
-	font-weight: 500;
+	font-weight: 400;
 	margin: 0;
 	order: 2;
 }
@@ -1613,7 +1614,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	border-radius: 8px;
 	color: var(--text-primary);
 	font-size: 0.9rem;
-	font-weight: 500;
+	font-weight: 400;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 	opacity: 0;
 	transform: translateX(100%);
@@ -1731,7 +1732,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 	padding: 0.6rem 1.2rem;
 	border-radius: 6px;
 	font-size: 0.9rem;
-	font-weight: 500;
+	font-weight: 400;
 	cursor: pointer;
 	transition: background-color 0.2s;
 }
@@ -1798,7 +1799,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 #date-modal-container h4 {
 	margin: 0 0 1.5rem 0;
 	font-size: 1.2rem;
-	font-weight: 500;
+	font-weight: 400;
 	text-align: center;
 }
 
@@ -1935,7 +1936,7 @@ body.light-mode #app-footer.dev-mode a:hover {
 #share-modal-container .share-list h4 {
 	margin: 0.5rem 0;
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 #share-modal-container .table-shares {
@@ -2190,7 +2191,7 @@ body.light-mode .btn-add-column-menu:hover {
 #password-modal-container h4 {
 	margin: 0 0 1.5rem 0;
 	font-size: 1.2rem;
-	font-weight: 500;
+	font-weight: 400;
 	text-align: center;
 }
 
@@ -2286,7 +2287,7 @@ body.light-mode .btn-add-column-menu:hover {
 
 .timeout-option span {
 	color: var(--text-primary);
-	font-weight: 500;
+	font-weight: 400;
 }
 
 #session-timeout-buttons {
@@ -2380,7 +2381,7 @@ body.light-mode .btn-add-column-menu:hover {
 .usage-stats-header h4 {
 	margin: 0;
 	font-size: 1.3rem;
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -2432,7 +2433,7 @@ body.light-mode .btn-add-column-menu:hover {
 
 .usage-label {
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--text-primary);
 }
 
@@ -2473,7 +2474,7 @@ body.light-mode .btn-add-column-menu:hover {
 
 .usage-percentage {
 	font-size: 0.85rem;
-	font-weight: 500;
+	font-weight: 400;
 	color: var(--text-secondary);
 	min-width: 35px;
 	text-align: right;
@@ -2524,7 +2525,7 @@ body.light-mode .btn-add-column-menu:hover {
 	cursor: pointer;
 	border: 1px solid rgba(255, 255, 255, 0.2);
 	text-align: center;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .new-task-input.quota-limited::placeholder {
@@ -2717,7 +2718,7 @@ body.light-mode .btn-add-column-menu:hover {
 	text-align: center;
 	font-size: 0.875rem;
 	color: var(--text-secondary);
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .setup-step {
@@ -2761,7 +2762,7 @@ body.light-mode .btn-add-column-menu:hover {
 	margin: 0 0 0.75rem 0;
 	color: #92400e;
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .warning-content p {

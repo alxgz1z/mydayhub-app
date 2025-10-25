@@ -61,6 +61,12 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="MyDayHub">
 	<meta name="theme-color" content="#FD7E13">
+	
+	<!-- Google Fonts - Inter for elegant typography -->
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+	
 	<link rel="stylesheet" href="uix/style.css">
 	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css?v=8.5">

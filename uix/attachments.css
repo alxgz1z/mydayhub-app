@@ -100,7 +100,7 @@ body.light-mode .file-management-thumbnail-icon {
 
 body.light-mode .file-management-filename {
 	color: #1a1a1a !important;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 body.light-mode .file-management-details {
@@ -266,7 +266,7 @@ body.light-mode .file-management-quota-info {
 
 .attachment-file-info .filename {
 	display: block;
-	font-weight: 500;
+	font-weight: 400;
 	color: #f2f2f7;
 	/* Modified for filename overflow - Truncates long text with an ellipsis */
 	white-space: nowrap;
@@ -610,7 +610,7 @@ body.dark-mode #attachment-quota-bar::-webkit-progress-value {
 }
 
 .task-name {
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .btn-delete-file-management {

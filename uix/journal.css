@@ -136,7 +136,7 @@
 
 .journal-column-title {
 	font-size: 1.1rem;
-	font-weight: 500;
+	font-weight: 400;
 	margin: 0;
 	flex-grow: 1;
 	color: var(--text-primary);
@@ -458,7 +458,7 @@
 	margin-bottom: 0.5rem;
 	color: var(--text-color);
 	font-size: 0.875rem;
-	font-weight: 500;
+	font-weight: 400;
 }
 
 .date-picker-section {
@@ -472,7 +472,7 @@
 	background-color: var(--bg-color);
 	color: var(--text-color);
 	font-size: 1rem;
-	font-weight: 500;
+	font-weight: 400;
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 	margin-bottom: 1rem;
 }
