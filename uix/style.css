@@ -5,6 +5,11 @@
 /* ==========================================================================
    1. THEME VARIABLES & GLOBAL STYLES
    ========================================================================== */
+
+/* Utility Classes */
+.hidden {
+	display: none !important;
+}
 :root {
 	--bg-color: #202020; /* Darker main background for better contrast */
 	--app-header-bg: #000000; /* Neutral black background */
