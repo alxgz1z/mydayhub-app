@@ -74,18 +74,18 @@ class JournalView {
         const menuItems = [];
         
         // Add weekends toggle at the top
-        const showWeekendsChecked = !this.hideWeekends ? 'checked' : '';
+        const hideWeekendsChecked = this.hideWeekends ? 'checked' : '';
         menuItems.push({
             id: 'journal-weekends-toggle',
             icon: '',
-            label: 'Show Weekends',
+            label: 'Hide Weekends',
             action: () => {
                 this.toggleWeekends();
                 this.closeJournalMenu();
             },
             active: false,
             isToggle: true,
-            checked: showWeekendsChecked
+            checked: hideWeekendsChecked
         });
         
         // Add view mode options
@@ -226,7 +226,7 @@ class JournalView {
         // Add event listener for toggle switches
         menu.addEventListener('change', (e) => {
             if (e.target.dataset.filter === 'showWeekends') {
-                this.hideWeekends = !e.target.checked;
+                this.hideWeekends = e.target.checked;
                 this.savePreferences();
                 this.renderJournalView();
             }
