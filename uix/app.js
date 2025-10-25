@@ -1528,10 +1528,6 @@ function showDueDateModal(currentDate = '') {
 		console.log('- Save button pointer-events:', getComputedStyle(saveBtn).pointerEvents);
 	}, 100);
 	
-	// Register date modal in modal stack
-	registerModal('date-modal', handleCancel);
-	console.log('Date modal registered in modal stack');
-
 	return new Promise(resolve => {
 		let isResolved = false;
 
@@ -1565,6 +1561,10 @@ function showDueDateModal(currentDate = '') {
 			console.log('Cancel button clicked');
 			resolveOnce(null);
 		};
+		
+		// Register date modal in modal stack AFTER handleCancel is defined
+		registerModal('date-modal', handleCancel);
+		console.log('Date modal registered in modal stack');
 		
 		const handleOverlayClick = (e) => {
 			if (e.target === modalOverlay) handleCancel();
