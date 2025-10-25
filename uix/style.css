@@ -18,7 +18,7 @@
 	left: 0;
 	width: 100%;
 	height: 100%;
-	background-color: rgba(255, 0, 0, 0.8); /* Bright red for debugging */
+	background-color: rgba(0, 0, 0, 0.5);
 	display: flex;
 	justify-content: center;
 	align-items: center;
@@ -32,7 +32,6 @@
 	max-width: 90vw;
 	max-height: 90vh;
 	overflow-y: auto;
-	border: 5px solid #00ff00; /* Bright green border for debugging */
 }
 :root {
 	--bg-color: #202020; /* Darker main background for better contrast */
