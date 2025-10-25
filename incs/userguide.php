@@ -32,6 +32,12 @@ if (!isset($_SESSION['user_id'])) {
 	
 	<style>
 		/* User Guide Specific Styles */
+		body {
+			overflow: auto !important;
+			height: auto !important;
+			display: block !important;
+		}
+		
 		.user-guide-container {
 			max-width: 900px;
 			margin: 0 auto;
