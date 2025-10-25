@@ -104,7 +104,8 @@ class JournalView {
         
         menuItems.push({
             id: 'journal-filter-notes',
-            icon: '📝',
+            icon: '<img src="/media/notepad-pencil.svg" alt="notepad" class="journal-menu-svg-icon" />',
+            isSvg: true,
             label: 'Only Days with Notes',
             action: () => { this.filterMode = 'notes-only'; this.saveAndRender(); },
             active: this.filterMode === 'notes-only',
@@ -191,7 +192,7 @@ class JournalView {
         const menuHTML = menuItems.map(item => {
             return `
                 <button class="journal-menu-item ${item.active ? 'active' : ''}" data-action="${item.id}">
-                    <span class="journal-menu-icon">${item.icon}</span>
+                    <span class="journal-menu-icon">${item.isSvg ? item.icon : item.icon}</span>
                     <span class="journal-menu-label">${item.label}</span>
                 </button>
             `;
