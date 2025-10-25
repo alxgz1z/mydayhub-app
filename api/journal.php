@@ -846,12 +846,15 @@ function handle_get_journal_preferences(PDO $pdo, int $userId): array {
         $preferences = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if (!$preferences) {
+            log_debug_message('📦 No preferences found for user ' . $userId . ', returning defaults');
             // Return default preferences
             $preferences = [
                 'view_mode' => '3-day',
                 'hide_weekends' => false,
                 'date_format' => 'YEAR.MON.DD, Day'
             ];
+        } else {
+            log_debug_message('✅ Loaded preferences for user ' . $userId . ': ' . json_encode($preferences));
         }
         
         return ['status' => 'success', 'data' => $preferences];
@@ -870,7 +873,13 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
     $hideWeekends = $data['hide_weekends'] ?? null;
     $dateFormat = $data['date_format'] ?? null;
     
+    log_debug_message('📝 handle_update_journal_preferences called with data: ' . json_encode($data));
+    log_debug_message('   - viewMode: ' . ($viewMode ?: 'null'));
+    log_debug_message('   - hideWeekends: ' . ($hideWeekends !== null ? ($hideWeekends ? 'true' : 'false') : 'null'));
+    log_debug_message('   - dateFormat: ' . ($dateFormat ?: 'null'));
+    
     if (!$viewMode && $hideWeekends === null && !$dateFormat) {
+        log_debug_message('❌ Validation failed: no preferences to update');
         return ['status' => 'error', 'message' => 'No preferences to update.'];
     }
     
@@ -906,6 +915,7 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
                 WHERE user_id = :userId
             ");
             $stmt->execute($params);
+            log_debug_message('✅ Updated existing preferences for user ' . $userId);
         } else {
             // Insert new preferences
             $stmt = $pdo->prepare("
@@ -919,6 +929,7 @@ function handle_update_journal_preferences(PDO $pdo, int $userId, array $data): 
                 ':hideWeekends' => $hideWeekends !== null ? ($hideWeekends ? 1 : 0) : 0,
                 ':dateFormat' => $dateFormat ?: 'YEAR.MON.DD, Day'
             ]);
+            log_debug_message('✅ Inserted new preferences for user ' . $userId);
         }
         
         return ['status' => 'success', 'message' => 'Preferences updated successfully.'];
