@@ -2363,6 +2363,7 @@ function debugDevModeFooter() {
 	console.log('Footer has dev-mode class:', footer.classList.contains('dev-mode'));
 	
 	// Check if DEVMODE is defined in JavaScript
+	console.log('window.MyDayHub_Config.DEV_MODE:', window.MyDayHub_Config?.DEV_MODE);
 	console.log('window.DEV_MODE:', window.DEV_MODE);
 	console.log('DEVMODE constant:', typeof DEVMODE !== 'undefined' ? DEVMODE : 'undefined');
 }

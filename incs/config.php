@@ -66,7 +66,9 @@ function isDeveloperMode(): bool {
 		error_log("DEVMODE: User in developers list: " . ($userEmail && in_array($userEmail, $developerEmails) ? 'YES' : 'NO'));
 		
 		// DEVMODE is true only if user's email is in DEVELOPERS list
-		return $userEmail && in_array($userEmail, $developerEmails);
+		$isDev = $userEmail && in_array($userEmail, $developerEmails);
+		error_log("DEVMODE: Final result: " . ($isDev ? 'TRUE' : 'FALSE'));
+		return $isDev;
 	} catch (Exception $e) {
 		// If database error, DEVMODE is false
 		error_log("DEVMODE: Database error: " . $e->getMessage());
