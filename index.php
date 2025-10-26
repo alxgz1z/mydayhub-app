@@ -2468,7 +2468,22 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		// Make username available globally for JavaScript
 		window.appUsername = '<?php echo htmlspecialchars($username); ?>';
 		// Make user email available globally for JavaScript
-		window.appUserEmail = '<?php echo htmlspecialchars($_SESSION['email'] ?? ''); ?>';
+		<?php
+		// Get user email from database using username
+		$userEmail = '';
+		if (isset($_SESSION['user_id'])) {
+			try {
+				require_once 'incs/db.php';
+				$pdo = get_pdo();
+				$stmt = $pdo->prepare("SELECT email FROM users WHERE user_id = :userId");
+				$stmt->execute([':userId' => $_SESSION['user_id']]);
+				$userEmail = $stmt->fetchColumn() ?: '';
+			} catch (Exception $e) {
+				$userEmail = '';
+			}
+		}
+		?>
+		window.appUserEmail = '<?php echo htmlspecialchars($userEmail); ?>';
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
