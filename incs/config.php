@@ -67,6 +67,10 @@ function isDeveloperMode(): bool {
 	$developerEmails = array_map('trim', explode(',', $developers));
 	error_log("DEVMODE: Developer emails: " . implode(', ', $developerEmails));
 	
+	// Also try case-insensitive comparison
+	$developerEmailsLower = array_map('strtolower', $developerEmails);
+	error_log("DEVMODE: Developer emails (lowercase): " . implode(', ', $developerEmailsLower));
+	
 	try {
 		// Get current user's email
 		if (!function_exists('get_pdo')) {
@@ -80,15 +84,28 @@ function isDeveloperMode(): bool {
 		
 		error_log("DEVMODE: Current user email: " . ($userEmail ?: 'not found'));
 		error_log("DEVMODE: Developer emails array: " . print_r($developerEmails, true));
-		error_log("DEVMODE: User email in array: " . (in_array($userEmail, $developerEmails) ? 'YES' : 'NO'));
+		
+		// Try exact match first
+		$exactMatch = $userEmail && in_array($userEmail, $developerEmails);
+		error_log("DEVMODE: Exact match: " . ($exactMatch ? 'YES' : 'NO'));
+		
+		// Try case-insensitive match
+		$caseInsensitiveMatch = $userEmail && in_array(strtolower($userEmail), $developerEmailsLower);
+		error_log("DEVMODE: Case-insensitive match: " . ($caseInsensitiveMatch ? 'YES' : 'NO'));
+		
+		// Try trimmed comparison
+		$trimmedMatch = $userEmail && in_array(trim($userEmail), $developerEmails);
+		error_log("DEVMODE: Trimmed match: " . ($trimmedMatch ? 'YES' : 'NO'));
+		
 		error_log("DEVMODE: Exact comparison - user email: '" . $userEmail . "'");
 		foreach ($developerEmails as $devEmail) {
 			error_log("DEVMODE: Comparing with developer email: '" . $devEmail . "'");
-			error_log("DEVMODE: Match result: " . ($userEmail === $devEmail ? 'EXACT MATCH' : 'NO MATCH'));
+			error_log("DEVMODE: Exact match: " . ($userEmail === $devEmail ? 'YES' : 'NO'));
+			error_log("DEVMODE: Case-insensitive match: " . (strtolower($userEmail) === strtolower($devEmail) ? 'YES' : 'NO'));
 		}
 		
-		// DEVMODE is true only if user's email is in DEVELOPERS list
-		$isDev = $userEmail && in_array($userEmail, $developerEmails);
+		// DEVMODE is true if any match succeeds
+		$isDev = $exactMatch || $caseInsensitiveMatch || $trimmedMatch;
 		error_log("DEVMODE: Final result: " . ($isDev ? 'TRUE' : 'FALSE'));
 		return $isDev;
 	} catch (Exception $e) {
