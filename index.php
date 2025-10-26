@@ -1107,6 +1107,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<label class="search-option-label">
 							<input type="checkbox" id="search-regex-mode" title="Use regular expressions">
 							<span>Regex</span>
+							<button class="btn-icon-small" id="search-regex-help" title="Regex help">?</button>
 						</label>
 						<input type="text" id="search-drawer-input" placeholder="Search..." class="search-drawer-input">
 						<button class="btn btn-primary" id="btn-search-drawer" title="Search">Search</button>

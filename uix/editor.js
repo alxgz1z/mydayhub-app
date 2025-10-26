@@ -1987,6 +1987,44 @@
 			searchBtn.setAttribute('data-listener-added', 'true');
 		}
 		
+		// Regex help button
+		const regexHelpBtn = document.getElementById('search-regex-help');
+		if (regexHelpBtn && !regexHelpBtn.hasAttribute('data-listener-added')) {
+			regexHelpBtn.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				const modal = document.getElementById('regex-help-modal');
+				if (modal) {
+					modal.classList.remove('hidden');
+				}
+			});
+			regexHelpBtn.setAttribute('data-listener-added', 'true');
+		}
+		
+		// Close regex help modal
+		const regexHelpClose = document.querySelector('#regex-help-modal .modal-header .btn-close');
+		if (regexHelpClose && !regexHelpClose.hasAttribute('data-search-drawer-listener')) {
+			regexHelpClose.addEventListener('click', (e) => {
+				e.preventDefault();
+				const modal = document.getElementById('regex-help-modal');
+				if (modal) {
+					modal.classList.add('hidden');
+				}
+			});
+			regexHelpClose.setAttribute('data-search-drawer-listener', 'true');
+		}
+		
+		// Close on overlay click
+		const regexHelpModal = document.getElementById('regex-help-modal');
+		if (regexHelpModal && !regexHelpModal.hasAttribute('data-search-drawer-listener')) {
+			regexHelpModal.addEventListener('click', (e) => {
+				if (e.target === regexHelpModal) {
+					regexHelpModal.classList.add('hidden');
+				}
+			});
+			regexHelpModal.setAttribute('data-search-drawer-listener', 'true');
+		}
+		
 		// Search input enter key
 		const searchInput = document.getElementById('search-drawer-input');
 		if (searchInput && !searchInput.hasAttribute('data-listener-added')) {
