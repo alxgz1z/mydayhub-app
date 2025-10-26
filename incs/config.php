@@ -17,8 +17,6 @@ define('ROOT_PATH', dirname(INCS_PATH));
 
 // --- LOAD ENVIRONMENT VARIABLES FROM .env FILE ---
 $envPath = ROOT_PATH . '/.env';
-$_ENV_VARS = []; // Store env vars in array for reliable access
-
 if (file_exists($envPath)) {
 	$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 	foreach ($lines as $line) {
@@ -28,62 +26,30 @@ if (file_exists($envPath)) {
 			$name = trim($name);
 			$value = trim($value, " \t\n\r\0\x0B\"");
 			putenv("$name=$value");
-			
-			// Store in global array for reliable access
-			$_ENV_VARS[$name] = $value;
-			
-			// Debug: Log the variables being loaded
-			if ($name === 'DEVELOPERS') {
-				error_log(".env LOADING: $name = $value\n", 3, __DIR__ . '/../php-debug.log');
-			}
 		}
 	}
 }
 
 // --- CORE CONSTANTS & ERROR REPORTING ---
-// DEVMODE is determined entirely by whether the current user is in the DEVELOPERS list
+// DEVMODE is now determined by whether the current user is in the DEVELOPERS list
 function isDeveloperMode(): bool {
-	global $_ENV_VARS;
+	// First check if DEV_MODE is explicitly set to true in .env
+	if (getenv('DEV_MODE') === 'true') {
+		return true;
+	}
 	
-	$logFile = __DIR__ . '/../php-debug.log';
-	
-	// If no user is logged in, DEVMODE is false
+	// If no user is logged in, use DEV_MODE from .env or default to false
 	if (!isset($_SESSION['user_id'])) {
-		error_log("DEVMODE: No user logged in\n", 3, $logFile);
-		return false;
+		return getenv('DEV_MODE') === 'true';
 	}
 	
-	// Get DEVELOPERS list from $_ENV_VARS (loaded from .env file)
-	$developers = $_ENV_VARS['DEVELOPERS'] ?? '';
-	error_log("DEVMODE: DEVELOPERS from .env: " . ($developers ?: 'empty') . "\n", 3, $logFile);
-	
-	// Also check if .env file exists and is readable
-	$envFile = __DIR__ . '/../.env';
-	error_log("DEVMODE: .env file exists: " . (file_exists($envFile) ? 'YES' : 'NO') . "\n", 3, $logFile);
-	error_log("DEVMODE: .env file readable: " . (is_readable($envFile) ? 'YES' : 'NO') . "\n", 3, $logFile);
-	
-	// Try to read .env file directly
-	if (file_exists($envFile)) {
-		$envContent = file_get_contents($envFile);
-		error_log("DEVMODE: .env file content length: " . strlen($envContent) . "\n", 3, $logFile);
-		if (strpos($envContent, 'DEVELOPERS=') !== false) {
-			error_log("DEVMODE: DEVELOPERS line found in .env file\n", 3, $logFile);
-		} else {
-			error_log("DEVMODE: DEVELOPERS line NOT found in .env file\n", 3, $logFile);
-		}
-	}
-	
+	// Check if current user is in DEVELOPERS list
+	$developers = getenv('DEVELOPERS');
 	if (empty($developers)) {
-		error_log("DEVMODE: No DEVELOPERS in .env\n", 3, $logFile);
-		return false;
+		return getenv('DEV_MODE') === 'true';
 	}
 	
 	$developerEmails = array_map('trim', explode(',', $developers));
-	error_log("DEVMODE: Developer emails: " . implode(', ', $developerEmails) . "\n", 3, $logFile);
-	
-	// Also try case-insensitive comparison
-	$developerEmailsLower = array_map('strtolower', $developerEmails);
-	error_log("DEVMODE: Developer emails (lowercase): " . implode(', ', $developerEmailsLower) . "\n", 3, $logFile);
 	
 	try {
 		// Get current user's email
@@ -96,49 +62,13 @@ function isDeveloperMode(): bool {
 		$stmt->execute([':userId' => $_SESSION['user_id']]);
 		$userEmail = $stmt->fetchColumn();
 		
-		error_log("DEVMODE: Current user email: " . ($userEmail ?: 'not found') . "\n", 3, $logFile);
-		error_log("DEVMODE: Developer emails array: " . print_r($developerEmails, true) . "\n", 3, $logFile);
-		
-		// Try exact match first
-		$exactMatch = $userEmail && in_array($userEmail, $developerEmails);
-		error_log("DEVMODE: Exact match: " . ($exactMatch ? 'YES' : 'NO') . "\n", 3, $logFile);
-		
-		// Try case-insensitive match
-		$caseInsensitiveMatch = $userEmail && in_array(strtolower($userEmail), $developerEmailsLower);
-		error_log("DEVMODE: Case-insensitive match: " . ($caseInsensitiveMatch ? 'YES' : 'NO') . "\n", 3, $logFile);
-		
-		// Try trimmed comparison
-		$trimmedMatch = $userEmail && in_array(trim($userEmail), $developerEmails);
-		error_log("DEVMODE: Trimmed match: " . ($trimmedMatch ? 'YES' : 'NO') . "\n", 3, $logFile);
-		
-		error_log("DEVMODE: Exact comparison - user email: '" . $userEmail . "'" . "\n", 3, $logFile);
-		foreach ($developerEmails as $devEmail) {
-			error_log("DEVMODE: Comparing with developer email: '" . $devEmail . "'" . "\n", 3, $logFile);
-			error_log("DEVMODE: Exact match: " . ($userEmail === $devEmail ? 'YES' : 'NO') . "\n", 3, $logFile);
-			error_log("DEVMODE: Case-insensitive match: " . (strtolower($userEmail) === strtolower($devEmail) ? 'YES' : 'NO') . "\n", 3, $logFile);
-		}
-		
-		// DEVMODE is true if any match succeeds
-		$isDev = $exactMatch || $caseInsensitiveMatch || $trimmedMatch;
-		error_log("DEVMODE: Final result: " . ($isDev ? 'TRUE' : 'FALSE') . "\n", 3, $logFile);
-		return $isDev;
+		return $userEmail && in_array($userEmail, $developerEmails);
 	} catch (Exception $e) {
-		// If database error, DEVMODE is false
-		error_log("DEVMODE: Database error: " . $e->getMessage() . "\n", 3, $logFile);
-		return false;
+		// If database error, fall back to DEV_MODE from .env
+		return getenv('DEV_MODE') === 'true';
 	}
 }
 
-// --- SESSION & SECURITY --- //
-define('SESSION_TIMEOUT_SECONDS', 28800);
-
-if (session_status() === PHP_SESSION_NONE) {
-	// Configure session cookies for HTTPS
-	session_set_cookie_params(0, '/', '', false, true); // lifetime, path, domain, secure=false (temp), httponly
-	session_start();
-}
-
-// Define DEVMODE now that session is started
 define('DEVMODE', isDeveloperMode());
 
 if (DEVMODE) {
@@ -225,6 +155,7 @@ define('DB_USER', getenv('DB_USER'));
 define('DB_PASS', getenv('DB_PASS'));
 
 // --- SESSION & SECURITY --- //
+define('SESSION_TIMEOUT_SECONDS', 28800);
 
 if (session_status() === PHP_SESSION_NONE) {
 	// Configure session cookies for HTTPS
@@ -265,7 +196,7 @@ if (isset($_SESSION['user_id'])) {
 		} catch (Exception $e) {
 			// Silently fail with default timeout
 			if (DEVMODE) {
-				error_log('Session timeout preference load failed: ' . $e->getMessage() . "\n", 3, __DIR__ . '/../php-debug.log');
+				error_log('Session timeout preference load failed: ' . $e->getMessage());
 			}
 		}
 	}
@@ -483,7 +414,7 @@ function check_user_quota(int $userId, string $action): array {
 		return ['allowed' => true];
 		
 	} catch (Exception $e) {
-		error_log('Quota check error: ' . $e->getMessage() . "\n", 3, __DIR__ . '/../php-debug.log');
+		error_log('Quota check error: ' . $e->getMessage());
 		return ['allowed' => false, 'reason' => 'Error checking quota'];
 	}
 }
