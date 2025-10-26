@@ -337,7 +337,11 @@
 		if (!elements.previewContent || !elements.textarea) return;
 		
 		try {
-			const markdown = elements.textarea.value;
+			let markdown = elements.textarea.value;
+			
+			// Convert framed text (box-drawing characters) to styled divs for preview
+			markdown = convertFramedTextForPreview(markdown);
+			
 			const html = marked.parse(markdown, {
 				breaks: true,
 				gfm: true
@@ -348,11 +352,35 @@
 			elements.previewContent.innerHTML = '<p style="color: #ff6b6b;">Error parsing markdown</p>';
 		}
 	}
+	
+	function convertFramedTextForPreview(text) {
+		// Pattern to match framed text with box-drawing characters
+		// Looks for: ╔═══╗ / ║ text ║ / ╚═══╝
+		const framedPattern = /╔═+╗\n((?:║[^║]*║\n)*?)╚═+╝/g;
+		
+		return text.replace(framedPattern, (match) => {
+			// Extract the lines between the borders
+			const lines = match.split('\n');
+			const contentLines = lines.slice(1, -1); // Remove top and bottom borders
+			
+			// Extract text from each line (remove ║ symbols)
+			const content = contentLines
+				.map(line => line.replace(/║\s?|\s?║/g, '').trim())
+				.filter(line => line.length > 0)
+				.join('\n');
+			
+			// Return as a styled code block for better rendering
+			return `\`\`\`\n${content}\n\`\`\``;
+		});
+	}
 
 	function exportContent(format) {
 		const title = elements.title.textContent.replace('Edit Entry: ', '').trim();
-		const content = elements.textarea.value;
+		let content = elements.textarea.value;
 		const timestamp = new Date().toLocaleString();
+		
+		// Convert framed text for exports
+		content = convertFramedTextForPreview(content);
 		
 		let fileContent, fileName, mimeType;
 		
