@@ -1007,7 +1007,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div id="editor-ribbon">
 				<nav id="editor-ribbon-tabs">
 					<button class="ribbon-tab active" data-panel="format">Format</button>
-					<button class="ribbon-tab" data-panel="preview">Preview</button>
+					<button class="ribbon-tab" data-panel="preview">Export</button>
 					<button class="ribbon-tab" data-panel="find-replace">Find & Replace</button>
 				</nav>
 				<div id="editor-ribbon-panels">
@@ -1147,10 +1147,37 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 					<div class="ribbon-panel" id="editor-panel-preview">
 						<div class="preview-controls">
-							<button class="btn-small" id="editor-btn-refresh-preview">🔄 Refresh Preview</button>
-							<button class="btn-small" data-export-format="html">📄 HTML</button>
-							<button class="btn-small" data-export-format="markdown">📝 Markdown</button>
-							<button class="btn-small" data-export-format="plaintext">📋 Plain Text</button>
+							<button class="btn-small" id="editor-btn-refresh-preview" title="Refresh Preview">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="23 4 23 10 17 10"></polyline>
+									<polyline points="1 20 1 14 7 14"></polyline>
+									<path d="M3.51 9a9 9 0 0114.85-3.36M20.49 15a9 9 0 01-14.85 3.36"></path>
+								</svg>
+								Refresh Preview
+							</button>
+							<button class="btn-small" data-export-format="html" title="Export as HTML">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<polyline points="3 12 9 16 15 4"></polyline>
+									<path d="M4 12H2a10 10 0 1020 0h-2"></path>
+								</svg>
+								HTML
+							</button>
+							<button class="btn-small" data-export-format="markdown" title="Export as Markdown">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M3 6h2l3 4 3-4h2M3 18h18"></path>
+									<line x1="3" y1="9" x2="3" y2="15"></line>
+									<line x1="21" y1="9" x2="21" y2="15"></line>
+								</svg>
+								Markdown
+							</button>
+							<button class="btn-small" data-export-format="plaintext" title="Export as Plain Text">
+								<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+									<line x1="7" y1="9" x2="17" y2="9"></line>
+									<line x1="7" y1="13" x2="13" y2="13"></line>
+								</svg>
+								Plain Text
+							</button>
 						</div>
 						<div id="editor-preview-content" class="markdown-preview"></div>
 					</div>
