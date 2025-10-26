@@ -1423,6 +1423,7 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
             $escapedPattern = $pdo->quote($searchTerm);
             log_debug_message('Using REGEXP mode with escaped pattern: ' . $escapedPattern);
             $searchCondition = "(title REGEXP " . $escapedPattern . " OR content REGEXP " . $escapedPattern . ")";
+            log_debug_message('REGEXP condition: ' . $searchCondition);
         } elseif ($exactMatch) {
             // Exact match - look for whole word
             log_debug_message('Using EXACT mode with term: ' . $searchTerm);
@@ -1459,11 +1460,42 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         log_debug_message('Query params: ' . json_encode($params));
         
         $stmt = $pdo->prepare($sql);
-        $stmt->execute($params);
+        
+        // Log before execution
+        log_debug_message('About to execute search query');
+        
+        $executed = $stmt->execute($params);
+        log_debug_message('Query executed: ' . ($executed ? 'success' : 'failed'));
         
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         
         log_debug_message('Search returned ' . count($entries) . ' entries');
+        
+        // Log sample entries for debugging
+        if (count($entries) > 0) {
+            log_debug_message('First result: ' . json_encode($entries[0]));
+        } else {
+            // Debug: try a simple LIKE search for comparison
+            log_debug_message('No REGEXP results found. Testing with simple LIKE...');
+            $testStmt = $pdo->prepare("
+                SELECT COUNT(*) as cnt FROM journal_entries 
+                WHERE user_id = :userId
+            ");
+            $testStmt->execute([':userId' => $userId]);
+            $totalCount = $testStmt->fetch(PDO::FETCH_ASSOC);
+            log_debug_message('Total entries in database: ' . $totalCount['cnt']);
+            
+            // Try LIKE as fallback
+            $likeStmt = $pdo->prepare("
+                SELECT entry_id, title FROM journal_entries 
+                WHERE user_id = :userId 
+                AND (title LIKE :term OR content LIKE :term)
+                LIMIT 5
+            ");
+            $likeStmt->execute([':userId' => $userId, ':term' => '%' . $searchTerm . '%']);
+            $likeResults = $likeStmt->fetchAll(PDO::FETCH_ASSOC);
+            log_debug_message('LIKE results: ' . count($likeResults) . ' entries. First: ' . json_encode($likeResults[0] ?? null));
+        }
         
         // Decrypt private entries if encryption is available
         if (function_exists('decrypt_content')) {
