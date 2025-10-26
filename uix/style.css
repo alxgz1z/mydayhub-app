@@ -162,6 +162,23 @@ body {
 	-webkit-backdrop-filter: blur(10px);
 }
 
+/* Force header to always remain in dark mode for consistency and readability */
+body.light-mode #app-header {
+	background-color: #1a1a1a !important;
+	border-bottom-color: #333 !important;
+	color: #fff !important;
+}
+
+body.light-mode #app-header .btn-header {
+	color: #fff !important;
+	border-color: #333 !important;
+}
+
+body.light-mode #app-header .btn-header:hover {
+	background-color: rgba(255, 255, 255, 0.1) !important;
+	color: #fff !important;
+}
+
 /* ==========================================================================
    VIEW TAB NAVIGATION
    ========================================================================== */
@@ -196,10 +213,6 @@ body {
 	white-space: nowrap;
 }
 
-/* Immediately override color in light mode to prevent white flash on load */
-body.light-mode .tab-btn {
-	color: #333 !important;
-}
 
 .tab-btn.active {
 	background: linear-gradient(135deg, #3a3a3a 0%, #2a2a2a 100%);
@@ -342,6 +355,13 @@ body.light-mode #app-header .btn-header:hover {
     border-top: 1px solid var(--border-color);
     transition: background-color 0.3s, border-top-color 0.3s;
     position: relative;
+}
+
+/* Force footer to always remain in dark mode for consistency and readability */
+body.light-mode #app-footer {
+	background-color: #1a1a1a !important;
+	border-top-color: #333 !important;
+	color: #fff !important;
 }
 
 /* ==========================================================================
@@ -1381,11 +1401,6 @@ body.light-mode #app-header .btn-header:hover {
 	color: var(--text-primary); /* Use text color by default */
 }
 
-/* Immediately override color in light mode to prevent white flash on load */
-body.light-mode #app-title {
-	color: #000000 !important;
-	font-weight: 600 !important;
-}
 
 #header-logo {
 	height: 28px;
@@ -3180,19 +3195,3 @@ body.light-mode .btn-add-column-menu:hover {
 	display: inline-block;
 }
 
-/* Fix app title readability in light mode */
-body.light-mode #app-title {
-	color: #000000 !important; /* Pure black for maximum contrast */
-	font-weight: 600 !important; /* Heavier weight for better visibility */
-}
-
-/* Fix tab button readability in light mode */
-body.light-mode .tab-btn:not(.active) {
-	color: #333 !important; /* Darker color for better contrast */
-}
-
-body.light-mode .tab-btn:not(.active) .tab-label,
-body.light-mode .tab-btn:not(.active) .tab-icon svg {
-	color: #333 !important;
-	stroke: #333 !important;
-}
