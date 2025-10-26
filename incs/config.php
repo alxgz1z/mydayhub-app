@@ -129,6 +129,52 @@ function isDeveloperMode(): bool {
 
 define('DEVMODE', isDeveloperMode());
 
+// Diagnostic function to test email matching
+function testEmailMatching() {
+	global $_ENV_VARS;
+	
+	if (!isset($_SESSION['user_id'])) {
+		error_log("DIAGNOSTIC: No session user_id");
+		return;
+	}
+	
+	// Get DEVELOPERS from env
+	$developers = $_ENV_VARS['DEVELOPERS'] ?? '';
+	error_log("DIAGNOSTIC: DEVELOPERS value: '$developers'");
+	
+	if (empty($developers)) {
+		error_log("DIAGNOSTIC: DEVELOPERS is empty");
+		return;
+	}
+	
+	$developerEmails = array_map('trim', explode(',', $developers));
+	error_log("DIAGNOSTIC: Developer emails array: " . json_encode($developerEmails));
+	
+	try {
+		require_once __DIR__ . '/db.php';
+		$pdo = get_pdo();
+		$stmt = $pdo->prepare("SELECT email FROM users WHERE user_id = :userId");
+		$stmt->execute([':userId' => $_SESSION['user_id']]);
+		$userEmail = $stmt->fetchColumn();
+		
+		error_log("DIAGNOSTIC: User email from DB: '$userEmail'");
+		
+		// Test each comparison method
+		error_log("DIAGNOSTIC: in_array exact match: " . (in_array($userEmail, $developerEmails) ? 'TRUE' : 'FALSE'));
+		error_log("DIAGNOSTIC: in_array case-insensitive: " . (in_array(strtolower($userEmail), array_map('strtolower', $developerEmails)) ? 'TRUE' : 'FALSE'));
+		
+		foreach ($developerEmails as $devEmail) {
+			error_log("DIAGNOSTIC: Comparing '$userEmail' === '$devEmail': " . ($userEmail === $devEmail ? 'MATCH' : 'NO MATCH'));
+		}
+		
+	} catch (Exception $e) {
+		error_log("DIAGNOSTIC: Error - " . $e->getMessage());
+	}
+}
+
+// Run diagnostic immediately
+testEmailMatching();
+
 if (DEVMODE) {
 	ini_set('display_errors', 1);
 	ini_set('display_startup_errors', 1);
