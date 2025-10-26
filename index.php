@@ -2491,6 +2491,39 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		console.log('PHP _ENV_VARS DEVELOPERS:', '<?php echo isset($_ENV_VARS['DEVELOPERS']) ? $_ENV_VARS['DEVELOPERS'] : 'NOT IN ARRAY'; ?>');
 		console.log('Full _ENV_VARS:', <?php echo json_encode($_ENV_VARS); ?>);
 	</script>
+	<!-- DEBUG OUTPUT -->
+	<!--
+	PHP DEVMODE: <?php echo defined('DEVMODE') && DEVMODE ? 'TRUE' : 'FALSE'; ?>
+	SESSION user_id: <?php echo $_SESSION['user_id'] ?? 'NOT SET'; ?>
+	SESSION username: <?php echo $_SESSION['username'] ?? 'NOT SET'; ?>
+	_ENV_VARS DEVELOPERS: <?php echo isset($_ENV_VARS['DEVELOPERS']) ? $_ENV_VARS['DEVELOPERS'] : 'NOT IN ARRAY'; ?>
+	User email from DB query below:
+	-->
+	<?php
+	// Quick debug: Get user email and compare
+	if (isset($_SESSION['user_id'])) {
+		try {
+			require_once 'incs/db.php';
+			$pdo = get_pdo();
+			$stmt = $pdo->prepare("SELECT email FROM users WHERE user_id = :userId");
+			$stmt->execute([':userId' => $_SESSION['user_id']]);
+			$dbEmail = $stmt->fetchColumn();
+			
+			$developers = isset($_ENV_VARS['DEVELOPERS']) ? $_ENV_VARS['DEVELOPERS'] : '';
+			$developerEmails = array_map('trim', explode(',', $developers));
+			
+			echo '<!-- DEBUG: User email: ' . htmlspecialchars($dbEmail) . " -->\n";
+			echo '<!-- DEBUG: Developer emails: ' . htmlspecialchars(implode(', ', $developerEmails)) . " -->\n";
+			echo '<!-- DEBUG: in_array result: ' . (in_array($dbEmail, $developerEmails) ? 'MATCH' : 'NO MATCH') . " -->\n";
+			
+			foreach ($developerEmails as $devEmail) {
+				echo '<!-- DEBUG: Comparing ' . htmlspecialchars($dbEmail) . ' === ' . htmlspecialchars($devEmail) . ': ' . ($dbEmail === $devEmail ? 'EXACT MATCH' : 'no') . " -->\n";
+			}
+		} catch (Exception $e) {
+			echo '<!-- DEBUG ERROR: ' . htmlspecialchars($e->getMessage()) . " -->\n";
+		}
+	}
+	?>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
 	<script src="uix/encryption-setup.js" defer></script>
