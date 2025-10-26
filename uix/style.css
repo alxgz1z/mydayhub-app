@@ -3167,3 +3167,31 @@ body.light-mode .btn-add-column-menu:hover {
 .footer-right span {
 	display: inline-block;
 }
+
+/* Fix app title readability in light mode */
+body.light-mode #app-title {
+	color: #1a1a1a; /* Very dark for maximum contrast */
+	font-weight: 500; /* Slightly heavier for readability */
+}
+
+/* Fix tab button readability in light mode */
+body.light-mode .tab-btn:not(.active) {
+	color: #555; /* Darker gray for better contrast */
+}
+
+body.light-mode .tab-btn:not(.active) .tab-label,
+body.light-mode .tab-btn:not(.active) .tab-icon svg {
+	color: #555 !important;
+	stroke: #555 !important;
+}
+
+body.light-mode .tab-btn:hover:not(.active) .tab-label,
+body.light-mode .tab-btn:hover:not(.active) .tab-icon svg {
+	color: #22c55e !important; /* Accent color on hover */
+	stroke: #22c55e !important;
+}
+
+body.light-mode #app-header .btn-header {
+	color: var(--text-primary);
+	border-color: var(--border-color);
+}
