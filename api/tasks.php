@@ -2470,8 +2470,10 @@ function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
 		// Build WHERE clause based on search mode
 		if ($regexMode) {
 			// Use MySQL REGEXP for regex mode
-			$searchCondition = "(t.task_title REGEXP :searchTerm OR t.task_description REGEXP :searchTerm)";
-			$params[':searchTerm'] = $searchTerm;
+			// Note: REGEXP patterns cannot use parameter binding, so we escape the pattern
+			$escapedPattern = $pdo->quote($searchTerm);
+			log_debug_message('Using REGEXP mode with escaped pattern: ' . $escapedPattern);
+			$searchCondition = "(t.task_title REGEXP " . $escapedPattern . " OR t.task_description REGEXP " . $escapedPattern . ")";
 		} elseif ($exactMatch) {
 			// Exact match - look for whole word
 			$searchCondition = "(t.task_title = :searchTerm1 OR t.task_description = :searchTerm2)";

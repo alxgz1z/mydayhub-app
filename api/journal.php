@@ -1413,25 +1413,26 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
             return ['status' => 'error', 'message' => 'Search term is required.'];
         }
         
-        $whereClauses = ["user_id = :userId"];
         $params = [':userId' => $userId];
+        $searchCondition = '';
         
         // Build WHERE clause based on search mode
         if ($regexMode) {
             // Use MySQL REGEXP for regex mode
-            log_debug_message('Using REGEXP mode with pattern: ' . $searchTerm);
-            $whereClauses[] = "(title REGEXP :searchTerm OR content REGEXP :searchTerm)";
-            $params[':searchTerm'] = $searchTerm;
+            // Note: REGEXP patterns cannot use parameter binding, so we escape the pattern
+            $escapedPattern = $pdo->quote($searchTerm);
+            log_debug_message('Using REGEXP mode with escaped pattern: ' . $escapedPattern);
+            $searchCondition = "(title REGEXP " . $escapedPattern . " OR content REGEXP " . $escapedPattern . ")";
         } elseif ($exactMatch) {
             // Exact match - look for whole word
             log_debug_message('Using EXACT mode with term: ' . $searchTerm);
-            $whereClauses[] = "(title = :searchTerm1 OR content = :searchTerm2)";
+            $searchCondition = "(title = :searchTerm1 OR content = :searchTerm2)";
             $params[':searchTerm1'] = $searchTerm;
             $params[':searchTerm2'] = $searchTerm;
         } else {
             // Partial match (default)
             log_debug_message('Using PARTIAL mode with term: ' . $searchTerm);
-            $whereClauses[] = "(title LIKE :searchTerm1 OR content LIKE :searchTerm2)";
+            $searchCondition = "(title LIKE :searchTerm1 OR content LIKE :searchTerm2)";
             $params[':searchTerm1'] = '%' . $searchTerm . '%';
             $params[':searchTerm2'] = '%' . $searchTerm . '%';
         }
@@ -1448,7 +1449,8 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
                 created_at,
                 updated_at
             FROM journal_entries 
-            WHERE " . implode(' AND ', $whereClauses) . "
+            WHERE user_id = :userId 
+            AND " . $searchCondition . "
             ORDER BY entry_date DESC, created_at DESC
             LIMIT 50
         ";

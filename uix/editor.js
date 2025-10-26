@@ -1809,6 +1809,8 @@
 		const results = await Promise.all(searchPromises);
 		
 		console.log('Search API results:', results);
+		console.log('Journal result:', results[0]);
+		console.log('Tasks result:', results[1]);
 		
 		// Combine and sort results by date (descending)
 		const allResults = [];
