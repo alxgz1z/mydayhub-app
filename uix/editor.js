@@ -1776,9 +1776,12 @@
 	async function searchNotesAndTasks(searchTerm, options = {}) {
 		const { includeJournal = true, includeTasks = true, exactMatch = false, regexMode = false } = options;
 		
+		console.log('searchNotesAndTasks called with:', { searchTerm, exactMatch, regexMode });
+		
 		const searchPromises = [];
 		
 		if (includeJournal) {
+			console.log('Fetching journal with regex:', regexMode);
 			searchPromises.push(
 				window.apiFetch({
 					module: 'journal',
@@ -1791,6 +1794,7 @@
 		}
 		
 		if (includeTasks) {
+			console.log('Fetching tasks with regex:', regexMode);
 			searchPromises.push(
 				window.apiFetch({
 					module: 'tasks',
@@ -1803,6 +1807,8 @@
 		}
 		
 		const results = await Promise.all(searchPromises);
+		
+		console.log('Search API results:', results);
 		
 		// Combine and sort results by date (descending)
 		const allResults = [];

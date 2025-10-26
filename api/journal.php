@@ -1407,6 +1407,8 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         $exactMatch = filter_var($data['exact_match'] ?? false, FILTER_VALIDATE_BOOLEAN);
         $regexMode = filter_var($data['regex_mode'] ?? false, FILTER_VALIDATE_BOOLEAN);
         
+        log_debug_message('Parsed parameters: searchTerm=' . $searchTerm . ', exactMatch=' . ($exactMatch ? 'true' : 'false') . ', regexMode=' . ($regexMode ? 'true' : 'false'));
+        
         if (empty($searchTerm)) {
             return ['status' => 'error', 'message' => 'Search term is required.'];
         }
@@ -1417,22 +1419,25 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         // Build WHERE clause based on search mode
         if ($regexMode) {
             // Use MySQL REGEXP for regex mode
+            log_debug_message('Using REGEXP mode with pattern: ' . $searchTerm);
             $whereClauses[] = "(title REGEXP :searchTerm OR content REGEXP :searchTerm)";
             $params[':searchTerm'] = $searchTerm;
         } elseif ($exactMatch) {
             // Exact match - look for whole word
+            log_debug_message('Using EXACT mode with term: ' . $searchTerm);
             $whereClauses[] = "(title = :searchTerm1 OR content = :searchTerm2)";
             $params[':searchTerm1'] = $searchTerm;
             $params[':searchTerm2'] = $searchTerm;
         } else {
             // Partial match (default)
+            log_debug_message('Using PARTIAL mode with term: ' . $searchTerm);
             $whereClauses[] = "(title LIKE :searchTerm1 OR content LIKE :searchTerm2)";
             $params[':searchTerm1'] = '%' . $searchTerm . '%';
             $params[':searchTerm2'] = '%' . $searchTerm . '%';
         }
         
         // Search in both title and content
-        $stmt = $pdo->prepare("
+        $sql = "
             SELECT 
                 entry_id,
                 title,
@@ -1446,11 +1451,17 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
             WHERE " . implode(' AND ', $whereClauses) . "
             ORDER BY entry_date DESC, created_at DESC
             LIMIT 50
-        ");
+        ";
         
+        log_debug_message('SQL Query: ' . $sql);
+        log_debug_message('Query params: ' . json_encode($params));
+        
+        $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        log_debug_message('Search returned ' . count($entries) . ' entries');
         
         // Decrypt private entries if encryption is available
         if (function_exists('decrypt_content')) {
