@@ -129,7 +129,14 @@ function isDeveloperMode(): bool {
 	}
 }
 
-define('DEVMODE', isDeveloperMode());
+// --- SESSION & SECURITY --- //
+define('SESSION_TIMEOUT_SECONDS', 28800);
+
+if (session_status() === PHP_SESSION_NONE) {
+	// Configure session cookies for HTTPS
+	session_set_cookie_params(0, '/', '', false, true); // lifetime, path, domain, secure=false (temp), httponly
+	session_start();
+}
 
 // Diagnostic function to test email matching
 function testEmailMatching() {
@@ -176,6 +183,8 @@ function testEmailMatching() {
 
 // Run diagnostic immediately
 testEmailMatching();
+
+define('DEVMODE', isDeveloperMode());
 
 if (DEVMODE) {
 	ini_set('display_errors', 1);
