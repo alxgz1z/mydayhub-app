@@ -225,7 +225,6 @@ define('DB_USER', getenv('DB_USER'));
 define('DB_PASS', getenv('DB_PASS'));
 
 // --- SESSION & SECURITY --- //
-define('SESSION_TIMEOUT_SECONDS', 28800);
 
 if (session_status() === PHP_SESSION_NONE) {
 	// Configure session cookies for HTTPS
