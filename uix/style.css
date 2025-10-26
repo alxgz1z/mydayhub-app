@@ -132,9 +132,25 @@ body {
 	flex-direction: column;
 	flex-grow: 1;
 	min-height: 0;
+	position: relative; /* Allow absolute positioning of background */
 }
 
+/* Background Arches */
+.app-background-arches {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	z-index: 0; /* Behind all content */
+	pointer-events: none; /* Don't interfere with interactions */
+	opacity: 0.6; /* Subtle but visible */
+}
+
+/* Ensure content appears above background */
 #app-header {
+	position: relative;
+	z-index: 1;
 	flex-shrink: 0;
 	display: flex;
 	justify-content: space-between;
@@ -306,6 +322,8 @@ body.light-mode #app-header .btn-header:hover {
 	flex-grow: 1;
 	overflow-y: auto;
 	padding: 1rem 1.5rem;
+	position: relative;
+	z-index: 1;
 }
 
 #app-footer {

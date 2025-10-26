@@ -545,6 +545,24 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 
 	<div id="main-app-container">
 
+		<!-- Background Arches -->
+		<svg class="app-background-arches" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+			<!-- Large back arch - most transparent -->
+			<path d="M 0 300 Q 360 150 720 150 Q 1080 150 1440 300 L 1440 0 L 0 0 Z" fill="var(--accent-color)" opacity="0.08"/>
+			
+			<!-- Second arch -->
+			<path d="M 0 400 Q 360 280 720 280 Q 1080 280 1440 400 L 1440 0 L 0 0 Z" fill="var(--accent-color)" opacity="0.06"/>
+			
+			<!-- Third arch -->
+			<path d="M 0 500 Q 360 380 720 380 Q 1080 380 1440 500 L 1440 0 L 0 0 Z" fill="var(--accent-color)" opacity="0.05"/>
+			
+			<!-- Fourth arch - slightly darker -->
+			<path d="M 0 600 Q 360 450 720 450 Q 1080 450 1440 600 L 1440 0 L 0 0 Z" fill="var(--accent-color)" opacity="0.07"/>
+			
+			<!-- Bottom arch - most visible -->
+			<path d="M 0 750 Q 360 580 720 580 Q 1080 580 1440 750 L 1440 0 L 0 0 Z" fill="var(--accent-color)" opacity="0.04"/>
+		</svg>
+
 		<header id="app-header">
 			<div class="header-left">
 				<button id="btn-settings-toggle" class="btn-icon" title="Settings">
