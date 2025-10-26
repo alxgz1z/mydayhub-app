@@ -1821,10 +1821,7 @@
 				if (state.currentKind === 'journal' && state.currentTaskId === entry.entry_id) {
 					return;
 				}
-				// Apply client-side filtering if needed (for partial vs exact)
-				if (!filterSearchResult(entry, searchTerm, exactMatch, regexMode)) {
-					return;
-				}
+				// Backend already filtered by regex/exact/partial, so don't filter again
 				allResults.push({
 					...entry,
 					type: 'journal',
@@ -1840,10 +1837,7 @@
 				if (state.currentKind === 'task' && state.currentTaskId === task.task_id) {
 					return;
 				}
-				// Apply client-side filtering if needed
-				if (!filterSearchResult(task, searchTerm, exactMatch, regexMode)) {
-					return;
-				}
+				// Backend already filtered by regex/exact/partial, so don't filter again
 				allResults.push({
 					...task,
 					type: 'task',
