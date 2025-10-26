@@ -88,9 +88,6 @@
     flex: 1;
     min-width: 280px;
     max-width: 350px;
-    height: 50vh; /* Default height target */
-    min-height: 50vh; /* Minimum 50% of available vertical space */
-    max-height: 95vh; /* Keep existing maximum */
     display: flex;
     flex-direction: column;
     background-color: var(--toolbar-bg) !important;
@@ -100,6 +97,8 @@
     overflow: hidden; /* Hide overflow for proper scrolling */
     box-shadow: var(--card-shadow);
     transition: all 0.3s ease;
+    height: 100%;
+    max-height: 100%;
 }
 
 /* Visual indicator when column is at maximum height */
