@@ -360,6 +360,7 @@ body.light-mode #app-header .btn-header:hover {
 	padding: 1rem 1.5rem;
 	position: relative;
 	z-index: 1;
+	background-color: transparent;
 }
 
 #app-footer {
