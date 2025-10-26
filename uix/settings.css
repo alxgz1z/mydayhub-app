@@ -64,9 +64,17 @@
 	flex-shrink: 0;
 }
 
+.settings-username {
+    color: #888;
+    font-size: 0.9rem;
+    font-weight: 400;
+    margin: 0 0.5rem;
+    flex-shrink: 0;
+}
+
 .settings-panel-header h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 500;
     flex: 1;
     text-align: center;

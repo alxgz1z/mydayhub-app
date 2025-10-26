@@ -698,6 +698,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
+				<span id="settings-username" class="settings-username"></span>
 				<h2>Settings</h2>
 				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>

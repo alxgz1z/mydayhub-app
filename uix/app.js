@@ -1077,6 +1077,9 @@ function openSettingsPanel() {
 		overlay.classList.remove('hidden');
 		// Register settings panel in modal stack
 		registerModal('settings-panel', closeSettingsPanel);
+		
+		// Update username display
+		updateSettingsUsername();
 	}
 }
 
@@ -1090,6 +1093,52 @@ function closeSettingsPanel() {
 		// Unregister settings panel from modal stack
 		unregisterModal('settings-panel');
 	}
+}
+
+/**
+ * Updates the username display in settings panel with truncation logic.
+ */
+function updateSettingsUsername() {
+	const usernameElement = document.getElementById('settings-username');
+	if (!usernameElement) return;
+	
+	// Get username from session or API
+	const username = getCurrentUsername();
+	if (!username) {
+		usernameElement.textContent = '';
+		return;
+	}
+	
+	// Truncate username if longer than 6 characters
+	let displayUsername = username;
+	if (username.length > 6) {
+		displayUsername = username.substring(0, 4) + '..' + username.substring(username.length - 1);
+	}
+	
+	usernameElement.textContent = displayUsername;
+}
+
+/**
+ * Gets the current username from session or API.
+ */
+function getCurrentUsername() {
+	// Try to get from global user data first
+	if (window.currentUser && window.currentUser.username) {
+		return window.currentUser.username;
+	}
+	
+	// Fallback: try to get from session storage
+	const userData = sessionStorage.getItem('userData');
+	if (userData) {
+		try {
+			const parsed = JSON.parse(userData);
+			return parsed.username || parsed.name || '';
+		} catch (e) {
+			console.warn('Could not parse user data from session storage');
+		}
+	}
+	
+	return '';
 }
 
 // ==========================================================================
