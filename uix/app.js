@@ -1100,11 +1100,19 @@ function closeSettingsPanel() {
  */
 function updateSettingsUsername() {
 	const usernameElement = document.getElementById('settings-username');
-	if (!usernameElement) return;
+	console.log('updateSettingsUsername called, element found:', !!usernameElement);
+	
+	if (!usernameElement) {
+		console.log('Username element not found');
+		return;
+	}
 	
 	// Get username from session or API
 	const username = getCurrentUsername();
+	console.log('Retrieved username:', username);
+	
 	if (!username) {
+		console.log('No username found, clearing display');
 		usernameElement.textContent = '';
 		return;
 	}
@@ -1115,6 +1123,7 @@ function updateSettingsUsername() {
 		displayUsername = username.substring(0, 4) + '..' + username.substring(username.length - 1);
 	}
 	
+	console.log('Display username:', displayUsername);
 	usernameElement.textContent = displayUsername;
 }
 
@@ -1122,22 +1131,32 @@ function updateSettingsUsername() {
  * Gets the current username from session or API.
  */
 function getCurrentUsername() {
+	console.log('getCurrentUsername called');
+	console.log('window.currentUser:', window.currentUser);
+	
 	// Try to get from global user data first
 	if (window.currentUser && window.currentUser.username) {
+		console.log('Found username in window.currentUser:', window.currentUser.username);
 		return window.currentUser.username;
 	}
 	
 	// Fallback: try to get from session storage
 	const userData = sessionStorage.getItem('userData');
+	console.log('userData from sessionStorage:', userData);
+	
 	if (userData) {
 		try {
 			const parsed = JSON.parse(userData);
-			return parsed.username || parsed.name || '';
+			console.log('Parsed userData:', parsed);
+			const username = parsed.username || parsed.name || '';
+			console.log('Extracted username:', username);
+			return username;
 		} catch (e) {
-			console.warn('Could not parse user data from session storage');
+			console.warn('Could not parse user data from session storage:', e);
 		}
 	}
 	
+	console.log('No username found, returning empty string');
 	return '';
 }
 
