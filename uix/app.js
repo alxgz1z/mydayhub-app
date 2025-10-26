@@ -501,7 +501,7 @@ async function updateMissionFocusChart() {
 		
 		// Set tooltip
 		missionFocusChart.setAttribute('data-tooltip', 
-			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog (Tasks + Last 30 Days)`
+			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog\n(Tasks + Last 30 Days)`
 		);
 		
         // Clear the safety flag and process any pending request
