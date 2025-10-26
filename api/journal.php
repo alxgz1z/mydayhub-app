@@ -1404,9 +1404,31 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
     try {
         log_debug_message('Search journal entries called with: ' . json_encode($data));
         $searchTerm = $data['search_term'] ?? '';
+        $exactMatch = filter_var($data['exact_match'] ?? false, FILTER_VALIDATE_BOOLEAN);
+        $regexMode = filter_var($data['regex_mode'] ?? false, FILTER_VALIDATE_BOOLEAN);
         
         if (empty($searchTerm)) {
             return ['status' => 'error', 'message' => 'Search term is required.'];
+        }
+        
+        $whereClauses = ["user_id = :userId"];
+        $params = [':userId' => $userId];
+        
+        // Build WHERE clause based on search mode
+        if ($regexMode) {
+            // Use MySQL REGEXP for regex mode
+            $whereClauses[] = "(title REGEXP :searchTerm OR content REGEXP :searchTerm)";
+            $params[':searchTerm'] = $searchTerm;
+        } elseif ($exactMatch) {
+            // Exact match - look for whole word
+            $whereClauses[] = "(title = :searchTerm1 OR content = :searchTerm2)";
+            $params[':searchTerm1'] = $searchTerm;
+            $params[':searchTerm2'] = $searchTerm;
+        } else {
+            // Partial match (default)
+            $whereClauses[] = "(title LIKE :searchTerm1 OR content LIKE :searchTerm2)";
+            $params[':searchTerm1'] = '%' . $searchTerm . '%';
+            $params[':searchTerm2'] = '%' . $searchTerm . '%';
         }
         
         // Search in both title and content
@@ -1421,20 +1443,12 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
                 created_at,
                 updated_at
             FROM journal_entries 
-            WHERE user_id = :userId 
-            AND (
-                title LIKE :searchTerm1 
-                OR content LIKE :searchTerm2
-            )
+            WHERE " . implode(' AND ', $whereClauses) . "
             ORDER BY entry_date DESC, created_at DESC
             LIMIT 50
         ");
         
-        $searchPattern = '%' . $searchTerm . '%';
-        $stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-        $stmt->bindParam(':searchTerm1', $searchPattern, PDO::PARAM_STR);
-        $stmt->bindParam(':searchTerm2', $searchPattern, PDO::PARAM_STR);
-        $stmt->execute();
+        $stmt->execute($params);
         
         $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
         

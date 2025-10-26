@@ -2456,10 +2456,32 @@ function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
 	try {
 		log_debug_message('Search tasks called with: ' . json_encode($data));
 		$searchTerm = $data['search_term'] ?? '';
+		$exactMatch = filter_var($data['exact_match'] ?? false, FILTER_VALIDATE_BOOLEAN);
+		$regexMode = filter_var($data['regex_mode'] ?? false, FILTER_VALIDATE_BOOLEAN);
 		
 		if (empty($searchTerm)) {
 			send_json_response(['status' => 'error', 'message' => 'Search term is required.'], 400);
 			return;
+		}
+		
+		$params = [':userId' => $userId];
+		$searchCondition = '';
+		
+		// Build WHERE clause based on search mode
+		if ($regexMode) {
+			// Use MySQL REGEXP for regex mode
+			$searchCondition = "(t.task_title REGEXP :searchTerm OR t.task_description REGEXP :searchTerm)";
+			$params[':searchTerm'] = $searchTerm;
+		} elseif ($exactMatch) {
+			// Exact match - look for whole word
+			$searchCondition = "(t.task_title = :searchTerm1 OR t.task_description = :searchTerm2)";
+			$params[':searchTerm1'] = $searchTerm;
+			$params[':searchTerm2'] = $searchTerm;
+		} else {
+			// Partial match (default)
+			$searchCondition = "(t.task_title LIKE :searchTerm1 OR t.task_description LIKE :searchTerm2)";
+			$params[':searchTerm1'] = '%' . $searchTerm . '%';
+			$params[':searchTerm2'] = '%' . $searchTerm . '%';
 		}
 		
 		// Search in both task_title and task_description
@@ -2477,18 +2499,12 @@ function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
 			LEFT JOIN columns c ON t.column_id = c.column_id
 			WHERE t.user_id = :userId 
 			AND t.deleted_at IS NULL
-			AND (
-				t.task_title LIKE :searchTerm 
-				OR t.task_description LIKE :searchTerm
-			)
+			AND " . $searchCondition . "
 			ORDER BY t.created_at DESC
 			LIMIT 50
 		");
 		
-		$searchPattern = '%' . $searchTerm . '%';
-		$stmt->bindParam(':userId', $userId, PDO::PARAM_INT);
-		$stmt->bindParam(':searchTerm', $searchPattern, PDO::PARAM_STR);
-		$stmt->execute();
+		$stmt->execute($params);
 		
 		$tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 		
