@@ -1117,6 +1117,7 @@ function updateSettingsUsername() {
 	if (!username) {
 		console.log('No username found, clearing display');
 		usernameElement.textContent = '';
+		usernameElement.title = '';
 		return;
 	}
 	
@@ -1128,6 +1129,44 @@ function updateSettingsUsername() {
 	
 	console.log('Display username:', displayUsername);
 	usernameElement.textContent = displayUsername;
+	
+	// Get user email for tooltip
+	const userEmail = getCurrentUserEmail();
+	
+	// Set tooltip to show full username and email
+	if (userEmail) {
+		usernameElement.title = `Username: ${username}\nEmail: ${userEmail}`;
+	} else {
+		usernameElement.title = `Username: ${username}`;
+	}
+}
+
+/**
+ * Gets the current user's email from session or API.
+ */
+function getCurrentUserEmail() {
+	// Try to get from global app data first (set in index.php)
+	if (window.appUserEmail) {
+		return window.appUserEmail;
+	}
+	
+	// Fallback: try to get from global user data
+	if (window.currentUser && window.currentUser.email) {
+		return window.currentUser.email;
+	}
+	
+	// Fallback: try to get from session storage
+	const userData = sessionStorage.getItem('userData');
+	if (userData) {
+		try {
+			const parsed = JSON.parse(userData);
+			return parsed.email || '';
+		} catch (e) {
+			console.warn('Could not parse user data from session storage');
+		}
+	}
+	
+	return '';
 }
 
 /**
