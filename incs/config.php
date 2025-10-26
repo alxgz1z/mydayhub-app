@@ -138,52 +138,7 @@ if (session_status() === PHP_SESSION_NONE) {
 	session_start();
 }
 
-// Diagnostic function to test email matching
-function testEmailMatching() {
-	global $_ENV_VARS;
-	
-	if (!isset($_SESSION['user_id'])) {
-		error_log("DIAGNOSTIC: No session user_id\n", 3, __DIR__ . '/../php-debug.log');
-		return;
-	}
-	
-	// Get DEVELOPERS from env
-	$developers = $_ENV_VARS['DEVELOPERS'] ?? '';
-	error_log("DIAGNOSTIC: DEVELOPERS value: '$developers'\n", 3, __DIR__ . '/../php-debug.log');
-	
-	if (empty($developers)) {
-		error_log("DIAGNOSTIC: DEVELOPERS is empty\n", 3, __DIR__ . '/../php-debug.log');
-		return;
-	}
-	
-	$developerEmails = array_map('trim', explode(',', $developers));
-	error_log("DIAGNOSTIC: Developer emails array: " . json_encode($developerEmails) . "\n", 3, __DIR__ . '/../php-debug.log');
-	
-	try {
-		require_once __DIR__ . '/db.php';
-		$pdo = get_pdo();
-		$stmt = $pdo->prepare("SELECT email FROM users WHERE user_id = :userId");
-		$stmt->execute([':userId' => $_SESSION['user_id']]);
-		$userEmail = $stmt->fetchColumn();
-		
-		error_log("DIAGNOSTIC: User email from DB: '$userEmail'\n", 3, __DIR__ . '/../php-debug.log');
-		
-		// Test each comparison method
-		error_log("DIAGNOSTIC: in_array exact match: " . (in_array($userEmail, $developerEmails) ? 'TRUE' : 'FALSE') . "\n", 3, __DIR__ . '/../php-debug.log');
-		error_log("DIAGNOSTIC: in_array case-insensitive: " . (in_array(strtolower($userEmail), array_map('strtolower', $developerEmails)) ? 'TRUE' : 'FALSE') . "\n", 3, __DIR__ . '/../php-debug.log');
-		
-		foreach ($developerEmails as $devEmail) {
-			error_log("DIAGNOSTIC: Comparing '$userEmail' === '$devEmail': " . ($userEmail === $devEmail ? 'MATCH' : 'NO MATCH') . "\n", 3, __DIR__ . '/../php-debug.log');
-		}
-		
-	} catch (Exception $e) {
-		error_log("DIAGNOSTIC: Error - " . $e->getMessage() . "\n", 3, __DIR__ . '/../php-debug.log');
-	}
-}
-
-// Run diagnostic immediately
-testEmailMatching();
-
+// Define DEVMODE now that session is started
 define('DEVMODE', isDeveloperMode());
 
 if (DEVMODE) {
