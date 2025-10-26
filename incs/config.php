@@ -43,6 +43,22 @@ function isDeveloperMode(): bool {
 	$developers = getenv('DEVELOPERS');
 	error_log("DEVMODE: DEVELOPERS from .env: " . ($developers ?: 'empty'));
 	
+	// Also check if .env file exists and is readable
+	$envFile = __DIR__ . '/../.env';
+	error_log("DEVMODE: .env file exists: " . (file_exists($envFile) ? 'YES' : 'NO'));
+	error_log("DEVMODE: .env file readable: " . (is_readable($envFile) ? 'YES' : 'NO'));
+	
+	// Try to read .env file directly
+	if (file_exists($envFile)) {
+		$envContent = file_get_contents($envFile);
+		error_log("DEVMODE: .env file content length: " . strlen($envContent));
+		if (strpos($envContent, 'DEVELOPERS=') !== false) {
+			error_log("DEVMODE: DEVELOPERS line found in .env file");
+		} else {
+			error_log("DEVMODE: DEVELOPERS line NOT found in .env file");
+		}
+	}
+	
 	if (empty($developers)) {
 		error_log("DEVMODE: No DEVELOPERS in .env");
 		return false;
@@ -63,7 +79,13 @@ function isDeveloperMode(): bool {
 		$userEmail = $stmt->fetchColumn();
 		
 		error_log("DEVMODE: Current user email: " . ($userEmail ?: 'not found'));
-		error_log("DEVMODE: User in developers list: " . ($userEmail && in_array($userEmail, $developerEmails) ? 'YES' : 'NO'));
+		error_log("DEVMODE: Developer emails array: " . print_r($developerEmails, true));
+		error_log("DEVMODE: User email in array: " . (in_array($userEmail, $developerEmails) ? 'YES' : 'NO'));
+		error_log("DEVMODE: Exact comparison - user email: '" . $userEmail . "'");
+		foreach ($developerEmails as $devEmail) {
+			error_log("DEVMODE: Comparing with developer email: '" . $devEmail . "'");
+			error_log("DEVMODE: Match result: " . ($userEmail === $devEmail ? 'EXACT MATCH' : 'NO MATCH'));
+		}
 		
 		// DEVMODE is true only if user's email is in DEVELOPERS list
 		$isDev = $userEmail && in_array($userEmail, $developerEmails);
