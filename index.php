@@ -2484,6 +2484,10 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		}
 		?>
 		window.appUserEmail = '<?php echo htmlspecialchars($userEmail); ?>';
+		
+		// Debug DEVMODE
+		console.log('PHP DEVMODE:', <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>);
+		console.log('PHP DEVELOPERS from .env:', '<?php echo getenv('DEVELOPERS') ?: 'NOT SET'; ?>');
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
