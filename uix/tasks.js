@@ -4084,12 +4084,7 @@ function exitMoveMode() {
 		 <tr data-user-id="${s.user_id}">
 			 <td>${s.username || ''}</td>
 			 <td>${s.email || ''}</td>
-			 <td>
-				 <select class="perm-select">
-					 <option value="view"${s.permission === 'view' ? ' selected' : ''}>View</option>
-					 <option value="edit"${s.permission === 'edit' ? ' selected' : ''}>Edit</option>
-				 </select>
-			 </td>
+			 <td>Edit</td>
 			 <td><button class="btn-unshare" type="button" data-user-id="${s.user_id}">Unshare</button></td>
 		 </tr>
 	 `).join('');
@@ -4102,11 +4097,6 @@ function exitMoveMode() {
 			 <div class="share-add">
 				 <label>Recipient (email or username)</label>
 				 <input type="text" id="share-ident" placeholder="user@example.com or username" />
-				 <label>Permission</label>
-				 <select id="share-perm">
-					 <option value="edit">Edit</option>
-					 <option value="view">View</option>
-				 </select>
 				 <button id="btn-share-add" type="button">Add</button>
 			 </div>
  
@@ -4168,7 +4158,7 @@ function exitMoveMode() {
 	 // Modified for Lightweight Updates - Share handler without full reload
 	 overlay.querySelector('#btn-share-add')?.addEventListener('click', async () => {
 		 const recipient_identifier = overlay.querySelector('#share-ident')?.value.trim();
-		 const permission = overlay.querySelector('#share-perm')?.value === 'view' ? 'view' : 'edit';
+		 const permission = 'edit'; // Always give edit permission when sharing
 		 if (!recipient_identifier) return;
  
 		 try {
@@ -4215,12 +4205,7 @@ function exitMoveMode() {
 						 <tr data-user-id="${s.user_id}">
 							 <td>${s.username || ''}</td>
 							 <td>${s.email || ''}</td>
-							 <td>
-								 <select class="perm-select">
-									 <option value="view"${s.permission === 'view' ? ' selected' : ''}>View</option>
-									 <option value="edit"${s.permission === 'edit' ? ' selected' : ''}>Edit</option>
-								 </select>
-							 </td>
+							 <td>Edit</td>
 							 <td><button class="btn-unshare" type="button" data-user-id="${s.user_id}">Unshare</button></td>
 						 </tr>
 					 `).join('');
