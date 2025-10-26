@@ -698,7 +698,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<span id="settings-username" class="settings-username" title=""></span>
+				<span id="settings-username" class="settings-username clickable" title="Click to view user info"></span>
 				<h2>Settings</h2>
 				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>
@@ -853,6 +853,26 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							<span class="setting-label">User Guide</span>
 						</button>
 					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	
+	<!-- User Info Popover -->
+	<div id="user-info-popover" class="user-info-popover hidden">
+		<div class="user-info-content">
+			<div class="user-info-header">
+				<h4>User Information</h4>
+				<button class="btn-icon btn-close" id="btn-close-user-info">&times;</button>
+			</div>
+			<div class="user-info-body">
+				<div class="user-info-item">
+					<label>Username:</label>
+					<span id="user-info-username"></span>
+				</div>
+				<div class="user-info-item">
+					<label>Email:</label>
+					<span id="user-info-email"></span>
 				</div>
 			</div>
 		</div>

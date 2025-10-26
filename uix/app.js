@@ -573,6 +573,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Debug DEVMODE footer
 	debugDevModeFooter();
+	
+	// Initialize user info popover
+	initUserInfoPopover();
 
 	// Do not eagerly initialize tasks or journal here; ViewManager will lazy-load
 	
@@ -1139,6 +1142,13 @@ function updateSettingsUsername() {
 	} else {
 		usernameElement.title = username;
 	}
+	
+	// Add click handler for popover
+	usernameElement.addEventListener('click', (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		openUserInfoPopover(username, userEmail);
+	});
 }
 
 /**
@@ -1167,6 +1177,41 @@ function getCurrentUserEmail() {
 	}
 	
 	return '';
+}
+
+/**
+ * Opens the user info popover with username and email.
+ */
+function openUserInfoPopover(username, email) {
+	const popover = document.getElementById('user-info-popover');
+	const usernameSpan = document.getElementById('user-info-username');
+	const emailSpan = document.getElementById('user-info-email');
+	
+	if (!popover || !usernameSpan || !emailSpan) {
+		console.error('User info popover elements not found');
+		return;
+	}
+	
+	// Populate the popover
+	usernameSpan.textContent = username || 'Not available';
+	emailSpan.textContent = email || 'Not available';
+	
+	// Show the popover
+	popover.classList.remove('hidden');
+	
+	// Register in modal stack
+	registerModal('user-info-popover', closeUserInfoPopover);
+}
+
+/**
+ * Closes the user info popover.
+ */
+function closeUserInfoPopover() {
+	const popover = document.getElementById('user-info-popover');
+	if (popover) {
+		popover.classList.add('hidden');
+		unregisterModal('user-info-popover');
+	}
 }
 
 /**
@@ -2385,6 +2430,16 @@ function updateFontSizeUI(size) {
 // Make font size functions globally available
 window.applyFontSize = applyFontSize;
 window.updateFontSizeUI = updateFontSizeUI;
+
+/**
+ * Initializes the user info popover event listeners.
+ */
+function initUserInfoPopover() {
+	const closeBtn = document.getElementById('btn-close-user-info');
+	if (closeBtn) {
+		closeBtn.addEventListener('click', closeUserInfoPopover);
+	}
+}
 
 /**
  * Debug function to check DEVMODE footer styling

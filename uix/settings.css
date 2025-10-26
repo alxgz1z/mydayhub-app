@@ -72,6 +72,17 @@
     flex-shrink: 0;
 }
 
+.settings-username.clickable {
+    cursor: pointer;
+    color: #4a9eff;
+    transition: color 0.2s ease;
+}
+
+.settings-username.clickable:hover {
+    color: #6bb6ff;
+    text-decoration: underline;
+}
+
 .settings-panel-header h2 {
     margin: 0;
     font-size: 1rem;
@@ -666,6 +677,74 @@ body.light-mode #trust-management-modal-container {
 	width: 16px;
 	height: 16px;
 	color: var(--accent-color);
+}
+
+/* User Info Popover */
+.user-info-popover {
+	position: fixed;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	z-index: 10000;
+	background: var(--bg-primary);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+	min-width: 300px;
+	max-width: 400px;
+}
+
+.user-info-popover.hidden {
+	display: none;
+}
+
+.user-info-content {
+	padding: 0;
+}
+
+.user-info-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.25rem;
+	border-bottom: 1px solid var(--border-color);
+	background: var(--toolbar-bg);
+	border-radius: 8px 8px 0 0;
+}
+
+.user-info-header h4 {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.user-info-body {
+	padding: 1.25rem;
+}
+
+.user-info-item {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.75rem;
+}
+
+.user-info-item:last-child {
+	margin-bottom: 0;
+}
+
+.user-info-item label {
+	font-weight: 500;
+	color: var(--text-secondary);
+	margin-right: 1rem;
+}
+
+.user-info-item span {
+	color: var(--text-primary);
+	font-family: 'JetBrains Mono', 'Consolas', 'Monaco', 'Courier New', monospace;
+	font-size: 0.9rem;
+	word-break: break-all;
 }
 
 .share-permission {
