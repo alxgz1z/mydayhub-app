@@ -1133,11 +1133,11 @@ function updateSettingsUsername() {
 	// Get user email for tooltip
 	const userEmail = getCurrentUserEmail();
 	
-	// Set tooltip to show full username and email
+	// Set tooltip to show username | email format
 	if (userEmail) {
-		usernameElement.title = `Username: ${username}\nEmail: ${userEmail}`;
+		usernameElement.title = `${username} | ${userEmail}`;
 	} else {
-		usernameElement.title = `Username: ${username}`;
+		usernameElement.title = username;
 	}
 }
 
