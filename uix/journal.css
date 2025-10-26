@@ -293,6 +293,11 @@
 	animation: fadeInUpEntry 0.4s ease-out;
 }
 
+/* Add top margin to first card to prevent header overlap */
+.journal-entry-card:first-of-type {
+	margin-top: 0.5rem;
+}
+
 .journal-entry-card.private {
     background: linear-gradient(45deg, var(--card-bg) 25%, transparent 25%),
                 linear-gradient(-45deg, var(--card-bg) 25%, transparent 25%),

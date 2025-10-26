@@ -290,6 +290,11 @@
 	background-color: var(--card-bg-hover, var(--card-bg)); /* Subtle background change */
 }
 
+/* Add top margin to first card to prevent header overlap */
+.task-card:first-of-type {
+	margin-top: 0.5rem;
+}
+
 /* Remove wiggle; unify with journal hover */
 
 .task-card-main {
