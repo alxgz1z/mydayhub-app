@@ -2488,6 +2488,8 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		// Debug DEVMODE
 		console.log('PHP DEVMODE:', <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>);
 		console.log('PHP DEVELOPERS from .env:', '<?php echo getenv('DEVELOPERS') ?: 'NOT SET'; ?>');
+		console.log('PHP _ENV_VARS DEVELOPERS:', '<?php echo isset($_ENV_VARS['DEVELOPERS']) ? $_ENV_VARS['DEVELOPERS'] : 'NOT IN ARRAY'; ?>');
+		console.log('Full _ENV_VARS:', <?php echo json_encode($_ENV_VARS); ?>);
 	</script>
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
