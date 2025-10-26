@@ -16,6 +16,7 @@
 	height: 100%;
 	/* Center by default, mirroring journal columns for consistent layout */
 	justify-content: center;
+	background-color: transparent;
 }
 
 /* Responsive centering for task board layout */
