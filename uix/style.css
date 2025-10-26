@@ -1758,15 +1758,23 @@ body.light-mode #app-footer.dev-mode a:hover {
 	color: var(--text-primary);
 	border: none;
 	padding: 0.6rem 1.2rem;
-	border-radius: 6px;
+	border-radius: 8px; /* Increased from 6px for modern look */
 	font-size: 0.9rem;
 	font-weight: 400;
 	cursor: pointer;
-	transition: background-color 0.2s;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); /* Improved easing */
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Added subtle shadow */
 }
 
 .btn:hover {
 	background-color: var(--btn-hover-bg);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15); /* Enhanced shadow on hover */
+}
+
+.btn:active {
+	transform: translateY(0);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .btn.btn-danger {
@@ -1775,6 +1783,8 @@ body.light-mode #app-footer.dev-mode a:hover {
 
 .btn.btn-danger:hover {
 	background-color: var(--btn-danger-hover-bg);
+	transform: translateY(-1px);
+	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .btn.btn-success {
