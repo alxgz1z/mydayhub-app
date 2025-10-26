@@ -1132,9 +1132,15 @@ function updateSettingsUsername() {
  */
 function getCurrentUsername() {
 	console.log('getCurrentUsername called');
-	console.log('window.currentUser:', window.currentUser);
+	console.log('window.appUsername:', window.appUsername);
 	
-	// Try to get from global user data first
+	// Try to get from global app username first (set in index.php)
+	if (window.appUsername) {
+		console.log('Found username in window.appUsername:', window.appUsername);
+		return window.appUsername;
+	}
+	
+	// Fallback: try to get from global user data
 	if (window.currentUser && window.currentUser.username) {
 		console.log('Found username in window.currentUser:', window.currentUser.username);
 		return window.currentUser.username;
