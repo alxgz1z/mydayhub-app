@@ -755,9 +755,11 @@
 			case 'frame':
 				const lines = selectedText.split('\n');
 				const maxLength = Math.max(...lines.map(line => line.length));
-				const framedLines = lines.map(line => `| ${line.padEnd(maxLength)} |`);
-				const border = `+${'—'.repeat(maxLength + 2)}+`;
-				newText = `${border}\n${framedLines.join('\n')}\n${border}`;
+				// Double-lined frame using ║ and ══
+				const framedLines = lines.map(line => `║ ${line.padEnd(maxLength)} ║`);
+				const topBorder = `╔${'═'.repeat(maxLength + 2)}╗`;
+				const bottomBorder = `╚${'═'.repeat(maxLength + 2)}╝`;
+				newText = `${topBorder}\n${framedLines.join('\n')}\n${bottomBorder}`;
 				break;
 			case 'calculate':
 				if (!selectedText) return;
