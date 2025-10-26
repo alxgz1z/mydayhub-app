@@ -198,6 +198,13 @@ body.light-mode #app-header .btn-header:hover {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
+/* Light mode: tabs container should match header dark style */
+body.light-mode .view-tabs {
+	background: linear-gradient(135deg, #1a1a1a 0%, #1a1a1a 100%) !important;
+	border-color: #333 !important;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
+}
+
 .tab-btn {
 	display: flex;
 	align-items: center;
@@ -228,6 +235,17 @@ body.light-mode #app-header .btn-header:hover {
 
 .tab-btn:not(.active) {
     color: var(--text-primary) !important; /* stronger contrast for inactive */
+}
+
+/* Light mode: inactive tabs should be white on dark header */
+body.light-mode .tab-btn:not(.active) {
+	color: #ffffff !important;
+}
+
+body.light-mode .tab-btn:not(.active) .tab-label,
+body.light-mode .tab-btn:not(.active) .tab-icon svg {
+	color: #ffffff !important;
+	stroke: #ffffff !important;
 }
 
 .tab-btn:hover:not(.active) {
@@ -1401,6 +1419,10 @@ body.light-mode #app-footer {
 	color: var(--text-primary); /* Use text color by default */
 }
 
+/* Light mode: title should be white on dark header */
+body.light-mode #app-title {
+	color: #ffffff !important;
+}
 
 #header-logo {
 	height: 28px;
