@@ -974,10 +974,36 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<div id="editor-ribbon-panels">
 					<div class="ribbon-panel active" id="editor-panel-format">
 						<div class="ribbon-button-group">
-								<button class="btn-icon" title="Undo (Ctrl+Z / Cmd+Z)" id="editor-btn-undo" data-action="undo">↶</button>
-								<button class="btn-icon" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" id="editor-btn-redo" data-action="redo">↷</button>
-								<button class="btn-icon" title="Toggle Line Numbers" id="editor-btn-line-numbers" data-action="toggle-line-numbers">⎖</button>
-								<button class="btn-icon" title="Search Notes & Tasks" id="editor-btn-search" data-action="search-notes">🔍</button>
+								<button class="btn-icon" title="Undo (Ctrl+Z / Cmd+Z)" id="editor-btn-undo" data-action="undo">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M3 7v6h6"></path>
+										<path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"></path>
+									</svg>
+								</button>
+								<button class="btn-icon" title="Redo (Ctrl+Shift+Z / Cmd+Shift+Z)" id="editor-btn-redo" data-action="redo">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<path d="M21 7v6h-6"></path>
+										<path d="M3 17a9 9 0 019-9 9 9 0 016 2.3l3 2.7"></path>
+									</svg>
+								</button>
+								<button class="btn-icon" title="Toggle Line Numbers" id="editor-btn-line-numbers" data-action="toggle-line-numbers">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<line x1="6" y1="4" x2="6" y2="20"></line>
+										<line x1="10" y1="4" x2="10" y2="20"></line>
+										<line x1="14" y1="4" x2="14" y2="20"></line>
+										<line x1="18" y1="4" x2="18" y2="20"></line>
+										<path d="M5 8l-2 0"></path>
+										<path d="M5 12l-2 0"></path>
+										<path d="M5 16l-2 0"></path>
+										<path d="M5 20l-2 0"></path>
+									</svg>
+								</button>
+								<button class="btn-icon" title="Search Notes & Tasks" id="editor-btn-search" data-action="search-notes">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<circle cx="11" cy="11" r="8"></circle>
+										<path d="m21 21-4.35-4.35"></path>
+									</svg>
+								</button>
 								<span class="button-separator"></span>
 								<button class="btn-icon" title="Bold (**text**)" data-action="markdown-bold">**</button>
 								<button class="btn-icon" title="Italic (_text_)" data-action="markdown-italic">_</button>
@@ -990,11 +1016,36 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon" title="Title Case" data-action="case" data-casetype="title">Aa</button>
 								<button class="btn-icon" title="lowercase" data-action="case" data-casetype="lower">aa</button>
 								<button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
-								<button class="btn-icon" title="Frame Selection" data-action="frame">[]</button>
-								<button class="btn-icon" title="Calculate Selection" data-action="calculate">🔢</button>
+								<button class="btn-icon" title="Frame Selection" data-action="frame">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+										<path d="M3 9h18"></path>
+										<path d="M3 15h18"></path>
+										<path d="M9 3v18"></path>
+										<path d="M15 3v18"></path>
+									</svg>
+								</button>
+								<button class="btn-icon" title="Calculate Selection" data-action="calculate">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+										<rect x="4" y="2" width="16" height="5"></rect>
+										<line x1="8" y1="9" x2="8" y2="10"></line>
+										<line x1="12" y1="9" x2="12" y2="10"></line>
+										<line x1="16" y1="9" x2="16" y2="10"></line>
+										<line x1="8" y1="14" x2="16" y2="14"></line>
+										<line x1="8" y1="18" x2="16" y2="18"></line>
+									</svg>
+								</button>
 								<button class="btn-icon" title="Decrease Font Size" data-action="font-size" data-change="-1">A-</button>
 								<button class="btn-icon" title="Increase Font Size" data-action="font-size" data-change="1">A+</button>
-								<button class="btn-icon btn-text-danger" title="Clear all note contents" id="editor-btn-clear" data-action="clear">[clear]</button>
+								<button class="btn-icon btn-text-danger" title="Clear all note contents" id="editor-btn-clear" data-action="clear">
+									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+										<polyline points="3 6 5 6 21 6"></polyline>
+										<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+										<line x1="10" y1="11" x2="10" y2="17"></line>
+										<line x1="14" y1="11" x2="14" y2="17"></line>
+									</svg>
+								</button>
 								<div class="btn-more-menu">
 								<button class="more-menu-button" id="editor-btn-more-menu" title="More options">⋯</button>
 								<div class="more-menu-dropdown" id="editor-more-menu-dropdown">
@@ -1015,11 +1066,29 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 										<span class="more-menu-label">Underline</span>
 									</button>
 									<button class="btn-icon" data-action="frame" title="Frame Selection">
-										<span class="more-menu-icon">[]</span>
+										<span class="more-menu-icon">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+												<path d="M3 9h18"></path>
+												<path d="M3 15h18"></path>
+												<path d="M9 3v18"></path>
+												<path d="M15 3v18"></path>
+											</svg>
+										</span>
 										<span class="more-menu-label">Frame</span>
 									</button>
 									<button class="btn-icon" data-action="calculate" title="Calculate Selection">
-										<span class="more-menu-icon">🔢</span>
+										<span class="more-menu-icon">
+											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+												<rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect>
+												<rect x="4" y="2" width="16" height="5"></rect>
+												<line x1="8" y1="9" x2="8" y2="10"></line>
+												<line x1="12" y1="9" x2="12" y2="10"></line>
+												<line x1="16" y1="9" x2="16" y2="10"></line>
+												<line x1="8" y1="14" x2="16" y2="14"></line>
+												<line x1="8" y1="18" x2="16" y2="18"></line>
+											</svg>
+										</span>
 										<span class="more-menu-label">Calculate</span>
 									</button>
 									<button class="btn-icon" data-action="font-size" data-change="-1" title="Decrease Font Size">

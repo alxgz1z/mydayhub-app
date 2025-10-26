@@ -118,6 +118,18 @@
 	transform: translateY(-2px);
 }
 
+/* SVG icon styling in buttons */
+.btn-icon svg {
+	width: 20px;
+	height: 20px;
+	display: block;
+	stroke: currentColor;
+}
+
+.btn-icon:hover svg {
+	stroke: currentColor;
+}
+
 /* Close button - circular red design */
 #editor-btn-close {
 	background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
@@ -726,6 +738,15 @@
 	font-size: 20px;
 	line-height: 1;
 	font-weight: 500;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.more-menu-icon svg {
+	width: 20px;
+	height: 20px;
+	stroke: currentColor;
 }
 
 .more-menu-label {
