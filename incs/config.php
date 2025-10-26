@@ -17,6 +17,8 @@ define('ROOT_PATH', dirname(INCS_PATH));
 
 // --- LOAD ENVIRONMENT VARIABLES FROM .env FILE ---
 $envPath = ROOT_PATH . '/.env';
+$_ENV_VARS = []; // Store env vars in array for reliable access
+
 if (file_exists($envPath)) {
 	$lines = file($envPath, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
 	foreach ($lines as $line) {
@@ -26,6 +28,14 @@ if (file_exists($envPath)) {
 			$name = trim($name);
 			$value = trim($value, " \t\n\r\0\x0B\"");
 			putenv("$name=$value");
+			
+			// Store in global array for reliable access
+			$_ENV_VARS[$name] = $value;
+			
+			// Debug: Log the variables being loaded
+			if ($name === 'DEVELOPERS') {
+				error_log(".env LOADING: $name = $value");
+			}
 		}
 	}
 }
@@ -33,14 +43,16 @@ if (file_exists($envPath)) {
 // --- CORE CONSTANTS & ERROR REPORTING ---
 // DEVMODE is determined entirely by whether the current user is in the DEVELOPERS list
 function isDeveloperMode(): bool {
+	global $_ENV_VARS;
+	
 	// If no user is logged in, DEVMODE is false
 	if (!isset($_SESSION['user_id'])) {
 		error_log("DEVMODE: No user logged in");
 		return false;
 	}
 	
-	// Get DEVELOPERS list from .env
-	$developers = getenv('DEVELOPERS');
+	// Get DEVELOPERS list from $_ENV_VARS (loaded from .env file)
+	$developers = $_ENV_VARS['DEVELOPERS'] ?? '';
 	error_log("DEVMODE: DEVELOPERS from .env: " . ($developers ?: 'empty'));
 	
 	// Also check if .env file exists and is readable
