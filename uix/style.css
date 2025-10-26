@@ -331,6 +331,7 @@ body.light-mode .tab-btn:not(.active) .tab-icon svg {
 #journal-view.view-container {
 	flex-direction: column;
 	overflow: hidden;
+	background-color: transparent;
 }
 
 #journal-view.view-container.active {
