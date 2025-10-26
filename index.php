@@ -1100,20 +1100,18 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<div class="search-drawer-header">
 					<h3>Search Results</h3>
 					<div class="search-drawer-controls">
+						<label class="search-option-label">
+							<input type="checkbox" id="search-exact-match" title="Exact match only">
+							<span>Exact</span>
+						</label>
+						<label class="search-option-label">
+							<input type="checkbox" id="search-regex-mode" title="Use regular expressions">
+							<span>Regex</span>
+						</label>
 						<input type="text" id="search-drawer-input" placeholder="Search..." class="search-drawer-input">
 						<button class="btn btn-primary" id="btn-search-drawer" title="Search">Search</button>
 						<button class="btn-icon" id="btn-close-search-drawer" title="Close">✕</button>
 					</div>
-				</div>
-				<div class="search-drawer-options">
-					<label class="search-option-label">
-						<input type="checkbox" id="search-exact-match" title="Exact match only">
-						<span>Exact</span>
-					</label>
-					<label class="search-option-label">
-						<input type="checkbox" id="search-regex-mode" title="Use regular expressions">
-						<span>Regex</span>
-					</label>
 				</div>
 				<div id="search-drawer-content" class="search-drawer-content">
 					<div class="search-placeholder">
