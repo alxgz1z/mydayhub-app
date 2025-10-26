@@ -634,7 +634,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<div class="mobile-bottom-spacer"></div>
 		</main>
 
-		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>">
+		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>" data-devmode="<?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>">
 			<div class="footer-left">
 			<span id="footer-username" data-username="<?php echo htmlspecialchars($username); ?>" title="Username"></span>
 			<?php if ($isCurrentUserAdmin): ?>

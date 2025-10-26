@@ -570,6 +570,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	updateFooterDate();
 	initSettingsPanel();
 	setupUserGuideEventListeners();
+	
+	// Debug DEVMODE footer
+	debugDevModeFooter();
 
 	// Do not eagerly initialize tasks or journal here; ViewManager will lazy-load
 	
@@ -2343,6 +2346,26 @@ function updateFontSizeUI(size) {
 // Make font size functions globally available
 window.applyFontSize = applyFontSize;
 window.updateFontSizeUI = updateFontSizeUI;
+
+/**
+ * Debug function to check DEVMODE footer styling
+ */
+function debugDevModeFooter() {
+	const footer = document.getElementById('app-footer');
+	if (!footer) {
+		console.log('Footer element not found');
+		return;
+	}
+	
+	console.log('Footer element found:', footer);
+	console.log('Footer classes:', footer.className);
+	console.log('Footer data-devmode:', footer.getAttribute('data-devmode'));
+	console.log('Footer has dev-mode class:', footer.classList.contains('dev-mode'));
+	
+	// Check if DEVMODE is defined in JavaScript
+	console.log('window.DEV_MODE:', window.DEV_MODE);
+	console.log('DEVMODE constant:', typeof DEVMODE !== 'undefined' ? DEVMODE : 'undefined');
+}
 
 // ==========================================================================
 // --- ACCENT COLOR CUSTOMIZATION ---
