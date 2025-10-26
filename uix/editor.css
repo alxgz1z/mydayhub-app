@@ -287,7 +287,7 @@
 	border: 1px solid rgba(255,255,255,0.2);
 	color: #cccccc;
 	cursor: pointer;
-	padding: 8px 12px;
+	padding: 10px;
 	border-radius: 8px;
 	display: flex;
 	align-items: center;
@@ -295,8 +295,10 @@
 	transition: all 0.3s ease;
 	font-size: 0.9rem;
 	font-weight: 500;
-	min-width: 36px;
-	min-height: 36px;
+	width: 40px;
+	height: 40px;
+	min-width: 40px;
+	min-height: 40px;
 }
 
 .ribbon-button-group .btn-icon:hover {
@@ -311,6 +313,32 @@
 	border-color: var(--accent-color, #4f46e5);
 	color: var(--accent-text-color, white);
 	box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+}
+
+/* Markdown button border colors */
+.ribbon-button-group [data-action="markdown-bold"],
+.ribbon-button-group [data-action="markdown-italic"],
+.ribbon-button-group [data-action="markdown-code"],
+.ribbon-button-group [data-action="markdown-h1"],
+.ribbon-button-group [data-action="markdown-h2"] {
+	border-color: rgba(100, 150, 200, 0.4);
+}
+
+.ribbon-button-group [data-action="markdown-bold"]:hover,
+.ribbon-button-group [data-action="markdown-italic"]:hover,
+.ribbon-button-group [data-action="markdown-code"]:hover,
+.ribbon-button-group [data-action="markdown-h1"]:hover,
+.ribbon-button-group [data-action="markdown-h2"]:hover {
+	border-color: rgba(100, 150, 200, 0.8);
+}
+
+/* Clear button with red lines */
+.ribbon-button-group #editor-btn-clear svg {
+	stroke: #ff4444;
+}
+
+.ribbon-button-group #editor-btn-clear:hover svg {
+	stroke: #ff2222;
 }
 
 /* Clear note button */
