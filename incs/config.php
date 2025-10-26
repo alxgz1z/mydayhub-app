@@ -35,16 +35,21 @@ if (file_exists($envPath)) {
 function isDeveloperMode(): bool {
 	// If no user is logged in, DEVMODE is false
 	if (!isset($_SESSION['user_id'])) {
+		error_log("DEVMODE: No user logged in");
 		return false;
 	}
 	
 	// Get DEVELOPERS list from .env
 	$developers = getenv('DEVELOPERS');
+	error_log("DEVMODE: DEVELOPERS from .env: " . ($developers ?: 'empty'));
+	
 	if (empty($developers)) {
+		error_log("DEVMODE: No DEVELOPERS in .env");
 		return false;
 	}
 	
 	$developerEmails = array_map('trim', explode(',', $developers));
+	error_log("DEVMODE: Developer emails: " . implode(', ', $developerEmails));
 	
 	try {
 		// Get current user's email
@@ -57,10 +62,14 @@ function isDeveloperMode(): bool {
 		$stmt->execute([':userId' => $_SESSION['user_id']]);
 		$userEmail = $stmt->fetchColumn();
 		
+		error_log("DEVMODE: Current user email: " . ($userEmail ?: 'not found'));
+		error_log("DEVMODE: User in developers list: " . ($userEmail && in_array($userEmail, $developerEmails) ? 'YES' : 'NO'));
+		
 		// DEVMODE is true only if user's email is in DEVELOPERS list
 		return $userEmail && in_array($userEmail, $developerEmails);
 	} catch (Exception $e) {
 		// If database error, DEVMODE is false
+		error_log("DEVMODE: Database error: " . $e->getMessage());
 		return false;
 	}
 }
