@@ -1018,11 +1018,11 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<button class="btn-icon" title="Underline Selection" data-action="underline"><u>U</u></button>
 								<button class="btn-icon" title="Frame Selection" data-action="frame">
 									<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-										<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-										<path d="M3 9h18"></path>
-										<path d="M3 15h18"></path>
-										<path d="M9 3v18"></path>
-										<path d="M15 3v18"></path>
+										<!-- Outer double box -->
+										<rect x="3" y="3" width="18" height="18"></rect>
+										<rect x="4" y="4" width="16" height="16"></rect>
+										<!-- Inner content indicator -->
+										<line x1="7" y1="12" x2="17" y2="12"></line>
 									</svg>
 								</button>
 								<button class="btn-icon" title="Calculate Selection" data-action="calculate">
@@ -1068,11 +1068,10 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 									<button class="btn-icon" data-action="frame" title="Frame Selection">
 										<span class="more-menu-icon">
 											<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-												<rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-												<path d="M3 9h18"></path>
-												<path d="M3 15h18"></path>
-												<path d="M9 3v18"></path>
-												<path d="M15 3v18"></path>
+												<rect x="3" y="3" width="18" height="18"></rect>
+												<rect x="4" y="4" width="16" height="16"></rect>
+												<!-- Inner content indicator -->
+												<line x1="7" y1="12" x2="17" y2="12"></line>
 											</svg>
 										</span>
 										<span class="more-menu-label">Frame</span>
