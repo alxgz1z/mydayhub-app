@@ -568,6 +568,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	updateFooterDate();
+	updateFooterUsername();
 	initSettingsPanel();
 	setupUserGuideEventListeners();
 	
@@ -1084,8 +1085,8 @@ function openSettingsPanel() {
 		// Register settings panel in modal stack
 		registerModal('settings-panel', closeSettingsPanel);
 		
-		// Update username display
-		updateSettingsUsername();
+		// Update username display in footer
+		updateFooterUsername();
 	}
 }
 
@@ -1102,14 +1103,14 @@ function closeSettingsPanel() {
 }
 
 /**
- * Updates the username display in settings panel with truncation logic.
+ * Updates the username display in footer with truncation logic.
  */
-function updateSettingsUsername() {
-	const usernameElement = document.getElementById('settings-username');
-	console.log('updateSettingsUsername called, element found:', !!usernameElement);
+function updateFooterUsername() {
+	const usernameElement = document.getElementById('footer-username');
+	console.log('updateFooterUsername called, element found:', !!usernameElement);
 	
 	if (!usernameElement) {
-		console.log('Username element not found');
+		console.log('Footer username element not found');
 		return;
 	}
 	
@@ -1143,8 +1144,13 @@ function updateSettingsUsername() {
 		usernameElement.title = username;
 	}
 	
+	// Remove any existing click handlers by cloning (preserves all attributes)
+	const parent = usernameElement.parentNode;
+	const newElement = usernameElement.cloneNode(true);
+	parent.replaceChild(newElement, usernameElement);
+	
 	// Add click handler for popover
-	usernameElement.addEventListener('click', (e) => {
+	newElement.addEventListener('click', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		openUserInfoPopover(username, userEmail);
@@ -1183,11 +1189,12 @@ function getCurrentUserEmail() {
  * Opens the user info popover with username and email.
  */
 function openUserInfoPopover(username, email) {
+	const overlay = document.getElementById('user-info-popover-overlay');
 	const popover = document.getElementById('user-info-popover');
 	const usernameSpan = document.getElementById('user-info-username');
 	const emailSpan = document.getElementById('user-info-email');
 	
-	if (!popover || !usernameSpan || !emailSpan) {
+	if (!overlay || !popover || !usernameSpan || !emailSpan) {
 		console.error('User info popover elements not found');
 		return;
 	}
@@ -1196,8 +1203,8 @@ function openUserInfoPopover(username, email) {
 	usernameSpan.textContent = username || 'Not available';
 	emailSpan.textContent = email || 'Not available';
 	
-	// Show the popover
-	popover.classList.remove('hidden');
+	// Show the overlay
+	overlay.classList.remove('hidden');
 	
 	// Register in modal stack
 	registerModal('user-info-popover', closeUserInfoPopover);
@@ -1207,9 +1214,9 @@ function openUserInfoPopover(username, email) {
  * Closes the user info popover.
  */
 function closeUserInfoPopover() {
-	const popover = document.getElementById('user-info-popover');
-	if (popover) {
-		popover.classList.add('hidden');
+	const overlay = document.getElementById('user-info-popover-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
 		unregisterModal('user-info-popover');
 	}
 }
@@ -1861,6 +1868,11 @@ function populateUsageStatsModal(data) {
 	// Update columns usage
 	updateUsageCategory('columns', data.usage.columns);
 	
+	// Update journal entries usage
+	if (data.usage.journal_entries) {
+		updateUsageCategory('journal-entries', data.usage.journal_entries);
+	}
+	
 	// Update storage usage
 	updateStorageUsage(data.usage.storage);
 	
@@ -1879,24 +1891,45 @@ function updateUsageCategory(category, usage) {
 	const percentageElement = document.getElementById(`${category}-usage-percentage`);
 	
 	if (textElement) {
-		textElement.textContent = `${usage.used} of ${usage.limit}`;
+		// Handle unlimited (-1) limit - check both number and string
+		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
+		if (isUnlimited) {
+			// For unlimited, show just the count with "(Unlimited)" label
+			textElement.textContent = `${usage.used} (Unlimited)`;
+		} else {
+			textElement.textContent = `${usage.used} of ${usage.limit}`;
+		}
 	}
 	
 	if (fillElement) {
-		fillElement.style.width = `${usage.percentage}%`;
-		
-		// Apply color coding based on usage percentage
-		if (usage.percentage >= 95) {
-			fillElement.style.backgroundColor = 'var(--toast-error-bg)';
-		} else if (usage.percentage >= 80) {
-			fillElement.style.backgroundColor = '#f59e0b';
+		// Hide progress bar if unlimited
+		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
+		if (isUnlimited) {
+			fillElement.style.width = '0%';
+			fillElement.style.opacity = '0.3'; // Make it subtle/grayed out
+			fillElement.style.backgroundColor = 'var(--border-color)';
 		} else {
-			fillElement.style.backgroundColor = 'var(--accent-color)';
+			fillElement.style.opacity = '1';
+			fillElement.style.width = `${usage.percentage}%`;
+			
+			// Apply color coding based on usage percentage
+			if (usage.percentage >= 95) {
+				fillElement.style.backgroundColor = 'var(--toast-error-bg)';
+			} else if (usage.percentage >= 80) {
+				fillElement.style.backgroundColor = '#f59e0b';
+			} else {
+				fillElement.style.backgroundColor = 'var(--accent-color)';
+			}
 		}
 	}
 	
 	if (percentageElement) {
-		percentageElement.textContent = `${usage.percentage}%`;
+		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
+		if (isUnlimited) {
+			percentageElement.textContent = 'No limit';
+		} else {
+			percentageElement.textContent = `${usage.percentage}%`;
+		}
 	}
 }
 
@@ -2436,8 +2469,19 @@ window.updateFontSizeUI = updateFontSizeUI;
  */
 function initUserInfoPopover() {
 	const closeBtn = document.getElementById('btn-close-user-info');
+	const overlay = document.getElementById('user-info-popover-overlay');
+	
 	if (closeBtn) {
 		closeBtn.addEventListener('click', closeUserInfoPopover);
+	}
+	
+	// Close on overlay click (but not on modal content click)
+	if (overlay) {
+		overlay.addEventListener('click', (e) => {
+			if (e.target === overlay) {
+				closeUserInfoPopover();
+			}
+		});
 	}
 }
 

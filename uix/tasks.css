@@ -42,9 +42,11 @@
 	display: flex;
 	flex-direction: column;
 	max-height: 100%;
+	height: 100%; /* Match journal columns for consistency */
 	position: relative; 
 	overflow: hidden;
 	box-shadow: var(--card-shadow, 0 2px 8px rgba(0, 0, 0, 0.1));
+	transition: all 0.3s ease; /* Match journal columns for consistency */
 }
 
 /* Modified for Column Drag & Drop - Visual feedback for dragging columns */
@@ -67,6 +69,7 @@
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--border-color);
 	gap: 0.75rem; /* Add gap for spacing between elements */
+	background-color: var(--card-bg) !important; /* Subtle elevation - slightly lighter than column body */
 }
 
 /* Modified for Column Drag & Drop - Indicate draggable columns */

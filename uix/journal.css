@@ -78,6 +78,8 @@
 	overflow-x: auto;
 	overflow-y: hidden;
 	padding: 1rem;
+	padding-top: 1.5rem; /* Extra top padding to prevent border hiding under header */
+	padding-bottom: 2rem; /* Extra bottom padding to prevent border hiding under footer */
 	gap: 1rem;
 	justify-content: center;
 	align-items: stretch; /* Make all columns the same height */
@@ -99,6 +101,20 @@
     transition: all 0.3s ease;
     height: 100%;
     max-height: 100%;
+}
+
+/* Wide-screen column height behavior: occupy half the viewport, expand up to 85%, then scroll internally */
+@media (min-width: 769px) {
+	.journal-column {
+		height: 50vh;       /* Default height target */
+		min-height: 50vh;   /* Minimum 50% of available vertical space */
+		max-height: 90vh;   /* Allow expansion up to 90% */
+		overflow: visible;  /* Allow internal entries container to scroll instead */
+	}
+	.journal-entries-container {
+		max-height: calc(90vh - 120px); /* safety cap: header+footer ~120px */
+		overflow-y: auto;   /* Scroll entries inside the column when needed */
+	}
 }
 
 /* Visual indicator when column is at maximum height */
@@ -132,7 +148,7 @@
 	padding: 0.75rem 1rem;
 	border-bottom: 1px solid var(--border-color);
 	gap: 0.75rem;
-	background: transparent;
+	background-color: var(--card-bg) !important; /* Subtle elevation - slightly lighter than column body */
 }
 
 .journal-column-title {
@@ -1095,6 +1111,8 @@ body.light-mode .journal-menu-popover .filter-item {
     
     .journal-columns {
         padding: 0.5rem;
+        padding-top: 1rem; /* Extra top padding on mobile to prevent border hiding under header */
+        padding-bottom: 2rem; /* Extra bottom padding on mobile too */
         gap: 0.5rem;
     }
     
@@ -1120,6 +1138,8 @@ body.light-mode .journal-menu-popover .filter-item {
 @media (max-width: 480px) {
     .journal-columns {
         padding: 0.25rem;
+        padding-top: 1rem; /* Extra top padding on small mobile to prevent border hiding under header */
+        padding-bottom: 2rem; /* Extra bottom padding on small mobile too */
         gap: 0.25rem;
     }
     

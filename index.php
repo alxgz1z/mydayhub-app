@@ -68,7 +68,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	
 	<link rel="stylesheet" href="uix/style.css">
-	<link rel="stylesheet" href="uix/tasks.css">
+	<link rel="stylesheet" href="uix/tasks.css?v=8.5">
 	<link rel="stylesheet" href="uix/editor.css?v=8.5">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
@@ -531,7 +531,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		
 		}
 	</style>
-	<link rel="stylesheet" href="uix/journal.css">
+	<link rel="stylesheet" href="uix/journal.css?v=8.5">
 	<script>
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>",
@@ -654,7 +654,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 
 		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>" data-devmode="<?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>">
 			<div class="footer-left">
-			<span id="footer-username" data-username="<?php echo htmlspecialchars($username); ?>" title="Username"></span>
+			<span id="footer-username" class="footer-username clickable" data-username="<?php echo htmlspecialchars($username); ?>" title="Click to view user info"></span>
 			<?php if ($isCurrentUserAdmin): ?>
 				<a href="/admin/" id="admin-access-link" title="Admin Panel">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -716,7 +716,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<span id="settings-username" class="settings-username clickable" title="Click to view user info"></span>
 				<h2>Settings</h2>
 				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>
@@ -877,20 +876,22 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	</div>
 	
 	<!-- User Info Popover -->
-	<div id="user-info-popover" class="user-info-popover hidden">
-		<div class="user-info-content">
-			<div class="user-info-header">
-				<h4>User Information</h4>
-				<button class="btn-icon btn-close" id="btn-close-user-info">&times;</button>
-			</div>
-			<div class="user-info-body">
-				<div class="user-info-item">
-					<label>Username:</label>
-					<span id="user-info-username"></span>
+	<div id="user-info-popover-overlay" class="user-info-popover-overlay hidden">
+		<div id="user-info-popover" class="user-info-popover">
+			<div class="user-info-content">
+				<div class="user-info-header">
+					<h4>User Information</h4>
+					<button class="btn-icon btn-close" id="btn-close-user-info">&times;</button>
 				</div>
-				<div class="user-info-item">
-					<label>Email:</label>
-					<span id="user-info-email"></span>
+				<div class="user-info-body">
+					<div class="user-info-item">
+						<label>Username:</label>
+						<span id="user-info-username"></span>
+					</div>
+					<div class="user-info-item">
+						<label>Email:</label>
+						<span id="user-info-email"></span>
+					</div>
 				</div>
 			</div>
 		</div>
@@ -1580,7 +1581,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 					<div class="usage-category">
 						<div class="usage-category-header">
-							<span class="usage-label">Columns</span>
+							<span class="usage-label">Tasks' Columns</span>
 							<span id="columns-usage-text" class="usage-text">0 of 0</span>
 						</div>
 						<div class="usage-bar-container">
@@ -1588,6 +1589,18 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<div id="columns-usage-fill" class="usage-fill" style="width: 0%"></div>
 							</div>
 							<span id="columns-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
+							<span class="usage-label">Journal Entries</span>
+							<span id="journal-entries-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="journal-entries-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="journal-entries-usage-percentage" class="usage-percentage">0%</span>
 						</div>
 					</div>
 					<div class="usage-category">

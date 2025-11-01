@@ -243,25 +243,82 @@ define('SSL_CSR_PATH', getenv('SSL_CSR_PATH'));
 define('ADMIN_EMAILS', array_map('trim', explode(',', getenv('ADMIN_EMAILS') ?: '')));
 
 // --- SUBSCRIPTION QUOTAS ---
-define('QUOTA_FREE_COLUMNS', 3);
-define('QUOTA_FREE_TASKS_PER_COLUMN', 10);
-define('QUOTA_FREE_STORAGE_MB', 10);
-define('QUOTA_FREE_SHARED_TASKS', 2);
+// Read from .env file - NO hardcoded defaults, .env is the ONLY source of truth
+// Support both old format (QUOTA_*) and new format (*_LIMIT, *_STORAGE_MB)
+// Note: *_TASK_LIMIT in .env is TOTAL tasks limit, not per-column
 
-define('QUOTA_BASE_COLUMNS', 10);
-define('QUOTA_BASE_TASKS_PER_COLUMN', 50);
-define('QUOTA_BASE_STORAGE_MB', 100);
-define('QUOTA_BASE_SHARED_TASKS', 20);
+// FREE tier
+$freeColumns = getenv('QUOTA_FREE_COLUMNS') ?: getenv('FREE_COLUMN_LIMIT');
+define('QUOTA_FREE_COLUMNS', $freeColumns !== false && $freeColumns !== '' ? (int)$freeColumns : 3);
 
-define('QUOTA_PRO_COLUMNS', 50);
-define('QUOTA_PRO_TASKS_PER_COLUMN', 200);
-define('QUOTA_PRO_STORAGE_MB', 500);
-define('QUOTA_PRO_SHARED_TASKS', 100);
+$freeTasks = getenv('QUOTA_FREE_TASKS_PER_COLUMN') ?: getenv('FREE_TASK_LIMIT');
+define('QUOTA_FREE_TASKS_PER_COLUMN', $freeTasks !== false && $freeTasks !== '' ? (int)$freeTasks : 10);
 
-define('QUOTA_ELITE_COLUMNS', -1); // Unlimited
-define('QUOTA_ELITE_TASKS_PER_COLUMN', -1); // Unlimited
-define('QUOTA_ELITE_STORAGE_MB', 2048); // 2GB
-define('QUOTA_ELITE_SHARED_TASKS', -1); // Unlimited
+$freeStorage = getenv('QUOTA_FREE_STORAGE_MB') ?: getenv('FREE_STORAGE_MB');
+define('QUOTA_FREE_STORAGE_MB', $freeStorage !== false && $freeStorage !== '' ? (int)$freeStorage : 10);
+
+$freeShared = getenv('QUOTA_FREE_SHARED_TASKS');
+define('QUOTA_FREE_SHARED_TASKS', $freeShared !== false && $freeShared !== '' ? (int)$freeShared : 2);
+
+$freeJournal = getenv('QUOTA_FREE_JOURNAL_ENTRIES') ?: getenv('FREE_ENTRY_LIMIT');
+define('QUOTA_FREE_JOURNAL_ENTRIES', $freeJournal !== false && $freeJournal !== '' ? (int)$freeJournal : 60);
+
+// BASE tier
+$baseColumns = getenv('QUOTA_BASE_COLUMNS') ?: getenv('BASE_COLUMN_LIMIT');
+define('QUOTA_BASE_COLUMNS', $baseColumns !== false && $baseColumns !== '' ? (int)$baseColumns : 5);
+
+$baseTasks = getenv('QUOTA_BASE_TASKS_PER_COLUMN') ?: getenv('BASE_TASK_LIMIT');
+define('QUOTA_BASE_TASKS_PER_COLUMN', $baseTasks !== false && $baseTasks !== '' ? (int)$baseTasks : 200);
+
+$baseStorage = getenv('QUOTA_BASE_STORAGE_MB') ?: getenv('BASE_STORAGE_MB');
+define('QUOTA_BASE_STORAGE_MB', $baseStorage !== false && $baseStorage !== '' ? (int)$baseStorage : 10);
+
+$baseShared = getenv('QUOTA_BASE_SHARED_TASKS');
+define('QUOTA_BASE_SHARED_TASKS', $baseShared !== false && $baseShared !== '' ? (int)$baseShared : 20);
+
+$baseJournal = getenv('QUOTA_BASE_JOURNAL_ENTRIES') ?: getenv('BASE_ENTRY_LIMIT');
+define('QUOTA_BASE_JOURNAL_ENTRIES', $baseJournal !== false && $baseJournal !== '' ? (int)$baseJournal : 200);
+
+// PRO tier
+$proColumns = getenv('QUOTA_PRO_COLUMNS') ?: getenv('PRO_COLUMN_LIMIT');
+define('QUOTA_PRO_COLUMNS', $proColumns !== false && $proColumns !== '' ? (int)$proColumns : 10);
+
+$proTasks = getenv('QUOTA_PRO_TASKS_PER_COLUMN') ?: getenv('PRO_TASK_LIMIT');
+define('QUOTA_PRO_TASKS_PER_COLUMN', $proTasks !== false && $proTasks !== '' ? (int)$proTasks : 500);
+
+$proStorage = getenv('QUOTA_PRO_STORAGE_MB') ?: getenv('PRO_STORAGE_MB');
+define('QUOTA_PRO_STORAGE_MB', $proStorage !== false && $proStorage !== '' ? (int)$proStorage : 50);
+
+$proShared = getenv('QUOTA_PRO_SHARED_TASKS');
+define('QUOTA_PRO_SHARED_TASKS', $proShared !== false && $proShared !== '' ? (int)$proShared : 100);
+
+$proJournal = getenv('QUOTA_PRO_JOURNAL_ENTRIES') ?: getenv('PRO_ENTRY_LIMIT');
+define('QUOTA_PRO_JOURNAL_ENTRIES', $proJournal !== false && $proJournal !== '' ? (int)$proJournal : 500);
+
+// ELITE tier - special handling for unlimited (-1)
+$eliteColumns = getenv('QUOTA_ELITE_COLUMNS') ?: getenv('ELITE_COLUMN_LIMIT');
+define('QUOTA_ELITE_COLUMNS', ($eliteColumns !== false && $eliteColumns !== '' && $eliteColumns !== '999') ? (int)$eliteColumns : -1);
+
+$eliteTasks = getenv('QUOTA_ELITE_TASKS_PER_COLUMN') ?: getenv('ELITE_TASK_LIMIT');
+define('QUOTA_ELITE_TASKS_PER_COLUMN', ($eliteTasks !== false && $eliteTasks !== '' && $eliteTasks !== '9999') ? (int)$eliteTasks : -1);
+
+$eliteStorage = getenv('QUOTA_ELITE_STORAGE_MB');
+if ($eliteStorage === false || $eliteStorage === '') {
+	$eliteStorageGB = getenv('ELITE_STORAGE_GB');
+	if ($eliteStorageGB !== false && $eliteStorageGB !== '') {
+		define('QUOTA_ELITE_STORAGE_MB', (int)$eliteStorageGB * 1024);
+	} else {
+		define('QUOTA_ELITE_STORAGE_MB', 1024); // Default 1GB
+	}
+} else {
+	define('QUOTA_ELITE_STORAGE_MB', (int)$eliteStorage);
+}
+
+$eliteShared = getenv('QUOTA_ELITE_SHARED_TASKS');
+define('QUOTA_ELITE_SHARED_TASKS', ($eliteShared !== false && $eliteShared !== '' && $eliteShared !== '999') ? (int)$eliteShared : -1);
+
+$eliteJournal = getenv('QUOTA_ELITE_JOURNAL_ENTRIES') ?: getenv('ELITE_ENTRY_LIMIT');
+define('QUOTA_ELITE_JOURNAL_ENTRIES', ($eliteJournal !== false && $eliteJournal !== '' && $eliteJournal !== '999') ? (int)$eliteJournal : -1);
 
 /**
  * Check if the current user is an admin based on their email
@@ -296,28 +353,32 @@ function get_user_quotas(string $subscriptionLevel): array {
 				'columns' => QUOTA_BASE_COLUMNS,
 				'tasks_per_column' => QUOTA_BASE_TASKS_PER_COLUMN,
 				'storage_bytes' => QUOTA_BASE_STORAGE_MB * 1024 * 1024,
-				'shared_tasks' => QUOTA_BASE_SHARED_TASKS
+				'shared_tasks' => QUOTA_BASE_SHARED_TASKS,
+				'journal_entries' => QUOTA_BASE_JOURNAL_ENTRIES
 			];
 		case 'pro':
 			return [
 				'columns' => QUOTA_PRO_COLUMNS,
 				'tasks_per_column' => QUOTA_PRO_TASKS_PER_COLUMN,
 				'storage_bytes' => QUOTA_PRO_STORAGE_MB * 1024 * 1024,
-				'shared_tasks' => QUOTA_PRO_SHARED_TASKS
+				'shared_tasks' => QUOTA_PRO_SHARED_TASKS,
+				'journal_entries' => QUOTA_PRO_JOURNAL_ENTRIES
 			];
 		case 'elite':
 			return [
 				'columns' => QUOTA_ELITE_COLUMNS,
 				'tasks_per_column' => QUOTA_ELITE_TASKS_PER_COLUMN,
 				'storage_bytes' => QUOTA_ELITE_STORAGE_MB * 1024 * 1024,
-				'shared_tasks' => QUOTA_ELITE_SHARED_TASKS
+				'shared_tasks' => QUOTA_ELITE_SHARED_TASKS,
+				'journal_entries' => QUOTA_ELITE_JOURNAL_ENTRIES
 			];
 		default: // 'free'
 			return [
 				'columns' => QUOTA_FREE_COLUMNS,
 				'tasks_per_column' => QUOTA_FREE_TASKS_PER_COLUMN,
 				'storage_bytes' => QUOTA_FREE_STORAGE_MB * 1024 * 1024,
-				'shared_tasks' => QUOTA_FREE_SHARED_TASKS
+				'shared_tasks' => QUOTA_FREE_SHARED_TASKS,
+				'journal_entries' => QUOTA_FREE_JOURNAL_ENTRIES
 			];
 	}
 }

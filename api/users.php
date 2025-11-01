@@ -263,35 +263,33 @@ function handle_get_user_usage_stats(PDO $pdo, int $userId): void {
 		$subscriptionLevel = $userData['subscription_level'] ?? 'free';
 		$storageUsed = (int)($userData['storage_used_bytes'] ?? 0);
 		
-		// Define limits per subscription tier
-		$limits = [
-			'free' => [
-				'storage_mb' => 10,
-				'max_columns' => 3,
-				'max_tasks' => 60,
-				'sharing_enabled' => false
-			],
-			'base' => [
-				'storage_mb' => 10,
-				'max_columns' => 5,
-				'max_tasks' => 200,
-				'sharing_enabled' => true
-			],
-			'pro' => [
-				'storage_mb' => 50,
-				'max_columns' => 10,
-				'max_tasks' => 500,
-				'sharing_enabled' => true
-			],
-			'elite' => [
-				'storage_mb' => 1024, // 1GB
-				'max_columns' => 999,
-				'max_tasks' => 9999,
-				'sharing_enabled' => true
-			]
-		];
+		// Use get_user_quotas() from config.php to get quota limits from .env constants
+		require_once __DIR__ . '/../incs/config.php';
+		$quotas = get_user_quotas($subscriptionLevel);
 		
-		$userLimits = $limits[$subscriptionLevel] ?? $limits['free'];
+		// Convert quotas to format expected by frontend
+		$storageLimitMB = $quotas['storage_bytes'] / (1024 * 1024);
+		// For unlimited, keep -1; for limited, use the actual value
+		$maxColumns = $quotas['columns'] === -1 ? -1 : $quotas['columns'];
+		
+		// For tasks: The constant name is misleading - when reading from .env *_TASK_LIMIT variables,
+		// these are TOTAL task limits, not per-column. We need to detect this.
+		// Values from .env *_TASK_LIMIT are: FREE=60, BASE=200, PRO=500, ELITE=9999
+		// Per-column values (old format) would be: FREE=10, BASE=50, PRO=200
+		// So if tasks_per_column >= 60, it's likely a total limit from .env format
+		// Otherwise it's per-column and needs multiplication
+		if ($quotas['tasks_per_column'] === -1) {
+			$maxTasks = -1;
+		} else if ($quotas['tasks_per_column'] >= 60) {
+			// Values >= 60 are total limits from .env (FREE_TASK_LIMIT=60, BASE_TASK_LIMIT=200, etc.)
+			$maxTasks = $quotas['tasks_per_column'];
+		} else {
+			// Values < 60 are per-column limits (old format: FREE=10, BASE=50, etc.)
+			$maxTasks = $quotas['tasks_per_column'] * max(1, $maxColumns === -1 ? 10 : $maxColumns);
+		}
+		
+		$maxJournalEntries = $quotas['journal_entries'] === -1 ? -1 : $quotas['journal_entries'];
+		$sharingEnabled = $quotas['shared_tasks'] > 0;
 		
 		// Get current usage counts
 		$stmtColumns = $pdo->prepare("SELECT COUNT(*) FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
@@ -302,13 +300,17 @@ function handle_get_user_usage_stats(PDO $pdo, int $userId): void {
 		$stmtTasks->execute([':userId' => $userId]);
 		$tasksUsed = (int)$stmtTasks->fetchColumn();
 		
+		$stmtJournal = $pdo->prepare("SELECT COUNT(*) FROM journal_entries WHERE user_id = :userId");
+		$stmtJournal->execute([':userId' => $userId]);
+		$journalEntriesUsed = (int)$stmtJournal->fetchColumn();
+		
 		// Convert storage to MB for display
-		$storageLimitMB = $userLimits['storage_mb'];
 		$storageUsedMB = round($storageUsed / (1024 * 1024), 2);
 		
-		// Calculate percentages
-		$columnsPercentage = ($userLimits['max_columns'] > 0) ? round(($columnsUsed / $userLimits['max_columns']) * 100, 1) : 0;
-		$tasksPercentage = ($userLimits['max_tasks'] > 0) ? round(($tasksUsed / $userLimits['max_tasks']) * 100, 1) : 0;
+		// Calculate percentages (only for limited quotas)
+		$columnsPercentage = ($maxColumns > 0 && $maxColumns !== -1) ? round(($columnsUsed / $maxColumns) * 100, 1) : 0;
+		$tasksPercentage = ($maxTasks > 0 && $maxTasks !== -1) ? round(($tasksUsed / $maxTasks) * 100, 1) : 0;
+		$journalEntriesPercentage = ($maxJournalEntries > 0 && $maxJournalEntries !== -1) ? round(($journalEntriesUsed / $maxJournalEntries) * 100, 1) : 0;
 		$storagePercentage = ($storageLimitMB > 0) ? round(($storageUsedMB / $storageLimitMB) * 100, 1) : 0;
 		
 		http_response_code(200);
@@ -319,13 +321,18 @@ function handle_get_user_usage_stats(PDO $pdo, int $userId): void {
 				'usage' => [
 					'columns' => [
 						'used' => $columnsUsed,
-						'limit' => $userLimits['max_columns'],
+						'limit' => $maxColumns, // -1 means unlimited
 						'percentage' => $columnsPercentage
 					],
 					'tasks' => [
 						'used' => $tasksUsed,
-						'limit' => $userLimits['max_tasks'],
+						'limit' => $maxTasks, // -1 means unlimited
 						'percentage' => $tasksPercentage
+					],
+					'journal_entries' => [
+						'used' => $journalEntriesUsed,
+						'limit' => $maxJournalEntries, // -1 means unlimited
+						'percentage' => $journalEntriesPercentage
 					],
 					'storage' => [
 						'used_mb' => $storageUsedMB,
@@ -334,7 +341,7 @@ function handle_get_user_usage_stats(PDO $pdo, int $userId): void {
 					]
 				],
 				'features' => [
-					'sharing_enabled' => $userLimits['sharing_enabled']
+					'sharing_enabled' => $sharingEnabled
 				]
 			]
 		]);

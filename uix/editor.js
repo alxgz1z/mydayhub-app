@@ -869,6 +869,27 @@
 					entryCard.dataset.updatedAt = new Date().toISOString().slice(0, 19).replace('T', ' ');
 				}
 				
+				// Handle task creation from @task markup
+				const createdTasks = result.data?.created_tasks || [];
+				if (createdTasks.length > 0) {
+					// Refresh task board to show new tasks
+					if (typeof window.fetchAndRenderBoard === 'function') {
+						window.fetchAndRenderBoard();
+					}
+					
+					// Show notification about task creation
+					const taskCount = createdTasks.length;
+					const message = taskCount === 1 
+						 ? 'Content saved. 1 task created from @task markup.'
+						: `Content saved. ${taskCount} tasks created from @task markup.`;
+					showToast({ message: message, type: 'success', duration: 5000 });
+					
+					// Update mission focus chart if visible
+					if (typeof window.updateMissionFocusChart === 'function') {
+						window.updateMissionFocusChart();
+					}
+				}
+				
 				// Dispatch event for journal view to handle re-rendering
 				const hasContent = elements.textarea.value.trim() !== '';
 				const event = new CustomEvent('contentSaved', {

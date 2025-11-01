@@ -36,40 +36,33 @@ define('ALLOWED_MIME_TYPES', [
 /**
  * Modified for Subscription Quota Enforcement - Get user's subscription limits
  */
+/**
+ * Modified for Column Quota Integration - Get user subscription limits from config.php constants
+ * Uses get_user_quotas() to ensure consistency with .env quota definitions
+ */
 function getUserSubscriptionLimits(PDO $pdo, int $userId): array {
 	$stmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
 	$stmt->execute([':userId' => $userId]);
 	$subscriptionLevel = $stmt->fetchColumn() ?: 'free';
 	
-	// Define limits per subscription tier
-	$limits = [
-		'free' => [
-			'storage_mb' => 10,
-			'max_columns' => 3,
-			'max_tasks' => 60,
-			'sharing_enabled' => false
-		],
-		'base' => [
-			'storage_mb' => 10,
-			'max_columns' => 5,
-			'max_tasks' => 200,
-			'sharing_enabled' => true
-		],
-		'pro' => [
-			'storage_mb' => 50,
-			'max_columns' => 10,
-			'max_tasks' => 500,
-			'sharing_enabled' => true
-		],
-		'elite' => [
-			'storage_mb' => 1024, // 1GB
-			'max_columns' => 999,
-			'max_tasks' => 9999,
-			'sharing_enabled' => true
-		]
-	];
+	// Use get_user_quotas() from config.php to get quota limits from .env constants
+	require_once __DIR__ . '/../incs/config.php';
+	$quotas = get_user_quotas($subscriptionLevel);
 	
-	return $limits[$subscriptionLevel] ?? $limits['free'];
+	// Convert quotas to format expected by existing code
+	$storageMB = $quotas['storage_bytes'] / (1024 * 1024);
+	$maxColumns = $quotas['columns'] === -1 ? 999 : $quotas['columns'];
+	// For max_tasks, calculate total possible tasks (tasks_per_column * columns)
+	// If unlimited per column, set to 9999
+	$maxTasks = $quotas['tasks_per_column'] === -1 ? 9999 : ($quotas['tasks_per_column'] * max(1, $maxColumns));
+	$sharingEnabled = $quotas['shared_tasks'] > 0;
+	
+	return [
+		'storage_mb' => $storageMB,
+		'max_columns' => $maxColumns,
+		'max_tasks' => $maxTasks,
+		'sharing_enabled' => $sharingEnabled
+	];
 }
 
 /**
@@ -273,8 +266,8 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 			
 		case 'getAllUserAttachments':
-		if ($method === 'GET') {
-			handle_get_all_user_attachments($pdo, $userId);
+		if ($method === 'GET' || $method === 'POST') {
+			handle_get_all_user_attachments($pdo, $userId, $data);
 		}
 		break;
 		
@@ -1143,13 +1136,13 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$quotaStatus = [
 			'columns' => [
 				'used' => $currentColumns,
-				'limit' => $limits['max_columns'],
-				'at_limit' => $currentColumns >= $limits['max_columns']
+				'limit' => $limits['max_columns'] === 999 ? -1 : $limits['max_columns'], // -1 means unlimited
+				'at_limit' => $limits['max_columns'] !== 999 && $currentColumns >= $limits['max_columns']
 			],
 			'tasks' => [
 				'used' => $currentTasks,
-				'limit' => $limits['max_tasks'],
-				'at_limit' => $currentTasks >= $limits['max_tasks']
+				'limit' => $limits['max_tasks'] === 9999 ? -1 : $limits['max_tasks'], // -1 means unlimited
+				'at_limit' => $limits['max_tasks'] !== 9999 && $currentTasks >= $limits['max_tasks']
 			],
 			'sharing_enabled' => $limits['sharing_enabled'],
 			'subscription_level' => strtoupper($subscriptionLevel)
@@ -2168,9 +2161,10 @@ function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): vo
  * Fetches all attachments for the current user across all tasks with sorting options.
  * Modified for File Management Feature - New endpoint for global attachment management
  */
-function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
-	$sortBy = $_GET['sort_by'] ?? 'date'; // 'date' or 'size'
-	$sortOrder = $_GET['sort_order'] ?? 'desc'; // 'asc' or 'desc'
+function handle_get_all_user_attachments(PDO $pdo, int $userId, ?array $data = null): void {
+	// Read sort parameters from POST data (sent via apiFetch) or GET
+	$sortBy = ($data['sort_by'] ?? null) ?: ($_GET['sort_by'] ?? 'date'); // 'date' or 'size'
+	$sortOrder = ($data['sort_order'] ?? null) ?: ($_GET['sort_order'] ?? 'desc'); // 'asc' or 'desc'
 
 	// Validate sort parameters
 	if (!in_array($sortBy, ['date', 'size'])) {
@@ -2185,6 +2179,14 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
 		$storageStmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
 		$storageStmt->execute([':userId' => $userId]);
 		$storageUsed = (int)$storageStmt->fetchColumn();
+
+		// Get user's storage quota from subscription level
+		require_once __DIR__ . '/../incs/config.php';
+		$userStmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
+		$userStmt->execute([':userId' => $userId]);
+		$subscriptionLevel = $userStmt->fetchColumn() ?: 'free';
+		$quotas = get_user_quotas($subscriptionLevel);
+		$storageQuotaBytes = $quotas['storage_bytes'];
 
 		// Build the ORDER BY clause based on sort parameters
 		$orderByClause = '';
@@ -2229,14 +2231,14 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
 			'data' => [
 				'attachments' => $attachments,
 				'storage_used' => $storageUsed,
-				'storage_quota' => USER_STORAGE_QUOTA_BYTES,
+				'storage_quota' => $storageQuotaBytes,
 				'total_count' => count($attachments)
 			]
 		], 200);
 
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_get_all_user_attachments: ' . $e->getMessage());
-		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
+		send_json_response(['status' => 'error', 'message' => 'Failed to fetch attachments.'], 500);
 	}
 }
 

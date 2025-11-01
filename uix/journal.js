@@ -370,6 +370,9 @@ class JournalView {
             if (wasMobile !== this.isMobile) {
                 this.updateViewModeForScreenSize();
                 this.renderJournalView();
+            } else {
+                // Adjust column heights on resize (desktop only)
+                this.adjustJournalColumnHeightsDebounced(0);
             }
         });
         
@@ -532,12 +535,9 @@ class JournalView {
                 
                 if (title && date) {
                     await this.createEntry(date, title);
-                    input.value = '';
-                    // Collapse the footer after creating entry
-                    const footer = input.closest('.journal-column-footer');
-                    if (footer) {
-                        footer.classList.remove('expanded');
-                    }
+                    // Don't collapse footer - keep expanded for fluid entry creation
+                    // Footer will collapse on Esc or clicking elsewhere (handled by existing listeners)
+                    // Input is cleared and refocused in createEntry()
                 }
             }
         });
@@ -750,8 +750,12 @@ class JournalView {
                 }
             });
             
-            // Adjust column heights after rendering
-            this.adjustJournalColumnHeights();
+            // Adjust column heights after rendering (with delay to ensure DOM is ready)
+            setTimeout(() => {
+                this.adjustJournalColumnHeightsDebounced(0);
+                // Run once more on the next frame to capture late layout changes
+                requestAnimationFrame(() => this.adjustJournalColumnHeightsDebounced(0));
+            }, 150);
             
         } catch (error) {
             console.error('Failed to render journal view:', error);
@@ -1243,18 +1247,39 @@ class JournalView {
                     column.querySelector('.journal-entries-container').innerHTML = entriesHTML;
                 }
                 
-                // Clear input and collapse footer
+                // Clear input but keep footer expanded for fluid entry creation
                 const input = document.querySelector(`.journal-column[data-date="${date}"] .journal-entry-input`);
                 if (input) {
                     input.value = '';
-                    const footer = input.closest('.journal-column-footer');
-                    if (footer) {
-                        footer.classList.remove('expanded');
-                    }
+                    // Keep footer expanded - don't collapse
+                    // Footer will collapse on Esc or clicking elsewhere (handled by existing listeners)
+                    // Refocus input for next entry
+                    setTimeout(() => {
+                        input.focus();
+                    }, 100);
                 }
                 
-                // Show success message
-                showToast({ message: 'Journal entry created successfully.', type: 'success' });
+                // Handle task creation from @task markup
+                const createdTasks = response.data?.created_tasks || [];
+                if (createdTasks.length > 0) {
+                    // Refresh task board to show new tasks
+                    if (typeof window.fetchAndRenderBoard === 'function') {
+                        window.fetchAndRenderBoard();
+                    }
+                    
+                    // Show notification about task creation
+                    const taskCount = createdTasks.length;
+                    const message = taskCount === 1 
+                        ? 'Journal entry created with 1 task from @task markup.'
+                        : `Journal entry created with ${taskCount} tasks from @task markup.`;
+                    showToast({ message: message, type: 'success', duration: 5000 });
+                } else {
+                    // Show success message
+                    showToast({ message: 'Journal entry created successfully.', type: 'success' });
+                }
+                
+                // Adjust column heights after creating entry
+                this.adjustJournalColumnHeightsDebounced(0);
                 
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
@@ -1285,7 +1310,23 @@ class JournalView {
             if (response.status === 'success') {
                 // Update the data-title attribute
                 entryCard.dataset.title = newTitle;
-                showToast({ message: 'Entry title updated.', type: 'success' });
+                
+                // Handle task creation from @task markup (unlikely but possible if content changed)
+                const createdTasks = response.data?.created_tasks || [];
+                if (createdTasks.length > 0) {
+                    // Refresh task board to show new tasks
+                    if (typeof window.fetchAndRenderBoard === 'function') {
+                        window.fetchAndRenderBoard();
+                    }
+                    
+                    const taskCount = createdTasks.length;
+                    const message = taskCount === 1 
+                        ? 'Entry updated with 1 task from @task markup.'
+                        : `Entry updated with ${taskCount} tasks from @task markup.`;
+                    showToast({ message: message, type: 'success', duration: 5000 });
+                } else {
+                    showToast({ message: 'Entry title updated.', type: 'success' });
+                }
             } else {
                 showToast({ message: response.message || 'Failed to update title.', type: 'error' });
                 // Reload to restore correct title
@@ -1362,7 +1403,7 @@ class JournalView {
                 showToast({ message: 'Journal entry deleted successfully.', type: 'success' });
                 
                 // Adjust column heights after deletion
-                this.adjustJournalColumnHeights();
+                this.adjustJournalColumnHeightsDebounced(0);
                 
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
@@ -2008,40 +2049,63 @@ Would you like to set up encryption now?`;
     
     /**
      * Adjusts the heights of journal columns to accommodate content gracefully.
-     * Called after adding/removing entries to expand or contract columns smoothly.
+     * On wide screens: starts at 50vh, expands uniformly up to 85vh based on content needs,
+     * then enables internal scrolling if content exceeds available space.
+     * Matches the logic used in tasks columns for consistency.
      */
     adjustJournalColumnHeights() {
         const container = document.getElementById('journal-view');
         if (!container) return;
         
-        // Only apply on non-mobile screens
-        if (window.innerWidth <= 768) {
-            return;
-        }
-        
-        const columns = document.querySelectorAll('.journal-column');
+        // Only apply for wide screens; allow stacked/mobile to grow naturally
+        if (window.innerWidth <= 768) return;
+
+        const columns = Array.from(document.querySelectorAll('.journal-column'));
         if (columns.length === 0) return;
-        
-        // Reset all column heights to auto to measure content
-        columns.forEach(column => {
-            column.style.height = 'auto';
+
+        const baseMin = Math.round(window.innerHeight * 0.50); // 50vh
+        const maxCap = Math.round(window.innerHeight * 0.85);  // 85vh (user-tuned)
+
+        // First pass: compute desired height per column based on content
+        const desiredHeights = columns.map(col => {
+            const entriesContainer = col.querySelector('.journal-entries-container');
+            if (!entriesContainer) return baseMin;
+            // Clear inline styles that could influence measurements
+            col.style.height = '';
+            entriesContainer.style.maxHeight = '';
+            entriesContainer.style.overflowY = '';
+
+            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
+            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
+            const contentNeeded = headerH + footerH + entriesContainer.scrollHeight + 2;
+            return Math.max(baseMin, Math.min(contentNeeded, maxCap));
         });
-        
-        // Find the tallest column and set all columns to that height
-        let maxHeight = 0;
-        columns.forEach(column => {
-            const height = column.offsetHeight;
-            if (height > maxHeight) {
-                maxHeight = height;
-            }
+
+        // Equalize height cosmetically using the tallest desired height, within cap
+        const equalized = Math.min(Math.max(...desiredHeights), maxCap);
+
+        // Second pass: apply equalized height and set per-column entries container scrolling
+        columns.forEach((col) => {
+            const entriesContainer = col.querySelector('.journal-entries-container');
+            if (!entriesContainer) return;
+
+            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
+            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
+            col.style.height = equalized + 'px';
+
+            // Compute entries container viewport height inside the column and set scroll when needed
+            const containerViewport = Math.max(0, equalized - headerH - footerH - 2);
+            entriesContainer.style.maxHeight = containerViewport + 'px';
+            entriesContainer.style.overflowY = (entriesContainer.scrollHeight > containerViewport) ? 'auto' : 'hidden';
         });
-        
-        // Apply the max height to all columns
-        if (maxHeight > 0) {
-            columns.forEach(column => {
-                column.style.height = `${maxHeight}px`;
-            });
-        }
+    }
+
+    // Debounced helper to avoid thrashing during many DOM mutations
+    adjustJournalColumnHeightsDebounced(delay = 50) {
+        if (this._adjustHeightsTimer) clearTimeout(this._adjustHeightsTimer);
+        this._adjustHeightsTimer = setTimeout(() => {
+            this.adjustJournalColumnHeights();
+        }, delay);
     }
     
     toggleShowOnlyWithNotes() {
