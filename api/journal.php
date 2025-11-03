@@ -12,6 +12,55 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../incs/helpers.php';
 require_once __DIR__ . '/../incs/crypto.php';
+require_once __DIR__ . '/../incs/config.php';
+
+/**
+ * Get journal entry limits for a user based on their subscription level
+ */
+function getJournalEntryLimits(PDO $pdo, int $userId): array {
+	$stmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
+	$stmt->execute([':userId' => $userId]);
+	$subscriptionLevel = $stmt->fetchColumn() ?: 'free';
+	
+	$quotas = get_user_quotas($subscriptionLevel);
+	
+	return [
+		'max_entries' => $quotas['journal_entries'],
+		'subscription_level' => $subscriptionLevel
+	];
+}
+
+/**
+ * Check if user can create a new journal entry
+ */
+function canCreateJournalEntry(PDO $pdo, int $userId): array {
+	$limits = getJournalEntryLimits($pdo, $userId);
+	$maxEntries = $limits['max_entries'];
+	
+	// Unlimited quota
+	if ($maxEntries === -1) {
+		return [
+			'can_create' => true,
+			'current_count' => 0,
+			'limit' => -1,
+			'message' => ''
+		];
+	}
+	
+	// Count current journal entries
+	$stmt = $pdo->prepare("SELECT COUNT(*) FROM journal_entries WHERE user_id = :userId");
+	$stmt->execute([':userId' => $userId]);
+	$currentCount = (int)$stmt->fetchColumn();
+	
+	$canCreate = $currentCount < $maxEntries;
+	
+	return [
+		'can_create' => $canCreate,
+		'current_count' => $currentCount,
+		'limit' => $maxEntries,
+		'message' => $canCreate ? '' : "You've reached your journal entry limit ({$maxEntries}). Upgrade your subscription to create more entries."
+	];
+}
 
 /**
  * Main handler function for journal actions
@@ -106,6 +155,18 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
             case 'searchEntries':
                 if ($method === 'GET' || $method === 'POST') {
                     return handle_search_journal_entries($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'getBulkDeleteItems':
+                if ($method === 'GET' || $method === 'POST') {
+                    return handle_get_bulk_delete_journal_items($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'bulkDeleteJournalEntries':
+                if ($method === 'POST') {
+                    return handle_bulk_delete_journal_entries($pdo, $userId, $data);
                 }
                 break;
                 
@@ -215,6 +276,18 @@ function handle_get_journal_entries(PDO $pdo, int $userId, array $data): array {
  * Creates a new journal entry
  */
 function handle_create_journal_entry(PDO $pdo, int $userId, array $data): array {
+    // Check quota before creating entry
+    $quotaCheck = canCreateJournalEntry($pdo, $userId);
+    if (!$quotaCheck['can_create']) {
+        return [
+            'status' => 'error',
+            'message' => $quotaCheck['message'],
+            'quota_exceeded' => true,
+            'current_count' => $quotaCheck['current_count'],
+            'limit' => $quotaCheck['limit']
+        ];
+    }
+    
     $entryDate = $data['entry_date'] ?? date('Y-m-d');
     $title = trim($data['title'] ?? '');
     $content = $data['content'] ?? '';
@@ -1523,6 +1596,121 @@ function handle_search_journal_entries(PDO $pdo, int $userId, array $data): arra
         log_debug_message('General Exception in handle_search_journal_entries(): ' . $e->getMessage());
         log_debug_message('Stack trace: ' . $e->getTraceAsString());
         return ['status' => 'error', 'message' => 'Server error: ' . $e->getMessage()];
+    }
+}
+
+/**
+ * Get journal entries for bulk delete based on filter criteria
+ */
+function handle_get_bulk_delete_journal_items(PDO $pdo, int $userId, array $data): array {
+    $filterType = $data['filter_type'] ?? 'all';
+    $count = isset($data['count']) ? (int)$data['count'] : 10;
+    
+    try {
+        // Journal entries don't have soft delete, so we only handle 'all' and 'oldest'
+        $sql = "SELECT entry_id, title, entry_date, created_at 
+                FROM journal_entries 
+                WHERE user_id = :userId";
+        
+        if ($filterType === 'oldest') {
+            $sql .= " ORDER BY created_at ASC LIMIT :limit";
+        } else {
+            $sql .= " ORDER BY created_at DESC";
+        }
+        
+        $stmt = $pdo->prepare($sql);
+        $stmt->bindValue(':userId', $userId, PDO::PARAM_INT);
+        
+        if ($filterType === 'oldest') {
+            $stmt->bindValue(':limit', $count, PDO::PARAM_INT);
+        }
+        
+        $stmt->execute();
+        $entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        
+        $items = [];
+        foreach ($entries as $entry) {
+            $items[] = [
+                'id' => $entry['entry_id'],
+                'title' => $entry['title'] ?? 'Untitled Entry',
+                'entry_date' => $entry['entry_date'],
+                'created_at' => $entry['created_at']
+            ];
+        }
+        
+        return [
+            'status' => 'success',
+            'data' => [
+                'items' => $items,
+                'count' => count($items)
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in handle_get_bulk_delete_journal_items(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'A server error occurred.'];
+    }
+}
+
+/**
+ * Perform bulk delete of journal entries
+ */
+function handle_bulk_delete_journal_entries(PDO $pdo, int $userId, array $data): array {
+    $entryIds = $data['entry_ids'] ?? [];
+    
+    if (empty($entryIds) || !is_array($entryIds)) {
+        return ['status' => 'error', 'message' => 'No entry IDs provided.'];
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        // Verify ownership
+        $placeholders = implode(',', array_fill(0, count($entryIds), '?'));
+        $stmt = $pdo->prepare("
+            SELECT entry_id 
+            FROM journal_entries 
+            WHERE entry_id IN ($placeholders) 
+            AND user_id = ?
+        ");
+        $params = array_merge($entryIds, [$userId]);
+        $stmt->execute($params);
+        $validEntryIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        
+        if (empty($validEntryIds)) {
+            $pdo->rollBack();
+            return ['status' => 'error', 'message' => 'No valid entries found to delete.'];
+        }
+        
+        // Delete journal entries (hard delete)
+        $deletePlaceholders = implode(',', array_fill(0, count($validEntryIds), '?'));
+        $deleteStmt = $pdo->prepare("
+            DELETE FROM journal_entries 
+            WHERE entry_id IN ($deletePlaceholders) 
+            AND user_id = ?
+        ");
+        $deleteParams = array_merge($validEntryIds, [$userId]);
+        $deleteStmt->execute($deleteParams);
+        
+        // Remove journal task links
+        $unlinkPlaceholders = implode(',', array_fill(0, count($validEntryIds), '?'));
+        $unlinkStmt = $pdo->prepare("DELETE FROM journal_task_links WHERE journal_entry_id IN ($unlinkPlaceholders)");
+        $unlinkStmt->execute($validEntryIds);
+        
+        $pdo->commit();
+        
+        return [
+            'status' => 'success',
+            'data' => [
+                'deleted_count' => count($validEntryIds),
+                'deleted_entry_ids' => $validEntryIds
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) $pdo->rollBack();
+        log_debug_message('Error in handle_bulk_delete_journal_entries(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'A server error occurred.'];
     }
 }
 ?>

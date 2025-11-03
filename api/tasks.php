@@ -36,33 +36,40 @@ define('ALLOWED_MIME_TYPES', [
 /**
  * Modified for Subscription Quota Enforcement - Get user's subscription limits
  */
-/**
- * Modified for Column Quota Integration - Get user subscription limits from config.php constants
- * Uses get_user_quotas() to ensure consistency with .env quota definitions
- */
 function getUserSubscriptionLimits(PDO $pdo, int $userId): array {
 	$stmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
 	$stmt->execute([':userId' => $userId]);
 	$subscriptionLevel = $stmt->fetchColumn() ?: 'free';
 	
-	// Use get_user_quotas() from config.php to get quota limits from .env constants
-	require_once __DIR__ . '/../incs/config.php';
-	$quotas = get_user_quotas($subscriptionLevel);
-	
-	// Convert quotas to format expected by existing code
-	$storageMB = $quotas['storage_bytes'] / (1024 * 1024);
-	$maxColumns = $quotas['columns'] === -1 ? 999 : $quotas['columns'];
-	// For max_tasks, calculate total possible tasks (tasks_per_column * columns)
-	// If unlimited per column, set to 9999
-	$maxTasks = $quotas['tasks_per_column'] === -1 ? 9999 : ($quotas['tasks_per_column'] * max(1, $maxColumns));
-	$sharingEnabled = $quotas['shared_tasks'] > 0;
-	
-	return [
-		'storage_mb' => $storageMB,
-		'max_columns' => $maxColumns,
-		'max_tasks' => $maxTasks,
-		'sharing_enabled' => $sharingEnabled
+	// Define limits per subscription tier
+	$limits = [
+		'free' => [
+			'storage_mb' => 10,
+			'max_columns' => 3,
+			'max_tasks' => 60,
+			'sharing_enabled' => false
+		],
+		'base' => [
+			'storage_mb' => 10,
+			'max_columns' => 5,
+			'max_tasks' => 200,
+			'sharing_enabled' => true
+		],
+		'pro' => [
+			'storage_mb' => 50,
+			'max_columns' => 10,
+			'max_tasks' => 500,
+			'sharing_enabled' => true
+		],
+		'elite' => [
+			'storage_mb' => 1024, // 1GB
+			'max_columns' => 999,
+			'max_tasks' => 9999,
+			'sharing_enabled' => true
+		]
 	];
+	
+	return $limits[$subscriptionLevel] ?? $limits['free'];
 }
 
 /**
@@ -266,8 +273,8 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			break;
 			
 		case 'getAllUserAttachments':
-		if ($method === 'GET' || $method === 'POST') {
-			handle_get_all_user_attachments($pdo, $userId, $data);
+		if ($method === 'GET') {
+			handle_get_all_user_attachments($pdo, $userId);
 		}
 		break;
 		
@@ -305,6 +312,18 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 					'status' => 'success',
 					'data' => []
 				], 200);
+			}
+			break;
+			
+		case 'getBulkDeleteItems':
+			if ($method === 'GET' || $method === 'POST') {
+				handle_get_bulk_delete_items($pdo, $userId, $data);
+			}
+			break;
+			
+		case 'bulkDeleteTasks':
+			if ($method === 'POST') {
+				handle_bulk_delete_tasks($pdo, $userId, $data);
 			}
 			break;
 		
@@ -1136,13 +1155,13 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$quotaStatus = [
 			'columns' => [
 				'used' => $currentColumns,
-				'limit' => $limits['max_columns'] === 999 ? -1 : $limits['max_columns'], // -1 means unlimited
-				'at_limit' => $limits['max_columns'] !== 999 && $currentColumns >= $limits['max_columns']
+				'limit' => $limits['max_columns'],
+				'at_limit' => $currentColumns >= $limits['max_columns']
 			],
 			'tasks' => [
 				'used' => $currentTasks,
-				'limit' => $limits['max_tasks'] === 9999 ? -1 : $limits['max_tasks'], // -1 means unlimited
-				'at_limit' => $limits['max_tasks'] !== 9999 && $currentTasks >= $limits['max_tasks']
+				'limit' => $limits['max_tasks'],
+				'at_limit' => $currentTasks >= $limits['max_tasks']
 			],
 			'sharing_enabled' => $limits['sharing_enabled'],
 			'subscription_level' => strtoupper($subscriptionLevel)
@@ -2161,10 +2180,9 @@ function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): vo
  * Fetches all attachments for the current user across all tasks with sorting options.
  * Modified for File Management Feature - New endpoint for global attachment management
  */
-function handle_get_all_user_attachments(PDO $pdo, int $userId, ?array $data = null): void {
-	// Read sort parameters from POST data (sent via apiFetch) or GET
-	$sortBy = ($data['sort_by'] ?? null) ?: ($_GET['sort_by'] ?? 'date'); // 'date' or 'size'
-	$sortOrder = ($data['sort_order'] ?? null) ?: ($_GET['sort_order'] ?? 'desc'); // 'asc' or 'desc'
+function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
+	$sortBy = $_GET['sort_by'] ?? 'date'; // 'date' or 'size'
+	$sortOrder = $_GET['sort_order'] ?? 'desc'; // 'asc' or 'desc'
 
 	// Validate sort parameters
 	if (!in_array($sortBy, ['date', 'size'])) {
@@ -2179,14 +2197,6 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId, ?array $data = n
 		$storageStmt = $pdo->prepare("SELECT storage_used_bytes FROM users WHERE user_id = :userId");
 		$storageStmt->execute([':userId' => $userId]);
 		$storageUsed = (int)$storageStmt->fetchColumn();
-
-		// Get user's storage quota from subscription level
-		require_once __DIR__ . '/../incs/config.php';
-		$userStmt = $pdo->prepare("SELECT subscription_level FROM users WHERE user_id = :userId");
-		$userStmt->execute([':userId' => $userId]);
-		$subscriptionLevel = $userStmt->fetchColumn() ?: 'free';
-		$quotas = get_user_quotas($subscriptionLevel);
-		$storageQuotaBytes = $quotas['storage_bytes'];
 
 		// Build the ORDER BY clause based on sort parameters
 		$orderByClause = '';
@@ -2231,14 +2241,14 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId, ?array $data = n
 			'data' => [
 				'attachments' => $attachments,
 				'storage_used' => $storageUsed,
-				'storage_quota' => $storageQuotaBytes,
+				'storage_quota' => USER_STORAGE_QUOTA_BYTES,
 				'total_count' => count($attachments)
 			]
 		], 200);
 
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_get_all_user_attachments: ' . $e->getMessage());
-		send_json_response(['status' => 'error', 'message' => 'Failed to fetch attachments.'], 500);
+		send_json_response(['status' => 'error', 'message' => 'An internal server error occurred.'], 500);
 	}
 }
 
@@ -2531,6 +2541,199 @@ function handle_search_tasks(PDO $pdo, int $userId, array $data): void {
 		
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_search_tasks(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
+	}
+}
+
+/**
+ * Get items for bulk delete based on filter criteria
+ */
+function handle_get_bulk_delete_items(PDO $pdo, int $userId, ?array $data): void {
+	$itemType = $data['item_type'] ?? 'tasks';
+	$filterType = $data['filter_type'] ?? 'all';
+	$count = isset($data['count']) ? (int)$data['count'] : 10;
+	$days = isset($data['days']) ? (int)$data['days'] : 30;
+	
+	try {
+		$items = [];
+		
+		if ($itemType === 'tasks') {
+			$sql = "SELECT task_id, encrypted_data, created_at, deleted_at 
+					FROM tasks 
+					WHERE user_id = :userId";
+			
+			// Apply filters
+			if ($filterType === 'deleted') {
+				$sql .= " AND deleted_at IS NOT NULL";
+			} elseif ($filterType === 'deleted_older_than') {
+				$sql .= " AND deleted_at IS NOT NULL AND deleted_at < DATE_SUB(NOW(), INTERVAL :days DAY)";
+			} elseif ($filterType === 'oldest') {
+				$sql .= " AND deleted_at IS NULL";
+			} else { // 'all'
+				$sql .= " AND deleted_at IS NULL";
+			}
+			
+			// Order by created_at for oldest filter
+			if ($filterType === 'oldest') {
+				$sql .= " ORDER BY created_at ASC LIMIT :limit";
+			} else {
+				$sql .= " ORDER BY created_at DESC";
+			}
+			
+			$stmt = $pdo->prepare($sql);
+			$stmt->bindValue(':userId', $userId, PDO::PARAM_INT);
+			
+			if ($filterType === 'deleted_older_than') {
+				$stmt->bindValue(':days', $days, PDO::PARAM_INT);
+			}
+			
+			if ($filterType === 'oldest') {
+				$stmt->bindValue(':limit', $count, PDO::PARAM_INT);
+			}
+			
+			$stmt->execute();
+			$tasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			
+			foreach ($tasks as $task) {
+				$taskData = json_decode($task['encrypted_data'], true) ?: [];
+				$items[] = [
+					'id' => $task['task_id'],
+					'title' => $taskData['title'] ?? 'Untitled Task',
+					'created_at' => $task['created_at'],
+					'deleted_at' => $task['deleted_at']
+				];
+			}
+		} elseif ($itemType === 'journal_entries') {
+			// Journal entries don't have soft delete, so we only handle 'all' and 'oldest'
+			$sql = "SELECT entry_id, title, entry_date, created_at 
+					FROM journal_entries 
+					WHERE user_id = :userId";
+			
+			if ($filterType === 'oldest') {
+				$sql .= " ORDER BY created_at ASC LIMIT :limit";
+			} else {
+				$sql .= " ORDER BY created_at DESC";
+			}
+			
+			$stmt = $pdo->prepare($sql);
+			$stmt->bindValue(':userId', $userId, PDO::PARAM_INT);
+			
+			if ($filterType === 'oldest') {
+				$stmt->bindValue(':limit', $count, PDO::PARAM_INT);
+			}
+			
+			$stmt->execute();
+			$entries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+			
+			foreach ($entries as $entry) {
+				$items[] = [
+					'id' => $entry['entry_id'],
+					'title' => $entry['title'] ?? 'Untitled Entry',
+					'entry_date' => $entry['entry_date'],
+					'created_at' => $entry['created_at']
+				];
+			}
+		}
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'items' => $items,
+				'count' => count($items)
+			]
+		]);
+		
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_bulk_delete_items(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
+	}
+}
+
+/**
+ * Perform bulk delete of tasks
+ */
+function handle_bulk_delete_tasks(PDO $pdo, int $userId, ?array $data): void {
+	$taskIds = $data['task_ids'] ?? [];
+	
+	if (empty($taskIds) || !is_array($taskIds)) {
+		send_json_response(['status' => 'error', 'message' => 'No task IDs provided.'], 400);
+		return;
+	}
+	
+	try {
+		$pdo->beginTransaction();
+		
+		// Verify ownership and check for shared tasks
+		$placeholders = implode(',', array_fill(0, count($taskIds), '?'));
+		$stmt = $pdo->prepare("
+			SELECT task_id 
+			FROM tasks 
+			WHERE task_id IN ($placeholders) 
+			AND user_id = ?
+			AND deleted_at IS NULL
+		");
+		$params = array_merge($taskIds, [$userId]);
+		$stmt->execute($params);
+		$validTaskIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+		
+		if (empty($validTaskIds)) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'No valid tasks found to delete.'], 404);
+			return;
+		}
+		
+		// Check for shared tasks
+		$sharedPlaceholders = implode(',', array_fill(0, count($validTaskIds), '?'));
+		$sharedCheck = $pdo->prepare("
+			SELECT DISTINCT item_id 
+			FROM shared_items 
+			WHERE owner_id = ? 
+			AND item_type = 'task' 
+			AND item_id IN ($sharedPlaceholders)
+		");
+		$sharedParams = array_merge([$userId], $validTaskIds);
+		$sharedCheck->execute($sharedParams);
+		$sharedTaskIds = $sharedCheck->fetchAll(PDO::FETCH_COLUMN);
+		
+		if (!empty($sharedTaskIds)) {
+			$pdo->rollBack();
+			send_json_response([
+				'status' => 'error',
+				'message' => 'Some tasks are shared. Unshare them first before deleting.',
+				'shared_task_ids' => $sharedTaskIds
+			], 409);
+			return;
+		}
+		
+		// Delete tasks (soft delete)
+		$deletePlaceholders = implode(',', array_fill(0, count($validTaskIds), '?'));
+		$deleteStmt = $pdo->prepare("
+			UPDATE tasks 
+			SET deleted_at = UTC_TIMESTAMP(), updated_at = UTC_TIMESTAMP() 
+			WHERE task_id IN ($deletePlaceholders) 
+			AND user_id = ?
+		");
+		$deleteParams = array_merge($validTaskIds, [$userId]);
+		$deleteStmt->execute($deleteParams);
+		
+		// Remove journal task links
+		$unlinkPlaceholders = implode(',', array_fill(0, count($validTaskIds), '?'));
+		$unlinkStmt = $pdo->prepare("DELETE FROM journal_task_links WHERE task_id IN ($unlinkPlaceholders)");
+		$unlinkStmt->execute($validTaskIds);
+		
+		$pdo->commit();
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'deleted_count' => count($validTaskIds),
+				'deleted_task_ids' => $validTaskIds
+			]
+		]);
+		
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) $pdo->rollBack();
+		log_debug_message('Error in handle_bulk_delete_tasks(): ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
 	}
 }

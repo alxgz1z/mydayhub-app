@@ -64,9 +64,7 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - Create, rename, delete (soft delete with undo), reorder
 - Privacy inheritance (making a column private encrypts its tasks)
 - Privacy toggle prompts encryption setup if not configured
-- Quota enforcement: subscription-based limits enforced on creation with upgrade messaging
-- Dynamic height logic: columns occupy ~55% viewport height on desktop, expand uniformly up to maximum (95%), then enable internal scrolling
-- Header styling: subtle elevation background (var(--card-bg)) to differentiate from column body
+- **Quota enforcement**: Column creation blocked when plan limit reached
 
 3.2 Tasks
 - Create, rename, duplicate, delete (soft with undo), move within/between columns
@@ -75,27 +73,70 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - Due date, snooze (preset and custom), notes via Unified Editor
 - Attachments (images, PDFs) with quotas
 - Privacy toggle with visual indicators; prompts encryption setup if not configured
-- Quota enforcement: subscription-based limits enforced on creation with upgrade messaging
+- **Quota enforcement**: Task creation blocked when plan limit reached
 
 3.3 Filters & Toolbar
 - Show/Hide Completed, Private, Snoozed; state persists
 
-3.6 File Management (IMPLEMENTED)
-- Global attachment management modal accessible from Settings
-- View all user attachments across all tasks with sorting options (date, size)
-- Storage quota display with progress bar and usage percentage
-- File previews for images, PDF icon indicators
-- Task context shown for each attachment (column name, task title)
-- Delete functionality with storage quota updates
+3.4 Unified Editor
+- Modal editor for task notes with autosave, formatting tools, and font sizing
 
-3.7 Subscription Quotas & Usage Stats (IMPLEMENTED)
-- Quota system defined in `.env` with tier-based limits (FREE, BASE, PRO, ELITE)
-- Quotas enforced for: columns, tasks, journal entries, storage (MB)
-- Unlimited plans supported (-1 indicates unlimited)
-- Usage Stats modal shows current subscription tier and usage across all quota categories
-- Progress bars and percentage indicators for limited quotas
-- "Unlimited" display for elite/unlimited plans
-- Quota-aware UI: creation buttons disabled at limits with upgrade messaging
+3.5 Journal View (IMPLEMENTED & REFACTORED v8.5)
+- Horizontal date-based columns with scrollable navigation (1-day, 3-day, 5-day views)
+- Journal entries: create, edit, delete with rich text support and classification system
+- Classification: Signal/Support/Backlog matching task card patterns with color bands and popover menus
+- Drag-and-drop: move entries between date columns with mobile-friendly modal for date selection
+- Task linking via @task[description] markup that creates linked tasks
+- Privacy integration: private journal entries encrypted same as tasks
+- Mobile-optimized: 1-day view enforced on mobile, responsive column layout
+- Navigation: < > buttons integrated in column headers, << >> buttons in footer popover
+- View switching: seamless transition between Tasks and Journal views
+- Vertical space optimization: removed header ribbon, integrated controls into footer popover
+- **REFACTORED ARCHITECTURE**: Clean state model with dayCount (1,3,5) and filterMode ('all','weekdays','notes-only')
+- **ROBUST FILTERING**: Single-pass date calculation eliminating race conditions and navigation inconsistencies
+- **MUTUALLY EXCLUSIVE FILTERS**: Replaced confusing toggles with clear button-based filter selection
+- **ENHANCED NOTES-ONLY MODE**: Wider date range loading ensures consistent column counts during navigation
+- **Quota enforcement**: Journal entry creation blocked when plan limit reached
+
+3.6 Subscription Quotas & Usage Management (IMPLEMENTED)
+- Plan-based limits: FREE, BASE, PRO, ELITE tiers with defined quotas for columns, tasks, journal entries, and storage
+- Quota source: `.env` file as single source of truth; `config.php` reads from environment variables
+- Backend enforcement: API endpoints check quotas before allowing creation operations
+- Frontend UI: Input fields disabled when quota limits reached, placeholder text shows current usage
+- Quota Limit Banner: Red banner appears below header when any quota limit is reached
+  - Shows which limits have been reached (tasks, columns, journal entries, storage)
+  - "View Usage" button opens Usage Stats modal
+  - "Bulk Delete" button opens bulk delete modal
+  - "Dismiss" button hides banner for 1 hour
+- Usage Stats Modal: Comprehensive display of quota usage across all categories
+  - Progress bars with color coding (green/yellow/red based on usage percentage)
+  - Percentage calculations and "Unlimited" display for elite plans
+  - "Bulk Delete" button for quick access to cleanup tools
+- Dynamic Updates: Quota banner and UI elements update immediately after create/delete operations without page refresh
+- Admin Dashboard: Displays quota limits and usage statistics for all users
+
+3.7 Bulk Delete (IMPLEMENTED)
+- Purpose: Allow users to efficiently manage quota limits by deleting multiple items at once
+- Filter options:
+  - All Items: Shows all active items (non-deleted tasks or all journal entries)
+  - Oldest X Items: Shows oldest items first, limited by count input
+  - Deleted Items: Shows only soft-deleted tasks (tasks only)
+  - Deleted Items Older Than X Days: Shows deleted tasks older than specified days (tasks only)
+- Item type selection: Tasks or Journal Entries
+- Selection interface:
+  - Checkbox list with item titles and dates
+  - "Select All" checkbox for quick selection
+  - Selected count displayed in delete button
+- Backend API:
+  - `getBulkDeleteItems`: Fetches items based on filter criteria
+  - `bulkDeleteTasks`: Performs bulk deletion of tasks (soft delete)
+  - `bulkDeleteJournalEntries`: Performs bulk deletion of journal entries (hard delete)
+- Safety features:
+  - Ownership verification: Only user's own items can be bulk deleted
+  - Shared task protection: Prevents deletion of shared tasks (must unshare first)
+  - Confirmation dialog: Requires explicit confirmation before deletion
+- Post-deletion: Automatically refreshes views and updates quota banner
+- Access points: Available from quota banner and Usage Stats modal
 
 ---
 
@@ -182,9 +223,9 @@ Settings:
 - Mission Focus Chart: Hide/Show (default: Show for new users).
 - Privacy & Encryption management.
 - User Guide.
-- Usage Stats: view subscription tier and quota usage across all categories.
-- File Management: global attachment management with storage quota display.
 - Accent Color Customization: presets + custom color picker + reset to default; persisted to localStorage and `users.preferences`; applied via dynamic CSS variables with `!important` and mirrored on `body` for light‑mode overrides.
+- Usage Stats: View current quota usage across all subscription categories (columns, tasks, journal entries, storage).
+- File Management: View and manage uploaded attachments with quota information.
 
 Theming & Accessibility:
 - Dark‑first palette; high‑contrast variant.
@@ -248,15 +289,15 @@ Environments:
 Single‑gateway API pattern with modular handlers. All mutating actions enforce session auth, CSRF validation, ownership checks, and consistent error semantics.
 
 Representative capability areas (non‑exhaustive, no request/response bodies here):
-- Authentication & User: register, login, logout, password reset flows, change password, preference persistence, usage stats retrieval
-- Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy (with encryption setup prompts), snooze, attachments, soft‑delete and restore, quota enforcement
-- File Management: get all user attachments with sorting, storage quota tracking
+- Authentication & User: register, login, logout, password reset flows, change password, preference persistence
+- Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy (with encryption setup prompts), snooze, attachments, soft‑delete and restore
 - Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
 - **Zero‑Knowledge (IMPLEMENTED): optional encryption setup, status, migration progress, recovery questions, decryptTaskData endpoint**
-- **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing, classification system (Signal/Support/Backlog), quota enforcement**
+- **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing, classification system (Signal/Support/Backlog)**
 - **Mission Focus Chart (IMPLEMENTED): real-time updates for tasks and journal entries, 30-day journal window integration**
-- **Subscription Quotas (IMPLEMENTED): quota definitions in .env, tier-based limits (FREE/BASE/PRO/ELITE), usage stats API**
+- **Subscription Quotas (IMPLEMENTED): getUserUsageStats, quota enforcement in create operations for columns, tasks, and journal entries**
+- **Bulk Delete (IMPLEMENTED): getBulkDeleteItems, bulkDeleteTasks, bulkDeleteJournalEntries with filter support and ownership verification**
 
 ---
 
@@ -341,17 +382,15 @@ Relationship highlights:
 - ✅ **Typography Modernization** - Inter font family with light base weight for elegant, professional appearance
 - ✅ **Icon Design Consistency** - Professional SVG icons matching design language across all interface elements
 - ✅ **Version Synchronization** - Updated to Avellanas 8.5 across all components and documentation
-- ✅ **Subscription Quota System** - Tier-based quota enforcement (FREE/BASE/PRO/ELITE) with .env configuration, quota-aware UI
-- ✅ **Usage Stats Modal** - Subscription usage tracking and display for columns, tasks, journal entries, and storage
-- ✅ **File Management Modal** - Global attachment management with sorting, previews, and storage quota display
-- ✅ **Column Height Logic** - Dynamic height adjustment for task and journal columns (~55% viewport, expand to 85-95%, then scroll)
-- ✅ **Column Header Styling** - Subtle elevation background (var(--card-bg)) for visual distinction
-- ✅ **Footer Username Display** - Prominent username badge in footer with truncation, clickable user info modal
-- ✅ **User Info Modal Enhancement** - Scaled-down app background pattern, hover effects, solid non-transparent background
-- ✅ **Journal Fluid Entry Creation** - "+ New Entry" stays active after creation, collapses on Esc or click outside
+- ✅ **Subscription Quota System** - Plan-based limits for columns, tasks, journal entries, and storage with backend enforcement and frontend UI feedback
+- ✅ **Quota Limit Banner** - Dynamic banner that appears when quota limits are reached with quick access to usage stats and bulk delete
+- ✅ **Usage Stats Modal** - Comprehensive quota usage display with progress bars and percentage calculations
+- ✅ **Bulk Delete Feature** - Flexible filtering and bulk deletion system for tasks and journal entries with ownership verification and shared task protection
+- ✅ **Quota-Aware UI** - Input fields disabled when quota limits reached, dynamic updates without page refresh
 
 Immediate priorities:
 - **Web Mirror Focus** - Ensure proper functionality across different hosting environments
+- Implement @task[description] markup detection and smart task creation from journal entries
 - Enforce permission‑based UI restrictions for shared items
 - Polish sharing workflow in mobile contexts
 - Implement password change with decrypt/re-encrypt of private items
@@ -390,13 +429,12 @@ Long term:
 - Chart default visibility: Mission Focus Chart visible by default for new users to improve mission awareness
 - Calendar Overlay System: contextual date information display with events, preferences, and header badge integration
 - Calendar events: user-defined events with types, labels, date ranges, and visibility preferences
-- Subscription quotas: tier-based limits (FREE/BASE/PRO/ELITE) for columns, tasks, journal entries, and storage defined in .env
-- Usage stats: subscription tier and quota usage tracking displayed in modal with progress indicators
-- File management: global attachment management interface with sorting, previews, and storage quota display
-- Column height logic: dynamic height adjustment for task and journal columns on desktop (55% viewport base, expand to 85-95%, then scroll)
-- Column header elevation: subtle background color (var(--card-bg)) to visually distinguish headers from column body
-- Footer username badge: prominent username display in footer (leftmost element) with truncation for long names, clickable to show user info
-- User info modal: enhanced modal with scaled-down app background pattern, hover effects, and solid non-transparent background
+- Subscription Quotas: plan-based limits for columns, tasks, journal entries, and storage enforced at API level
+- Quota Limit Banner: dynamic banner appearing below header when quota limits are reached
+- Usage Stats Modal: comprehensive display of quota usage with progress bars and percentages
+- Bulk Delete: flexible filtering and bulk deletion system for tasks and journal entries to manage quota limits
+- Quota-aware UI: input fields disabled when quota limits reached, placeholder text shows current usage
+- Dynamic quota updates: quota banner and UI elements update immediately after create/delete operations without page refresh
 
 ---
 

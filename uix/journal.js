@@ -370,9 +370,6 @@ class JournalView {
             if (wasMobile !== this.isMobile) {
                 this.updateViewModeForScreenSize();
                 this.renderJournalView();
-            } else {
-                // Adjust column heights on resize (desktop only)
-                this.adjustJournalColumnHeightsDebounced(0);
             }
         });
         
@@ -493,6 +490,16 @@ class JournalView {
             // Expand footer for entry creation (copied from tasks.js pattern)
             const footer = e.target.closest('.journal-column-footer');
             if (footer && !footer.classList.contains('expanded')) {
+                // Check quota status before expanding
+                if (footer.dataset.quotaDisabled === 'true') {
+                    showToast({ 
+                        message: 'You\'ve reached your journal entry limit. Upgrade your subscription to create more entries.', 
+                        type: 'info',
+                        duration: 4000
+                    });
+                    return;
+                }
+                
                 // Collapse any other expanded footers
                 document.querySelectorAll('.journal-column-footer.expanded').forEach(expandedFooter => {
                     expandedFooter.classList.remove('expanded');
@@ -533,11 +540,24 @@ class JournalView {
                 const title = input.value.trim();
                 const date = input.dataset.date;
                 
+                // Check if input is disabled or quota-limited
+                if (input.disabled || input.classList.contains('quota-limited')) {
+                    showToast({ 
+                        message: 'You\'ve reached your journal entry limit. Upgrade your subscription to create more entries.', 
+                        type: 'info',
+                        duration: 4000
+                    });
+                    return;
+                }
+                
                 if (title && date) {
                     await this.createEntry(date, title);
-                    // Don't collapse footer - keep expanded for fluid entry creation
-                    // Footer will collapse on Esc or clicking elsewhere (handled by existing listeners)
-                    // Input is cleared and refocused in createEntry()
+                    input.value = '';
+                    // Collapse the footer after creating entry
+                    const footer = input.closest('.journal-column-footer');
+                    if (footer) {
+                        footer.classList.remove('expanded');
+                    }
                 }
             }
         });
@@ -750,12 +770,11 @@ class JournalView {
                 }
             });
             
-            // Adjust column heights after rendering (with delay to ensure DOM is ready)
-            setTimeout(() => {
-                this.adjustJournalColumnHeightsDebounced(0);
-                // Run once more on the next frame to capture late layout changes
-                requestAnimationFrame(() => this.adjustJournalColumnHeightsDebounced(0));
-            }, 150);
+            // Adjust column heights after rendering
+            this.adjustJournalColumnHeights();
+            
+            // Update quota-aware UI after rendering
+            await this.updateJournalEntryCreationUI();
             
         } catch (error) {
             console.error('Failed to render journal view:', error);
@@ -1247,47 +1266,98 @@ class JournalView {
                     column.querySelector('.journal-entries-container').innerHTML = entriesHTML;
                 }
                 
-                // Clear input but keep footer expanded for fluid entry creation
+                // Clear input and collapse footer
                 const input = document.querySelector(`.journal-column[data-date="${date}"] .journal-entry-input`);
                 if (input) {
                     input.value = '';
-                    // Keep footer expanded - don't collapse
-                    // Footer will collapse on Esc or clicking elsewhere (handled by existing listeners)
-                    // Refocus input for next entry
-                    setTimeout(() => {
-                        input.focus();
-                    }, 100);
-                }
-                
-                // Handle task creation from @task markup
-                const createdTasks = response.data?.created_tasks || [];
-                if (createdTasks.length > 0) {
-                    // Refresh task board to show new tasks
-                    if (typeof window.fetchAndRenderBoard === 'function') {
-                        window.fetchAndRenderBoard();
+                    const footer = input.closest('.journal-column-footer');
+                    if (footer) {
+                        footer.classList.remove('expanded');
                     }
-                    
-                    // Show notification about task creation
-                    const taskCount = createdTasks.length;
-                    const message = taskCount === 1 
-                        ? 'Journal entry created with 1 task from @task markup.'
-                        : `Journal entry created with ${taskCount} tasks from @task markup.`;
-                    showToast({ message: message, type: 'success', duration: 5000 });
-                } else {
-                    // Show success message
-                    showToast({ message: 'Journal entry created successfully.', type: 'success' });
                 }
                 
-                // Adjust column heights after creating entry
-                this.adjustJournalColumnHeightsDebounced(0);
+                // Show success message
+                showToast({ message: 'Journal entry created successfully.', type: 'success' });
+                
+                // Update quota-aware UI and banner
+                await this.updateJournalEntryCreationUI();
+                if (typeof window.updateQuotaBanner === 'function') {
+                    window.updateQuotaBanner();
+                }
                 
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
                     window.updateMissionFocusChart();
                 }
+            } else if (response.quota_exceeded) {
+                // Quota exceeded - show error and update UI
+                showToast({ 
+                    message: response.message || 'You\'ve reached your journal entry limit.', 
+                    type: 'error',
+                    duration: 5000
+                });
+                await this.updateJournalEntryCreationUI();
+                if (typeof window.updateQuotaBanner === 'function') {
+                    window.updateQuotaBanner();
+                }
+            } else {
+                showToast({ message: response.message || 'Failed to create entry.', type: 'error' });
             }
         } catch (error) {
             console.error('Failed to create entry:', error);
+            showToast({ message: 'An error occurred while creating the entry.', type: 'error' });
+        }
+    }
+    
+    /**
+     * Updates journal entry creation UI based on quota status
+     */
+    async updateJournalEntryCreationUI() {
+        const inputs = document.querySelectorAll('.journal-entry-input');
+        if (!inputs.length) return;
+        
+        try {
+            const response = await window.apiFetch({
+                module: 'users',
+                action: 'getUserUsageStats'
+            });
+            
+            if (response.status === 'success' && response.data && response.data.usage) {
+                const journalUsage = response.data.usage.journal_entries;
+                const isAtLimit = journalUsage && journalUsage.limit !== -1 && journalUsage.used >= journalUsage.limit;
+                
+                inputs.forEach(input => {
+                    const footer = input.closest('.journal-column-footer');
+                    
+                    if (isAtLimit) {
+                        input.disabled = true;
+                        input.classList.add('quota-limited');
+                        input.placeholder = `Quota limit reached (${journalUsage.used}/${journalUsage.limit} entries)`;
+                        input.title = `You've reached your journal entry limit. Upgrade your ${response.data.subscription_level} plan to create more entries.`;
+                        
+                        if (footer) {
+                            footer.dataset.quotaDisabled = 'true';
+                            footer.classList.remove('expanded');
+                        }
+                    } else {
+                        input.disabled = false;
+                        input.classList.remove('quota-limited');
+                        input.placeholder = '+ New Entry';
+                        input.title = 'Add a new journal entry';
+                        
+                        if (footer) {
+                            footer.dataset.quotaDisabled = 'false';
+                        }
+                    }
+                });
+                
+                // Update quota banner when quota status changes
+                if (typeof window.updateQuotaBanner === 'function') {
+                    window.updateQuotaBanner();
+                }
+            }
+        } catch (error) {
+            console.error('Error updating journal entry creation UI:', error);
         }
     }
     
@@ -1310,23 +1380,7 @@ class JournalView {
             if (response.status === 'success') {
                 // Update the data-title attribute
                 entryCard.dataset.title = newTitle;
-                
-                // Handle task creation from @task markup (unlikely but possible if content changed)
-                const createdTasks = response.data?.created_tasks || [];
-                if (createdTasks.length > 0) {
-                    // Refresh task board to show new tasks
-                    if (typeof window.fetchAndRenderBoard === 'function') {
-                        window.fetchAndRenderBoard();
-                    }
-                    
-                    const taskCount = createdTasks.length;
-                    const message = taskCount === 1 
-                        ? 'Entry updated with 1 task from @task markup.'
-                        : `Entry updated with ${taskCount} tasks from @task markup.`;
-                    showToast({ message: message, type: 'success', duration: 5000 });
-                } else {
-                    showToast({ message: 'Entry title updated.', type: 'success' });
-                }
+                showToast({ message: 'Entry title updated.', type: 'success' });
             } else {
                 showToast({ message: response.message || 'Failed to update title.', type: 'error' });
                 // Reload to restore correct title
@@ -1402,8 +1456,14 @@ class JournalView {
                 
                 showToast({ message: 'Journal entry deleted successfully.', type: 'success' });
                 
+                // Update quota-aware UI and banner after deletion
+                await this.updateJournalEntryCreationUI();
+                if (typeof window.updateQuotaBanner === 'function') {
+                    window.updateQuotaBanner();
+                }
+                
                 // Adjust column heights after deletion
-                this.adjustJournalColumnHeightsDebounced(0);
+                this.adjustJournalColumnHeights();
                 
                 // Update mission focus chart if visible
                 if (typeof window.updateMissionFocusChart === 'function') {
@@ -2049,63 +2109,40 @@ Would you like to set up encryption now?`;
     
     /**
      * Adjusts the heights of journal columns to accommodate content gracefully.
-     * On wide screens: starts at 50vh, expands uniformly up to 85vh based on content needs,
-     * then enables internal scrolling if content exceeds available space.
-     * Matches the logic used in tasks columns for consistency.
+     * Called after adding/removing entries to expand or contract columns smoothly.
      */
     adjustJournalColumnHeights() {
         const container = document.getElementById('journal-view');
         if (!container) return;
         
-        // Only apply for wide screens; allow stacked/mobile to grow naturally
-        if (window.innerWidth <= 768) return;
-
-        const columns = Array.from(document.querySelectorAll('.journal-column'));
+        // Only apply on non-mobile screens
+        if (window.innerWidth <= 768) {
+            return;
+        }
+        
+        const columns = document.querySelectorAll('.journal-column');
         if (columns.length === 0) return;
-
-        const baseMin = Math.round(window.innerHeight * 0.50); // 50vh
-        const maxCap = Math.round(window.innerHeight * 0.85);  // 85vh (user-tuned)
-
-        // First pass: compute desired height per column based on content
-        const desiredHeights = columns.map(col => {
-            const entriesContainer = col.querySelector('.journal-entries-container');
-            if (!entriesContainer) return baseMin;
-            // Clear inline styles that could influence measurements
-            col.style.height = '';
-            entriesContainer.style.maxHeight = '';
-            entriesContainer.style.overflowY = '';
-
-            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
-            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
-            const contentNeeded = headerH + footerH + entriesContainer.scrollHeight + 2;
-            return Math.max(baseMin, Math.min(contentNeeded, maxCap));
+        
+        // Reset all column heights to auto to measure content
+        columns.forEach(column => {
+            column.style.height = 'auto';
         });
-
-        // Equalize height cosmetically using the tallest desired height, within cap
-        const equalized = Math.min(Math.max(...desiredHeights), maxCap);
-
-        // Second pass: apply equalized height and set per-column entries container scrolling
-        columns.forEach((col) => {
-            const entriesContainer = col.querySelector('.journal-entries-container');
-            if (!entriesContainer) return;
-
-            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
-            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
-            col.style.height = equalized + 'px';
-
-            // Compute entries container viewport height inside the column and set scroll when needed
-            const containerViewport = Math.max(0, equalized - headerH - footerH - 2);
-            entriesContainer.style.maxHeight = containerViewport + 'px';
-            entriesContainer.style.overflowY = (entriesContainer.scrollHeight > containerViewport) ? 'auto' : 'hidden';
+        
+        // Find the tallest column and set all columns to that height
+        let maxHeight = 0;
+        columns.forEach(column => {
+            const height = column.offsetHeight;
+            if (height > maxHeight) {
+                maxHeight = height;
+            }
         });
-    }
-
-    // Debounced helper to avoid thrashing during many DOM mutations
-    adjustJournalColumnHeightsDebounced(delay = 50) {
-        if (this._adjustHeightsTimer) clearTimeout(this._adjustHeightsTimer);
-        this._adjustHeightsTimer = setTimeout(() => {
-            this.adjustJournalColumnHeights();
-        }, delay);
+        
+        // Apply the max height to all columns
+        if (maxHeight > 0) {
+            columns.forEach(column => {
+                column.style.height = `${maxHeight}px`;
+            });
+        }
     }
     
     toggleShowOnlyWithNotes() {

@@ -1,0 +1,232 @@
+{
+    "when": "2025-11-02T04:12:14.976Z",
+    "window": {
+        "innerWidth": 1268,
+        "innerHeight": 1254,
+        "devicePixelRatio": 2
+    },
+    "container": {
+        "scrollWidth": 1215,
+        "clientWidth": 1215,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [
+        {
+            "index": 0,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 332.609375
+            }
+        },
+        {
+            "index": 1,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 332.609375
+            }
+        },
+        {
+            "index": 2,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 332.609375
+            }
+        }
+    ],
+    "console": [
+        {
+            "level": "log",
+            "message": "Format actions found: 27",
+            "timestamp": "2025-11-02T04:12:14.062Z"
+        },
+        {
+            "level": "log",
+            "message": "Search button in format actions: {}",
+            "timestamp": "2025-11-02T04:12:14.062Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-undo action: undo",
+            "timestamp": "2025-11-02T04:12:14.062Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-redo action: redo",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-line-numbers action: toggle-line-numbers",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-search action: search-notes",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-bold",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-italic",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-code",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-h1",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-h2",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: underline",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: frame",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: calculate",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-clear action: clear",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: underline",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: frame",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: calculate",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: clear",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Setting up search drawer listeners...",
+            "timestamp": "2025-11-02T04:12:14.063Z"
+        },
+        {
+            "level": "log",
+            "message": "Encryption status response: {\"success\":true,\"data\":{\"encryption_enabled\":true,\"recovery_enabled\":true,\"security_questions_count\":3,\"migration_status\":\"in_progress\",\"tasks_migrated\":0,\"total_tasks\":0,\"encryption_setup_at\":\"2025-10-06 21:32:40\",\"migration_completed_at\":null}}",
+            "timestamp": "2025-11-02T04:12:14.071Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1230,\"clientWidth\":1230,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T04:12:14.195Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1215,\"clientWidth\":1215,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T04:12:14.249Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1215,\"clientWidth\":1215,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T04:12:14.347Z"
+        }
+    ]
+}

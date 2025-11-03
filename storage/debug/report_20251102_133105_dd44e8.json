@@ -1,0 +1,476 @@
+{
+    "when": "2025-11-02T13:31:05.588Z",
+    "window": {
+        "innerWidth": 1268,
+        "innerHeight": 1254,
+        "devicePixelRatio": 2
+    },
+    "container": {
+        "scrollWidth": 1230,
+        "clientWidth": 1230,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [
+        {
+            "index": 0,
+            "width": 297.8046875,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 289.4140625
+            }
+        },
+        {
+            "index": 1,
+            "width": 297.8046875,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 289.4140625
+            }
+        },
+        {
+            "index": 2,
+            "width": 297.8046875,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 289.4140625
+            }
+        },
+        {
+            "index": 3,
+            "width": 297.8046875,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px",
+                "width": 289.4140625
+            }
+        }
+    ],
+    "console": [
+        {
+            "level": "log",
+            "message": "Format actions found: 27",
+            "timestamp": "2025-11-02T13:30:15.340Z"
+        },
+        {
+            "level": "log",
+            "message": "Search button in format actions: {}",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-undo action: undo",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-redo action: redo",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-line-numbers action: toggle-line-numbers",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-search action: search-notes",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-bold",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-italic",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-code",
+            "timestamp": "2025-11-02T13:30:15.341Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-h1",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: markdown-h2",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: underline",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: frame",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: calculate",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button: editor-btn-clear action: clear",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: case",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: underline",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: frame",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: calculate",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: font-size",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Adding click listener to button:  action: clear",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Setting up search drawer listeners...",
+            "timestamp": "2025-11-02T13:30:15.342Z"
+        },
+        {
+            "level": "log",
+            "message": "Encryption status response: {\"success\":true,\"data\":{\"encryption_enabled\":true,\"recovery_enabled\":true,\"security_questions_count\":3,\"migration_status\":\"in_progress\",\"tasks_migrated\":0,\"total_tasks\":5,\"encryption_setup_at\":\"2025-10-06 14:38:18\",\"migration_completed_at\":null}}",
+            "timestamp": "2025-11-02T13:30:15.351Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccc Creating new JournalView instance",
+            "timestamp": "2025-11-02T13:30:15.352Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udd04 renderJournalView START: {\"filterMode\":\"all\",\"dayCount\":1,\"currentDate\":\"2025-11-02T17:00:00.000Z\"}",
+            "timestamp": "2025-11-02T13:30:15.356Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":5,\"dates\":\"2025-10-31 to 2025-11-04\"}",
+            "timestamp": "2025-11-02T13:30:15.356Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udce5 Loading entries for potential dates: [\"2025-10-31\",\"2025-11-01\",\"2025-11-02\",\"2025-11-03\",\"2025-11-04\"]",
+            "timestamp": "2025-11-02T13:30:15.356Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccb Final filtered dates to render: {\"count\":1,\"dates\":[\"2025-11-02\"],\"filterMode\":\"all\",\"dayCount\":1}",
+            "timestamp": "2025-11-02T13:30:15.363Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - this.currentDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:15.363Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - centerDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:15.363Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-02, centerDateStr: 2025-11-02, isCenter: true, index: 0",
+            "timestamp": "2025-11-02T13:30:15.363Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: mobile view, removed overflowing class",
+            "timestamp": "2025-11-02T13:30:27.756Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: mobile view, removed overflowing class",
+            "timestamp": "2025-11-02T13:30:30.434Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udd04 renderJournalView START: {\"filterMode\":\"all\",\"dayCount\":1,\"currentDate\":\"2025-11-02T17:00:00.000Z\"}",
+            "timestamp": "2025-11-02T13:30:34.286Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":5,\"dates\":\"2025-10-31 to 2025-11-04\"}",
+            "timestamp": "2025-11-02T13:30:34.286Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udce5 Loading entries for potential dates: [\"2025-10-31\",\"2025-11-01\",\"2025-11-02\",\"2025-11-03\",\"2025-11-04\"]",
+            "timestamp": "2025-11-02T13:30:34.286Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccb Final filtered dates to render: {\"count\":1,\"dates\":[\"2025-11-02\"],\"filterMode\":\"all\",\"dayCount\":1}",
+            "timestamp": "2025-11-02T13:30:34.295Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - this.currentDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:34.296Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - centerDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:34.296Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-02, centerDateStr: 2025-11-02, isCenter: true, index: 0",
+            "timestamp": "2025-11-02T13:30:34.296Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1268,\"clientWidth\":1268,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T13:30:34.437Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udd04 renderJournalView START: {\"filterMode\":\"all\",\"dayCount\":3,\"currentDate\":\"2025-11-02T17:00:00.000Z\"}",
+            "timestamp": "2025-11-02T13:30:38.817Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":7,\"dates\":\"2025-10-30 to 2025-11-05\"}",
+            "timestamp": "2025-11-02T13:30:38.817Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udce5 Loading entries for potential dates: [\"2025-10-30\",\"2025-10-31\",\"2025-11-01\",\"2025-11-02\",\"2025-11-03\",\"2025-11-04\",\"2025-11-05\"]",
+            "timestamp": "2025-11-02T13:30:38.817Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccb Final filtered dates to render: {\"count\":3,\"dates\":[\"2025-11-01\",\"2025-11-02\",\"2025-11-03\"],\"filterMode\":\"all\",\"dayCount\":3}",
+            "timestamp": "2025-11-02T13:30:38.824Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - this.currentDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:38.824Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - centerDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:38.824Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-01, centerDateStr: 2025-11-02, isCenter: false, index: 0",
+            "timestamp": "2025-11-02T13:30:38.824Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-02, centerDateStr: 2025-11-02, isCenter: true, index: 1",
+            "timestamp": "2025-11-02T13:30:38.825Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-03, centerDateStr: 2025-11-02, isCenter: false, index: 2",
+            "timestamp": "2025-11-02T13:30:38.825Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":7,\"dates\":\"2025-10-30 to 2025-11-05\"}",
+            "timestamp": "2025-11-02T13:30:48.668Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udd04 renderJournalView START: {\"filterMode\":\"all\",\"dayCount\":3,\"currentDate\":\"2025-11-02T17:00:00.000Z\"}",
+            "timestamp": "2025-11-02T13:30:48.676Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":7,\"dates\":\"2025-10-30 to 2025-11-05\"}",
+            "timestamp": "2025-11-02T13:30:48.676Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udce5 Loading entries for potential dates: [\"2025-10-30\",\"2025-10-31\",\"2025-11-01\",\"2025-11-02\",\"2025-11-03\",\"2025-11-04\",\"2025-11-05\"]",
+            "timestamp": "2025-11-02T13:30:48.676Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccb Final filtered dates to render: {\"count\":3,\"dates\":[\"2025-11-01\",\"2025-11-02\",\"2025-11-03\"],\"filterMode\":\"all\",\"dayCount\":3}",
+            "timestamp": "2025-11-02T13:30:48.682Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - this.currentDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:48.682Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - centerDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:48.682Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-01, centerDateStr: 2025-11-02, isCenter: false, index: 0",
+            "timestamp": "2025-11-02T13:30:48.682Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-02, centerDateStr: 2025-11-02, isCenter: true, index: 1",
+            "timestamp": "2025-11-02T13:30:48.682Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-03, centerDateStr: 2025-11-02, isCenter: false, index: 2",
+            "timestamp": "2025-11-02T13:30:48.683Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":7,\"dates\":\"2025-10-30 to 2025-11-05\"}",
+            "timestamp": "2025-11-02T13:30:52.879Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udd04 renderJournalView START: {\"filterMode\":\"all\",\"dayCount\":3,\"currentDate\":\"2025-11-02T17:00:00.000Z\"}",
+            "timestamp": "2025-11-02T13:30:52.886Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udcca calculatePotentialDateRange: {\"filterMode\":\"all\",\"range\":7,\"dates\":\"2025-10-30 to 2025-11-05\"}",
+            "timestamp": "2025-11-02T13:30:52.886Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udce5 Loading entries for potential dates: [\"2025-10-30\",\"2025-10-31\",\"2025-11-01\",\"2025-11-02\",\"2025-11-03\",\"2025-11-04\",\"2025-11-05\"]",
+            "timestamp": "2025-11-02T13:30:52.886Z"
+        },
+        {
+            "level": "log",
+            "message": "\ud83d\udccb Final filtered dates to render: {\"count\":3,\"dates\":[\"2025-11-01\",\"2025-11-02\",\"2025-11-03\"],\"filterMode\":\"all\",\"dayCount\":3}",
+            "timestamp": "2025-11-02T13:30:52.894Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - this.currentDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:52.895Z"
+        },
+        {
+            "level": "log",
+            "message": "getCenterDate - centerDate: \"2025-11-02T17:00:00.000Z\"",
+            "timestamp": "2025-11-02T13:30:52.895Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-01, centerDateStr: 2025-11-02, isCenter: false, index: 0",
+            "timestamp": "2025-11-02T13:30:52.895Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-02, centerDateStr: 2025-11-02, isCenter: true, index: 1",
+            "timestamp": "2025-11-02T13:30:52.895Z"
+        },
+        {
+            "level": "log",
+            "message": "renderDateColumn - date: 2025-11-03, centerDateStr: 2025-11-02, isCenter: false, index: 2",
+            "timestamp": "2025-11-02T13:30:52.896Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1230,\"clientWidth\":1230,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T13:31:04.823Z"
+        },
+        {
+            "level": "log",
+            "message": "checkTaskBoardOverflow: {\"scrollWidth\":1230,\"clientWidth\":1230,\"isOverflowing\":false,\"windowWidth\":1268}",
+            "timestamp": "2025-11-02T13:31:04.979Z"
+        }
+    ]
+}

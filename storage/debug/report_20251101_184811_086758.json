@@ -1,0 +1,61 @@
+{
+    "when": "2025-11-01T18:48:11.434Z",
+    "window": {
+        "innerWidth": 569,
+        "innerHeight": 1254,
+        "devicePixelRatio": 2
+    },
+    "container": {
+        "scrollWidth": 543,
+        "clientWidth": 543,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [
+        {
+            "index": 0,
+            "width": 524.203125,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "100%",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px 32px 9.6px 9.6px",
+                "width": 504.8125
+            }
+        },
+        {
+            "index": 1,
+            "width": 524.203125,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "100%",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px 32px 9.6px 9.6px",
+                "width": 504.8125
+            }
+        },
+        {
+            "index": 2,
+            "width": 524.203125,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "100%",
+                "padding": "3.2px"
+            },
+            "firstCard": {
+                "padding": "9.6px 32px 9.6px 9.6px",
+                "width": 515.8125
+            }
+        }
+    ],
+    "console": []
+}

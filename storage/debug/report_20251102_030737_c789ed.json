@@ -1,0 +1,18 @@
+{
+    "when": "2025-11-02T03:07:37.835Z",
+    "window": {
+        "innerWidth": 440,
+        "innerHeight": 742,
+        "devicePixelRatio": 3
+    },
+    "container": {
+        "scrollWidth": 408,
+        "clientWidth": 408,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [],
+    "console": []
+}

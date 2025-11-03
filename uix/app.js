@@ -568,7 +568,6 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	updateFooterDate();
-	updateFooterUsername();
 	initSettingsPanel();
 	setupUserGuideEventListeners();
 	
@@ -577,7 +576,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Initialize user info popover
 	initUserInfoPopover();
-
+	
+	// Initialize quota banner
+	setupQuotaBannerEventListeners();
+	updateQuotaBanner(); // Check quota status on page load
+	
 	// Do not eagerly initialize tasks or journal here; ViewManager will lazy-load
 	
 	// Initialize calendar overlay after settings panel and tasks view are ready
@@ -1085,8 +1088,8 @@ function openSettingsPanel() {
 		// Register settings panel in modal stack
 		registerModal('settings-panel', closeSettingsPanel);
 		
-		// Update username display in footer
-		updateFooterUsername();
+		// Update username display
+		updateSettingsUsername();
 	}
 }
 
@@ -1103,14 +1106,14 @@ function closeSettingsPanel() {
 }
 
 /**
- * Updates the username display in footer with truncation logic.
+ * Updates the username display in settings panel with truncation logic.
  */
-function updateFooterUsername() {
-	const usernameElement = document.getElementById('footer-username');
-	console.log('updateFooterUsername called, element found:', !!usernameElement);
+function updateSettingsUsername() {
+	const usernameElement = document.getElementById('settings-username');
+	console.log('updateSettingsUsername called, element found:', !!usernameElement);
 	
 	if (!usernameElement) {
-		console.log('Footer username element not found');
+		console.log('Username element not found');
 		return;
 	}
 	
@@ -1144,13 +1147,8 @@ function updateFooterUsername() {
 		usernameElement.title = username;
 	}
 	
-	// Remove any existing click handlers by cloning (preserves all attributes)
-	const parent = usernameElement.parentNode;
-	const newElement = usernameElement.cloneNode(true);
-	parent.replaceChild(newElement, usernameElement);
-	
 	// Add click handler for popover
-	newElement.addEventListener('click', (e) => {
+	usernameElement.addEventListener('click', (e) => {
 		e.preventDefault();
 		e.stopPropagation();
 		openUserInfoPopover(username, userEmail);
@@ -1189,12 +1187,11 @@ function getCurrentUserEmail() {
  * Opens the user info popover with username and email.
  */
 function openUserInfoPopover(username, email) {
-	const overlay = document.getElementById('user-info-popover-overlay');
 	const popover = document.getElementById('user-info-popover');
 	const usernameSpan = document.getElementById('user-info-username');
 	const emailSpan = document.getElementById('user-info-email');
 	
-	if (!overlay || !popover || !usernameSpan || !emailSpan) {
+	if (!popover || !usernameSpan || !emailSpan) {
 		console.error('User info popover elements not found');
 		return;
 	}
@@ -1203,8 +1200,8 @@ function openUserInfoPopover(username, email) {
 	usernameSpan.textContent = username || 'Not available';
 	emailSpan.textContent = email || 'Not available';
 	
-	// Show the overlay
-	overlay.classList.remove('hidden');
+	// Show the popover
+	popover.classList.remove('hidden');
 	
 	// Register in modal stack
 	registerModal('user-info-popover', closeUserInfoPopover);
@@ -1214,9 +1211,9 @@ function openUserInfoPopover(username, email) {
  * Closes the user info popover.
  */
 function closeUserInfoPopover() {
-	const overlay = document.getElementById('user-info-popover-overlay');
-	if (overlay) {
-		overlay.classList.add('hidden');
+	const popover = document.getElementById('user-info-popover');
+	if (popover) {
+		popover.classList.add('hidden');
 		unregisterModal('user-info-popover');
 	}
 }
@@ -1827,6 +1824,11 @@ function closeUsageStatsModal() {
 		overlay.classList.add('hidden');
 		// Unregister usage stats modal from modal stack
 		unregisterModal('usage-stats-modal');
+		
+		// Refresh quota banner in case quotas changed (e.g., user upgraded plan)
+		if (typeof window.updateQuotaBanner === 'function') {
+			window.updateQuotaBanner();
+		}
 	}
 }
 
@@ -1891,10 +1893,7 @@ function updateUsageCategory(category, usage) {
 	const percentageElement = document.getElementById(`${category}-usage-percentage`);
 	
 	if (textElement) {
-		// Handle unlimited (-1) limit - check both number and string
-		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
-		if (isUnlimited) {
-			// For unlimited, show just the count with "(Unlimited)" label
+		if (usage.limit === -1) {
 			textElement.textContent = `${usage.used} (Unlimited)`;
 		} else {
 			textElement.textContent = `${usage.used} of ${usage.limit}`;
@@ -1902,14 +1901,10 @@ function updateUsageCategory(category, usage) {
 	}
 	
 	if (fillElement) {
-		// Hide progress bar if unlimited
-		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
-		if (isUnlimited) {
+		if (usage.limit === -1) {
 			fillElement.style.width = '0%';
-			fillElement.style.opacity = '0.3'; // Make it subtle/grayed out
-			fillElement.style.backgroundColor = 'var(--border-color)';
+			fillElement.style.backgroundColor = 'var(--accent-color)';
 		} else {
-			fillElement.style.opacity = '1';
 			fillElement.style.width = `${usage.percentage}%`;
 			
 			// Apply color coding based on usage percentage
@@ -1924,8 +1919,7 @@ function updateUsageCategory(category, usage) {
 	}
 	
 	if (percentageElement) {
-		const isUnlimited = usage.limit === -1 || usage.limit === '-1' || usage.limit === null || usage.limit === undefined;
-		if (isUnlimited) {
+		if (usage.limit === -1) {
 			percentageElement.textContent = 'No limit';
 		} else {
 			percentageElement.textContent = `${usage.percentage}%`;
@@ -1979,6 +1973,489 @@ function updateSharingStatus(enabled) {
 // Make usage stats functions globally available
 window.openUsageStatsModal = openUsageStatsModal;
 window.closeUsageStatsModal = closeUsageStatsModal;
+
+// ==========================================================================
+// --- QUOTA LIMIT BANNER ---
+// ==========================================================================
+
+/**
+ * Updates the quota limit banner based on current usage stats
+ */
+async function updateQuotaBanner() {
+	const banner = document.getElementById('quota-limit-banner');
+	const messageElement = document.getElementById('quota-banner-message');
+	
+	if (!banner || !messageElement) return;
+	
+	try {
+		const response = await apiFetch({
+			module: 'users',
+			action: 'getUserUsageStats'
+		});
+		
+		if (response.status === 'success' && response.data) {
+			const usage = response.data.usage;
+			const limits = [];
+			
+			// Check each quota type
+			if (usage.tasks && usage.tasks.limit !== -1 && usage.tasks.used >= usage.tasks.limit) {
+				limits.push('tasks');
+			}
+			if (usage.columns && usage.columns.limit !== -1 && usage.columns.used >= usage.columns.limit) {
+				limits.push('columns');
+			}
+			if (usage.journal_entries && usage.journal_entries.limit !== -1 && usage.journal_entries.used >= usage.journal_entries.limit) {
+				limits.push('journal entries');
+			}
+			if (usage.storage && usage.storage.limit_mb > 0 && usage.storage.used_mb >= usage.storage.limit_mb) {
+				limits.push('storage');
+			}
+			
+			if (limits.length > 0) {
+				const wasHidden = banner.classList.contains('hidden');
+				banner.classList.remove('hidden');
+				const message = `You've reached your limit for: ${limits.join(', ')}. Upgrade your subscription to create more content.`;
+				messageElement.textContent = message;
+				
+				// Dispatch event if visibility changed
+				if (wasHidden) {
+					window.dispatchEvent(new CustomEvent('quotaBannerVisibilityChanged', { detail: { visible: true } }));
+				}
+			} else {
+				const wasVisible = !banner.classList.contains('hidden');
+				banner.classList.add('hidden');
+				
+				// Dispatch event if visibility changed
+				if (wasVisible) {
+					window.dispatchEvent(new CustomEvent('quotaBannerVisibilityChanged', { detail: { visible: false } }));
+				}
+			}
+		}
+	} catch (error) {
+		console.error('Error updating quota banner:', error);
+		// Hide banner on error
+		if (banner) {
+			banner.classList.add('hidden');
+		}
+	}
+}
+
+/**
+ * Dismisses the quota banner for 1 hour
+ */
+function dismissQuotaBanner() {
+	const banner = document.getElementById('quota-limit-banner');
+	if (banner) {
+		banner.classList.add('hidden');
+		// Store dismissal timestamp (1 hour = 3600000 ms)
+		localStorage.setItem('quotaBannerDismissed', Date.now().toString());
+		window.dispatchEvent(new CustomEvent('quotaBannerVisibilityChanged', { detail: { visible: false } }));
+	}
+}
+
+/**
+ * Checks if quota banner should be shown (respects 1-hour dismissal)
+ */
+function shouldShowQuotaBanner() {
+	const dismissed = localStorage.getItem('quotaBannerDismissed');
+	if (dismissed) {
+		const dismissedTime = parseInt(dismissed, 10);
+		const oneHour = 3600000; // 1 hour in milliseconds
+		if (Date.now() - dismissedTime < oneHour) {
+			return false;
+		}
+		// Clear expired dismissal
+		localStorage.removeItem('quotaBannerDismissed');
+	}
+	return true;
+}
+
+// Make quota banner function globally available
+window.updateQuotaBanner = updateQuotaBanner;
+
+/**
+ * Sets up event listeners for quota banner buttons
+ */
+function setupQuotaBannerEventListeners() {
+	const viewUsageBtn = document.getElementById('quota-banner-view-usage');
+	const dismissBtn = document.getElementById('quota-banner-dismiss');
+	const bulkDeleteBtn = document.getElementById('quota-banner-bulk-delete');
+	
+	if (viewUsageBtn) {
+		viewUsageBtn.addEventListener('click', () => {
+			openUsageStatsModal();
+		});
+	}
+	
+	if (dismissBtn) {
+		dismissBtn.addEventListener('click', () => {
+			dismissQuotaBanner();
+		});
+	}
+	
+	if (bulkDeleteBtn) {
+		bulkDeleteBtn.addEventListener('click', () => {
+			openBulkDeleteModal();
+		});
+	}
+}
+
+// ==========================================================================
+// --- BULK DELETE MODAL SYSTEM ---
+// ==========================================================================
+
+let bulkDeleteSelectedItems = new Set();
+let bulkDeleteCurrentItems = [];
+
+/**
+ * Opens the bulk delete modal
+ */
+function openBulkDeleteModal() {
+	const overlay = document.getElementById('bulk-delete-modal-overlay');
+	if (!overlay) {
+		console.error('Bulk delete modal overlay not found');
+		return;
+	}
+	
+	overlay.classList.remove('hidden');
+	registerModal('bulk-delete-modal', closeBulkDeleteModal);
+	
+	// Reset state
+	bulkDeleteSelectedItems.clear();
+	bulkDeleteCurrentItems = [];
+	
+	// Hide results section initially
+	const resultsSection = document.getElementById('bulk-delete-results');
+	if (resultsSection) {
+		resultsSection.style.display = 'none';
+	}
+	
+	// Reset filters
+	resetBulkDeleteFilters();
+	
+	// Setup event listeners
+	setupBulkDeleteEventListeners();
+}
+
+/**
+ * Closes the bulk delete modal
+ */
+function closeBulkDeleteModal() {
+	const overlay = document.getElementById('bulk-delete-modal-overlay');
+	if (overlay) {
+		overlay.classList.add('hidden');
+		unregisterModal('bulk-delete-modal');
+	}
+	
+	// Reset state
+	bulkDeleteSelectedItems.clear();
+	bulkDeleteCurrentItems = [];
+}
+
+/**
+ * Sets up event listeners for bulk delete modal
+ */
+function setupBulkDeleteEventListeners() {
+	const closeBtn = document.getElementById('bulk-delete-modal-close-btn');
+	const applyFilterBtn = document.getElementById('bulk-delete-apply-filter');
+	const resetFilterBtn = document.getElementById('bulk-delete-reset-filter');
+	const filterTypeSelect = document.getElementById('bulk-delete-filter-type');
+	const confirmBtn = document.getElementById('bulk-delete-confirm');
+	const selectAllCheckbox = document.getElementById('bulk-delete-select-all');
+	const overlay = document.getElementById('bulk-delete-modal-overlay');
+	
+	// Close button
+	if (closeBtn && !closeBtn.hasAttribute('data-listener-added')) {
+		closeBtn.addEventListener('click', closeBulkDeleteModal);
+		closeBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Overlay click to close
+	if (overlay && !overlay.hasAttribute('data-listener-added')) {
+		overlay.addEventListener('click', (e) => {
+			if (e.target === overlay) {
+				closeBulkDeleteModal();
+			}
+		});
+		overlay.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Filter type change - show/hide count/days inputs
+	if (filterTypeSelect && !filterTypeSelect.hasAttribute('data-listener-added')) {
+		filterTypeSelect.addEventListener('change', handleFilterTypeChange);
+		filterTypeSelect.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Apply filter
+	if (applyFilterBtn && !applyFilterBtn.hasAttribute('data-listener-added')) {
+		applyFilterBtn.addEventListener('click', handleApplyFilter);
+		applyFilterBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Reset filter
+	if (resetFilterBtn && !resetFilterBtn.hasAttribute('data-listener-added')) {
+		resetFilterBtn.addEventListener('click', resetBulkDeleteFilters);
+		resetFilterBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Confirm delete
+	if (confirmBtn && !confirmBtn.hasAttribute('data-listener-added')) {
+		confirmBtn.addEventListener('click', handleBulkDeleteConfirm);
+		confirmBtn.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Select all checkbox
+	if (selectAllCheckbox && !selectAllCheckbox.hasAttribute('data-listener-added')) {
+		selectAllCheckbox.addEventListener('change', selectAllBulkDeleteItems);
+		selectAllCheckbox.setAttribute('data-listener-added', 'true');
+	}
+	
+	// Usage stats modal bulk delete button
+	const usageStatsBulkDeleteBtn = document.getElementById('usage-stats-bulk-delete');
+	if (usageStatsBulkDeleteBtn && !usageStatsBulkDeleteBtn.hasAttribute('data-listener-added')) {
+		usageStatsBulkDeleteBtn.addEventListener('click', () => {
+			closeUsageStatsModal();
+			openBulkDeleteModal();
+		});
+		usageStatsBulkDeleteBtn.setAttribute('data-listener-added', 'true');
+	}
+}
+
+/**
+ * Handles filter type change - shows/hides count/days inputs
+ */
+function handleFilterTypeChange() {
+	const filterType = document.getElementById('bulk-delete-filter-type').value;
+	const countGroup = document.getElementById('bulk-delete-count-group');
+	const daysGroup = document.getElementById('bulk-delete-days-group');
+	
+	if (countGroup) {
+		countGroup.style.display = (filterType === 'oldest') ? 'block' : 'none';
+	}
+	
+	if (daysGroup) {
+		daysGroup.style.display = (filterType === 'deleted_older_than') ? 'block' : 'none';
+	}
+}
+
+/**
+ * Resets bulk delete filters
+ */
+function resetBulkDeleteFilters() {
+	const itemTypeSelect = document.getElementById('bulk-delete-item-type');
+	const filterTypeSelect = document.getElementById('bulk-delete-filter-type');
+	const countInput = document.getElementById('bulk-delete-count');
+	const daysInput = document.getElementById('bulk-delete-days');
+	const resultsSection = document.getElementById('bulk-delete-results');
+	
+	if (itemTypeSelect) itemTypeSelect.value = 'tasks';
+	if (filterTypeSelect) filterTypeSelect.value = 'all';
+	if (countInput) countInput.value = '10';
+	if (daysInput) daysInput.value = '30';
+	if (resultsSection) resultsSection.style.display = 'none';
+	
+	handleFilterTypeChange();
+	bulkDeleteSelectedItems.clear();
+	bulkDeleteCurrentItems = [];
+}
+
+/**
+ * Applies filter and fetches items
+ */
+async function handleApplyFilter() {
+	const itemType = document.getElementById('bulk-delete-item-type').value;
+	const filterType = document.getElementById('bulk-delete-filter-type').value;
+	const count = parseInt(document.getElementById('bulk-delete-count').value) || 10;
+	const days = parseInt(document.getElementById('bulk-delete-days').value) || 30;
+	
+	try {
+		const module = itemType === 'tasks' ? 'tasks' : 'journal';
+		const action = itemType === 'tasks' ? 'getBulkDeleteItems' : 'getBulkDeleteItems';
+		
+		const response = await window.apiFetch({
+			module: module,
+			action: action,
+			item_type: itemType,
+			filter_type: filterType,
+			count: count,
+			days: days
+		});
+		
+		if (response.status === 'success' && response.data) {
+			bulkDeleteCurrentItems = response.data.items || [];
+			displayBulkDeleteResults();
+		} else {
+			showToast({ message: response.message || 'Failed to fetch items.', type: 'error' });
+		}
+	} catch (error) {
+		console.error('Error applying filter:', error);
+		showToast({ message: 'Failed to fetch items. Please try again.', type: 'error' });
+	}
+}
+
+/**
+ * Displays bulk delete results
+ */
+function displayBulkDeleteResults() {
+	const resultsSection = document.getElementById('bulk-delete-results');
+	const resultsList = document.getElementById('bulk-delete-results-list');
+	const resultsCount = document.getElementById('bulk-delete-results-count');
+	
+	if (!resultsSection || !resultsList || !resultsCount) return;
+	
+	resultsSection.style.display = 'block';
+	resultsCount.textContent = `${bulkDeleteCurrentItems.length} items found`;
+	
+	// Clear previous results
+	resultsList.innerHTML = '';
+	bulkDeleteSelectedItems.clear();
+	updateBulkDeleteUI();
+	
+	// Render items
+	bulkDeleteCurrentItems.forEach(item => {
+		const itemDiv = document.createElement('div');
+		itemDiv.className = 'bulk-delete-item';
+		itemDiv.dataset.itemId = item.id;
+		
+		const date = item.entry_date || item.created_at || '';
+		const dateStr = date ? new Date(date).toLocaleDateString() : '';
+		
+		itemDiv.innerHTML = `
+			<label class="bulk-delete-item-checkbox">
+				<input type="checkbox" data-item-id="${item.id}" class="bulk-delete-item-checkbox-input">
+				<span class="bulk-delete-item-title">${escapeHtml(item.title)}</span>
+				${dateStr ? `<span class="bulk-delete-item-date">${dateStr}</span>` : ''}
+			</label>
+		`;
+		
+		resultsList.appendChild(itemDiv);
+		
+		// Add checkbox listener
+		const checkbox = itemDiv.querySelector('.bulk-delete-item-checkbox-input');
+		if (checkbox) {
+			checkbox.addEventListener('change', (e) => {
+				if (e.target.checked) {
+					bulkDeleteSelectedItems.add(item.id);
+				} else {
+					bulkDeleteSelectedItems.delete(item.id);
+				}
+				updateBulkDeleteUI();
+			});
+		}
+	});
+}
+
+/**
+ * Updates bulk delete UI (selected count, button state)
+ */
+function updateBulkDeleteUI() {
+	const selectedCount = bulkDeleteSelectedItems.size;
+	const confirmBtn = document.getElementById('bulk-delete-confirm');
+	const selectedCountSpan = document.getElementById('bulk-delete-selected-count');
+	const selectAllCheckbox = document.getElementById('bulk-delete-select-all');
+	
+	if (confirmBtn) {
+		confirmBtn.disabled = selectedCount === 0;
+		confirmBtn.textContent = `Delete Selected (${selectedCount})`;
+	}
+	
+	if (selectedCountSpan) {
+		selectedCountSpan.textContent = selectedCount;
+	}
+	
+	if (selectAllCheckbox) {
+		selectAllCheckbox.checked = selectedCount > 0 && selectedCount === bulkDeleteCurrentItems.length;
+		selectAllCheckbox.indeterminate = selectedCount > 0 && selectedCount < bulkDeleteCurrentItems.length;
+	}
+}
+
+/**
+ * Selects/deselects all items
+ */
+function selectAllBulkDeleteItems(e) {
+	const checked = e.target.checked;
+	const checkboxes = document.querySelectorAll('.bulk-delete-item-checkbox-input');
+	
+	bulkDeleteSelectedItems.clear();
+	
+	checkboxes.forEach(checkbox => {
+		checkbox.checked = checked;
+		if (checked) {
+			bulkDeleteSelectedItems.add(parseInt(checkbox.dataset.itemId));
+		}
+	});
+	
+	updateBulkDeleteUI();
+}
+
+/**
+ * Handles bulk delete confirmation
+ */
+async function handleBulkDeleteConfirm() {
+	const selectedIds = Array.from(bulkDeleteSelectedItems);
+	if (selectedIds.length === 0) {
+		showToast({ message: 'No items selected.', type: 'info' });
+		return;
+	}
+	
+	const itemType = document.getElementById('bulk-delete-item-type').value;
+	const confirmed = await showConfirm(
+		`Are you sure you want to permanently delete ${selectedIds.length} ${itemType === 'tasks' ? 'task(s)' : 'journal entr(ies)'}? This action cannot be undone.`,
+		{ confirmText: 'Delete', cancelText: 'Cancel' }
+	);
+	
+	if (!confirmed) return;
+	
+	try {
+		const module = itemType === 'tasks' ? 'tasks' : 'journal';
+		const action = itemType === 'tasks' ? 'bulkDeleteTasks' : 'bulkDeleteJournalEntries';
+		const dataKey = itemType === 'tasks' ? 'task_ids' : 'entry_ids';
+		
+		const response = await window.apiFetch({
+			module: module,
+			action: action,
+			[dataKey]: selectedIds
+		});
+		
+		if (response.status === 'success') {
+			showToast({ 
+				message: `Successfully deleted ${response.data.deleted_count || selectedIds.length} ${itemType === 'tasks' ? 'task(s)' : 'entr(ies)'}.`, 
+				type: 'success' 
+			});
+			
+			// Refresh views
+			if (typeof window.updateQuotaBanner === 'function') {
+				window.updateQuotaBanner();
+			}
+			
+			if (itemType === 'tasks' && typeof window.fetchAndRenderBoard === 'function') {
+				await window.fetchAndRenderBoard();
+			} else if (itemType === 'journal_entries' && typeof window.journalView !== 'undefined' && window.journalView) {
+				await window.journalView.renderJournalView();
+			}
+			
+			// Close modal
+			closeBulkDeleteModal();
+		} else {
+			showToast({ message: response.message || 'Failed to delete items.', type: 'error' });
+		}
+	} catch (error) {
+		console.error('Error deleting items:', error);
+		showToast({ message: 'Failed to delete items. Please try again.', type: 'error' });
+	}
+}
+
+/**
+ * Escapes HTML to prevent XSS
+ */
+function escapeHtml(text) {
+	const div = document.createElement('div');
+	div.textContent = text;
+	return div.innerHTML;
+}
+
+// Make bulk delete functions globally available
+window.openBulkDeleteModal = openBulkDeleteModal;
 
 // ==========================================================================
 // --- TRUST MANAGEMENT SYSTEM ---
@@ -2469,19 +2946,8 @@ window.updateFontSizeUI = updateFontSizeUI;
  */
 function initUserInfoPopover() {
 	const closeBtn = document.getElementById('btn-close-user-info');
-	const overlay = document.getElementById('user-info-popover-overlay');
-	
 	if (closeBtn) {
 		closeBtn.addEventListener('click', closeUserInfoPopover);
-	}
-	
-	// Close on overlay click (but not on modal content click)
-	if (overlay) {
-		overlay.addEventListener('click', (e) => {
-			if (e.target === overlay) {
-				closeUserInfoPopover();
-			}
-		});
 	}
 }
 

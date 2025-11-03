@@ -58,6 +58,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	
 	<!-- Web App Meta Tags -->
 	<meta name="apple-mobile-web-app-capable" content="yes">
+	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 	<meta name="apple-mobile-web-app-title" content="MyDayHub">
 	<meta name="theme-color" content="#FD7E13">
@@ -68,7 +69,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	
 	<link rel="stylesheet" href="uix/style.css">
-	<link rel="stylesheet" href="uix/tasks.css?v=8.5">
+	<link rel="stylesheet" href="uix/tasks.css">
 	<link rel="stylesheet" href="uix/editor.css?v=8.5">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
@@ -531,7 +532,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		
 		}
 	</style>
-	<link rel="stylesheet" href="uix/journal.css?v=8.5">
+	<link rel="stylesheet" href="uix/journal.css">
 	<script>
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>",
@@ -618,6 +619,26 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 		</header>
 
+		<!-- Quota Limit Banner -->
+		<div id="quota-limit-banner" class="quota-banner hidden">
+			<div class="quota-banner-content">
+				<div class="quota-banner-icon">
+					<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+					</svg>
+				</div>
+				<div class="quota-banner-text">
+					<strong>Quota Limit Reached</strong>
+					<span id="quota-banner-message">You've reached your subscription limits. Upgrade to create more content.</span>
+				</div>
+				<div class="quota-banner-actions">
+					<button id="quota-banner-view-usage" class="btn btn-sm btn-primary">View Usage</button>
+					<button id="quota-banner-bulk-delete" class="btn btn-sm btn-secondary">Bulk Delete</button>
+					<button id="quota-banner-dismiss" class="btn btn-sm btn-secondary">Dismiss</button>
+				</div>
+			</div>
+		</div>
+
 		<!-- Encryption Status Banner -->
 		<div id="encryption-status-banner" class="encryption-banner hidden">
 			<div class="encryption-banner-content">
@@ -654,7 +675,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 
 		<footer id="app-footer" class="<?php if (defined('DEVMODE') && DEVMODE) { echo 'dev-mode'; } ?>" data-devmode="<?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>">
 			<div class="footer-left">
-			<span id="footer-username" class="footer-username clickable" data-username="<?php echo htmlspecialchars($username); ?>" title="Click to view user info"></span>
+			<span id="footer-username" data-username="<?php echo htmlspecialchars($username); ?>" title="Username"></span>
 			<?php if ($isCurrentUserAdmin): ?>
 				<a href="/admin/" id="admin-access-link" title="Admin Panel">
 					<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -716,6 +737,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
+				<span id="settings-username" class="settings-username clickable" title="Click to view user info"></span>
 				<h2>Settings</h2>
 				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>
@@ -876,22 +898,20 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	</div>
 	
 	<!-- User Info Popover -->
-	<div id="user-info-popover-overlay" class="user-info-popover-overlay hidden">
-		<div id="user-info-popover" class="user-info-popover">
-			<div class="user-info-content">
-				<div class="user-info-header">
-					<h4>User Information</h4>
-					<button class="btn-icon btn-close" id="btn-close-user-info">&times;</button>
+	<div id="user-info-popover" class="user-info-popover hidden">
+		<div class="user-info-content">
+			<div class="user-info-header">
+				<h4>User Information</h4>
+				<button class="btn-icon btn-close" id="btn-close-user-info">&times;</button>
+			</div>
+			<div class="user-info-body">
+				<div class="user-info-item">
+					<label>Username:</label>
+					<span id="user-info-username"></span>
 				</div>
-				<div class="user-info-body">
-					<div class="user-info-item">
-						<label>Username:</label>
-						<span id="user-info-username"></span>
-					</div>
-					<div class="user-info-item">
-						<label>Email:</label>
-						<span id="user-info-email"></span>
-					</div>
+				<div class="user-info-item">
+					<label>Email:</label>
+					<span id="user-info-email"></span>
 				</div>
 			</div>
 		</div>
@@ -1581,7 +1601,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 					<div class="usage-category">
 						<div class="usage-category-header">
-							<span class="usage-label">Tasks' Columns</span>
+							<span class="usage-label">Columns</span>
 							<span id="columns-usage-text" class="usage-text">0 of 0</span>
 						</div>
 						<div class="usage-bar-container">
@@ -1589,18 +1609,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 								<div id="columns-usage-fill" class="usage-fill" style="width: 0%"></div>
 							</div>
 							<span id="columns-usage-percentage" class="usage-percentage">0%</span>
-						</div>
-					</div>
-					<div class="usage-category">
-						<div class="usage-category-header">
-							<span class="usage-label">Journal Entries</span>
-							<span id="journal-entries-usage-text" class="usage-text">0 of 0</span>
-						</div>
-						<div class="usage-bar-container">
-							<div class="usage-bar">
-								<div id="journal-entries-usage-fill" class="usage-fill" style="width: 0%"></div>
-							</div>
-							<span id="journal-entries-usage-percentage" class="usage-percentage">0%</span>
 						</div>
 					</div>
 					<div class="usage-category">
@@ -1617,10 +1625,25 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 					<div class="usage-category">
 						<div class="usage-category-header">
+							<span class="usage-label">Journal Entries</span>
+							<span id="journal-entries-usage-text" class="usage-text">0 of 0</span>
+						</div>
+						<div class="usage-bar-container">
+							<div class="usage-bar">
+								<div id="journal-entries-usage-fill" class="usage-fill" style="width: 0%"></div>
+							</div>
+							<span id="journal-entries-usage-percentage" class="usage-percentage">0%</span>
+						</div>
+					</div>
+					<div class="usage-category">
+						<div class="usage-category-header">
 							<span class="usage-label">Sharing</span>
 							<span id="sharing-status" class="usage-text">Loading...</span>
 						</div>
 					</div>
+				</div>
+				<div class="usage-stats-actions">
+					<button id="usage-stats-bulk-delete" class="btn btn-secondary">Bulk Delete</button>
 				</div>
 			</div>
 		</div>
@@ -1682,7 +1705,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<button class="calendar-tab active" data-tab="view">View Events</button>
 						<button class="calendar-tab" data-tab="manage">Manage Events</button>
 						<button class="calendar-tab" data-tab="calendars">Calendar Management</button>
-						<button class="calendar-tab" data-tab="preferences">Preferences</button>
+						<button class="calendar-tab" data-tab="public">Public Calendars</button>
 					</div>
 				
 				<!-- View Events Tab -->
@@ -1708,15 +1731,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 							<button id="btn-add-event" class="btn btn-primary">Add Event</button>
 							<button id="btn-import-json" class="btn btn-secondary">Import JSON</button>
 						</div>
-						<div class="manage-controls-right">
-							<select id="event-type-filter">
-								<option value="">All Event Types</option>
-								<option value="fiscal">Fiscal</option>
-								<option value="holiday">Holiday</option>
-								<option value="birthday">Birthday</option>
-								<option value="custom">Custom</option>
-							</select>
-						</div>
 					</div>
 					<div id="events-list" class="events-list">
 						<!-- Events list will be populated here -->
@@ -1734,36 +1748,14 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					</div>
 				</div>
 				
-				<!-- Preferences Tab -->
-				<div id="calendar-tab-preferences" class="calendar-tab-content">
-					<div class="calendar-preferences-section">
-						<h6>Calendar Type Visibility</h6>
-						<div class="calendar-preferences">
-							<div class="preference-item">
-								<label class="preference-label">
-									<input type="checkbox" id="pref-fiscal" checked>
-									<span>Fiscal Calendar</span>
-								</label>
-							</div>
-							<div class="preference-item">
-								<label class="preference-label">
-									<input type="checkbox" id="pref-holiday" checked>
-									<span>Holidays</span>
-								</label>
-							</div>
-							<div class="preference-item">
-								<label class="preference-label">
-									<input type="checkbox" id="pref-birthday" checked>
-									<span>Birthdays</span>
-								</label>
-							</div>
-							<div class="preference-item">
-								<label class="preference-label">
-									<input type="checkbox" id="pref-custom" checked>
-									<span>Custom Events</span>
-								</label>
-							</div>
-						</div>
+				<!-- Public Calendars Tab -->
+				<div id="calendar-tab-public" class="calendar-tab-content">
+					<div class="calendar-management-header">
+						<h5>Browse Public Calendars</h5>
+						<p class="calendar-management-description">Discover and subscribe to calendars shared by other users</p>
+					</div>
+					<div id="public-calendars-list" class="calendars-list">
+						<!-- Public calendars will be populated here -->
 					</div>
 				</div>
 			</div>
@@ -1780,15 +1772,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			<form id="event-form" class="event-form">
 				<input type="hidden" id="event-id" name="id">
 				<div class="form-group">
-					<label for="event-type">Event Type</label>
-					<select id="event-type" name="event_type" required>
-						<option value="fiscal">📊 Fiscal Calendar</option>
-						<option value="holiday">🎉 Holiday</option>
-						<option value="birthday">🎂 Birthday</option>
-						<option value="custom" selected>⭐ Custom Event</option>
-					</select>
-				</div>
-				<div class="form-group">
 					<label for="event-label">Event Label</label>
 					<input type="text" id="event-label" name="label" required placeholder="e.g., Q1-M2-Wk7, Christmas Day, Team Meeting" maxlength="100">
 				</div>
@@ -1801,10 +1784,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<label for="event-end-date">End Date</label>
 						<input type="date" id="event-end-date" name="end_date" required>
 					</div>
-				</div>
-				<div class="form-group">
-					<label for="event-color">Event Color</label>
-					<input type="color" id="event-color" name="color" value="#22c55e" title="Choose a color for this event">
 				</div>
 				<div class="form-group">
 					<label class="checkbox-label">
@@ -1834,35 +1813,45 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					<p>Upload a JSON file containing calendar events in the following format:</p>
 					<pre><code>[
   {
-    "startDate": "2025-07-06",
-    "endDate": "2025-07-12", 
-    "label": "FY26-Q1-M1-Wk1",
-    "name": "Cisco FY26"
+    "startDate": "2025-11-01",
+    "endDate": "2025-11-05",
+    "label": "Discover"
+  },
+  {
+    "startDate": "2025-11-06",
+    "endDate": "2025-11-10",
+    "label": "Report"
   }
 ]</code></pre>
+					<p class="form-help">Note: Enter the calendar name in the field below. All events in this import will be grouped under that name, allowing you to delete them all at once if needed.</p>
 				</div>
 				<div class="import-form">
-					<div class="form-group">
-						<label for="json-file-input">Select JSON File</label>
-						<input type="file" id="json-file-input" accept=".json" />
+					<div class="import-method-tabs">
+						<button type="button" class="import-method-tab active" data-method="file">Upload File</button>
+						<button type="button" class="import-method-tab" data-method="paste">Paste JSON</button>
 					</div>
+					
+					<!-- File Upload Section -->
+					<div id="import-file-section" class="import-method-section active">
+						<div class="form-group">
+							<label for="json-file-input">Select JSON File</label>
+							<input type="file" id="json-file-input" accept=".json" />
+						</div>
+					</div>
+					
+					<!-- Paste JSON Section -->
+					<div id="import-paste-section" class="import-method-section hidden">
+						<div class="form-group">
+							<label for="json-paste-input">Paste JSON Data</label>
+							<textarea id="json-paste-input" rows="10" placeholder='[\n  {\n    "startDate": "2025-11-01",\n    "endDate": "2025-11-05",\n    "label": "Discover"\n  }\n]'></textarea>
+							<small class="form-help">Paste your JSON array directly into this field</small>
+						</div>
+					</div>
+					
 					<div class="form-group">
 						<label for="import-calendar-name">Calendar Name *</label>
-						<input type="text" id="import-calendar-name" placeholder="e.g., Cisco FY26" required>
+						<input type="text" id="import-calendar-name" placeholder="e.g. report dates" required>
 						<small class="form-help">Give this calendar import a name to manage it later</small>
-					</div>
-					<div class="form-group">
-						<label for="import-event-type">Event Type</label>
-						<select id="import-event-type" required>
-							<option value="fiscal">📊 Fiscal Calendar</option>
-							<option value="holiday">🎉 Holiday</option>
-							<option value="birthday">🎂 Birthday</option>
-							<option value="custom">⭐ Custom Event</option>
-						</select>
-					</div>
-					<div class="form-group">
-						<label for="import-event-color">Event Color</label>
-						<input type="color" id="import-event-color" value="#22c55e">
 					</div>
 					<div class="form-group">
 						<label class="checkbox-label">
@@ -1880,6 +1869,29 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				<button type="button" id="btn-import-cancel" class="btn">Cancel</button>
 				<button type="button" id="btn-import-preview" class="btn btn-secondary" disabled>Preview</button>
 				<button type="button" id="btn-import-execute" class="btn btn-primary" disabled>Import Events</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Calendar Export Modal -->
+	<div id="calendar-export-modal-overlay" class="hidden">
+		<div id="calendar-export-modal-container">
+			<div class="calendar-export-modal-header">
+				<h4>Export Calendar: <span id="export-calendar-name"></span></h4>
+				<button id="calendar-export-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="calendar-export-modal-body">
+				<div class="export-instructions">
+					<p>Copy the JSON data below to reuse this calendar elsewhere:</p>
+				</div>
+				<div class="form-group">
+					<label for="calendar-export-json">Calendar JSON</label>
+					<textarea id="calendar-export-json" rows="15" readonly></textarea>
+				</div>
+				<div class="calendar-export-modal-buttons">
+					<button type="button" id="btn-copy-export-json" class="btn btn-primary">Copy All</button>
+					<button type="button" id="btn-export-close" class="btn">Close</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -2582,6 +2594,68 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 		}
 	}
 	?>
+		</div>
+	</div>
+	
+	<!-- Bulk Delete Modal -->
+	<div id="bulk-delete-modal-overlay" class="hidden">
+		<div id="bulk-delete-modal-container">
+			<div class="bulk-delete-modal-header">
+				<h4>Bulk Delete</h4>
+				<button id="bulk-delete-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="bulk-delete-modal-body">
+				<div class="bulk-delete-filters">
+					<div class="form-group">
+						<label for="bulk-delete-item-type">Item Type</label>
+						<select id="bulk-delete-item-type">
+							<option value="tasks">Tasks</option>
+							<option value="journal_entries">Journal Entries</option>
+						</select>
+					</div>
+					<div class="form-group">
+						<label for="bulk-delete-filter-type">Filter By</label>
+						<select id="bulk-delete-filter-type">
+							<option value="all">All Items</option>
+							<option value="oldest">Oldest X Items</option>
+							<option value="deleted">Deleted Items</option>
+							<option value="deleted_older_than">Deleted Items Older Than X Days</option>
+						</select>
+					</div>
+					<div class="form-group" id="bulk-delete-count-group" style="display: none;">
+						<label for="bulk-delete-count">Count</label>
+						<input type="number" id="bulk-delete-count" min="1" value="10">
+					</div>
+					<div class="form-group" id="bulk-delete-days-group" style="display: none;">
+						<label for="bulk-delete-days">Days</label>
+						<input type="number" id="bulk-delete-days" min="1" value="30">
+					</div>
+					<div class="bulk-delete-actions">
+						<button id="bulk-delete-apply-filter" class="btn btn-primary">Apply Filter</button>
+						<button id="bulk-delete-reset-filter" class="btn btn-secondary">Reset</button>
+					</div>
+				</div>
+				<div class="bulk-delete-results" id="bulk-delete-results" style="display: none;">
+					<div class="bulk-delete-results-header">
+						<div class="bulk-delete-results-info">
+							<span id="bulk-delete-results-count">0 items found</span>
+							<label class="bulk-delete-select-all">
+								<input type="checkbox" id="bulk-delete-select-all">
+								Select All
+							</label>
+						</div>
+					</div>
+					<div class="bulk-delete-results-list" id="bulk-delete-results-list">
+						<!-- Results will be populated here -->
+					</div>
+					<div class="bulk-delete-confirm-section">
+						<button id="bulk-delete-confirm" class="btn btn-danger" disabled>Delete Selected (<span id="bulk-delete-selected-count">0</span>)</button>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
 	<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.js"></script>
 	<script src="uix/crypto.js" defer></script>
 	<script src="uix/encryption-setup.js" defer></script>

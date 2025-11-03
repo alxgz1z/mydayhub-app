@@ -764,6 +764,10 @@ function initEventListeners() {
 							columnBody.insertAdjacentHTML('beforeend', newTaskCardHTML);
 							updateColumnTaskCount(columnEl);
 							sortTasksInColumn(columnBody);
+							
+							// Update quota status after duplication
+							updateQuotaStatusAfterOperation('task', true);
+							
 							showToast({ message: 'Task duplicated successfully.', type: 'success' });
 						} else {
 							showToast({ message: 'Error: Could not duplicate the task.', type: 'error' });
@@ -2252,6 +2256,14 @@ async function createNewTask(columnId, taskTitle, columnEl) {
 			}
 			
 			showToast({ message: 'Task created.', type: 'success' });
+		} else if (result.quota_exceeded) {
+			// Quota exceeded - show error and update UI
+			showToast({ 
+				message: result.message || 'You\'ve reached your task limit.', 
+				type: 'error',
+				duration: 5000
+			});
+			updateQuotaStatusAfterOperation('task', false); // Don't increment, but refresh
 		} else {
 			showToast({ message: `Error: ${result.message}`, type: 'error' });
 		}
@@ -2375,9 +2387,6 @@ async function fetchAndRenderBoard() {
 		container.innerHTML = `<p style="color: #d94f46;">Could not load board. ${error.message}</p>`;
 	}
 }
-
-// Expose fetchAndRenderBoard globally for use by journal view and editor
-window.fetchAndRenderBoard = fetchAndRenderBoard;
 
 /**
  * Renders the entire board from the data provided by the API.
@@ -4400,7 +4409,7 @@ function exitMoveMode() {
 	 const addColumnBtn = document.getElementById('btn-add-column');
 	 if (!addColumnBtn || !window.quotaStatus) return;
 	 
-	if (window.quotaStatus.columns.at_limit && window.quotaStatus.columns.limit !== -1) {
+	 if (window.quotaStatus.columns.at_limit) {
 		 // Replace button with upgrade message
 		 addColumnBtn.textContent = `Upgrade (${window.quotaStatus.columns.used}/${window.quotaStatus.columns.limit} columns used)`;
 		 addColumnBtn.disabled = true;
@@ -4434,7 +4443,7 @@ function exitMoveMode() {
 	 
 	 taskInputs.forEach(input => {
 		 // Only check task limits - users can still add tasks to existing columns
-		if (window.quotaStatus.tasks.at_limit && window.quotaStatus.tasks.limit !== -1) {
+		 if (window.quotaStatus.tasks.at_limit) {
 			 input.placeholder = `Upgrade (${window.quotaStatus.tasks.used}/${window.quotaStatus.tasks.limit} tasks used)`;
 			 input.disabled = true;
 			 input.classList.add('quota-limited');
@@ -4459,7 +4468,7 @@ function exitMoveMode() {
   */
  function showColumnUpgradeMessage() {
 	 showToast({
-		message: `You've reached your column limit (${window.quotaStatus.columns.limit === -1 ? 'Unlimited' : window.quotaStatus.columns.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more columns.`,
+		 message: `You've reached your column limit (${window.quotaStatus.columns.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more columns.`,
 		 type: 'info',
 		 duration: 4000
 	 });
@@ -4470,7 +4479,7 @@ function exitMoveMode() {
   */
  function showTaskUpgradeMessage() {
 	 showToast({
-		message: `You've reached your task limit (${window.quotaStatus.tasks.limit === -1 ? 'Unlimited' : window.quotaStatus.tasks.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more tasks.`,
+		 message: `You've reached your task limit (${window.quotaStatus.tasks.limit}). Upgrade your ${window.quotaStatus.subscription_level} subscription to create more tasks.`,
 		 type: 'info', 
 		 duration: 4000
 	 });
@@ -4479,18 +4488,23 @@ function exitMoveMode() {
  /**
   * Updates quota status after successful operations and refreshes UI
   */
-function updateQuotaStatusAfterOperation(operation, increment = true) {
-	if (!window.quotaStatus) return;
-	
-	if (operation === 'column') {
-		window.quotaStatus.columns.used += increment ? 1 : -1;
-		window.quotaStatus.columns.at_limit = window.quotaStatus.columns.limit !== -1 && window.quotaStatus.columns.used >= window.quotaStatus.columns.limit;
-	} else if (operation === 'task') {
-		window.quotaStatus.tasks.used += increment ? 1 : -1;
-		window.quotaStatus.tasks.at_limit = window.quotaStatus.tasks.limit !== -1 && window.quotaStatus.tasks.used >= window.quotaStatus.tasks.limit;
-	}
-	
-	updateQuotaAwareUI();
+ function updateQuotaStatusAfterOperation(operation, increment = true) {
+	 if (!window.quotaStatus) return;
+	 
+	 if (operation === 'column') {
+		 window.quotaStatus.columns.used += increment ? 1 : -1;
+		 window.quotaStatus.columns.at_limit = window.quotaStatus.columns.used >= window.quotaStatus.columns.limit;
+	 } else if (operation === 'task') {
+		 window.quotaStatus.tasks.used += increment ? 1 : -1;
+		 window.quotaStatus.tasks.at_limit = window.quotaStatus.tasks.used >= window.quotaStatus.tasks.limit;
+	 }
+	 
+	 updateQuotaAwareUI();
+	 
+	 // Update quota banner with fresh data from server
+	 if (typeof window.updateQuotaBanner === 'function') {
+		 window.updateQuotaBanner();
+	 }
 }
 
 /**
