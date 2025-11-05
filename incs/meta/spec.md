@@ -202,7 +202,7 @@ Out‑of‑scope for current milestone: full end‑to‑end encrypted sharing. A
 - Column privacy inheritance: making columns private encrypts all tasks
 - Shared task conflict resolution with user confirmation
 - Environment variable security for SSL certificates
-- Debug information available in DEV_MODE
+- Debug information available in DEVMODE
 
 ---
 

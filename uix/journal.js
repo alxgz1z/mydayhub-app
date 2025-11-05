@@ -1059,7 +1059,7 @@ class JournalView {
                 
                 <div class="journal-entry-main">
                     <div class="journal-entry-status-band"></div>
-                    <div class="journal-entry-title" contenteditable="true">${entry.title}</div>
+                    <div class="journal-entry-title" contenteditable="true">${entry.title}${window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_entry_ids') : true) ? ` [${entry.entry_id}]` : ''}</div>
                     <div class="journal-entry-actions">
                         ${isPrivate ? '<span class="privacy-indicator" title="Private entry">🔒</span>' : ''}
                         <button class="journal-entry-menu" aria-label="Entry actions">&vellip;</button>

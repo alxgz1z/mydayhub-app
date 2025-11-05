@@ -33,20 +33,20 @@ if (file_exists($envPath)) {
 // --- CORE CONSTANTS & ERROR REPORTING ---
 // DEVMODE is now determined by whether the current user is in the DEVELOPERS list
 function isDeveloperMode(): bool {
-	// First check if DEV_MODE is explicitly set to true in .env
-	if (getenv('DEV_MODE') === 'true') {
+	// First check if DEVMODE is explicitly set to true in .env
+	if (getenv('DEVMODE') === 'true') {
 		return true;
 	}
 	
-	// If no user is logged in, use DEV_MODE from .env or default to false
+	// If no user is logged in, use DEVMODE from .env or default to false
 	if (!isset($_SESSION['user_id'])) {
-		return getenv('DEV_MODE') === 'true';
+		return getenv('DEVMODE') === 'true';
 	}
 	
 	// Check if current user is in DEVELOPERS list
 	$developers = getenv('DEVELOPERS');
 	if (empty($developers)) {
-		return getenv('DEV_MODE') === 'true';
+		return getenv('DEVMODE') === 'true';
 	}
 	
 	$developerEmails = array_map('trim', explode(',', $developers));
@@ -64,8 +64,8 @@ function isDeveloperMode(): bool {
 		
 		return $userEmail && in_array($userEmail, $developerEmails);
 	} catch (Exception $e) {
-		// If database error, fall back to DEV_MODE from .env
-		return getenv('DEV_MODE') === 'true';
+		// If database error, fall back to DEVMODE from .env
+		return getenv('DEVMODE') === 'true';
 	}
 }
 

@@ -2074,7 +2074,7 @@ body.light-mode #app-title {
 	opacity: 1;
 }
 
-/* Elegant DEV_MODE indicator - subtle border accent instead of red ribbon */
+/* Elegant DEVMODE indicator - subtle border accent instead of red ribbon */
 #app-footer.dev-mode {
 	background-color: var(--toolbar-bg); /* Keep normal background */
 	border-top: 3px solid var(--accent-color); /* Green accent border */

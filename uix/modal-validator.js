@@ -480,7 +480,7 @@ window.logValidationResults = logValidationResults;
 window.MODAL_REGISTRY = MODAL_REGISTRY;
 
 // Auto-run validation in dev mode
-if (window.MyDayHub_Config?.DEV_MODE) {
+if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_modal_validation') : true)) {
 	document.addEventListener('DOMContentLoaded', () => {
 		setTimeout(() => {
 			console.log('🔍 Running automatic modal validation...');

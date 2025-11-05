@@ -2009,7 +2009,7 @@ function handle_share_task(PDO $pdo, int $userId, ?array $data): void {
 		
 	} catch (Exception $e) {
 		log_debug_message("Exception in handle_share_task: " . $e->getMessage());
-		if (defined('DEV_MODE') && DEV_MODE) {
+		if (defined('DEVMODE') && DEVMODE) {
 			send_json_response(['status' => 'error', 'message' => 'Share failed: ' . $e->getMessage()], 500);
 		} else {
 			send_json_response(['status' => 'error', 'message' => 'Failed to share task.'], 500);
@@ -2070,7 +2070,7 @@ function handle_unshare_task(PDO $pdo, int $userId, ?array $data): void {
 		log_debug_message('unshareTask error: ' . $e->getMessage());
 		
 		$errorMessage = 'Server error while unsharing task.';
-		if (defined('DEV_MODE') && DEV_MODE) {
+		if (defined('DEVMODE') && DEVMODE) {
 			$errorMessage .= ' Details: ' . $e->getMessage();
 		}
 		
@@ -2117,7 +2117,7 @@ function handle_list_task_shares(PDO $pdo, int $userId, ?array $data): void {
 		
 		// Include detailed error in response when in dev mode
 		$errorMessage = 'Server error while listing shares.';
-		if (defined('DEV_MODE') && DEV_MODE) {
+		if (defined('DEVMODE') && DEVMODE) {
 			$errorMessage .= ' Details: ' . $e->getMessage();
 		}
 		

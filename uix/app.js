@@ -701,7 +701,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	console.log("MyDayHub App Initialized");
 
 	// DEV: capture console errors/warnings and unhandled errors to a ring buffer
-	if (window.MyDayHub_Config?.DEV_MODE) {
+	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_buffer') : true)) {
 		if (!window.__consoleBuffer) window.__consoleBuffer = [];
 		const pushLog = (level, args) => {
 			try {
@@ -731,7 +731,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	setupUserGuideEventListeners();
 	
 	// Debug DEVMODE footer
-	debugDevModeFooter();
+	if (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_footer_debug_function') : true) {
+		debugDevModeFooter();
+	}
 	
 	// Initialize user info popover
 	initUserInfoPopover();
@@ -761,8 +763,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	initMobileViewportFix();
 
 	// DEV: Footer dev report button to open latest layout report
-	if (window.MyDayHub_Config?.DEV_MODE) {
+	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_construction_button') : true)) {
 		const btnDev = document.getElementById('btn-dev-report');
+		if (btnDev) {
+			btnDev.style.display = 'inline-block';
+		}
 		if (btnDev && !btnDev.hasAttribute('data-listener-added')) {
 			btnDev.addEventListener('click', async () => {
 				const appURL = window.MyDayHub_Config?.appURL || '';
@@ -1040,6 +1045,22 @@ function initSettingsPanel() {
 			applyAccentColorToUI('#22c55e');
 		}
 	}
+	
+	// Initialize Developer Settings if available
+	if (typeof initDeveloperSettings === 'function') {
+		try {
+			initDeveloperSettings();
+		} catch (error) {
+			console.warn('Developer settings initialization failed:', error);
+		}
+	}
+	
+	// Update footer badge visibility after developer settings loads
+	setTimeout(() => {
+		if (typeof updateFooterBadgeVisibility === 'function') {
+			updateFooterBadgeVisibility();
+		}
+	}, 200);
 }
 
 /**
@@ -3255,8 +3276,8 @@ function debugDevModeFooter() {
 	console.log('Footer has dev-mode class:', footer.classList.contains('dev-mode'));
 	
 	// Check if DEVMODE is defined in JavaScript
-	console.log('window.MyDayHub_Config.DEV_MODE:', window.MyDayHub_Config?.DEV_MODE);
-	console.log('window.DEV_MODE:', window.DEV_MODE);
+	console.log('window.MyDayHub_Config.DEVMODE:', window.MyDayHub_Config?.DEVMODE);
+	console.log('window.DEVMODE:', window.DEVMODE);
 	console.log('DEVMODE constant:', typeof DEVMODE !== 'undefined' ? DEVMODE : 'undefined');
 }
 

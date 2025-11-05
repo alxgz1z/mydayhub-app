@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../incs/config.php';
 
-// Block if not DEV mode (uses DEV_MODE from .env via incs/config.php)
+// Block if not DEV mode (uses DEVMODE from .env via incs/config.php)
 if (!defined('DEVMODE') || !DEVMODE) {
     http_response_code(403);
     header('Content-Type: application/json');

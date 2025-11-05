@@ -165,7 +165,7 @@ If you need to reset your encryption (which will delete all encrypted data), ple
 
     async checkEncryptionStatus() {
         try {
-            if (window.MyDayHub_Config?.DEV_MODE) {
+            if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
                 console.log('Checking encryption status...');
             }
             
@@ -181,7 +181,7 @@ If you need to reset your encryption (which will delete all encrypted data), ple
             });
             
             const responseData = await response.json();
-            if (window.MyDayHub_Config?.DEV_MODE) {
+            if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
                 console.log('Encryption status response:', responseData);
             }
             return responseData.data || { encryption_enabled: false };
@@ -1044,7 +1044,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Make encryption setup wizard globally available for on-demand use
     if (window.cryptoManager) {
         window.encryptionSetupWizard = new EncryptionSetupWizard();
-        if (window.MyDayHub_Config?.DEV_MODE) {
+        if (window.MyDayHub_Config?.DEVMODE) {
             console.log('Encryption setup wizard ready for on-demand use');
         }
         

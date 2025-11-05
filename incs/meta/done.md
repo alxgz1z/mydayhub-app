@@ -48,7 +48,7 @@ Order: chronological (newest at bottom)
 - **Optional Encryption Setup**: Moved from mandatory login to user-triggered via privacy actions
 - **Column Privacy Inheritance**: Making columns private automatically encrypts all tasks
 - **Task Board Loading Fixed**: Resolved async function issues preventing board rendering
-- **Debug Information**: Added task_id and column_id display in DEV_MODE
+- **Debug Information**: Added task_id and column_id display in DEVMODE
 - **SSL Security**: Moved certificates to environment variables, removed from repository
 - **Database Migration**: Updated hosted mirror with safe migration scripts
 - **UI/UX Improvements**: Proactive validation, confirmation dialogs, toast notifications
@@ -187,7 +187,7 @@ Order: chronological (newest at bottom)
 ### 2025-10-18 — Tasks Layout Parity, Dev Telemetry, Editor Icon
 - Tasks: fixed card width utilization to mirror Journal (flex column body, stretch, min-width fixes); removed scrollbar-gutter reservation; columns now `flex:1` with `min/max` bounds.
 - UX polish: unified card padding/gaps; centered board by default on wide screens.
-- Dev tooling: added DEV_MODE layout report pipeline (JSON) with console ring buffer; footer 🚧 button to open latest report.
+- Dev tooling: added DEVMODE layout report pipeline (JSON) with console ring buffer; footer 🚧 button to open latest report.
 - Journal → Tasks parity confirmed via telemetry (332px card inside 350px column after padding/border).
 - Editor: replaced restore/collapse SVG icon with theme-aware `currentColor` variant per provided design.
 - Misc: reduced heavy font weights; tightened column-body padding; fixed hover shimmer caused by scrollbar.

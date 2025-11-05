@@ -105,7 +105,7 @@ function initTasksView() {
 		initEventListeners();
 
 		// DEV: layout inspector hotkey (Ctrl/Cmd + Alt + D)
-		if (window.MyDayHub_Config?.DEV_MODE) {
+		if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_layout_report_hotkey') : true)) {
 			const sendLayoutReport = async () => {
 				try {
 					const container = document.getElementById('task-board-container');
@@ -1014,14 +1014,14 @@ function initEventListeners() {
  * Modified for Ready for Review - Fixed UI state update after toggle
  */
 async function toggleReadyForReview(taskId, taskCard) {
-	 if (window.MyDayHub_Config?.DEV_MODE) {
+	 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 		 console.log('=== toggleReadyForReview called ===');
 		 console.log('Function params - taskId:', taskId, 'taskCard:', !!taskCard);
 		 console.log('isActionRunning check:', isActionRunning);
 	 }
 	 
 	 if (isActionRunning) {
-		 if (window.MyDayHub_Config?.DEV_MODE) {
+		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('Action blocked - isActionRunning is true');
 		 }
 		 return;
@@ -1032,7 +1032,7 @@ async function toggleReadyForReview(taskId, taskCard) {
 		 const currentReady = taskCard.dataset.readyForReview === 'true';
 		 const newReady = !currentReady;
 		 
-		 if (window.MyDayHub_Config?.DEV_MODE) {
+		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('Current ready state:', currentReady);
 			 console.log('New ready state will be:', newReady);
 			 console.log('About to call API...');
@@ -1045,7 +1045,7 @@ async function toggleReadyForReview(taskId, taskCard) {
 			 ready_for_review: newReady
 		 });
  
-		 if (window.MyDayHub_Config?.DEV_MODE) {
+		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('API result:', result);
 		 }
  
@@ -1362,7 +1362,7 @@ function closeAllTaskActionMenus() {
 	const isSnoozed = taskCard.dataset.isSnoozed === 'true';
 	
 	// Debug: Log the privacy state for context menu
-	if (window.MyDayHub_Config?.DEV_MODE) {
+	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 		console.log('Context menu privacy debug:', {
 			taskId: taskCard.dataset.taskId,
 			datasetIsPrivate: taskCard.dataset.isPrivate,
@@ -2558,7 +2558,7 @@ function createColumnElement(columnData) {
 	columnEl.innerHTML = `
 		<div class="column-header">
 			${headerControlsHTML}
-			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}${window.MyDayHub_Config?.DEV_MODE ? ` [${columnData.column_id}]` : ''}</h2>
+			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}${window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_column_ids') : true) ? ` [${columnData.column_id}]` : ''}</h2>
 			<span class="task-count">${columnData.tasks ? columnData.tasks.filter(task => task.classification !== 'completed').length : 0}</span>
 		</div>
 		<div class="column-body">
@@ -2597,7 +2597,7 @@ function createTaskCard(taskData) {
 							const titleElement = taskCard.querySelector('.task-title');
 							if (titleElement) {
 								titleElement.textContent = decryptedData.title || 'Untitled Task';
-								if (window.MyDayHub_Config?.DEV_MODE) {
+								if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
 									titleElement.textContent += ` (${taskData.task_id})`;
 								}
 							}
@@ -2622,8 +2622,8 @@ function createTaskCard(taskData) {
 		taskNotes = '';
 	}
 
-	// Add task_id in parentheses when DEV_MODE is enabled
-	if (window.MyDayHub_Config?.DEV_MODE) {
+	// Add task_id in parentheses when DEVMODE and preference is enabled
+	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
 		taskTitle = `${taskTitle} (${taskData.task_id})`;
 	}
 

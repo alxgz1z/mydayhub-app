@@ -28,6 +28,9 @@ $username = $_SESSION['username'] ?? 'User';
 // Check if current user is admin
 $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION['user_id']) : false;
 
+// Check if current user is a developer (for developer settings access)
+$isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : false;
+
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -536,7 +539,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<script>
 		window.MyDayHub_Config = {
 			appURL: "<?php echo APP_URL; ?>",
-			DEV_MODE: <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>
+			DEVMODE: <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>
 		};
 	</script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.1/math.min.js"></script>
@@ -683,7 +686,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				</a>
 				<?php endif; ?>
 				<?php if (defined('DEVMODE') && DEVMODE): ?>
-					<button id="btn-dev-report" class="btn-footer-icon" title="Open latest layout report" style="margin-left: 0.5rem;">
+					<button id="btn-dev-report" class="btn-footer-icon" title="Open latest layout report" style="margin-left: 0.5rem; display: none;">
 						<span role="img" aria-label="construction">🚧</span>
 					</button>
 				<?php endif; ?>
@@ -892,6 +895,20 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						</button>
 					</div>
 				</div>
+				<?php if ($isCurrentUserDeveloper): ?>
+				<div class="setting-item">
+					<div class="setting-control">
+						<button type="button" id="btn-developer-settings" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<circle cx="12" cy="12" r="3"></circle>
+								<path d="M12 1v6m0 6v6m9-9h-6m-6 0H3"></path>
+								<path d="M12 1a11 11 0 1 0 11 11"></path>
+							</svg>
+							<span class="setting-label">Developer Settings</span>
+						</button>
+					</div>
+				</div>
+				<?php endif; ?>
 			</div>
 		</div>
 	</div>
@@ -974,6 +991,114 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 			</div>
 		</div>
 	</div>
+	
+	<!-- Developer Settings Modal -->
+	<?php if ($isCurrentUserDeveloper): ?>
+	<div id="developer-settings-modal" class="modal hidden">
+		<div class="modal-content developer-settings-modal-content">
+			<div class="modal-header">
+				<h3>Developer Debug Settings</h3>
+				<button class="btn-icon btn-close" id="btn-close-developer-settings">&times;</button>
+			</div>
+			<div class="modal-body">
+				<p class="developer-settings-description">Configure which debugging aids are enabled. Settings are saved in localStorage only.</p>
+				
+				<div class="debug-settings-section">
+					<h4>Visual Indicators</h4>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-task-ids" class="debug-checkbox" checked>
+							<span>Show Task IDs in task titles</span>
+						</label>
+						<p class="debug-setting-description">Displays task ID as suffix: "Task Title (123)"</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-column-ids" class="debug-checkbox" checked>
+							<span>Show Column IDs in column titles</span>
+						</label>
+						<p class="debug-setting-description">Displays column ID as suffix: "Column Name [5]"</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-entry-ids" class="debug-checkbox" checked>
+							<span>Show Journal Entry IDs in entry titles</span>
+						</label>
+						<p class="debug-setting-description">Displays entry ID as suffix: "Entry Title [42]"</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-footer-badge" class="debug-checkbox" checked>
+							<span>Show DEV badge and border in footer</span>
+						</label>
+						<p class="debug-setting-description">Displays green DEV badge and border at top of footer</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-construction-button" class="debug-checkbox" checked>
+							<span>Show construction button (🚧) in footer</span>
+						</label>
+						<p class="debug-setting-description">Shows button to open latest layout report</p>
+					</div>
+				</div>
+				
+				<div class="debug-settings-section">
+					<h4>Console & Logging</h4>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-console-messages" class="debug-checkbox" checked>
+							<span>Enable console debugging messages</span>
+						</label>
+						<p class="debug-setting-description">Outputs console.log() statements throughout the application</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-console-buffer" class="debug-checkbox" checked>
+							<span>Capture console errors/warnings to ring buffer</span>
+						</label>
+						<p class="debug-setting-description">Captures console.error/warn and unhandled errors to window.__consoleBuffer</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-footer-debug-function" class="debug-checkbox" checked>
+							<span>Run footer debug function</span>
+						</label>
+						<p class="debug-setting-description">Logs footer state information to console on page load</p>
+					</div>
+				</div>
+				
+				<div class="debug-settings-section">
+					<h4>Developer Tools</h4>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-layout-report-hotkey" class="debug-checkbox" checked>
+							<span>Enable layout report hotkey (Ctrl/Cmd + Alt + D)</span>
+						</label>
+						<p class="debug-setting-description">Sends layout report to /api/debug.php when hotkey is pressed</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-modal-validation" class="debug-checkbox" checked>
+							<span>Auto-run modal validation on page load</span>
+						</label>
+						<p class="debug-setting-description">Automatically validates all modals when page loads</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-detailed-errors" class="debug-checkbox" checked>
+							<span>Show detailed error messages</span>
+						</label>
+						<p class="debug-setting-description">Shows detailed error messages in auth flows and exception handlers</p>
+					</div>
+				</div>
+			</div>
+			<div class="modal-footer">
+				<button class="btn btn-secondary" id="btn-reset-debug-settings">Reset to Defaults</button>
+				<button class="btn btn-primary" id="btn-apply-debug-settings">Apply Settings</button>
+			</div>
+		</div>
+	</div>
+	<?php endif; ?>
 	
 	<div id="toast-container"></div>
 
@@ -2723,6 +2848,9 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<script src="uix/crypto.js" defer></script>
 	<script src="uix/encryption-setup.js" defer></script>
 	<script src="uix/app.js" defer></script>
+	<?php if ($isCurrentUserDeveloper): ?>
+	<script src="uix/developer-settings.js" defer></script>
+	<?php endif; ?>
 	<script src="uix/editor.js" defer></script>
 	<script src="uix/view-manager.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
