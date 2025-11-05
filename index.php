@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  *
  * @author Alex & Gemini & Claude & Cursor
  */ 
@@ -69,8 +69,8 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	
 	<link rel="stylesheet" href="uix/style.css">
-	<link rel="stylesheet" href="uix/tasks.css">
-	<link rel="stylesheet" href="uix/editor.css?v=8.5">
+	<link rel="stylesheet" href="uix/tasks.css?v=8.6">
+	<link rel="stylesheet" href="uix/editor.css?v=8.6">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
 	
@@ -573,7 +573,6 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<h1 id="app-title">mdh</h1>
 				<img src="media/icons/icon-192x192.png" alt="MyDayHub Logo" id="header-logo">
 			</div>
 			
@@ -1030,6 +1029,7 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 					<button class="ribbon-tab active" data-panel="format">Format</button>
 					<button class="ribbon-tab" data-panel="preview">Export</button>
 					<button class="ribbon-tab" data-panel="find-replace">Find & Replace</button>
+					<button class="ribbon-tab" data-panel="attachments" id="editor-tab-attachments" style="display: none;">Attachments</button>
 				</nav>
 				<div id="editor-ribbon-panels">
 					<div class="ribbon-panel active" id="editor-panel-format">
@@ -1227,6 +1227,13 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 									<code>.*</code> Regex
 									<button class="btn-icon-small" id="editor-regex-help" title="Regex help">?</button>
 								</label>
+							</div>
+						</div>
+					</div>
+					<div class="ribbon-panel" id="editor-panel-attachments">
+						<div class="attachments-panel-container">
+							<div id="editor-attachments-list" class="editor-attachments-list">
+								<p class="no-attachments-message">Loading attachments...</p>
 							</div>
 						</div>
 					</div>
@@ -1496,9 +1503,30 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 				</div>
 				<div class="footer-button-group">
 					<button id="btn-browse-files" class="btn">Browse Files...</button>
+					<button id="btn-take-photo" class="btn">Take Photo</button>
 					<button id="btn-upload-staged" class="btn btn-success" style="display: none;">Upload</button>
 				</div>
-				<input type="file" id="attachment-file-input" multiple hidden>
+				<input type="file" id="attachment-file-input" multiple accept="image/*,application/pdf" hidden>
+				<input type="file" id="attachment-camera-input" accept="image/*" capture="environment" hidden>
+			</div>
+		</div>
+	</div>
+
+	<!-- Comments Modal -->
+	<div id="comments-modal-overlay" class="hidden">
+		<div id="comments-modal-container">
+			<div class="comments-modal-header">
+				<h4 id="comments-modal-title">Comments</h4>
+				<button id="comments-modal-close-btn" class="btn-icon btn-close">&times;</button>
+			</div>
+			<div id="comments-modal-body">
+				<div id="comments-list">
+					<p class="no-comments-message">Loading comments...</p>
+				</div>
+				<div id="add-comment-section">
+					<textarea id="new-comment-input" placeholder="Add a comment..." rows="3"></textarea>
+					<button id="btn-add-comment" class="btn btn-primary">Post Comment</button>
+				</div>
 			</div>
 		</div>
 	</div>
@@ -1506,6 +1534,41 @@ $isCurrentUserAdmin = isset($_SESSION['user_id']) ? is_admin_user((int)$_SESSION
 	<div id="attachment-viewer-modal-overlay" class="hidden">
 		<button id="attachment-viewer-close-btn" class="btn-icon btn-close">&times;</button>
 		<div id="attachment-viewer-content"></div>
+	</div>
+
+	<!-- Mission Focus Chart Modal -->
+	<div id="mission-focus-modal-overlay" class="hidden">
+		<div id="mission-focus-modal-container">
+			<div class="mission-focus-modal-header">
+				<h4>Mission Focus Chart</h4>
+				<button id="mission-focus-modal-close-btn" class="btn-icon btn-close">&times;</button>
+			</div>
+			<div id="mission-focus-modal-body">
+				<div id="mission-focus-modal-chart-container">
+					<canvas id="mission-focus-modal-canvas"></canvas>
+				</div>
+				<div id="mission-focus-modal-legend">
+					<div class="legend-item">
+						<span class="legend-color" style="background-color: #22c55e;"></span>
+						<span class="legend-label">Signal</span>
+						<span id="mission-focus-signal-percent" class="legend-percent">0%</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color" style="background-color: #3b82f6;"></span>
+						<span class="legend-label">Support</span>
+						<span id="mission-focus-support-percent" class="legend-percent">0%</span>
+					</div>
+					<div class="legend-item">
+						<span class="legend-color" style="background-color: #f97316;"></span>
+						<span class="legend-label">Backlog</span>
+						<span id="mission-focus-backlog-percent" class="legend-percent">0%</span>
+					</div>
+				</div>
+				<div id="mission-focus-modal-footer">
+					<p class="mission-focus-modal-note">Based on tasks and journal entries from the last 30 days</p>
+				</div>
+			</div>
+		</div>
 	</div>
 
 	<!-- File Management Modal -->

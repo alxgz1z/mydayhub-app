@@ -1,6 +1,6 @@
 /* Code for /uix/tasks.css */
 /* MyDayHub - Tasks View Specific Styles */
-/* @version 8.5 Avellanas */
+/* @version 8.6 Nosara */
 /* Cache bust: 2025-01-04 - Replaced complex completion animation with elegant flash - v4 */
 /* @author Alex & Gemini & Claude & Cursor */
 /* ==========================================================================
@@ -250,15 +250,40 @@
 }
 
 /* Modified for Shared Column Glow - Visual highlighting for virtual "Shared with Me" column */
-.task-column[data-column-id="shared-with-me"] {
-	border: 2px solid var(--accent-color);
-	box-shadow: 0 0 20px rgba(34, 197, 94, 0.3), 0 0 40px rgba(34, 197, 94, 0.1);
-	background: linear-gradient(135deg, rgba(34, 197, 94, 0.03), rgba(34, 197, 94, 0.01));
+.task-column[data-column-id="shared-with-me"],
+.task-column.virtual-column[data-column-id="shared-with-me"] {
+	border: 2px solid var(--accent-color) !important;
+	/* Use accent color with opacity for glow effect - dynamically adapts to user's accent color */
+	box-shadow: 0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent), 
+	            0 0 40px color-mix(in srgb, var(--accent-color) 15%, transparent) !important;
+	background-color: var(--toolbar-bg) !important;
+	position: relative;
 }
 
-.task-column[data-column-id="shared-with-me"] .column-title {
-	color: var(--accent-color);
-	font-weight: 400;
+.task-column[data-column-id="shared-with-me"] .column-title,
+.task-column.virtual-column[data-column-id="shared-with-me"] .column-title {
+	color: var(--accent-color) !important;
+	font-weight: 500 !important;
+}
+
+/* Light mode: Use lighter background for contrast */
+body.light-mode .task-column[data-column-id="shared-with-me"],
+body.light-mode .task-column.virtual-column[data-column-id="shared-with-me"] {
+	background-color: #ffffff !important;
+	border-color: var(--accent-color) !important;
+	box-shadow: 0 0 20px color-mix(in srgb, var(--accent-color) 30%, transparent), 
+	            0 0 40px color-mix(in srgb, var(--accent-color) 10%, transparent),
+	            inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 10%, transparent) !important;
+}
+
+/* Dark mode: Use darker background for contrast */
+body:not(.light-mode) .task-column[data-column-id="shared-with-me"],
+body:not(.light-mode) .task-column.virtual-column[data-column-id="shared-with-me"] {
+	background-color: #1a1a1a !important;
+	border-color: var(--accent-color) !important;
+	box-shadow: 0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent), 
+	            0 0 40px color-mix(in srgb, var(--accent-color) 15%, transparent),
+	            inset 0 0 0 1px color-mix(in srgb, var(--accent-color) 20%, transparent) !important;
 }
 
 
@@ -1222,4 +1247,259 @@ body.dark-mode .task-actions-menu {
 /* Smooth color transitions */
 .task-card, .task-column, .column-title {
 	transition: color 0.3s ease, background-color 0.3s ease, border-color 0.3s ease;
+}
+
+/* ==========================================================================
+   COMMENTS MODAL STYLES
+   ========================================================================== */
+
+#comments-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.6);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 10000;
+	opacity: 0;
+	transition: opacity 0.2s ease-in-out;
+	pointer-events: none;
+}
+
+#comments-modal-overlay:not(.hidden) {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+#comments-modal-container {
+	background-color: var(--card-bg);
+	color: var(--text-primary);
+	border-radius: 12px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+	width: 90%;
+	max-width: 600px;
+	max-height: 80vh;
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border-color);
+}
+
+.comments-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1rem 1.5rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.comments-modal-header h4 {
+	margin: 0;
+	font-size: 1.2rem;
+	font-weight: 400;
+}
+
+#comments-modal-body {
+	padding: 1.5rem;
+	overflow-y: auto;
+	flex-grow: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1.5rem;
+}
+
+#comments-list {
+	flex-grow: 1;
+	min-height: 200px;
+	max-height: 400px;
+	overflow-y: auto;
+}
+
+.no-comments-message {
+	text-align: center;
+	color: var(--text-secondary);
+	padding: 2rem;
+	font-style: italic;
+}
+
+.comment-item {
+	padding: 1rem;
+	margin-bottom: 1rem;
+	background-color: var(--toolbar-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 8px;
+}
+
+.comment-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 0.5rem;
+}
+
+.comment-author {
+	font-weight: 500;
+	color: var(--accent-color);
+}
+
+.comment-date {
+	font-size: 0.85rem;
+	color: var(--text-secondary);
+}
+
+.comment-content {
+	color: var(--text-primary);
+	line-height: 1.5;
+	white-space: pre-wrap;
+	word-wrap: break-word;
+	margin-bottom: 0.5rem;
+}
+
+.comment-actions {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.btn-comment-edit,
+.btn-comment-delete {
+	padding: 0.25rem 0.75rem;
+	font-size: 0.85rem;
+	border: 1px solid var(--border-color);
+	background-color: transparent;
+	color: var(--text-secondary);
+	border-radius: 4px;
+	cursor: pointer;
+	transition: all 0.2s;
+}
+
+.btn-comment-edit:hover {
+	color: var(--accent-color);
+	border-color: var(--accent-color);
+}
+
+.btn-comment-delete:hover {
+	color: var(--btn-danger-bg);
+	border-color: var(--btn-danger-bg);
+}
+
+.comment-edit-input {
+	width: 100%;
+	padding: 0.5rem;
+	border: 1px solid var(--border-color);
+	background-color: var(--bg-color);
+	color: var(--text-primary);
+	border-radius: 4px;
+	font-family: inherit;
+	font-size: 0.9rem;
+	resize: vertical;
+	margin-bottom: 0.5rem;
+}
+
+.comment-edit-controls {
+	display: flex;
+	gap: 0.5rem;
+	margin-top: 0.5rem;
+}
+
+.btn-comment-save,
+.btn-comment-cancel {
+	padding: 0.5rem 1rem;
+	font-size: 0.9rem;
+	border-radius: 4px;
+	cursor: pointer;
+	border: none;
+}
+
+.btn-comment-save {
+	background-color: var(--accent-color);
+	color: white;
+}
+
+.btn-comment-save:hover {
+	background-color: var(--btn-success-hover-bg);
+}
+
+.btn-comment-cancel {
+	background-color: transparent;
+	color: var(--text-secondary);
+	border: 1px solid var(--border-color);
+}
+
+.btn-comment-cancel:hover {
+	background-color: var(--toolbar-bg);
+}
+
+#add-comment-section {
+	border-top: 1px solid var(--border-color);
+	padding-top: 1rem;
+}
+
+#new-comment-input {
+	width: 100%;
+	padding: 0.75rem;
+	border: 1px solid var(--border-color);
+	background-color: var(--bg-color);
+	color: var(--text-primary);
+	border-radius: 8px;
+	font-family: inherit;
+	font-size: 0.9rem;
+	resize: vertical;
+	margin-bottom: 0.75rem;
+}
+
+#new-comment-input:focus {
+	outline: none;
+	border-color: var(--accent-color);
+	box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+}
+
+#btn-add-comment {
+	padding: 0.5rem 1.5rem;
+	background-color: var(--accent-color);
+	color: white;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	font-size: 0.9rem;
+	transition: background-color 0.2s;
+}
+
+#btn-add-comment:hover:not(:disabled) {
+	background-color: var(--btn-success-hover-bg);
+}
+
+#btn-add-comment:disabled {
+	opacity: 0.6;
+	cursor: not-allowed;
+}
+
+/* Light mode adjustments */
+body.light-mode #comments-modal-container {
+	background-color: #ffffff;
+	color: #1a1a1a;
+	border: 1px solid #e5e7eb;
+}
+
+body.light-mode .comment-item {
+	background-color: #f9fafb;
+	border: 1px solid #e5e7eb;
+}
+
+body.light-mode .comment-content {
+	color: #1a1a1a;
+}
+
+body.light-mode #new-comment-input {
+	background-color: #ffffff;
+	color: #1a1a1a;
+	border: 1px solid #e5e7eb;
+}
+
+body.light-mode .comment-edit-input {
+	background-color: #ffffff;
+	color: #1a1a1a;
+	border: 1px solid #e5e7eb;
 }

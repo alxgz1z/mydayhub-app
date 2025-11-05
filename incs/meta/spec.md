@@ -71,15 +71,31 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - Classify: Signal, Support, Backlog, Completed; enforced sorting rules
 - Complete/uncomplete with visual and audio feedback
 - Due date, snooze (preset and custom), notes via Unified Editor
-- Attachments (images, PDFs) with quotas
+- Attachments (images, PDFs) with quotas, compression, and camera capture
 - Privacy toggle with visual indicators; prompts encryption setup if not configured
 - **Quota enforcement**: Task creation blocked when plan limit reached
+- **Comments**: Social-style comment system for shared tasks (non-private only)
 
 3.3 Filters & Toolbar
 - Show/Hide Completed, Private, Snoozed; state persists
 
 3.4 Unified Editor
 - Modal editor for task notes with autosave, formatting tools, and font sizing
+- **Attachments Tab (IMPLEMENTED)**: Dedicated tab for viewing task attachments
+  - Grid layout displaying all attachments with thumbnails
+  - Image thumbnails: Click to view full size in new tab
+  - PDF inline viewer: Embedded iframe viewer with full-page scrolling
+  - Attachment metadata: Filename and file size displayed
+  - Visible only for tasks (hidden for journal entries)
+- **Image Compression (IMPLEMENTED)**: Automatic optimization for large images
+  - Images >1MB automatically compressed before upload
+  - User confirmation dialog before compression
+  - Canvas API compression: Reduces size while maintaining quality
+  - Storage quota management: Helps users stay within storage limits
+- **Camera Capture (IMPLEMENTED)**: Mobile-friendly photo capture
+  - "Take Photo" button in attachments modal
+  - Direct camera access via HTML5 capture API
+  - Automatic compression for camera-captured photos
 
 3.5 Journal View (IMPLEMENTED & REFACTORED v8.5)
 - Horizontal date-based columns with scrollable navigation (1-day, 3-day, 5-day views)
@@ -97,6 +113,7 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 - **MUTUALLY EXCLUSIVE FILTERS**: Replaced confusing toggles with clear button-based filter selection
 - **ENHANCED NOTES-ONLY MODE**: Wider date range loading ensures consistent column counts during navigation
 - **Quota enforcement**: Journal entry creation blocked when plan limit reached
+- **Column Height Optimization (v8.6)**: Desktop columns automatically adjust height based on content (50vh minimum, 85vh maximum) with internal scrolling for overflow
 
 3.6 Subscription Quotas & Usage Management (IMPLEMENTED)
 - Plan-based limits: FREE, BASE, PRO, ELITE tiers with defined quotas for columns, tasks, journal entries, and storage
@@ -145,8 +162,16 @@ Non‑goals for the current milestone: full offline engine, full end‑to‑end 
 Model favors clarity and safety:
 - Only non‑private items can be shared
 - Permissions: view or edit; owners retain share/privacy controls
-- Recipient experience: “Shared with Me” virtual column; permission‑based action visibility
+- Recipient experience: "Shared with Me" virtual column; permission‑based action visibility
 - Ready‑for‑Review workflow: recipients mark ready; owners see non‑blocking notifications
+- **Task Comments System (IMPLEMENTED)**: Social-style comment system for shared tasks
+  - Comments modal accessible from task menu or comment indicator badge
+  - Comment CRUD: Add, edit, and delete comments (Edit permission required)
+  - Comment indicators: Task cards show comment count badges
+  - Privacy: Comments only available on non-private tasks
+  - Real-time updates: Comment counts update immediately after operations
+  - Database tracking: `task_comments` and `task_activity` tables for audit trail
+- **Enhanced Ready-for-Review**: Visual indicators and notification badges for review workflow
 
 Out‑of‑scope for current milestone: full end‑to‑end encrypted sharing. A documented trade‑off is used for shareable items.
 
@@ -291,7 +316,7 @@ Single‑gateway API pattern with modular handlers. All mutating actions enforce
 Representative capability areas (non‑exhaustive, no request/response bodies here):
 - Authentication & User: register, login, logout, password reset flows, change password, preference persistence
 - Tasks & Columns: board retrieval, column CRUD/reorder, task CRUD/reorder, classification, privacy (with encryption setup prompts), snooze, attachments, soft‑delete and restore
-- Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions
+- Sharing (Foundations): share/unshare, list shares, ready‑for‑review flags, permission‑gated actions, **task comments system (CRUD operations)**
 - Calendar Overlay: events CRUD, bulk import/export, calendar grouping and priority; calendar visibility preferences
 - **Zero‑Knowledge (IMPLEMENTED): optional encryption setup, status, migration progress, recovery questions, decryptTaskData endpoint**
 - **Journal View (IMPLEMENTED): entries CRUD, preferences management, task reference processing, classification system (Signal/Support/Backlog)**

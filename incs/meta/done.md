@@ -1,22 +1,24 @@
 # MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-10-31
+Updated: 2025-11-02
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Avellanas 8.5 — Journal View Refactored & Typography Enhanced
+- Version: Nosara 8.6 — Collaboration Features & Editor Enhancements
 - **Next Release**: Web Mirror Focus - TBD
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
-- Mission Focus Chart: Header doughnut, real-time updates, tasks + journal entries (30-day window)
+- Mission Focus Chart: Header doughnut, real-time updates, tasks + journal entries (30-day window), modal view with detailed percentages
 - Network: Smart URL detection (localhost/jagmac.local), multi-device access
-- Sharing (foundation): Share/unshare, permissions, Ready-for-Review flow
+- Sharing (foundation): Share/unshare, permissions, Ready-for-Review flow, task comments system
 - **Zero-Knowledge Encryption: COMPLETE** — Hybrid architecture, AES-256-GCM, optional setup
-- **Journal View: COMPLETE** — Horizontal date columns, CRUD operations, privacy integration, classification system
+- **Journal View: COMPLETE** — Horizontal date columns, CRUD operations, privacy integration, classification system, desktop column height optimization
 - **User Guide: COMPLETE** — Comprehensive accordion-style documentation in Settings panel
 - **Mission Focus Integration: COMPLETE** — Chart now includes journal entries from last 30 days for comprehensive signal tracking
 - **Subscription Quotas: COMPLETE** — Plan-based limits for columns, tasks, journal entries, storage with enforcement and UI feedback
 - **Bulk Delete: COMPLETE** — Flexible filtering and bulk deletion for tasks and journal entries to manage quota limits
+- **Task Collaboration: COMPLETE** — Comments system, Ready-for-Review workflow, trust management, multiple recipients
+- **Editor Enhancements: COMPLETE** — Attachments tab, PDF inline viewer, image compression, camera capture
 
 ---
 

@@ -1,0 +1,453 @@
+{
+    "when": "2025-11-05T14:01:37.547Z",
+    "window": {
+        "innerWidth": 1268,
+        "innerHeight": 954,
+        "devicePixelRatio": 2
+    },
+    "container": {
+        "scrollWidth": 1220,
+        "clientWidth": 1220,
+        "classList": [
+            "view-container",
+            "active"
+        ]
+    },
+    "columns": [
+        {
+            "index": 0,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "12px",
+                "width": 342
+            }
+        },
+        {
+            "index": 1,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "12px",
+                "width": 342
+            }
+        },
+        {
+            "index": 2,
+            "width": 352,
+            "computedStyles": {
+                "flex": "1 1 0%",
+                "minWidth": "280px",
+                "maxWidth": "350px",
+                "padding": "4px"
+            },
+            "firstCard": {
+                "padding": "12px",
+                "width": 342
+            }
+        }
+    ],
+    "console": [
+        {
+            "type": "log",
+            "args": [
+                "Checking crypto availability:"
+            ],
+            "time": "2025-11-05T14:01:36.613Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "window.crypto:",
+                true
+            ],
+            "time": "2025-11-05T14:01:36.613Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "window.crypto.subtle:",
+                true
+            ],
+            "time": "2025-11-05T14:01:36.613Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Crypto test successful:",
+                true
+            ],
+            "time": "2025-11-05T14:01:36.613Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Crypto manager initialized successfully on main thread"
+            ],
+            "time": "2025-11-05T14:01:36.613Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Encryption setup wizard ready for on-demand use"
+            ],
+            "time": "2025-11-05T14:01:36.631Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Checking encryption status..."
+            ],
+            "time": "2025-11-05T14:01:36.631Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Format actions found:",
+                27
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Search button in format actions:",
+                []
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "editor-btn-undo",
+                "action:",
+                "undo"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "editor-btn-redo",
+                "action:",
+                "redo"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "editor-btn-line-numbers",
+                "action:",
+                "toggle-line-numbers"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "editor-btn-search",
+                "action:",
+                "search-notes"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "markdown-bold"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "markdown-italic"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "markdown-code"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "markdown-h1"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "markdown-h2"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "underline"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "frame"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "calculate"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "font-size"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "font-size"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "editor-btn-clear",
+                "action:",
+                "clear"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "case"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "underline"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "frame"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "calculate"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "font-size"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "font-size"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Adding click listener to button:",
+                "",
+                "action:",
+                "clear"
+            ],
+            "time": "2025-11-05T14:01:36.632Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Setting up search drawer listeners..."
+            ],
+            "time": "2025-11-05T14:01:36.633Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "Encryption status response:",
+                {
+                    "success": true,
+                    "data": {
+                        "encryption_enabled": true,
+                        "recovery_enabled": true,
+                        "security_questions_count": 3,
+                        "migration_status": "in_progress",
+                        "tasks_migrated": 0,
+                        "total_tasks": 5,
+                        "encryption_setup_at": "2025-10-06 14:38:18",
+                        "migration_completed_at": null
+                    }
+                }
+            ],
+            "time": "2025-11-05T14:01:36.637Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "checkTaskBoardOverflow:",
+                {
+                    "scrollWidth": 1220,
+                    "clientWidth": 1220,
+                    "isOverflowing": false,
+                    "windowWidth": 1268
+                }
+            ],
+            "time": "2025-11-05T14:01:36.759Z"
+        },
+        {
+            "type": "log",
+            "args": [
+                "checkTaskBoardOverflow:",
+                {
+                    "scrollWidth": 1220,
+                    "clientWidth": 1220,
+                    "isOverflowing": false,
+                    "windowWidth": 1268
+                }
+            ],
+            "time": "2025-11-05T14:01:36.911Z"
+        }
+    ]
+}

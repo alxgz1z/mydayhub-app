@@ -6,7 +6,7 @@
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
  *
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -499,10 +499,17 @@ async function updateMissionFocusChart() {
 		
 		// Chart created successfully
 		
-		// Set tooltip
-		missionFocusChart.setAttribute('data-tooltip', 
-			`${signalPercent}% Signal, ${supportPercent}% Support, ${backlogPercent}% Backlog\n(Tasks + Last 30 Days)`
-		);
+		// Store percentages for modal display
+		window.missionFocusPercentages = {
+			signal: signalPercent,
+			support: supportPercent,
+			backlog: backlogPercent
+		};
+		
+		// Update modal chart if it's open
+		if (window.missionFocusModalInstance) {
+			updateMissionFocusModalChart();
+		}
 		
         // Clear the safety flag and process any pending request
         window._updatingMissionChart = false;
@@ -518,6 +525,158 @@ async function updateMissionFocusChart() {
             setTimeout(() => updateMissionFocusChart(), 50);
         }
 	}
+}
+
+/**
+ * Open Mission Focus Chart Modal with larger version of the donut chart
+ */
+function openMissionFocusModal() {
+	const modalOverlay = document.getElementById('mission-focus-modal-overlay');
+	if (!modalOverlay) return;
+	
+	// Register modal with modal management system - pass the close function
+	if (window.registerModal) {
+		window.registerModal('mission-focus-modal-overlay', closeMissionFocusModal);
+	}
+	
+	// Ensure modal is visible
+	if (window.ensureModalVisible) {
+		window.ensureModalVisible(modalOverlay);
+	} else {
+		modalOverlay.classList.remove('hidden');
+		modalOverlay.style.display = 'flex';
+		modalOverlay.style.zIndex = '10000';
+	}
+	
+	// Update modal chart
+	updateMissionFocusModalChart();
+}
+
+/**
+ * Close Mission Focus Chart Modal
+ */
+function closeMissionFocusModal() {
+	const modalOverlay = document.getElementById('mission-focus-modal-overlay');
+	if (!modalOverlay) return;
+	
+	// Unregister modal
+	if (window.unregisterModal) {
+		window.unregisterModal('mission-focus-modal-overlay');
+	}
+	
+	// Reset styles and hide
+	if (window.resetModalStyles) {
+		window.resetModalStyles(modalOverlay);
+	} else {
+		modalOverlay.classList.add('hidden');
+		modalOverlay.style.display = 'none';
+	}
+}
+
+/**
+ * Update the larger chart in the modal
+ */
+function updateMissionFocusModalChart() {
+	const modalCanvas = document.getElementById('mission-focus-modal-canvas');
+	if (!modalCanvas) return;
+	
+	// Get data from the main chart or recalculate
+	const percentages = window.missionFocusPercentages || { signal: 0, support: 0, backlog: 0 };
+	
+	// If we have the main chart instance, use its data
+	let signalCount = 0, supportCount = 0, backlogCount = 0;
+	if (window.missionFocusChartInstance && window.missionFocusChartInstance.data) {
+		const data = window.missionFocusChartInstance.data.datasets[0].data;
+		signalCount = data[0] || 0;
+		supportCount = data[1] || 0;
+		backlogCount = data[2] || 0;
+	}
+	
+	const total = signalCount + supportCount + backlogCount;
+	
+	// Update percentages display
+	const signalPercentEl = document.getElementById('mission-focus-signal-percent');
+	const supportPercentEl = document.getElementById('mission-focus-support-percent');
+	const backlogPercentEl = document.getElementById('mission-focus-backlog-percent');
+	
+	if (signalPercentEl) signalPercentEl.textContent = `${percentages.signal}%`;
+	if (supportPercentEl) supportPercentEl.textContent = `${percentages.support}%`;
+	if (backlogPercentEl) backlogPercentEl.textContent = `${percentages.backlog}%`;
+	
+	// Destroy existing modal chart instance if it exists
+	if (window.missionFocusModalInstance) {
+		window.missionFocusModalInstance.destroy();
+	}
+	
+	if (total === 0) {
+		// Show empty state
+		window.missionFocusModalInstance = new Chart(modalCanvas, {
+			type: 'doughnut',
+			data: {
+				datasets: [{
+					data: [1],
+					backgroundColor: ['#e5e7eb'],
+					borderWidth: 0
+				}]
+			},
+			options: {
+				responsive: true,
+				maintainAspectRatio: true,
+				aspectRatio: 1,
+				cutout: '70%',
+				plugins: {
+					legend: { display: false },
+					tooltip: { enabled: false }
+				},
+				animation: {
+					duration: 0
+				}
+			}
+		});
+		return;
+	}
+	
+	// Create larger chart for modal
+	window.missionFocusModalInstance = new Chart(modalCanvas, {
+		type: 'doughnut',
+		data: {
+			labels: ['Signal', 'Support', 'Backlog'],
+			datasets: [{
+				data: [signalCount, supportCount, backlogCount],
+				backgroundColor: [
+					'#22c55e', // Signal - Fixed mission green
+					'#3b82f6', // Support - Blue
+					'#f97316'  // Backlog - Orange
+				],
+				borderWidth: 0
+			}]
+		},
+		options: {
+			responsive: true,
+			maintainAspectRatio: true,
+			aspectRatio: 1,
+			cutout: '60%',
+			plugins: {
+				legend: { display: false },
+				tooltip: { 
+					enabled: true,
+					callbacks: {
+						label: function(context) {
+							const label = context.label || '';
+							const value = context.parsed || 0;
+							const total = context.dataset.data.reduce((a, b) => a + b, 0);
+							const percent = total > 0 ? Math.round((value / total) * 100) : 0;
+							return `${label}: ${value} (${percent}%)`;
+						}
+					}
+				}
+			},
+			animation: {
+				duration: 800,
+				easing: 'easeOutQuart'
+			}
+		}
+	});
 }
 
 
@@ -576,6 +735,11 @@ document.addEventListener('DOMContentLoaded', () => {
 	
 	// Initialize user info popover
 	initUserInfoPopover();
+	
+	// Update footer username and set up click handler
+	setTimeout(() => {
+		updateFooterUsername();
+	}, 0);
 	
 	// Initialize quota banner
 	setupQuotaBannerEventListeners();
@@ -676,9 +840,15 @@ document.addEventListener('keydown', (e) => {
 		// Close the topmost modal first
 		if (modalStack.length > 0) {
 			const topModal = modalStack[modalStack.length - 1];
-			topModal.close();
-			e.preventDefault();
-			e.stopPropagation();
+			if (topModal && typeof topModal.close === 'function') {
+				topModal.close();
+				e.preventDefault();
+				e.stopPropagation();
+			} else {
+				console.warn('Modal in stack does not have a close function:', topModal);
+				// Remove invalid modal from stack
+				modalStack.pop();
+			}
 		}
 	}
 });
@@ -789,6 +959,28 @@ function initSettingsPanel() {
 		missionFocusOnBtn.addEventListener('click', () => toggleMissionFocusChart('on'));
 		// Load saved preference
 		loadMissionFocusPreference();
+	}
+	
+	// Mission Focus Chart Modal - Click handler
+	const missionFocusChart = document.getElementById('mission-focus-chart');
+	if (missionFocusChart) {
+		missionFocusChart.addEventListener('click', () => {
+			openMissionFocusModal();
+		});
+	}
+	
+	// Mission Focus Modal - Close button
+	const missionFocusModalCloseBtn = document.getElementById('mission-focus-modal-close-btn');
+	const missionFocusModalOverlay = document.getElementById('mission-focus-modal-overlay');
+	if (missionFocusModalCloseBtn) {
+		missionFocusModalCloseBtn.addEventListener('click', closeMissionFocusModal);
+	}
+	if (missionFocusModalOverlay) {
+		missionFocusModalOverlay.addEventListener('click', (e) => {
+			if (e.target === missionFocusModalOverlay) {
+				closeMissionFocusModal();
+			}
+		});
 	}
 
 	// Completion Sound Selector
@@ -1158,7 +1350,7 @@ function updateSettingsUsername() {
 /**
  * Gets the current user's email from session or API.
  */
-function getCurrentUserEmail() {
+async function getCurrentUserEmail() {
 	// Try to get from global app data first (set in index.php)
 	if (window.appUserEmail) {
 		return window.appUserEmail;
@@ -1174,22 +1366,83 @@ function getCurrentUserEmail() {
 	if (userData) {
 		try {
 			const parsed = JSON.parse(userData);
-			return parsed.email || '';
+			if (parsed.email) {
+				return parsed.email;
+			}
 		} catch (e) {
 			console.warn('Could not parse user data from session storage');
 		}
+	}
+	
+	// Try to fetch from API
+	try {
+		const result = await window.apiFetch({
+			module: 'users',
+			action: 'getCurrentUser'
+		});
+		if (result.status === 'success' && result.data && result.data.email) {
+			// Cache it
+			window.appUserEmail = result.data.email;
+			return result.data.email;
+		}
+	} catch (error) {
+		console.warn('Could not fetch user email from API:', error);
 	}
 	
 	return '';
 }
 
 /**
+ * Updates the footer username display and adds click handler for popover.
+ */
+function updateFooterUsername() {
+	const footerUsernameEl = document.getElementById('footer-username');
+	if (!footerUsernameEl) {
+		console.warn('Footer username element not found');
+		return;
+	}
+	
+	// Get username from data attribute or current username function
+	let username = footerUsernameEl.getAttribute('data-username');
+	if (!username) {
+		username = getCurrentUsername();
+	}
+	
+	if (!username) {
+		footerUsernameEl.textContent = '';
+		return;
+	}
+	
+	// Update display
+	footerUsernameEl.textContent = username;
+	
+	// Remove existing click listeners to avoid duplicates
+	const newEl = footerUsernameEl.cloneNode(true);
+	footerUsernameEl.parentNode.replaceChild(newEl, footerUsernameEl);
+	
+	// Add click handler to open popover
+	newEl.addEventListener('click', async (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+		
+		// Get email
+		const email = await getCurrentUserEmail();
+		openUserInfoPopover(username, email);
+	});
+	
+	// Set cursor pointer to indicate it's clickable
+	newEl.style.cursor = 'pointer';
+}
+
+/**
  * Opens the user info popover with username and email.
+ * Positions it above the footer username element.
  */
 function openUserInfoPopover(username, email) {
 	const popover = document.getElementById('user-info-popover');
 	const usernameSpan = document.getElementById('user-info-username');
 	const emailSpan = document.getElementById('user-info-email');
+	const footerUsernameEl = document.getElementById('footer-username');
 	
 	if (!popover || !usernameSpan || !emailSpan) {
 		console.error('User info popover elements not found');
@@ -1200,8 +1453,43 @@ function openUserInfoPopover(username, email) {
 	usernameSpan.textContent = username || 'Not available';
 	emailSpan.textContent = email || 'Not available';
 	
+	// Position popover above footer username if element exists
+	if (footerUsernameEl) {
+		const rect = footerUsernameEl.getBoundingClientRect();
+		const popoverWidth = 300; // min-width from CSS
+		const popoverHeight = 150; // approximate height
+		const spaceAbove = rect.top;
+		const spaceBelow = window.innerHeight - rect.bottom;
+		
+		// Position above footer if there's space, otherwise below
+		if (spaceAbove >= popoverHeight + 10) {
+			popover.style.top = `${rect.top - popoverHeight - 10}px`;
+			popover.style.left = `${rect.left}px`;
+			popover.style.transform = 'none';
+		} else if (spaceBelow >= popoverHeight + 10) {
+			popover.style.top = `${rect.bottom + 10}px`;
+			popover.style.left = `${rect.left}px`;
+			popover.style.transform = 'none';
+		} else {
+			// Center if not enough space
+			popover.style.top = '50%';
+			popover.style.left = '50%';
+			popover.style.transform = 'translate(-50%, -50%)';
+		}
+	} else {
+		// Fallback: center if footer username not found
+		popover.style.top = '50%';
+		popover.style.left = '50%';
+		popover.style.transform = 'translate(-50%, -50%)';
+	}
+	
 	// Show the popover
 	popover.classList.remove('hidden');
+	
+	// Ensure modal visibility
+	if (window.ensureModalVisible) {
+		window.ensureModalVisible(popover);
+	}
 	
 	// Register in modal stack
 	registerModal('user-info-popover', closeUserInfoPopover);

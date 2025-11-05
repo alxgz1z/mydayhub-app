@@ -5,7 +5,7 @@
  * File: /uix/editor.js
  * Adapted from the robust Beta 4 implementation.
  *
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  * @author Alex & Gemini & Claude & Cursor
  *
  * Public API:
@@ -452,12 +452,156 @@
 		URL.revokeObjectURL(url);
 	}
 
-	function handleTabSwitch(tab) {
+	async function handleTabSwitch(tab) {
 		const panelId = tab.target.dataset.panel;
 		elements.tabs.forEach(t => t.classList.remove('active'));
 		elements.panels.forEach(p => p.classList.remove('active'));
 		tab.target.classList.add('active');
 		document.getElementById(`editor-panel-${panelId}`).classList.add('active');
+		
+		// Load attachments when attachments tab is clicked (only for tasks)
+		if (panelId === 'attachments' && state.currentKind === 'task' && state.currentTaskId) {
+			await loadEditorAttachments(state.currentTaskId);
+		}
+	}
+	
+	/**
+	 * Loads and renders attachments for the current task in the editor panel
+	 */
+	async function loadEditorAttachments(taskId) {
+		const attachmentsList = document.getElementById('editor-attachments-list');
+		if (!attachmentsList) return;
+		
+		attachmentsList.innerHTML = '<p class="no-attachments-message">Loading attachments...</p>';
+		
+		// Use the getAttachments function from tasks.js (should be globally accessible)
+		if (typeof window.getAttachments === 'function') {
+			const attachments = await window.getAttachments(taskId);
+			renderEditorAttachments(attachments, attachmentsList);
+		} else {
+			// Fallback: fetch directly
+			try {
+				const appURL = window.MyDayHub_Config?.appURL || '';
+				const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`, {
+					credentials: 'include'
+				});
+				const result = await response.json();
+				if (result.status === 'success') {
+					renderEditorAttachments(result.data, attachmentsList);
+				} else {
+					attachmentsList.innerHTML = '<p class="no-attachments-message">Failed to load attachments.</p>';
+				}
+			} catch (error) {
+				console.error('Error loading attachments:', error);
+				attachmentsList.innerHTML = '<p class="no-attachments-message">Error loading attachments.</p>';
+			}
+		}
+	}
+	
+	/**
+	 * Renders attachments in the editor attachments panel
+	 */
+	function renderEditorAttachments(attachments, container) {
+		container.innerHTML = '';
+		
+		if (!attachments || attachments.length === 0) {
+			container.innerHTML = '<p class="no-attachments-message">No attachments yet.</p>';
+			return;
+		}
+		
+		const appURL = window.MyDayHub_Config?.appURL || '';
+		
+		attachments.forEach(att => {
+			const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
+			const fileUrl = `${appURL}/media/imgs/${att.filename_on_server}`;
+			const fileSizeKB = (att.filesize_bytes / 1024).toFixed(1);
+			
+			const itemEl = document.createElement('div');
+			itemEl.className = 'editor-attachment-item';
+			itemEl.dataset.attachmentId = att.attachment_id;
+			
+			let thumbnailHTML = '';
+			if (isPdf) {
+				thumbnailHTML = `
+					<div class="editor-attachment-thumbnail-icon">
+						<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+							<polyline points="14 2 14 8 20 8"></polyline>
+						</svg>
+					</div>
+				`;
+			} else {
+				thumbnailHTML = `<img src="${fileUrl}" class="editor-attachment-thumbnail" alt="${att.original_filename}" />`;
+			}
+			
+			itemEl.innerHTML = `
+				${thumbnailHTML}
+				<div class="editor-attachment-info">
+					<a href="${fileUrl}" target="_blank" class="editor-attachment-filename">${att.original_filename}</a>
+					<span class="editor-attachment-size">${fileSizeKB} KB</span>
+				</div>
+				${isPdf ? '<button class="btn-view-pdf" title="View PDF in editor">👁️</button>' : ''}
+			`;
+			
+			// Make image thumbnails clickable to view full size
+			if (!isPdf) {
+				itemEl.style.cursor = 'pointer';
+				itemEl.addEventListener('click', () => {
+					window.open(fileUrl, '_blank');
+				});
+			}
+			
+			// Handle PDF view button click
+			if (isPdf) {
+				const viewBtn = itemEl.querySelector('.btn-view-pdf');
+				if (viewBtn) {
+					viewBtn.addEventListener('click', (e) => {
+						e.stopPropagation();
+						togglePdfViewer(att, fileUrl, itemEl);
+					});
+				}
+			}
+			
+			container.appendChild(itemEl);
+		});
+	}
+	
+	/**
+	 * Toggles PDF viewer embedded in the attachment item
+	 */
+	function togglePdfViewer(attachment, fileUrl, itemEl) {
+		const existingViewer = itemEl.querySelector('.editor-pdf-viewer');
+		
+		if (existingViewer) {
+			// Remove viewer if it exists
+			existingViewer.remove();
+			itemEl.classList.remove('pdf-expanded');
+			return;
+		}
+		
+		// Create iframe viewer
+		const viewerContainer = document.createElement('div');
+		viewerContainer.className = 'editor-pdf-viewer';
+		viewerContainer.innerHTML = `
+			<iframe src="${fileUrl}" class="editor-pdf-iframe" title="${attachment.original_filename}"></iframe>
+			<button class="btn-close-pdf-viewer" title="Close viewer">&times;</button>
+		`;
+		
+		// Add close button handler
+		const closeBtn = viewerContainer.querySelector('.btn-close-pdf-viewer');
+		closeBtn.addEventListener('click', (e) => {
+			e.stopPropagation();
+			viewerContainer.remove();
+			itemEl.classList.remove('pdf-expanded');
+		});
+		
+		// Insert viewer after the attachment info
+		const attachmentInfo = itemEl.querySelector('.editor-attachment-info');
+		attachmentInfo.insertAdjacentElement('afterend', viewerContainer);
+		itemEl.classList.add('pdf-expanded');
+		
+		// Scroll into view if needed
+		viewerContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 	}
 
 	function startEditingTitle() {
@@ -962,6 +1106,23 @@
 
 		elements.title.textContent = title;
 		elements.textarea.value = content;
+		
+		// Show/hide attachments tab based on whether it's a task
+		const attachmentsTab = document.getElementById('editor-tab-attachments');
+		if (attachmentsTab) {
+			if (kind === 'task') {
+				attachmentsTab.style.display = 'block';
+			} else {
+				attachmentsTab.style.display = 'none';
+				// If attachments tab is active, switch to format tab
+				if (attachmentsTab.classList.contains('active')) {
+					const formatTab = document.querySelector('[data-panel="format"]');
+					if (formatTab) {
+						formatTab.click();
+					}
+				}
+			}
+		}
 		elements.textarea.style.fontSize = `${state.fontSize}px`;
 
 		elements.overlay.classList.remove('hidden');

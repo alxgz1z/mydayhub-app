@@ -1,6 +1,6 @@
 /* Code for /uix/style.css */
 /* MyDayHub - Main Application Styles */
-/* @version 8.5 Avellanas */
+/* @version 8.6 Nosara */
 /* @author Alex & Gemini & Claude & Cursor & Cursor */
 /* ==========================================================================
    1. THEME VARIABLES & GLOBAL STYLES
@@ -423,23 +423,132 @@ body.light-mode #app-footer {
 	max-height: 24px;
 }
 
-.mission-focus-chart:hover::after {
-	content: attr(data-tooltip);
-	position: absolute;
-	top: 100%;
-	left: 50%;
-	transform: translateX(-50%);
-	background-color: rgba(0, 0, 0, 0.9);
-	color: white;
-	padding: 0.5rem 0.75rem;
-	border-radius: 0.375rem;
-	font-size: 0.75rem;
-	white-space: pre-line; /* Changed from nowrap to allow line breaks */
-	z-index: 9999;
-	margin-top: 0.5rem;
-	pointer-events: none;
-	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+/* Removed tooltip - replaced with modal */
+
+/* Mission Focus Chart Modal */
+#mission-focus-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 10000;
+}
+
+#mission-focus-modal-container {
+	background-color: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 12px;
+	max-width: 500px;
+	width: 90%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+}
+
+.mission-focus-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.25rem 1.5rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.mission-focus-modal-header h4 {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+#mission-focus-modal-body {
+	padding: 2rem;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 2rem;
+}
+
+#mission-focus-modal-chart-container {
+	width: 100%;
+	max-width: 300px;
+	aspect-ratio: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+#mission-focus-modal-canvas {
+	max-width: 100%;
+	max-height: 100%;
+}
+
+#mission-focus-modal-legend {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	width: 100%;
+}
+
+.legend-item {
+	display: flex;
+	align-items: center;
+	gap: 0.75rem;
+	padding: 0.5rem;
+	border-radius: 6px;
+	background-color: var(--bg-color);
+}
+
+.legend-color {
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+	flex-shrink: 0;
+}
+
+.legend-label {
+	flex-grow: 1;
+	color: var(--text-primary);
+	font-weight: 500;
+}
+
+.legend-percent {
+	color: var(--text-secondary);
+	font-weight: 600;
+	min-width: 45px;
+	text-align: right;
+}
+
+#mission-focus-modal-footer {
+	width: 100%;
+	text-align: center;
+}
+
+.mission-focus-modal-note {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: 0.875rem;
+	font-style: italic;
+}
+
+@media (max-width: 768px) {
+	#mission-focus-modal-container {
+		width: 95%;
+		max-width: none;
+	}
+	
+	#mission-focus-modal-body {
+		padding: 1.5rem;
+		gap: 1.5rem;
+	}
+	
+	#mission-focus-modal-chart-container {
+		max-width: 250px;
+	}
 }
 
 /* Calendar Badge */
@@ -3712,15 +3821,31 @@ body.light-mode .btn-add-column-menu:hover {
 
 /* Footer username display */
 #footer-username {
-	color: var(--text-primary);
-	font-size: 0.85rem;
-	display: inline-block;
+	color: var(--accent-color);
+	font-size: 0.875rem;
+	font-weight: 500;
+	display: inline-flex;
+	align-items: center;
 	margin-right: 1rem;
+	padding: 0.25rem 0.5rem;
+	border-radius: 0.375rem;
 	white-space: nowrap;
 	text-overflow: ellipsis;
-	overflow: hidden;
-	max-width: 80px;
-	min-width: 60px;
+	overflow: visible;
+	max-width: 120px;
+	min-width: fit-content;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+	border: 1px solid color-mix(in srgb, var(--accent-color) 20%, transparent);
+	width: fit-content;
+}
+
+#footer-username:hover {
+	background: color-mix(in srgb, var(--accent-color) 15%, transparent);
+	border-color: color-mix(in srgb, var(--accent-color) 30%, transparent);
+	transform: translateY(-1px);
+	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* Ensure footer-right spans display properly */

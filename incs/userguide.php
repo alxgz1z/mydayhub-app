@@ -5,7 +5,7 @@
  * Comprehensive user manual with accordion-style sections
  * Follows app theming and visual design patterns
  * 
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  * @author Alex & AI Assistant
  */
 
@@ -309,8 +309,9 @@ if (!isset($_SESSION['user_id'])) {
 							<li><strong>Tasks View:</strong> Kanban-style board with flexible columns and intelligent task classification</li>
 							<li><strong>Journal View:</strong> Daily entries organized by date for reflection and planning</li>
 							<li><strong>Privacy-First:</strong> Optional zero-knowledge encryption for sensitive content</li>
-							<li><strong>Collaboration:</strong> Controlled sharing with permission management</li>
+							<li><strong>Collaboration:</strong> Controlled sharing with permission management and comments</li>
 							<li><strong>Calendar Overlays:</strong> Contextual date information without disrupting your workflow</li>
+							<li><strong>User Info:</strong> Click your username in the footer to view your username and email in a popover</li>
 						</ul>
 						
 						<div class="tip-box">
@@ -421,7 +422,7 @@ if (!isset($_SESSION['user_id'])) {
 						<h3>Task Actions</h3>
 						<p>Click the menu icon (⋮) on any task to access these options:</p>
 						<ul>
-							<li><strong>Notes:</strong> Open the full editor for detailed information</li>
+							<li><strong>Notes:</strong> Open the full editor for detailed information (includes Format, Export, Find & Replace, and Attachments tabs)</li>
 							<li><strong>Due Date:</strong> Set or remove deadlines</li>
 							<li><strong>Snooze:</strong> Hide tasks until a future date</li>
 							<li><strong>Duplicate:</strong> Create a copy of the task</li>
@@ -570,7 +571,7 @@ if (!isset($_SESSION['user_id'])) {
 							<li>All View permissions, plus:</li>
 							<li>Edit title and notes</li>
 							<li>Change classification and due dates</li>
-							<li>Add comments and updates</li>
+							<li>Add, edit, and delete comments</li>
 							<li>Cannot delete, re-share, or change privacy</li>
 						</ul>
 						
@@ -583,13 +584,35 @@ if (!isset($_SESSION['user_id'])) {
 							<li>Share with additional users</li>
 						</ul>
 						
+						<h3>Task Comments System</h3>
+						<p>MyDayHub includes a social-style comment system for shared tasks:</p>
+						<ul>
+							<li><strong>Main Note:</strong> The task's primary note is editable only by the owner</li>
+							<li><strong>Comments:</strong> Both owner and recipients can add, edit, and delete comments</li>
+							<li><strong>Comment Indicator:</strong> Tasks with comments show a comment count badge in the footer</li>
+							<li><strong>Privacy:</strong> Comments are only available on non-private tasks (private tasks cannot have comments)</li>
+						</ul>
+						
+						<p><strong>How to Use Comments:</strong></p>
+						<ol>
+							<li>Open a shared task menu (⋮) and select <strong>"Comments"</strong></li>
+							<li>Or click the comment indicator badge on the task card</li>
+							<li>Type your comment in the text area</li>
+							<li>Click <strong>"Post Comment"</strong> or press Ctrl/Cmd+Enter</li>
+							<li>Edit or delete your own comments using the action buttons</li>
+						</ol>
+						
+						<div class="tip-box">
+							<strong>💡 Comment Best Practices:</strong> Use comments for quick questions, updates, or discussions. The main task note should contain important context that everyone needs to see. Comments are perfect for back-and-forth conversations without cluttering the main note.
+						</div>
+						
 						<h3>Ready for Review Workflow</h3>
 						<p>Recipients can signal when they've completed their part:</p>
 						<ol>
-							<li>Recipient clicks the status indicator on a shared task</li>
-							<li>Selects <strong>"Mark Ready for Review"</strong></li>
-							<li>Owner sees a notification badge on the task</li>
-							<li>Owner can review and either complete or provide feedback</li>
+							<li>Recipient clicks the status indicator (circle) on a shared task</li>
+							<li>The indicator fills to show "Ready for Review" status</li>
+							<li>Owner sees a notification badge ("Review") on the task</li>
+							<li>Owner can review and either complete or provide feedback via comments</li>
 						</ol>
 						
 						<h3>Unsharing Tasks</h3>
@@ -601,7 +624,7 @@ if (!isset($_SESSION['user_id'])) {
 						</ul>
 						
 						<div class="tip-box">
-							<strong>💡 Collaboration Tip:</strong> Use Edit permission for active collaborators and View permission for stakeholders who just need visibility. The Ready for Review workflow keeps everyone aligned without constant back-and-forth.
+							<strong>💡 Collaboration Tip:</strong> Use Edit permission for active collaborators and View permission for stakeholders who just need visibility. Combine comments with the Ready for Review workflow to keep everyone aligned without constant back-and-forth. Comments are perfect for asking questions, providing updates, or discussing details without modifying the main task.
 						</div>
 					</div>
 				</div>
@@ -660,6 +683,7 @@ if (!isset($_SESSION['user_id'])) {
 							<li><strong>Organization:</strong> Entries automatically sort by date</li>
 							<li><strong>Navigation:</strong> Scroll horizontally to see past and future dates</li>
 							<li><strong>Drag & Drop:</strong> Move entries between date columns</li>
+							<li><strong>Column Height:</strong> On desktop, columns automatically adjust height based on content with smooth scrolling for overflow</li>
 						</ul>
 						
 						<h3>Linking Tasks to Journal Entries</h3>
@@ -715,8 +739,33 @@ if (!isset($_SESSION['user_id'])) {
 							<li>Supported formats: JPEG, PNG, GIF, WebP, PDF</li>
 							<li>Maximum file size: 5MB per file</li>
 							<li>Access via task menu (⋮) → <strong>"Manage Files"</strong></li>
-							<li>Upload by browsing or drag-and-drop</li>
-							<li>View in-app (images) or new tab (PDFs)</li>
+							<li>Upload by browsing, drag-and-drop, or camera capture (mobile)</li>
+							<li>View in-app (images) or embedded PDF viewer</li>
+						</ul>
+						
+						<p><strong>Image Compression:</strong></p>
+						<ul>
+							<li>Large images (>1MB) are automatically compressed before upload</li>
+							<li>You'll be asked to confirm compression to reduce storage usage</li>
+							<li>Original quality is preserved for smaller images</li>
+							<li>Helps manage storage quotas efficiently</li>
+						</ul>
+						
+						<p><strong>Camera Capture:</strong></p>
+						<ul>
+							<li>Mobile users can take photos directly from the attachments modal</li>
+							<li>Click <strong>"Take Photo"</strong> button to access device camera</li>
+							<li>Photos are automatically compressed if needed</li>
+							<li>Perfect for quick documentation and note-taking</li>
+						</ul>
+						
+						<p><strong>Viewing Attachments in Editor:</strong></p>
+						<ul>
+							<li>When editing a task note, click the <strong>"Attachments"</strong> tab</li>
+							<li>View all task attachments in a convenient grid layout</li>
+							<li>Images display as thumbnails (click to view full size)</li>
+							<li>PDFs can be viewed inline using the embedded viewer (click the eye icon)</li>
+							<li>Inline PDF viewer supports full-page scrolling and can be closed anytime</li>
 						</ul>
 						
 						<h3>Calendar Overlays</h3>
@@ -734,7 +783,7 @@ if (!isset($_SESSION['user_id'])) {
 						<ul>
 							<li>Small doughnut chart in the header</li>
 							<li>Shows Signal/Support/Backlog proportions</li>
-							<li>Hover to see exact percentages</li>
+							<li>Click to open a larger modal with detailed percentages</li>
 							<li>Toggle visibility in Settings</li>
 							<li>Updates in real-time as you work</li>
 						</ul>

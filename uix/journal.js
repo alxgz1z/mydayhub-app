@@ -4,7 +4,7 @@
  * Handles the journal view functionality with horizontal date columns,
  * entry CRUD operations, and mobile-optimized navigation.
  * 
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  */
 
 class JournalView {
@@ -370,6 +370,12 @@ class JournalView {
             if (wasMobile !== this.isMobile) {
                 this.updateViewModeForScreenSize();
                 this.renderJournalView();
+            } else {
+                // On desktop, just adjust column heights without re-rendering
+                // (renderJournalView already calls adjustJournalColumnHeights)
+                if (window.innerWidth > 768) {
+                    this.adjustJournalColumnHeightsDebounced(150);
+                }
             }
         });
         
@@ -770,8 +776,11 @@ class JournalView {
                 }
             });
             
-            // Adjust column heights after rendering
-            this.adjustJournalColumnHeights();
+            // Adjust column heights after rendering (only on wide screens)
+            // Use setTimeout to ensure DOM is fully ready
+            setTimeout(() => {
+                this.adjustJournalColumnHeights();
+            }, 0);
             
             // Update quota-aware UI after rendering
             await this.updateJournalEntryCreationUI();
@@ -2108,41 +2117,64 @@ Would you like to set up encryption now?`;
     }
     
     /**
-     * Adjusts the heights of journal columns to accommodate content gracefully.
-     * Called after adding/removing entries to expand or contract columns smoothly.
+     * Debounced helper to avoid thrashing during many DOM mutations
+     */
+    adjustJournalColumnHeightsDebounced(delay = 50) {
+        if (this._adjustJournalHeightsTimer) clearTimeout(this._adjustJournalHeightsTimer);
+        this._adjustJournalHeightsTimer = setTimeout(() => {
+            this.adjustJournalColumnHeights();
+        }, delay);
+    }
+
+    /**
+     * On wide screens only: expand column height from 50vh up to 85vh
+     * if its content requires more space, then enable internal scrolling.
+     * Uses the same logic as tasks view for consistency.
      */
     adjustJournalColumnHeights() {
-        const container = document.getElementById('journal-view');
-        if (!container) return;
-        
-        // Only apply on non-mobile screens
-        if (window.innerWidth <= 768) {
-            return;
-        }
-        
-        const columns = document.querySelectorAll('.journal-column');
+        // Only apply for wide screens; allow stacked/mobile to grow naturally
+        if (window.innerWidth <= 768) return;
+
+        const columns = Array.from(document.querySelectorAll('.journal-column'));
         if (columns.length === 0) return;
-        
-        // Reset all column heights to auto to measure content
-        columns.forEach(column => {
-            column.style.height = 'auto';
+
+        const baseMin = Math.round(window.innerHeight * 0.50); // 50vh
+        const maxCap = Math.round(window.innerHeight * 0.85);  // 85vh (user-tuned)
+
+        // First pass: compute desired height per column based on content
+        const desiredHeights = columns.map(col => {
+            const body = col.querySelector('.journal-entries-container');
+            if (!body) return baseMin;
+            // Clear inline styles that could influence measurements
+            col.style.height = '';
+            body.style.maxHeight = '';
+            body.style.overflowY = '';
+
+            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
+            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
+            const contentNeeded = headerH + footerH + body.scrollHeight + 2;
+            return Math.max(baseMin, Math.min(contentNeeded, maxCap));
         });
-        
-        // Find the tallest column and set all columns to that height
-        let maxHeight = 0;
-        columns.forEach(column => {
-            const height = column.offsetHeight;
-            if (height > maxHeight) {
-                maxHeight = height;
-            }
+
+        // Equalize height cosmetically using the tallest desired height, within cap
+        const equalized = Math.min(Math.max(...desiredHeights), maxCap);
+
+        // Second pass: apply equalized height and set per-column body scrolling
+        columns.forEach((col, idx) => {
+            const body = col.querySelector('.journal-entries-container');
+            if (!body) return;
+
+            const headerH = col.querySelector('.journal-column-header')?.offsetHeight || 0;
+            const footerH = col.querySelector('.journal-column-footer')?.offsetHeight || 0;
+            // Set height with !important via setProperty to override CSS
+            col.style.setProperty('height', equalized + 'px', 'important');
+            col.style.setProperty('max-height', equalized + 'px', 'important');
+
+            // Compute body viewport height inside the column and set scroll when needed
+            const bodyViewport = Math.max(0, equalized - headerH - footerH - 2);
+            body.style.setProperty('max-height', bodyViewport + 'px', 'important');
+            body.style.overflowY = (body.scrollHeight > bodyViewport) ? 'auto' : 'hidden';
         });
-        
-        // Apply the max height to all columns
-        if (maxHeight > 0) {
-            columns.forEach(column => {
-                column.style.height = `${maxHeight}px`;
-            });
-        }
     }
     
     toggleShowOnlyWithNotes() {

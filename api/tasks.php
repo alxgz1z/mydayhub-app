@@ -7,7 +7,7 @@
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
  *
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -269,6 +269,31 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 		case 'toggleReadyForReview':
 			if ($method === 'POST') {
 				handle_toggle_ready_for_review($pdo, $userId, $data);
+			}
+			break;
+		
+		// Modified for Task Comments System - Comment management endpoints
+		case 'addComment':
+			if ($method === 'POST') {
+				handle_add_task_comment($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'getComments':
+			if ($method === 'POST' || $method === 'GET') {
+				handle_get_task_comments($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'editComment':
+			if ($method === 'POST') {
+				handle_edit_task_comment($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'deleteComment':
+			if ($method === 'POST') {
+				handle_delete_task_comment($pdo, $userId, $data);
 			}
 			break;
 			
@@ -1026,11 +1051,13 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 
 		// Modified for Deleted User Cleanup - Exclude shared tasks from deleted/suspended users
 		// Modified for Shared Task Completion - Exclude completed shared tasks from receiver view
+		// Modified for Task Comments System - Include comment counts
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
 				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at,
-				COUNT(ta.attachment_id) as attachments_count,
+				COUNT(DISTINCT ta.attachment_id) as attachments_count,
+				COUNT(DISTINCT tc.comment_id) as comments_count,
 				s.permission as access_type,
 				COALESCE(s.ready_for_review, 0) as ready_for_review,
 				u.username as owner_username
@@ -1038,6 +1065,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			 JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task'
 			 JOIN users u ON u.user_id = t.user_id
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
+			 LEFT JOIN task_comments tc ON t.task_id = tc.task_id AND tc.deleted_at IS NULL
 			 WHERE s.recipient_id = :userId 
 			 AND t.deleted_at IS NULL 
 			 AND u.status = 'active'
@@ -1074,14 +1102,17 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		}
 
 		// Get user's own tasks
+		// Modified for Task Comments System - Include comment counts
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
 				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, t.journal_entry_id,
-				COUNT(ta.attachment_id) as attachments_count,
+				COUNT(DISTINCT ta.attachment_id) as attachments_count,
+				COUNT(DISTINCT tc.comment_id) as comments_count,
 				'owner' as access_type
 			 FROM tasks t
 			 LEFT JOIN task_attachments ta ON t.task_id = ta.task_id
+			 LEFT JOIN task_comments tc ON t.task_id = tc.task_id AND tc.deleted_at IS NULL
 			 WHERE t.user_id = :userId AND t.deleted_at IS NULL
 			 GROUP BY t.task_id
 			 ORDER BY t.position ASC"
@@ -2174,7 +2205,302 @@ function handle_toggle_ready_for_review(PDO $pdo, int $userId, ?array $data): vo
 	}
 }
 
+/**
+ * Helper function to record task activity (for future activity feed)
+ * Modified for Task Comments System - Activity logging
+ */
+function recordTaskActivity(PDO $pdo, int $taskId, int $userId, string $activityType, ?array $activityData = null): void {
+	try {
+		$stmt = $pdo->prepare("
+			INSERT INTO task_activity (task_id, user_id, activity_type, activity_data, created_at)
+			VALUES (?, ?, ?, ?, UTC_TIMESTAMP())
+		");
+		$stmt->execute([
+			$taskId,
+			$userId,
+			$activityType,
+			$activityData ? json_encode($activityData) : null
+		]);
+	} catch (Exception $e) {
+		// Log but don't fail the main operation if activity logging fails
+		log_debug_message('Error recording task activity: ' . $e->getMessage());
+	}
+}
 
+/**
+ * Adds a comment to a task
+ * Modified for Task Comments System - Social-style comment system
+ * Requires: data.task_id, data.content
+ */
+function handle_add_task_comment(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	$content = isset($data['content']) ? trim($data['content']) : '';
+	
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+	
+	if (empty($content)) {
+		send_json_response(['status' => 'error', 'message' => 'Comment content cannot be empty.'], 400);
+		return;
+	}
+	
+	try {
+		$pdo->beginTransaction();
+		
+		// Verify user has access to this task (owner or recipient)
+		$accessCheck = $pdo->prepare("
+			SELECT t.user_id as owner_id, s.permission, s.recipient_id
+			FROM tasks t
+			LEFT JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task' AND s.recipient_id = ?
+			WHERE t.task_id = ? AND t.deleted_at IS NULL
+			AND (t.user_id = ? OR s.recipient_id = ?)
+		");
+		$accessCheck->execute([$userId, $taskId, $userId, $userId]);
+		$access = $accessCheck->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$access) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have access.'], 404);
+			return;
+		}
+		
+		// Verify task is not private (can't comment on private tasks)
+		$taskCheck = $pdo->prepare("SELECT is_private FROM tasks WHERE task_id = ?");
+		$taskCheck->execute([$taskId]);
+		$task = $taskCheck->fetch(PDO::FETCH_ASSOC);
+		
+		if ($task && $task['is_private']) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Cannot comment on private tasks.'], 403);
+			return;
+		}
+		
+		// Insert comment
+		$stmt = $pdo->prepare("
+			INSERT INTO task_comments (task_id, user_id, content, created_at, updated_at)
+			VALUES (?, ?, ?, UTC_TIMESTAMP(), UTC_TIMESTAMP())
+		");
+		$stmt->execute([$taskId, $userId, $content]);
+		$commentId = $pdo->lastInsertId();
+		
+		// Log activity
+		recordTaskActivity($pdo, $taskId, $userId, 'comment_add', ['comment_id' => $commentId]);
+		
+		// Get the created comment with user info
+		$commentStmt = $pdo->prepare("
+			SELECT c.comment_id, c.task_id, c.user_id, c.content, c.created_at, c.updated_at,
+				   u.username, u.email
+			FROM task_comments c
+			JOIN users u ON u.user_id = c.user_id
+			WHERE c.comment_id = ?
+		");
+		$commentStmt->execute([$commentId]);
+		$comment = $commentStmt->fetch(PDO::FETCH_ASSOC);
+		
+		$pdo->commit();
+		
+		send_json_response([
+			'status' => 'success',
+			'message' => 'Comment added successfully.',
+			'data' => $comment
+		], 201);
+		
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message('Error in handle_add_task_comment: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to add comment.'], 500);
+	}
+}
+
+/**
+ * Gets all comments for a task
+ * Modified for Task Comments System - Returns comments for accessible tasks
+ * Requires: data.task_id
+ */
+function handle_get_task_comments(PDO $pdo, int $userId, ?array $data): void {
+	$taskId = isset($data['task_id']) ? (int)$data['task_id'] : 0;
+	
+	if ($taskId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid task_id is required.'], 400);
+		return;
+	}
+	
+	try {
+		// Verify user has access to this task
+		$accessCheck = $pdo->prepare("
+			SELECT t.user_id as owner_id, s.permission, s.recipient_id
+			FROM tasks t
+			LEFT JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task' AND s.recipient_id = ?
+			WHERE t.task_id = ? AND t.deleted_at IS NULL
+			AND (t.user_id = ? OR s.recipient_id = ?)
+		");
+		$accessCheck->execute([$userId, $taskId, $userId, $userId]);
+		$access = $accessCheck->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$access) {
+			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have access.'], 404);
+			return;
+		}
+		
+		// Get comments
+		$stmt = $pdo->prepare("
+			SELECT c.comment_id, c.task_id, c.user_id, c.content, c.created_at, c.updated_at,
+				   u.username, u.email
+			FROM task_comments c
+			JOIN users u ON u.user_id = c.user_id
+			WHERE c.task_id = ? AND c.deleted_at IS NULL
+			ORDER BY c.created_at ASC
+		");
+		$stmt->execute([$taskId]);
+		$comments = $stmt->fetchAll(PDO::FETCH_ASSOC);
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => $comments,
+			'current_user_id' => $userId // Include current user ID for UI permissions
+		], 200);
+		
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_get_task_comments: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to retrieve comments.'], 500);
+	}
+}
+
+/**
+ * Edits a comment
+ * Modified for Task Comments System - Users can edit their own comments
+ * Requires: data.comment_id, data.content
+ */
+function handle_edit_task_comment(PDO $pdo, int $userId, ?array $data): void {
+	$commentId = isset($data['comment_id']) ? (int)$data['comment_id'] : 0;
+	$content = isset($data['content']) ? trim($data['content']) : '';
+	
+	if ($commentId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid comment_id is required.'], 400);
+		return;
+	}
+	
+	if (empty($content)) {
+		send_json_response(['status' => 'error', 'message' => 'Comment content cannot be empty.'], 400);
+		return;
+	}
+	
+	try {
+		$pdo->beginTransaction();
+		
+		// Verify comment exists and user owns it
+		$checkStmt = $pdo->prepare("
+			SELECT comment_id, task_id, user_id FROM task_comments
+			WHERE comment_id = ? AND user_id = ? AND deleted_at IS NULL
+		");
+		$checkStmt->execute([$commentId, $userId]);
+		$comment = $checkStmt->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$comment) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Comment not found or you do not have permission to edit it.'], 404);
+			return;
+		}
+		
+		// Update comment
+		$updateStmt = $pdo->prepare("
+			UPDATE task_comments
+			SET content = ?, updated_at = UTC_TIMESTAMP()
+			WHERE comment_id = ?
+		");
+		$updateStmt->execute([$content, $commentId]);
+		
+		// Log activity
+		recordTaskActivity($pdo, $comment['task_id'], $userId, 'comment_edit', ['comment_id' => $commentId]);
+		
+		// Get updated comment with user info
+		$commentStmt = $pdo->prepare("
+			SELECT c.comment_id, c.task_id, c.user_id, c.content, c.created_at, c.updated_at,
+				   u.username, u.email
+			FROM task_comments c
+			JOIN users u ON u.user_id = c.user_id
+			WHERE c.comment_id = ?
+		");
+		$commentStmt->execute([$commentId]);
+		$updatedComment = $commentStmt->fetch(PDO::FETCH_ASSOC);
+		
+		$pdo->commit();
+		
+		send_json_response([
+			'status' => 'success',
+			'message' => 'Comment updated successfully.',
+			'data' => $updatedComment
+		], 200);
+		
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message('Error in handle_edit_task_comment: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to update comment.'], 500);
+	}
+}
+
+/**
+ * Deletes a comment
+ * Modified for Task Comments System - Users can delete their own comments
+ * Requires: data.comment_id
+ */
+function handle_delete_task_comment(PDO $pdo, int $userId, ?array $data): void {
+	$commentId = isset($data['comment_id']) ? (int)$data['comment_id'] : 0;
+	
+	if ($commentId <= 0) {
+		send_json_response(['status' => 'error', 'message' => 'Valid comment_id is required.'], 400);
+		return;
+	}
+	
+	try {
+		$pdo->beginTransaction();
+		
+		// Verify comment exists and user owns it
+		$checkStmt = $pdo->prepare("
+			SELECT comment_id, task_id, user_id FROM task_comments
+			WHERE comment_id = ? AND user_id = ? AND deleted_at IS NULL
+		");
+		$checkStmt->execute([$commentId, $userId]);
+		$comment = $checkStmt->fetch(PDO::FETCH_ASSOC);
+		
+		if (!$comment) {
+			$pdo->rollBack();
+			send_json_response(['status' => 'error', 'message' => 'Comment not found or you do not have permission to delete it.'], 404);
+			return;
+		}
+		
+		// Soft delete comment
+		$deleteStmt = $pdo->prepare("
+			UPDATE task_comments
+			SET deleted_at = UTC_TIMESTAMP()
+			WHERE comment_id = ?
+		");
+		$deleteStmt->execute([$commentId]);
+		
+		// Log activity
+		recordTaskActivity($pdo, $comment['task_id'], $userId, 'comment_delete', ['comment_id' => $commentId]);
+		
+		$pdo->commit();
+		
+		send_json_response([
+			'status' => 'success',
+			'message' => 'Comment deleted successfully.'
+		], 200);
+		
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message('Error in handle_delete_task_comment: ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to delete comment.'], 500);
+	}
+}
 
 /**
  * Fetches all attachments for the current user across all tasks with sorting options.

@@ -6,7 +6,7 @@
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
  *
- * @version 8.5 Avellanas
+ * @version 8.6 Nosara
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -188,6 +188,7 @@ function getTaskDataFromElement(taskCardEl) {
 		 due_date: taskCardEl.dataset.dueDate || null,
 		 has_notes: taskCardEl.dataset.hasNotes === 'true',
 		 attachments_count: parseInt(taskCardEl.dataset.attachmentsCount || '0', 10),
+		 comments_count: parseInt(taskCardEl.dataset.commentsCount || '0', 10),
 		 updated_at: taskCardEl.dataset.updatedAt,
 		 snoozed_until: taskCardEl.dataset.snoozedUntil || null,
 		 snoozed_at: taskCardEl.dataset.snoozedAt || null,
@@ -481,6 +482,10 @@ function initEventListeners() {
 				const taskId = taskCard.dataset.taskId;
 				const taskTitle = decodeURIComponent(taskCard.dataset.title);
 				await openAttachmentsModal(taskId, taskTitle);
+			} else if (action === 'open-comments') {
+				const taskId = taskCard.dataset.taskId;
+				const taskTitle = decodeURIComponent(taskCard.dataset.title);
+				await openCommentsModal(taskId, taskTitle);
 			} else if (action === 'edit-snooze') {
 				await openSnoozeModalForTask(taskCard);
 			} else if (action === 'view-journal-entry') {
@@ -706,6 +711,9 @@ function initEventListeners() {
 				} else if (action === 'attachments') {
 					const taskTitle = decodeURIComponent(taskCard.dataset.title);
 					await openAttachmentsModal(taskId, taskTitle);
+				} else if (action === 'comments') {
+					const taskTitle = decodeURIComponent(taskCard.dataset.title);
+					await openCommentsModal(taskId, taskTitle);
 				} else if (action === 'share') {
 					if (taskId) {
 						// close the menu to avoid stray clicks under the modal
@@ -1423,6 +1431,18 @@ function closeAllTaskActionMenus() {
 			 <span>Attachments</span>
 		 </button>
 	 `;
+
+	 // Comments - Available to all users (but not for private tasks)
+	 if (!isPrivate) {
+		 menuHTML += `
+			 <button class="task-action-btn" data-action="comments">
+				 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+					 <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+				 </svg>
+				 <span>Comments</span>
+			 </button>
+		 `;
+	 }
  
 	 // Duplicate - Owner only and not private (security reasons)
 	 if (isOwner && !isPrivate) {
@@ -2627,7 +2647,9 @@ function createTaskCard(taskData) {
 	const hasReadyIndicator = isOwner && taskData.shares && 
 		taskData.shares.some(share => share.ready_for_review);
 	const hasJournalOrigin = taskData.journal_entry_id && taskData.journal_entry_id > 0;
-	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator || hasJournalOrigin;
+	const commentsCount = taskData.comments_count || 0;
+	const hasCommentsIndicator = commentsCount > 0;
+	const hasIndicators = taskData.has_notes || taskData.due_date || (taskData.attachments_count && taskData.attachments_count > 0) || hasSnoozeIndicator || hasSharedIndicator || hasReadyIndicator || hasJournalOrigin || hasCommentsIndicator;
 	
 	if (hasIndicators) {
 		let notesIndicator = '';
@@ -2686,6 +2708,19 @@ function createTaskCard(taskData) {
 				<span class="task-indicator indicator-shortcut" data-action="open-attachments" title="${taskData.attachments_count} attachment(s)">
 					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
 					<span class="attachment-count">${taskData.attachments_count}</span>
+				</span>
+			`;
+		}
+
+		// Modified for Task Comments System - Comments indicator
+		let commentsIndicator = '';
+		if (hasCommentsIndicator && !isPrivate) {
+			commentsIndicator = `
+				<span class="task-indicator indicator-shortcut" data-action="open-comments" title="${commentsCount} comment${commentsCount !== 1 ? 's' : ''} - Click to view">
+					<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+					</svg>
+					<span class="comment-count">${commentsCount}</span>
 				</span>
 			`;
 		}
@@ -2756,6 +2791,7 @@ function createTaskCard(taskData) {
 		footerHTML = `
 			<div class="task-card-footer">
 				${attachmentsIndicator}
+				${commentsIndicator}
 				${snoozeIndicator}
 				${notesIndicator}
 				${dueDateIndicator}
@@ -2809,6 +2845,7 @@ function createTaskCard(taskData) {
 			data-updated-at="${taskData.updated_at || ''}"
 			data-due-date="${taskData.due_date || ''}"
 			data-attachments-count="${taskData.attachments_count || 0}"
+			data-comments-count="${commentsCount}"
 			data-snoozed-until="${taskData.snoozed_until || ''}"
 			data-snoozed-at="${taskData.snoozed_at || ''}"
 			data-is-snoozed="${taskData.is_snoozed ? 'true' : 'false'}"
@@ -2872,8 +2909,9 @@ async function deleteAttachment(attachmentId) {
 
 /**
  * Fetches the list of attachments for a given task from the API.
+ * Made globally accessible for use in editor.js
  */
-async function getAttachments(taskId) {
+window.getAttachments = async function getAttachments(taskId) {
 	try {
 		const appURL = window.MyDayHub_Config?.appURL || '';
 		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`, {
@@ -3038,8 +3076,122 @@ async function openAttachmentsModal(taskId, taskTitle) {
 			}
 		});
 
-		const handleFiles = (files) => {
-			stagedFiles.push(...Array.from(files));
+		/**
+		 * Compresses an image file using Canvas API to reduce file size
+		 * @param {File} file - The image file to compress
+		 * @param {number} maxWidth - Maximum width in pixels (default: 1920)
+		 * @param {number} maxHeight - Maximum height in pixels (default: 1920)
+		 * @param {number} quality - JPEG quality 0-1 (default: 0.8)
+		 * @returns {Promise<File>} - Compressed file as a Blob converted to File
+		 */
+		const compressImage = (file, maxWidth = 1920, maxHeight = 1920, quality = 0.8) => {
+			return new Promise((resolve, reject) => {
+				const reader = new FileReader();
+				reader.onload = (e) => {
+					const img = new Image();
+					img.onload = () => {
+						// Calculate new dimensions
+						let width = img.width;
+						let height = img.height;
+						
+						if (width > maxWidth || height > maxHeight) {
+							const ratio = Math.min(maxWidth / width, maxHeight / height);
+							width = width * ratio;
+							height = height * ratio;
+						}
+						
+						// Create canvas and draw resized image
+						const canvas = document.createElement('canvas');
+						canvas.width = width;
+						canvas.height = height;
+						const ctx = canvas.getContext('2d');
+						ctx.drawImage(img, 0, 0, width, height);
+						
+						// Convert to blob
+						canvas.toBlob((blob) => {
+							if (!blob) {
+								reject(new Error('Failed to compress image'));
+								return;
+							}
+							
+							// Create a new File object with the same name
+							const compressedFile = new File([blob], file.name, {
+								type: 'image/jpeg',
+								lastModified: Date.now()
+							});
+							
+							resolve(compressedFile);
+						}, 'image/jpeg', quality);
+					};
+					img.onerror = () => reject(new Error('Failed to load image'));
+					img.src = e.target.result;
+				};
+				reader.onerror = () => reject(new Error('Failed to read file'));
+				reader.readAsDataURL(file);
+			});
+		};
+
+		/**
+		 * Processes image files and asks user for compression confirmation if needed
+		 * @param {FileList|File[]} files - Files to process
+		 * @returns {Promise<File[]>} - Processed files ready for upload
+		 */
+		const processImageFiles = async (files) => {
+			const processedFiles = [];
+			
+			for (const file of Array.from(files)) {
+				// Only process image files (not PDFs)
+				if (file.type.startsWith('image/')) {
+					const originalSizeMB = (file.size / 1024 / 1024).toFixed(2);
+					
+					// If image is larger than 1MB, offer compression
+					if (file.size > 1024 * 1024) {
+						const shouldCompress = await showConfirm(
+							`This image (${originalSizeMB} MB) can be compressed to reduce storage usage. ` +
+							`Would you like to compress it before uploading?`,
+							{ confirmText: 'Compress', cancelText: 'Keep Original' }
+						);
+						
+						if (shouldCompress) {
+							try {
+								const compressedFile = await compressImage(file);
+								const compressedSizeMB = (compressedFile.size / 1024 / 1024).toFixed(2);
+								const savingsPercent = ((1 - compressedFile.size / file.size) * 100).toFixed(0);
+								
+								showToast({
+									message: `Image compressed: ${originalSizeMB} MB → ${compressedSizeMB} MB (${savingsPercent}% savings)`,
+									type: 'success'
+								});
+								
+								processedFiles.push(compressedFile);
+							} catch (error) {
+								console.error('Compression failed:', error);
+								showToast({
+									message: 'Failed to compress image. Uploading original.',
+									type: 'warning'
+								});
+								processedFiles.push(file);
+							}
+						} else {
+							processedFiles.push(file);
+						}
+					} else {
+						// Small images don't need compression
+						processedFiles.push(file);
+					}
+				} else {
+					// Non-image files (like PDFs) pass through unchanged
+					processedFiles.push(file);
+				}
+			}
+			
+			return processedFiles;
+		};
+
+		const handleFiles = async (files) => {
+			// Process images and get user confirmation for compression
+			const processedFiles = await processImageFiles(files);
+			stagedFiles.push(...processedFiles);
 			renderStagedFiles();
 		};
 
@@ -3082,7 +3234,20 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		};
 
 		const handleBrowseClick = () => fileInput.click();
+		const handleTakePhotoClick = () => {
+			const cameraInput = document.getElementById('attachment-camera-input');
+			if (cameraInput) {
+				cameraInput.click();
+			}
+		};
 		const handleFileChange = (e) => handleFiles(e.target.files);
+		const handleCameraChange = (e) => {
+			if (e.target.files && e.target.files.length > 0) {
+				handleFiles(e.target.files);
+				// Reset the input so the same file can be selected again
+				e.target.value = '';
+			}
+		};
 		const preventDefaults = (e) => { e.preventDefault(); e.stopPropagation(); };
 		const handleDragEnter = () => dropZone.classList.add('drag-over');
 		const handleDragLeave = () => dropZone.classList.remove('drag-over');
@@ -3104,7 +3269,15 @@ async function openAttachmentsModal(taskId, taskTitle) {
 
 		const closeModalHandler = () => {
 			btnBrowse.removeEventListener('click', handleBrowseClick);
+			const btnTakePhoto = document.getElementById('btn-take-photo');
+			if (btnTakePhoto) {
+				btnTakePhoto.removeEventListener('click', handleTakePhotoClick);
+			}
 			fileInput.removeEventListener('change', handleFileChange);
+			const cameraInput = document.getElementById('attachment-camera-input');
+			if (cameraInput) {
+				cameraInput.removeEventListener('change', handleCameraChange);
+			}
 			btnUploadStaged.removeEventListener('click', handleUploadStaged);
 			listContainer.removeEventListener('click', handleDeleteAttachmentClick);
 			['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -3130,7 +3303,15 @@ async function openAttachmentsModal(taskId, taskTitle) {
 		};
 		
 		btnBrowse.addEventListener('click', handleBrowseClick);
+		const btnTakePhoto = document.getElementById('btn-take-photo');
+		if (btnTakePhoto) {
+			btnTakePhoto.addEventListener('click', handleTakePhotoClick);
+		}
 		fileInput.addEventListener('change', handleFileChange);
+		const cameraInput = document.getElementById('attachment-camera-input');
+		if (cameraInput) {
+			cameraInput.addEventListener('change', handleCameraChange);
+		}
 		btnUploadStaged.addEventListener('click', handleUploadStaged);
 		listContainer.addEventListener('click', handleDeleteAttachmentClick);
 		['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -3163,6 +3344,372 @@ function closeAttachmentsModal() {
 
 		const btnUpload = document.getElementById('btn-upload-staged');
 		if (btnUpload) btnUpload.style.display = 'none';
+	}
+}
+
+// --- Comments Functions ---
+
+/**
+ * Fetches comments for a task
+ * Modified for Task Comments System
+ */
+async function getTaskComments(taskId) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'getComments',
+			data: { task_id: taskId }
+		});
+		
+		if (result.status === 'success') {
+			return result.data || [];
+		}
+		return [];
+	} catch (error) {
+		console.error('Error fetching comments:', error);
+		return [];
+	}
+}
+
+/**
+ * Adds a comment to a task
+ * Modified for Task Comments System
+ */
+async function addTaskComment(taskId, content) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'addComment',
+			data: {
+				task_id: taskId,
+				content: content
+			}
+		});
+		
+		if (result.status === 'success') {
+			return result.data;
+		}
+		return null;
+	} catch (error) {
+		console.error('Error adding comment:', error);
+		showToast({ message: 'Failed to add comment.', type: 'error' });
+		return null;
+	}
+}
+
+/**
+ * Edits a comment
+ * Modified for Task Comments System
+ */
+async function editTaskComment(commentId, content) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'editComment',
+			data: {
+				comment_id: commentId,
+				content: content
+			}
+		});
+		
+		if (result.status === 'success') {
+			return result.data;
+		}
+		return null;
+	} catch (error) {
+		console.error('Error editing comment:', error);
+		showToast({ message: 'Failed to edit comment.', type: 'error' });
+		return null;
+	}
+}
+
+/**
+ * Deletes a comment
+ * Modified for Task Comments System
+ */
+async function deleteTaskComment(commentId) {
+	try {
+		const result = await window.apiFetch({
+			module: 'tasks',
+			action: 'deleteComment',
+			data: {
+				comment_id: commentId
+			}
+		});
+		
+		return result.status === 'success';
+	} catch (error) {
+		console.error('Error deleting comment:', error);
+		showToast({ message: 'Failed to delete comment.', type: 'error' });
+		return false;
+	}
+}
+
+/**
+ * Helper function to escape HTML
+ */
+function escapeHtml(text) {
+	const div = document.createElement('div');
+	div.textContent = text;
+	return div.innerHTML;
+}
+
+/**
+ * Renders the comments list
+ * Modified for Task Comments System
+ */
+function renderCommentsList(comments, container, currentUserId) {
+	if (!comments || comments.length === 0) {
+		container.innerHTML = '<p class="no-comments-message">No comments yet. Be the first to comment!</p>';
+		return;
+	}
+	
+	container.innerHTML = comments.map(comment => {
+		const isOwnComment = comment.user_id === currentUserId;
+		const createdDate = new Date(comment.created_at);
+		const formattedDate = createdDate.toLocaleDateString('en-US', {
+			month: 'short',
+			day: 'numeric',
+			year: 'numeric',
+			hour: 'numeric',
+			minute: '2-digit'
+		});
+		
+		const editControls = isOwnComment ? `
+			<div class="comment-actions">
+				<button class="btn-comment-edit" data-comment-id="${comment.comment_id}" title="Edit comment">Edit</button>
+				<button class="btn-comment-delete" data-comment-id="${comment.comment_id}" title="Delete comment">Delete</button>
+			</div>
+		` : '';
+		
+		return `
+			<div class="comment-item" data-comment-id="${comment.comment_id}">
+				<div class="comment-header">
+					<span class="comment-author">${escapeHtml(comment.username || comment.email || 'Unknown')}</span>
+					<span class="comment-date">${formattedDate}</span>
+				</div>
+				<div class="comment-content">${escapeHtml(comment.content)}</div>
+				${editControls}
+			</div>
+		`;
+	}).join('');
+}
+
+/**
+ * Opens the comments modal and populates it with comments for a given task.
+ * Modified for Task Comments System
+ */
+async function openCommentsModal(taskId, taskTitle) {
+	if (isModalOpening) return;
+	isModalOpening = true;
+
+	try {
+		const modalOverlay = document.getElementById('comments-modal-overlay');
+		const modalTitle = document.getElementById('comments-modal-title');
+		const commentsList = document.getElementById('comments-list');
+		const newCommentInput = document.getElementById('new-comment-input');
+		const btnAddComment = document.getElementById('btn-add-comment');
+		const closeButton = document.getElementById('comments-modal-close-btn');
+		
+		if (!modalOverlay || !modalTitle || !commentsList || !newCommentInput || !btnAddComment) {
+			console.error('Comments modal components are missing!');
+			return;
+		}
+
+		modalOverlay.dataset.currentTaskId = taskId;
+		modalTitle.textContent = `Comments: ${taskTitle}`;
+		commentsList.innerHTML = '<p>Loading comments...</p>';
+		newCommentInput.value = '';
+		modalOverlay.classList.remove('hidden');
+
+		let currentUserId = null;
+
+		const refreshCommentsList = async () => {
+			try {
+				const result = await window.apiFetch({
+					module: 'tasks',
+					action: 'getComments',
+					data: { task_id: taskId }
+				});
+				
+				if (result.status === 'success') {
+					const comments = result.data || [];
+					currentUserId = result.current_user_id || null;
+					renderCommentsList(comments, commentsList, currentUserId);
+					updateTaskCardCommentCount(taskId, comments.length);
+				} else {
+					commentsList.innerHTML = '<p class="no-comments-message">Could not load comments.</p>';
+				}
+			} catch (error) {
+				console.error('Error refreshing comments:', error);
+				commentsList.innerHTML = '<p class="no-comments-message">Error loading comments.</p>';
+			}
+		};
+		
+		await refreshCommentsList();
+
+		const handleAddComment = async () => {
+			const content = newCommentInput.value.trim();
+			if (!content) {
+				showToast({ message: 'Please enter a comment.', type: 'info' });
+				return;
+			}
+
+			btnAddComment.disabled = true;
+			btnAddComment.textContent = 'Posting...';
+
+			const newComment = await addTaskComment(taskId, content);
+			if (newComment) {
+				newCommentInput.value = '';
+				await refreshCommentsList();
+				showToast({ message: 'Comment added successfully.', type: 'success' });
+			}
+
+			btnAddComment.disabled = false;
+			btnAddComment.textContent = 'Post Comment';
+		};
+
+		const handleCommentClick = async (e) => {
+			const editBtn = e.target.closest('.btn-comment-edit');
+			const deleteBtn = e.target.closest('.btn-comment-delete');
+			
+			if (editBtn) {
+				const commentId = parseInt(editBtn.dataset.commentId, 10);
+				const commentItem = editBtn.closest('.comment-item');
+				const contentDiv = commentItem.querySelector('.comment-content');
+				const currentContent = contentDiv.textContent;
+				
+				// Create edit interface
+				const textarea = document.createElement('textarea');
+				textarea.value = currentContent;
+				textarea.rows = 3;
+				textarea.className = 'comment-edit-input';
+				
+				const saveBtn = document.createElement('button');
+				saveBtn.className = 'btn btn-primary btn-comment-save';
+				saveBtn.textContent = 'Save';
+				
+				const cancelBtn = document.createElement('button');
+				cancelBtn.className = 'btn btn-comment-cancel';
+				cancelBtn.textContent = 'Cancel';
+				
+				const editControls = document.createElement('div');
+				editControls.className = 'comment-edit-controls';
+				editControls.appendChild(saveBtn);
+				editControls.appendChild(cancelBtn);
+				
+				contentDiv.replaceWith(textarea);
+				commentItem.querySelector('.comment-actions').replaceWith(editControls);
+				
+				const handleSave = async () => {
+					const newContent = textarea.value.trim();
+					if (!newContent) {
+						showToast({ message: 'Comment cannot be empty.', type: 'error' });
+						return;
+					}
+					
+					saveBtn.disabled = true;
+					saveBtn.textContent = 'Saving...';
+					
+					const updatedComment = await editTaskComment(commentId, newContent);
+					if (updatedComment) {
+						await refreshCommentsList();
+						showToast({ message: 'Comment updated successfully.', type: 'success' });
+					}
+					
+					saveBtn.disabled = false;
+				};
+				
+				const handleCancel = async () => {
+					await refreshCommentsList();
+				};
+				
+				saveBtn.addEventListener('click', handleSave);
+				cancelBtn.addEventListener('click', handleCancel);
+				
+			} else if (deleteBtn) {
+				const commentId = parseInt(deleteBtn.dataset.commentId, 10);
+				const confirmed = await showConfirm('Are you sure you want to delete this comment?');
+				if (confirmed) {
+					const success = await deleteTaskComment(commentId);
+					if (success) {
+						await refreshCommentsList();
+						showToast({ message: 'Comment deleted successfully.', type: 'success' });
+					}
+				}
+			}
+		};
+
+		const closeModalHandler = () => {
+			btnAddComment.removeEventListener('click', handleAddComment);
+			newCommentInput.removeEventListener('keydown', handleEnterKey);
+			commentsList.removeEventListener('click', handleCommentClick);
+			modalOverlay.removeEventListener('click', clickOutsideHandler);
+			closeButton.removeEventListener('click', closeModalHandler);
+			window.unregisterModal('comments-modal');
+			closeCommentsModal();
+		};
+
+		const handleEnterKey = (e) => {
+			if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+				handleAddComment();
+			}
+		};
+
+		const clickOutsideHandler = (e) => {
+			if (e.target === modalOverlay) closeModalHandler();
+		};
+
+		// Register comments modal in modal stack
+		if (typeof window.registerModal === 'function') {
+			window.registerModal('comments-modal', closeModalHandler);
+		}
+
+		btnAddComment.addEventListener('click', handleAddComment);
+		newCommentInput.addEventListener('keydown', handleEnterKey);
+		commentsList.addEventListener('click', handleCommentClick);
+		modalOverlay.addEventListener('click', clickOutsideHandler);
+		closeButton.addEventListener('click', closeModalHandler);
+	} finally {
+		isModalOpening = false;
+	}
+}
+
+/**
+ * Closes the comments modal and cleans up.
+ * Modified for Task Comments System
+ */
+function closeCommentsModal() {
+	const modalOverlay = document.getElementById('comments-modal-overlay');
+	if (modalOverlay) {
+		modalOverlay.classList.add('hidden');
+		modalOverlay.removeAttribute('data-current-task-id');
+	}
+}
+
+/**
+ * Updates the comment count on a task card
+ * Modified for Task Comments System
+ */
+function updateTaskCardCommentCount(taskId, count) {
+	const taskCard = document.querySelector(`.task-card[data-task-id="${taskId}"]`);
+	if (taskCard) {
+		taskCard.dataset.commentsCount = count.toString();
+		// Update the indicator if it exists
+		const commentIndicator = taskCard.querySelector('.comment-count');
+		if (commentIndicator) {
+			commentIndicator.textContent = count;
+		}
+		// If count is 0, remove the indicator; if count > 0 and no indicator, re-render card
+		if (count === 0) {
+			const indicator = taskCard.querySelector('[data-action="open-comments"]');
+			if (indicator) {
+				indicator.remove();
+			}
+		} else if (!commentIndicator && count > 0) {
+			// Re-render card to show indicator
+			rerenderTaskCard(taskCard);
+		}
 	}
 }
 

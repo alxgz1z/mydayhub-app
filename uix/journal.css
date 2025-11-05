@@ -1,6 +1,6 @@
 /* ==========================================================================
    JOURNAL VIEW STYLES
-   @version 8.5 Avellanas
+   @version 8.6 Nosara
    ========================================================================== */
 
 /* ==========================================================================
@@ -246,6 +246,32 @@
 
 .journal-column-footer.expanded input {
 	display: block;
+}
+
+/* ==========================================================================
+   4. WIDE SCREEN COLUMN HEIGHT BEHAVIOR
+   ========================================================================== */
+/* On wide screens, allow JavaScript to control column heights dynamically */
+/* Mobile behavior (max-width: 768px) remains unchanged - columns grow naturally */
+@media (min-width: 769px) {
+	.journal-columns {
+		/* Disable flexbox stretch on wide screens - JavaScript controls heights */
+		align-items: flex-start;
+	}
+	
+	.journal-column {
+		/* Remove height: 100% and max-height: 100% on wide screens */
+		/* JavaScript will set these via inline styles with !important */
+		height: auto;
+		max-height: none;
+		overflow: visible; /* Allow internal container to scroll instead */
+	}
+	
+	.journal-entries-container {
+		/* JavaScript will set max-height dynamically based on column height */
+		/* This is just a fallback */
+		overflow-y: auto;
+	}
 }
 
 .journal-column-footer input:focus {
