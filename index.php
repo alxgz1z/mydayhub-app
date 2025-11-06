@@ -7,7 +7,7 @@
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
  *
- * @version 8.6 Nosara
+ * @version 8.7 Nosara
  *
  * @author Alex & Gemini & Claude & Cursor
  */ 
@@ -72,8 +72,8 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	
 	<link rel="stylesheet" href="uix/style.css">
-	<link rel="stylesheet" href="uix/tasks.css?v=8.6">
-	<link rel="stylesheet" href="uix/editor.css?v=8.6">
+	<link rel="stylesheet" href="uix/tasks.css?v=8.7">
+	<link rel="stylesheet" href="uix/editor.css?v=8.7">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
 	

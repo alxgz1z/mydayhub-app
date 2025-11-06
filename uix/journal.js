@@ -559,11 +559,8 @@ class JournalView {
                 if (title && date) {
                     await this.createEntry(date, title);
                     input.value = '';
-                    // Collapse the footer after creating entry
-                    const footer = input.closest('.journal-column-footer');
-                    if (footer) {
-                        footer.classList.remove('expanded');
-                    }
+                    // Keep input focused and expanded for fluid entry creation
+                    input.focus();
                 }
             }
         });
@@ -1275,14 +1272,22 @@ class JournalView {
                     column.querySelector('.journal-entries-container').innerHTML = entriesHTML;
                 }
                 
-                // Clear input and collapse footer
+                // Clear input and keep focused for fluid entry creation
                 const input = document.querySelector(`.journal-column[data-date="${date}"] .journal-entry-input`);
+                const footer = input ? input.closest('.journal-column-footer') : null;
                 if (input) {
                     input.value = '';
-                    const footer = input.closest('.journal-column-footer');
+                    // Keep footer expanded and input focused - footer will collapse on ESC or click outside
                     if (footer) {
-                        footer.classList.remove('expanded');
+                        footer.classList.add('expanded');
                     }
+                    setTimeout(() => {
+                        input.focus();
+                        // Ensure footer stays expanded after focus
+                        if (footer) {
+                            footer.classList.add('expanded');
+                        }
+                    }, 100);
                 }
                 
                 // Show success message

@@ -7,7 +7,7 @@
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 8.6 Nosara
+ * @version 8.7 Nosara
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -112,7 +112,7 @@ if (DEVMODE) {
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Nosara 8.6');
+define('APP_VER', 'Nosara 8.7');
 
 // Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
 function detectAppUrl() {

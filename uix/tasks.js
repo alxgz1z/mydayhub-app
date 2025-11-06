@@ -424,15 +424,12 @@ function initEventListeners() {
 					const taskTitle = input.value.trim();
 					const columnEl = input.closest('.task-column');
 					const columnId = columnEl.dataset.columnId;
-	
+
 					if (taskTitle && columnId) {
 						await createNewTask(columnId, taskTitle, columnEl);
 						input.value = '';
-						// Collapse the footer after creating task
-						const footer = input.closest('.column-footer');
-						if (footer) {
-							footer.classList.remove('expanded');
-						}
+						// Keep input focused and expanded for fluid entry creation
+						input.focus();
 					}
 				} finally {
 					isActionRunning = false;
