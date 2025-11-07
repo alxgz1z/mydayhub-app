@@ -11,7 +11,7 @@ require_once __DIR__ . '/incs/db.php';
 header('Content-Type: application/json');
 
 try {
-    $pdo = getDBConnection();
+    $pdo = getPDO();
     
     // Get alfa user ID
     $stmt = $pdo->prepare("SELECT user_id, username FROM users WHERE username = 'alfa'");
