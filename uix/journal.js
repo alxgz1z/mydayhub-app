@@ -1724,6 +1724,7 @@ Would you like to set up encryption now?`;
         const entryCard = document.querySelector(`[data-entry-id="${entryId}"]`);
         if (!entryCard) return;
         
+        const currentDate = entryCard.closest('.journal-column').dataset.date;
         const rawTitle = entryCard.querySelector('.journal-entry-title').textContent;
         const cleanTitle = this.stripIdFromTitle(rawTitle);
         
