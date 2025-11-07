@@ -907,7 +907,9 @@ function initEventListeners() {
 				if (success) {
 					showToast({ message: 'Task renamed.', type: 'success' });
 				} else {
-					titleEl.textContent = originalTitle;
+					// Restore original display title with ID if needed
+					const restoreTitle = originalTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+					titleEl.textContent = restoreTitle;
 					showToast({ message: 'Error: Could not rename task.', type: 'error' });
 				}
 			};
