@@ -107,29 +107,34 @@ function handle_perform_password_reset(?array $data): void {
 		$tokenHash = hash('sha256', $token);
 		
 		// Check which column name exists in password_resets table
-		$checkColumn = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
-		$hasTokenHash = $checkColumn && $checkColumn->rowCount() > 0;
+		// breveasy uses 'token' (plain), localhost uses 'token_hash' (hashed)
+		$checkTokenHash = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
+		$hasTokenHash = $checkTokenHash && $checkTokenHash->rowCount() > 0;
 		
 		if ($hasTokenHash) {
+			// localhost: uses token_hash (hashed)
 			$stmt = $pdo->prepare(
 				"SELECT user_id, expires_at FROM password_resets WHERE token_hash = :tokenHash"
 			);
+			$stmt->execute([':tokenHash' => $tokenHash]);
 		} else {
+			// breveasy: uses token (plain) - need to compare plain token
 			$stmt = $pdo->prepare(
-				"SELECT user_id, expires_at FROM password_resets WHERE reset_token = :tokenHash"
+				"SELECT user_id, expires_at FROM password_resets WHERE token = :token"
 			);
+			$stmt->execute([':token' => $token]);
 		}
-		$stmt->execute([':tokenHash' => $tokenHash]);
 		$resetRequest = $stmt->fetch();
 
 		if (!$resetRequest || strtotime($resetRequest['expires_at']) < time()) {
 			if ($resetRequest) {
 				if ($hasTokenHash) {
 					$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE token_hash = :tokenHash");
+					$stmt_delete->execute([':tokenHash' => $tokenHash]);
 				} else {
-					$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE reset_token = :tokenHash");
+					$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE token = :token");
+					$stmt_delete->execute([':token' => $token]);
 				}
-				$stmt_delete->execute([':tokenHash' => $tokenHash]);
 			}
 			$pdo->commit();
 			send_debug_response(['status' => 'error', 'message' => 'This reset link is invalid or has expired. Please request a new one.'], 400);
@@ -211,25 +216,31 @@ function handle_request_password_reset(?array $data): void {
 			log_debug_message('DEBUG: Invalidated old tokens.');
 
 			// Check which column name exists in password_resets table
-			$checkColumn = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
-			$hasTokenHash = $checkColumn && $checkColumn->rowCount() > 0;
-			$tokenColumn = $hasTokenHash ? 'token_hash' : 'reset_token';
+			// breveasy uses 'token' (plain), localhost uses 'token_hash' (hashed)
+			$checkTokenHash = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
+			$hasTokenHash = $checkTokenHash && $checkTokenHash->rowCount() > 0;
 			
 			if ($hasTokenHash) {
+				// localhost: uses token_hash (hashed)
 				$stmt = $pdo->prepare(
 					"INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, UTC_TIMESTAMP())"
 				);
+				$stmt->execute([
+					':userId' => $userId,
+					':tokenHash' => $tokenHash,
+					':expiresAt' => $expiresAt
+				]);
 			} else {
-				// Fallback to reset_token if token_hash doesn't exist
+				// breveasy: uses token (plain) - store plain token
 				$stmt = $pdo->prepare(
-					"INSERT INTO password_resets (user_id, reset_token, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, UTC_TIMESTAMP())"
+					"INSERT INTO password_resets (user_id, token, expires_at, created_at) VALUES (:userId, :token, :expiresAt, UTC_TIMESTAMP())"
 				);
+				$stmt->execute([
+					':userId' => $userId,
+					':token' => $token,
+					':expiresAt' => $expiresAt
+				]);
 			}
-			$stmt->execute([
-				':userId' => $userId,
-				':tokenHash' => $tokenHash,
-				':expiresAt' => $expiresAt
-			]);
 			log_debug_message('DEBUG: Inserted new token into password_resets table.');
 
 			send_password_reset_email($data['email'], $username, $token);
