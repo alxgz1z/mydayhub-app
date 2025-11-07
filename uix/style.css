@@ -3851,5 +3851,24 @@ body.light-mode .btn-add-column-menu:hover {
 /* Ensure footer-right spans display properly */
 .footer-right span {
 	display: inline-block;
+	margin-right: 0.5rem;
+}
+
+/* Dev mode commit hash badge */
+.dev-commit-hash-badge {
+	font-family: 'Courier New', monospace;
+	font-size: 0.75rem;
+	color: var(--accent-color);
+	background-color: color-mix(in srgb, var(--accent-color) 15%, transparent);
+	padding: 0.25rem 0.5rem;
+	border-radius: 4px;
+	border: 1px solid color-mix(in srgb, var(--accent-color) 30%, transparent);
+	margin-right: 0.75rem;
+	opacity: 0.9;
+	display: inline-block;
+}
+
+.dev-commit-hash-badge.hidden {
+	display: none;
 }
 

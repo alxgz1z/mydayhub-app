@@ -722,6 +722,26 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 				</div>
 			</div>
 			<div class="footer-right">
+				<?php if (defined('DEVMODE') && DEVMODE): ?>
+					<?php
+					// Get git commit hash for tracking (only when DEVMODE is enabled)
+					$gitHash = 'unknown';
+					$gitHashFile = __DIR__ . '/.git/HEAD';
+					if (file_exists($gitHashFile)) {
+						$headContent = trim(file_get_contents($gitHashFile));
+						if (strpos($headContent, 'ref:') === 0) {
+							$refPath = trim(str_replace('ref:', '', $headContent));
+							$refFile = __DIR__ . '/.git/' . $refPath;
+							if (file_exists($refFile)) {
+								$gitHash = substr(trim(file_get_contents($refFile)), 0, 7);
+							}
+						} else {
+							$gitHash = substr($headContent, 0, 7);
+						}
+					}
+					?>
+					<span id="dev-commit-hash-badge" class="dev-commit-hash-badge hidden" title="Git Commit Hash (DEVMODE)"><?php echo htmlspecialchars($gitHash); ?></span>
+				<?php endif; ?>
 				<span><?php echo APP_VER; ?></span>
 				<a href="login/logout.php">Logout</a>
 			</div>
@@ -1039,6 +1059,13 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 							<span>Show construction button (🚧) in footer</span>
 						</label>
 						<p class="debug-setting-description">Shows button to open latest layout report</p>
+					</div>
+					<div class="debug-setting-item">
+						<label class="debug-setting-label">
+							<input type="checkbox" id="debug-show-commit-hash" class="debug-checkbox" checked>
+							<span>Show commit hash badge in footer</span>
+						</label>
+						<p class="debug-setting-description">Displays current Git commit hash in footer for tracking code versions</p>
 					</div>
 				</div>
 				

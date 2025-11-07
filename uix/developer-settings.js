@@ -11,6 +11,7 @@ const DEBUG_PREFS = {
 	SHOW_ENTRY_IDS: 'debug_show_entry_ids',
 	SHOW_FOOTER_BADGE: 'debug_show_footer_badge',
 	SHOW_CONSTRUCTION_BUTTON: 'debug_show_construction_button',
+	SHOW_COMMIT_HASH: 'debug_show_commit_hash',
 	CONSOLE_MESSAGES: 'debug_console_messages',
 	CONSOLE_BUFFER: 'debug_console_buffer',
 	FOOTER_DEBUG_FUNCTION: 'debug_footer_debug_function',
@@ -142,6 +143,17 @@ function initDeveloperSettings() {
 				btnDev.style.display = showButton ? 'inline-block' : 'none';
 			}
 			
+			// Update commit hash badge visibility
+			const commitHashBadge = document.getElementById('dev-commit-hash-badge');
+			if (commitHashBadge) {
+				const showCommitHash = typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_commit_hash') : false;
+				if (showCommitHash) {
+					commitHashBadge.classList.remove('hidden');
+				} else {
+					commitHashBadge.classList.add('hidden');
+				}
+			}
+			
 			closeDeveloperSettings();
 			if (typeof showToast === 'function') {
 				showToast({ message: 'Debug settings applied. Page refresh recommended for full effect.', type: 'success' });
@@ -168,6 +180,17 @@ function initDeveloperSettings() {
 	
 	// Initialize footer badge visibility on load
 	updateFooterBadgeVisibility();
+	
+	// Initialize commit hash badge visibility on load
+	const commitHashBadge = document.getElementById('dev-commit-hash-badge');
+	if (commitHashBadge) {
+		const showCommitHash = typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_commit_hash') : false;
+		if (showCommitHash) {
+			commitHashBadge.classList.remove('hidden');
+		} else {
+			commitHashBadge.classList.add('hidden');
+		}
+	}
 }
 
 // Make functions globally available
