@@ -4,7 +4,7 @@
   "description": "A personal task and journal management application with zero-knowledge encryption",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1a1a1a",
+  "background_color": "#000000",
   "theme_color": "#FD7E13",
   "orientation": "portrait-primary",
   "icons": [
