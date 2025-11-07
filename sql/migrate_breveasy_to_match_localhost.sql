@@ -83,11 +83,16 @@ SET `status` = 'ready_for_review'
 WHERE `ready_for_review` = 1 AND `status` = 'active';
 
 -- Step 4: Update indexes to match localhost
+-- Drop existing indexes first to avoid conflicts
 ALTER TABLE `shared_items`
 DROP INDEX IF EXISTS `unique_share`,
-ADD UNIQUE KEY `ux_share` (`owner_id`, `recipient_id`, `item_type`, `item_id`),
 DROP INDEX IF EXISTS `idx_owner`,
 DROP INDEX IF EXISTS `idx_recipient`,
+DROP INDEX IF EXISTS `idx_shared_items_detection`;
+
+-- Add new indexes
+ALTER TABLE `shared_items`
+ADD UNIQUE KEY `ux_share` (`owner_id`, `recipient_id`, `item_type`, `item_id`),
 ADD KEY `ix_recipient` (`recipient_id`),
 ADD KEY `ix_owner` (`owner_id`),
 ADD KEY `ix_recipient_active` (`recipient_id`, `status`),
