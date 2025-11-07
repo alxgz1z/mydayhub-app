@@ -1,15 +1,21 @@
+# DISABLED: Hostinger Git Integration handles auto-deployment
+# This workflow is no longer needed and has been disabled to prevent conflicts
+# If Hostinger autodeploy fails, you can re-enable this by uncommenting the workflow below
+
 name: Deploy to Breveasy.com
 
+# Workflow disabled - Hostinger handles deployment automatically
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch: # Allow manual trigger
+  workflow_dispatch: # Only allow manual trigger, no automatic runs
+  # push:
+  #   branches:
+  #     - main
 
 jobs:
   deploy:
-    name: Deploy to Breveasy.com
+    name: Deploy to Breveasy.com (DISABLED)
     runs-on: ubuntu-latest
+    if: false  # This prevents the job from running
     
     steps:
       - name: Checkout code
