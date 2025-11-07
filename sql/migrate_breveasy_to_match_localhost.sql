@@ -12,24 +12,67 @@ SET time_zone = "+00:00";
 -- ============================================================================
 -- breveasy has: token (plain), used_at
 -- localhost has: token_hash (hashed), no used_at
--- Strategy: Since tokens are single-use and expire quickly, we can safely
--- drop existing tokens and start fresh with hashed tokens going forward
+-- Strategy: Check what exists and migrate accordingly
 
--- Step 1: Drop old columns (existing tokens will be lost, but they're likely expired anyway)
-ALTER TABLE `password_resets` 
-DROP COLUMN IF EXISTS `token`,
-DROP COLUMN IF EXISTS `used_at`;
+-- Check if token_hash already exists (may have been partially migrated)
+SET @token_hash_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'password_resets' 
+    AND COLUMN_NAME = 'token_hash'
+);
 
--- Step 2: Add token_hash column
-ALTER TABLE `password_resets` 
-ADD COLUMN `token_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL AFTER `user_id`;
+-- Check if token column exists
+SET @token_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'password_resets' 
+    AND COLUMN_NAME = 'token'
+);
 
--- Step 3: Update index
+-- Only add token_hash if it doesn't exist
+SET @sql = IF(@token_hash_exists = 0, 
+    'ALTER TABLE `password_resets` ADD COLUMN `token_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL AFTER `user_id`',
+    'SELECT "token_hash column already exists, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Drop token column if it exists
+SET @sql = IF(@token_exists > 0, 
+    'ALTER TABLE `password_resets` DROP COLUMN `token`',
+    'SELECT "token column does not exist, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Drop used_at column if it exists
+SET @used_at_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'password_resets' 
+    AND COLUMN_NAME = 'used_at'
+);
+SET @sql = IF(@used_at_exists > 0, 
+    'ALTER TABLE `password_resets` DROP COLUMN `used_at`',
+    'SELECT "used_at column does not exist, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Update index (drop old, add new)
 ALTER TABLE `password_resets`
-DROP INDEX IF EXISTS `unique_token`,
+DROP INDEX IF EXISTS `unique_token`;
+ALTER TABLE `password_resets`
 ADD UNIQUE KEY `token_hash_UNIQUE` (`token_hash`);
 
--- Step 4: Update column types to match localhost
+-- Update column types to match localhost
 ALTER TABLE `password_resets`
 MODIFY `id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `user_id` INT NOT NULL,
@@ -40,14 +83,42 @@ MODIFY `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 -- ============================================================================
 -- breveasy has: verification_token
 -- localhost has: code_hash
--- Strategy: Rename column
+-- Strategy: Check if column exists and rename accordingly
 
-ALTER TABLE `pending_registrations`
-CHANGE COLUMN `verification_token` `code_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL;
+-- Check if code_hash already exists
+SET @code_hash_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'pending_registrations' 
+    AND COLUMN_NAME = 'code_hash'
+);
+
+-- Check if verification_token exists
+SET @verification_token_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'pending_registrations' 
+    AND COLUMN_NAME = 'verification_token'
+);
+
+-- Rename verification_token to code_hash if needed
+SET @sql = IF(@code_hash_exists = 0 AND @verification_token_exists > 0, 
+    'ALTER TABLE `pending_registrations` CHANGE COLUMN `verification_token` `code_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL',
+    IF(@code_hash_exists > 0, 
+        'SELECT "code_hash column already exists, skipping rename" AS message',
+        'SELECT "verification_token column does not exist, skipping" AS message'
+    )
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Update indexes
 ALTER TABLE `pending_registrations`
-DROP INDEX IF EXISTS `idx_token`,
+DROP INDEX IF EXISTS `idx_token`;
+ALTER TABLE `pending_registrations`
 ADD KEY `ix_email_code` (`email`, `code_hash`),
 ADD KEY `ix_expires` (`expires_at`);
 
@@ -113,11 +184,23 @@ MODIFY `ready_for_review` TINYINT(1) DEFAULT '0';
 -- 4. FIX tasks TABLE
 -- ============================================================================
 -- breveasy missing: snoozed_at column
--- breveasy has different column order
--- Strategy: Add missing column, ensure column order matches
+-- Strategy: Add missing column if it doesn't exist
 
-ALTER TABLE `tasks`
-ADD COLUMN `snoozed_at` DATETIME DEFAULT NULL AFTER `snoozed_until`;
+SET @snoozed_at_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'tasks' 
+    AND COLUMN_NAME = 'snoozed_at'
+);
+
+SET @sql = IF(@snoozed_at_exists = 0, 
+    'ALTER TABLE `tasks` ADD COLUMN `snoozed_at` DATETIME DEFAULT NULL AFTER `snoozed_until`',
+    'SELECT "snoozed_at column already exists, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Update column types to match localhost
 ALTER TABLE `tasks`
