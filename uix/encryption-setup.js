@@ -513,6 +513,10 @@ If you need to reset your encryption (which will delete all encrypted data), ple
         if (this.currentStep === 2) {
             // Start migration
             this.startMigration();
+            // Also update button immediately in case migration completes instantly
+            setTimeout(() => {
+                this.updateButtonToComplete();
+            }, 500);
         }
     }
 
@@ -746,18 +750,18 @@ Try refreshing the page or using a different browser.`;
                 if (responseData.success) {
                     const { migration_status, tasks_migrated, total_tasks } = responseData.data;
                     
+                    // If there are 0 tasks, consider migration complete immediately
+                    if (total_tasks === 0) {
+                        progressBar.style.width = '100%';
+                        progressText.textContent = 'No tasks to migrate. Setup complete!';
+                        this.updateButtonToComplete();
+                        return;
+                    }
+                    
                     if (migration_status === 'completed') {
                         progressBar.style.width = '100%';
                         progressText.textContent = 'Migration completed successfully!';
-                        
-                        // Update the button to "Complete Setup"
-                        const nextBtn = this.modal.querySelector('.btn-next');
-                        if (nextBtn) {
-                            nextBtn.textContent = 'Complete Setup';
-                            nextBtn.className = 'btn btn-primary btn-complete';
-                            nextBtn.onclick = () => this.completeSetup();
-                        }
-                        
+                        this.updateButtonToComplete();
                         return;
                     } else if (migration_status === 'in_progress') {
                         const progress = total_tasks > 0 ? (tasks_migrated / total_tasks) * 100 : 0;
@@ -873,17 +877,34 @@ Try refreshing the page or using a different browser.`;
             buttons += '<button type="button" class="btn btn-secondary btn-back">← Back</button>';
         }
 
-        if (this.currentStep < this.totalSteps) {
-            buttons += '<button type="button" class="btn btn-primary btn-next">Next →</button>';
-        }
-
+        // On the final step, show "Complete Setup" button instead of "Next →"
         if (this.currentStep === this.totalSteps) {
             buttons += '<button type="button" class="btn btn-primary btn-complete">Complete Setup</button>';
+        } else if (this.currentStep < this.totalSteps) {
+            buttons += '<button type="button" class="btn btn-primary btn-next">Next →</button>';
         }
 
         buttons += '<button type="button" class="btn btn-text btn-cancel">Cancel</button>';
 
         return buttons;
+    }
+
+    updateButtonToComplete() {
+        // Update the button to "Complete Setup" and attach handler
+        const nextBtn = this.modal.querySelector('.btn-next');
+        const completeBtn = this.modal.querySelector('.btn-complete');
+        
+        if (nextBtn) {
+            nextBtn.textContent = 'Complete Setup';
+            nextBtn.className = 'btn btn-primary btn-complete';
+            // Remove old event listener and add new one
+            const newBtn = nextBtn.cloneNode(true);
+            nextBtn.parentNode.replaceChild(newBtn, nextBtn);
+            newBtn.addEventListener('click', () => this.completeSetup());
+        } else if (completeBtn) {
+            // If complete button already exists, ensure it has the handler
+            completeBtn.addEventListener('click', () => this.completeSetup());
+        }
     }
 
     showSkipEncryptionOption() {
