@@ -471,7 +471,7 @@ function handle_snooze_task(PDO $pdo, int $userId, ?array $data): void {
 		// Update task: snooze it and set classification to backlog
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
-			 SET snoozed_until = :wakeTime, snoozed_at = UTC_TIMESTAMP(), 
+			 SET snoozed_until = :wakeTime, 
 				 classification = 'backlog', updated_at = UTC_TIMESTAMP()
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
@@ -535,7 +535,7 @@ function handle_unsnooze_task(PDO $pdo, int $userId, ?array $data): void {
 		// Clear snooze fields
 		$stmt = $pdo->prepare(
 			"UPDATE tasks 
-			 SET snoozed_until = NULL, snoozed_at = NULL, updated_at = UTC_TIMESTAMP()
+			 SET snoozed_until = NULL, updated_at = UTC_TIMESTAMP()
 			 WHERE task_id = :taskId AND user_id = :userId"
 		);
 		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
@@ -1025,7 +1025,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		if ($hasAwakenedTasks) {
 			$stmtClearAwakened = $pdo->prepare(
 				"UPDATE tasks 
-				 SET snoozed_until = NULL, snoozed_at = NULL, updated_at = UTC_TIMESTAMP()
+				 SET snoozed_until = NULL, updated_at = UTC_TIMESTAMP()
 				 WHERE user_id = :userId AND deleted_at IS NULL 
 				 AND snoozed_until IS NOT NULL AND snoozed_until <= UTC_TIMESTAMP()"
 			);
@@ -1055,7 +1055,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$stmtSharedTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.encrypted_data, t.position, t.classification, t.is_private,
-				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at,
+				t.updated_at, t.due_date, t.snoozed_until,
 				COUNT(DISTINCT ta.attachment_id) as attachments_count,
 				COUNT(DISTINCT tc.comment_id) as comments_count,
 				s.permission as access_type,
@@ -1106,7 +1106,7 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 		$stmtTasks = $pdo->prepare(
 			"SELECT 
 				t.task_id, t.column_id, t.encrypted_data, t.position, t.classification, t.is_private,
-				t.updated_at, t.due_date, t.snoozed_until, t.snoozed_at, t.journal_entry_id,
+				t.updated_at, t.due_date, t.snoozed_until, t.journal_entry_id,
 				COUNT(DISTINCT ta.attachment_id) as attachments_count,
 				COUNT(DISTINCT tc.comment_id) as comments_count,
 				'owner' as access_type
@@ -1359,7 +1359,7 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 				'position' => $position, 'classification' => 'support', 'is_private' => false,
 				'due_date' => null, 'has_notes' => false, 'attachments_count' => 0,
 				// Modified for Snooze Feature: Add snooze fields
-				'snoozed_until' => null, 'snoozed_at' => null, 'is_snoozed' => false
+				'snoozed_until' => null, 'is_snoozed' => false
 			]
 		], 201);
 	} catch (Exception $e) {
@@ -1709,7 +1709,7 @@ function handle_duplicate_task(PDO $pdo, int $userId, ?array $data): void {
 				'position' => $newPosition, 'classification' => $originalTask['classification'], 'due_date' => $originalTask['due_date'],
 				'has_notes' => !empty($encryptedDataDecoded['notes']), 'attachments_count' => 0, 'is_private' => false,
 				// Modified for Snooze Feature: Duplicated tasks are not snoozed
-				'snoozed_until' => null, 'snoozed_at' => null, 'is_snoozed' => false
+				'snoozed_until' => null, 'is_snoozed' => false
 			]
 		], 201);
 	} catch (Exception $e) {

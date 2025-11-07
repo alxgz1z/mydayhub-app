@@ -1688,7 +1688,7 @@ Would you like to set up encryption now?`;
             
             if (response.status === 'success') {
                 // Reload entries for affected dates
-                const dates = this.getDateRange();
+                const dates = this.calculatePotentialDateRange();
                 await this.loadEntries(dates);
                 this.renderJournalView();
                 showToast({ message: 'Entry moved successfully.', type: 'success' });
