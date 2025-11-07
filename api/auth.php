@@ -106,15 +106,20 @@ function handle_perform_password_reset(?array $data): void {
 
 		$tokenHash = hash('sha256', $token);
 		
+		// Check which column name exists in password_resets table
+		$checkColumn = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
+		$hasTokenHash = $checkColumn && $checkColumn->rowCount() > 0;
+		$tokenColumn = $hasTokenHash ? 'token_hash' : 'reset_token';
+		
 		$stmt = $pdo->prepare(
-			"SELECT user_id, expires_at FROM password_resets WHERE token_hash = :tokenHash"
+			"SELECT user_id, expires_at FROM password_resets WHERE {$tokenColumn} = :tokenHash"
 		);
 		$stmt->execute([':tokenHash' => $tokenHash]);
 		$resetRequest = $stmt->fetch();
 
 		if (!$resetRequest || strtotime($resetRequest['expires_at']) < time()) {
 			if ($resetRequest) {
-				$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE token_hash = :tokenHash");
+				$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE {$tokenColumn} = :tokenHash");
 				$stmt_delete->execute([':tokenHash' => $tokenHash]);
 			}
 			$pdo->commit();
@@ -196,9 +201,21 @@ function handle_request_password_reset(?array $data): void {
 			$stmt_invalidate->execute([':userId' => $userId]);
 			log_debug_message('DEBUG: Invalidated old tokens.');
 
-			$stmt = $pdo->prepare(
-				"INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, UTC_TIMESTAMP())"
-			);
+			// Check which column name exists in password_resets table
+			$checkColumn = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
+			$hasTokenHash = $checkColumn && $checkColumn->rowCount() > 0;
+			$tokenColumn = $hasTokenHash ? 'token_hash' : 'reset_token';
+			
+			if ($hasTokenHash) {
+				$stmt = $pdo->prepare(
+					"INSERT INTO password_resets (user_id, token_hash, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, UTC_TIMESTAMP())"
+				);
+			} else {
+				// Fallback to reset_token if token_hash doesn't exist
+				$stmt = $pdo->prepare(
+					"INSERT INTO password_resets (user_id, reset_token, expires_at, created_at) VALUES (:userId, :tokenHash, :expiresAt, UTC_TIMESTAMP())"
+				);
+			}
 			$stmt->execute([
 				':userId' => $userId,
 				':tokenHash' => $tokenHash,
