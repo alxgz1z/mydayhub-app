@@ -1692,6 +1692,7 @@ Would you like to set up encryption now?`;
         return title.replace(/\s*\[[0-9]+\]\s*$/, '').replace(/\s*\([0-9]+\)\s*$/, '').trim();
     }
     
+    async moveEntry(entryId, newDate) {
         try {
             const response = await window.apiFetch({
                 module: 'journal',
