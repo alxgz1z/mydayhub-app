@@ -81,7 +81,22 @@ let isActionRunning = false;
 
 // Modified for Mobile Move Mode
 let isMoveModeActive = false;
-let taskToMoveId = null;
+/**
+ * Strips ID suffix from title (e.g., "Task Title (123)" -> "Task Title")
+ * Also handles bracket format: "Task Title [123]" -> "Task Title"
+ */
+function stripIdFromTitle(title) {
+	if (!title) return title;
+	// Remove patterns like " (123)" or " [123]" at the end
+	return title.replace(/\s*\([0-9]+\)\s*$/, '').replace(/\s*\[[0-9]+\]\s*$/, '').trim();
+}
+
+/**
+ * Gets clean title without ID for storage
+ */
+function getCleanTitle(title) {
+	return stripIdFromTitle(title);
+}
 
 
 /**
@@ -180,7 +195,7 @@ function getTaskDataFromElement(taskCardEl) {
 	 return {
 		 task_id: taskCardEl.dataset.taskId,
 		 encrypted_data: JSON.stringify({
-			 title: decodeURIComponent(taskCardEl.dataset.title),
+			 title: stripIdFromTitle(decodeURIComponent(taskCardEl.dataset.title)),
 			 notes: decodeURIComponent(taskCardEl.dataset.notes)
 		 }),
 		 classification: taskCardEl.dataset.classification,
@@ -850,7 +865,8 @@ function initEventListeners() {
 			}
 			
 			const taskId = taskCard.dataset.taskId;
-			const originalTitle = titleEl.textContent;
+			// Strip ID from original title before editing
+			const originalTitle = stripIdFromTitle(titleEl.textContent);
 		
 			const input = document.createElement('input');
 			input.type = 'text';
@@ -867,15 +883,24 @@ function initEventListeners() {
 				if (finalized) return;
 				finalized = true;
 				
-				const newTitle = input.value.trim();
+				// Strip any ID that might have been added
+				const newTitle = stripIdFromTitle(input.value.trim());
 		
 				if (newTitle === '' || newTitle === originalTitle) {
+					// Restore with ID if needed
+					const displayTitle = originalTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+					titleEl.textContent = displayTitle;
 					input.replaceWith(titleEl);
 					return;
 				}
 		
-				titleEl.textContent = newTitle;
+				// Update display with ID if needed
+				const displayTitle = newTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+				titleEl.textContent = displayTitle;
 				input.replaceWith(titleEl);
+				
+				// Update data-title with clean title
+				taskCard.dataset.title = encodeURIComponent(newTitle);
 		
 				const success = await renameTaskTitle(taskId, newTitle);
 		
@@ -2593,10 +2618,13 @@ function createTaskCard(taskData) {
 						if (taskCard) {
 							const titleElement = taskCard.querySelector('.task-title');
 							if (titleElement) {
-								titleElement.textContent = decryptedData.title || 'Untitled Task';
+								const cleanTitle = getCleanTitle(decryptedData.title || 'Untitled Task');
+								titleElement.textContent = cleanTitle;
 								if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
 									titleElement.textContent += ` (${taskData.task_id})`;
 								}
+								// Update data-title attribute with clean title
+								taskCard.dataset.title = encodeURIComponent(cleanTitle);
 							}
 						}
 					}
@@ -2619,10 +2647,13 @@ function createTaskCard(taskData) {
 		taskNotes = '';
 	}
 
-	// Add task_id in parentheses when DEVMODE and preference is enabled
-	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
-		taskTitle = `${taskTitle} (${taskData.task_id})`;
-	}
+	// Strip any existing IDs from title before storing
+	const cleanTitle = getCleanTitle(taskTitle);
+	
+	// Add task_id in parentheses when DEVMODE and preference is enabled (for display only)
+	const displayTitle = window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)
+		? `${cleanTitle} (${taskData.task_id})`
+		: cleanTitle;
 
 	const isCompleted = taskData.classification === 'completed';
 	const isPrivate = taskData.is_private;
@@ -2834,7 +2865,7 @@ function createTaskCard(taskData) {
 	<div 
 		class="task-card ${isCompleted ? 'completed' : ''} ${classificationClass} ${isPrivate ? 'private' : ''} ${isSnoozed ? 'snoozed' : ''} ${isShared ? 'shared' : ''} ${!isOwner ? 'recipient' : ''} ${isReadyForReview ? 'ready-for-review' : ''}"
 		data-task-id="${taskData.task_id}" 
-			data-title="${encodeURIComponent(taskTitle)}"
+			data-title="${encodeURIComponent(cleanTitle)}"
 			data-notes="${encodeURIComponent(taskNotes)}"
 			data-classification="${taskData.classification}"
 			data-is-private="${isPrivate ? 'true' : 'false'}"
@@ -2854,7 +2885,7 @@ function createTaskCard(taskData) {
 		<div class="task-card-main">
 			<div class="task-status-band ${!isOwner ? 'readonly' : ''}"></div>
 			${statusElement}
-			<span class="task-title ${isOwner ? 'editable' : 'readonly'}">${taskTitle}</span>
+			<span class="task-title ${isOwner ? 'editable' : 'readonly'}">${displayTitle}</span>
 			${isPrivate ? '<span class="task-privacy-indicator" title="Private task">🔒</span>' : ''}
 			<button class="btn-task-actions" title="Task Actions">&vellip;</button>
 		</div>

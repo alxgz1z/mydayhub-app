@@ -592,14 +592,17 @@ class JournalView {
                 
                 const entryId = entryCard.dataset.entryId;
                 const oldTitle = entryCard.dataset.title;
-                const newTitle = titleEl.textContent.trim();
+                const rawNewTitle = titleEl.textContent.trim();
+                // Strip any ID that might have been added visually
+                const newTitle = this.stripIdFromTitle(rawNewTitle);
                 
                 // Only save if title actually changed and is not empty
                 if (newTitle && newTitle !== oldTitle) {
                     await this.updateEntryTitle(entryId, newTitle);
                 } else if (!newTitle) {
                     // Restore old title if empty
-                    titleEl.textContent = oldTitle;
+                    const displayTitle = oldTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_entry_ids') : true) ? ` [${entryId}]` : '');
+                    titleEl.textContent = displayTitle;
                 }
             }
         }, true); // Use capture phase to ensure we catch blur events
@@ -1009,7 +1012,9 @@ class JournalView {
         const hasContent = entry.content && entry.content.trim().length > 0;
         
         // Encode data attributes to prevent XSS and parsing issues
-        const encodedTitle = encodeURIComponent(entry.title || '');
+        // Strip any existing IDs from title before storing
+        const cleanTitle = this.stripIdFromTitle(entry.title || '');
+        const encodedTitle = encodeURIComponent(cleanTitle);
         const encodedContent = encodeURIComponent(entry.content || '');
         
         // Build footer indicators (similar to task cards)
@@ -1677,7 +1682,16 @@ Would you like to set up encryption now?`;
         return confirmed;
     }
     
-    async moveEntry(entryId, newDate) {
+    /**
+     * Strips ID suffix from title (e.g., "Entry Title [123]" -> "Entry Title")
+     * Also handles parentheses format: "Entry Title (123)" -> "Entry Title"
+     */
+    stripIdFromTitle(title) {
+        if (!title) return title;
+        // Remove patterns like " [123]" or " (123)" at the end
+        return title.replace(/\s*\[[0-9]+\]\s*$/, '').replace(/\s*\([0-9]+\)\s*$/, '').trim();
+    }
+    
         try {
             const response = await window.apiFetch({
                 module: 'journal',
@@ -1709,8 +1723,8 @@ Would you like to set up encryption now?`;
         const entryCard = document.querySelector(`[data-entry-id="${entryId}"]`);
         if (!entryCard) return;
         
-        const currentDate = entryCard.closest('.journal-column').dataset.date;
-        const entryTitle = entryCard.querySelector('.journal-entry-title').textContent;
+        const rawTitle = entryCard.querySelector('.journal-entry-title').textContent;
+        const cleanTitle = this.stripIdFromTitle(rawTitle);
         
         // Create modal matching app's modal pattern
         const modal = document.createElement('div');
@@ -1718,7 +1732,7 @@ Would you like to set up encryption now?`;
         modal.innerHTML = `
             <div id="journal-move-modal-container">
                 <div class="journal-move-modal-header">
-                    <h4 class="modal-title">Move Entry: <span class="entry-title">"${entryTitle}"</span></h4>
+                    <h4 class="modal-title">Move Entry: <span class="entry-title">"${cleanTitle}"</span></h4>
                     <button class="modal-close-btn btn-icon btn-close">&times;</button>
                 </div>
                 <div class="journal-move-modal-body">
