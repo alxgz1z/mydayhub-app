@@ -139,14 +139,58 @@ MODIFY `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP;
 -- localhost has: item_type enum('task','column'), status, review_status
 -- Strategy: Add missing columns and update enum
 
--- Step 1: Update item_type enum to include 'column'
-ALTER TABLE `shared_items`
-MODIFY `item_type` ENUM('task','column') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'task';
+-- Step 1: Update item_type enum to include 'column' (check current enum first)
+SET @item_type_has_column = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'shared_items' 
+    AND COLUMN_NAME = 'item_type'
+    AND COLUMN_TYPE LIKE '%column%'
+);
 
--- Step 2: Add missing columns
-ALTER TABLE `shared_items`
-ADD COLUMN `status` ENUM('active','ready_for_review','revoked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active' AFTER `permission`,
-ADD COLUMN `review_status` ENUM('pending','in_review','approved','needs_changes','completed') COLLATE utf8mb4_unicode_ci DEFAULT 'pending' AFTER `ready_for_review`;
+SET @sql = IF(@item_type_has_column = 0, 
+    'ALTER TABLE `shared_items` MODIFY `item_type` ENUM(\'task\',\'column\') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT \'task\'',
+    'SELECT "item_type enum already includes column, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Step 2: Add missing columns (check if they exist first)
+SET @status_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'shared_items' 
+    AND COLUMN_NAME = 'status'
+);
+
+SET @review_status_exists = (
+    SELECT COUNT(*) 
+    FROM INFORMATION_SCHEMA.COLUMNS 
+    WHERE TABLE_SCHEMA = DATABASE() 
+    AND TABLE_NAME = 'shared_items' 
+    AND COLUMN_NAME = 'review_status'
+);
+
+-- Add status column if missing
+SET @sql = IF(@status_exists = 0, 
+    'ALTER TABLE `shared_items` ADD COLUMN `status` ENUM(\'active\',\'ready_for_review\',\'revoked\') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT \'active\' AFTER `permission`',
+    'SELECT "status column already exists, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add review_status column if missing
+SET @sql = IF(@review_status_exists = 0, 
+    'ALTER TABLE `shared_items` ADD COLUMN `review_status` ENUM(\'pending\',\'in_review\',\'approved\',\'needs_changes\',\'completed\') COLLATE utf8mb4_unicode_ci DEFAULT \'pending\' AFTER `ready_for_review`',
+    'SELECT "review_status column already exists, skipping" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- Step 3: Update existing rows to have status='active' if ready_for_review=1
 UPDATE `shared_items` 
