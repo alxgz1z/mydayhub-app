@@ -109,17 +109,26 @@ function handle_perform_password_reset(?array $data): void {
 		// Check which column name exists in password_resets table
 		$checkColumn = $pdo->query("SHOW COLUMNS FROM password_resets LIKE 'token_hash'");
 		$hasTokenHash = $checkColumn && $checkColumn->rowCount() > 0;
-		$tokenColumn = $hasTokenHash ? 'token_hash' : 'reset_token';
 		
-		$stmt = $pdo->prepare(
-			"SELECT user_id, expires_at FROM password_resets WHERE {$tokenColumn} = :tokenHash"
-		);
+		if ($hasTokenHash) {
+			$stmt = $pdo->prepare(
+				"SELECT user_id, expires_at FROM password_resets WHERE token_hash = :tokenHash"
+			);
+		} else {
+			$stmt = $pdo->prepare(
+				"SELECT user_id, expires_at FROM password_resets WHERE reset_token = :tokenHash"
+			);
+		}
 		$stmt->execute([':tokenHash' => $tokenHash]);
 		$resetRequest = $stmt->fetch();
 
 		if (!$resetRequest || strtotime($resetRequest['expires_at']) < time()) {
 			if ($resetRequest) {
-				$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE {$tokenColumn} = :tokenHash");
+				if ($hasTokenHash) {
+					$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE token_hash = :tokenHash");
+				} else {
+					$stmt_delete = $pdo->prepare("DELETE FROM password_resets WHERE reset_token = :tokenHash");
+				}
 				$stmt_delete->execute([':tokenHash' => $tokenHash]);
 			}
 			$pdo->commit();
