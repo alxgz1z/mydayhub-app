@@ -1301,8 +1301,7 @@ function openSettingsPanel() {
 		// Register settings panel in modal stack
 		registerModal('settings-panel', closeSettingsPanel);
 		
-		// Update username display
-		updateSettingsUsername();
+		// Username removed from settings header - it's already in the footer
 	}
 }
 

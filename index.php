@@ -38,24 +38,19 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-	<title>MyDayHub</title>
+	<title>mdhub</title>
 	
 	<!-- Web App Manifest for PWA support -->
 	<link rel="manifest" href="manifest.json">
 	
 	<!-- Favicon and App Icons -->
+	<!-- Primary icon for iOS/macOS - 180x180 is the standard for modern iOS -->
+	<link rel="apple-touch-icon" sizes="180x180" href="media/icons/icon-180x180.png">
+	<!-- Fallback for older devices -->
+	<link rel="apple-touch-icon" href="media/icons/icon-180x180.png">
+	<!-- Standard favicons -->
 	<link rel="icon" type="image/png" sizes="32x32" href="media/icons/icon-32x32.png">
 	<link rel="icon" type="image/png" sizes="16x16" href="media/icons/icon-16x16.png">
-	<link rel="apple-touch-icon" href="media/icons/icon-180x180.png">
-	<link rel="apple-touch-icon" sizes="180x180" href="media/icons/icon-180x180.png">
-	<link rel="apple-touch-icon" sizes="152x152" href="media/icons/icon-192x192.png">
-	<link rel="apple-touch-icon" sizes="144x144" href="media/icons/icon-192x192.png">
-	<link rel="apple-touch-icon" sizes="120x120" href="media/icons/icon-128x128.png">
-	<link rel="apple-touch-icon" sizes="114x114" href="media/icons/icon-128x128.png">
-	<link rel="apple-touch-icon" sizes="76x76" href="media/icons/icon-64x64.png">
-	<link rel="apple-touch-icon" sizes="72x72" href="media/icons/icon-64x64.png">
-	<link rel="apple-touch-icon" sizes="60x60" href="media/icons/icon-32x32.png">
-	<link rel="apple-touch-icon" sizes="57x57" href="media/icons/icon-32x32.png">
 	<link rel="icon" type="image/png" sizes="192x192" href="media/icons/icon-192x192.png">
 	<link rel="icon" type="image/png" sizes="512x512" href="media/icons/icon-512x512.png">
 	
@@ -63,7 +58,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<meta name="apple-mobile-web-app-title" content="MyDayHub">
+	<meta name="apple-mobile-web-app-title" content="mdhub">
 	<meta name="theme-color" content="#FD7E13">
 	
 	<!-- Google Fonts - Inter for elegant typography -->
@@ -759,7 +754,6 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<span id="settings-username" class="settings-username clickable" title="Click to view user info"></span>
 				<h2>Settings</h2>
 				<button id="btn-settings-close" class="btn-icon btn-close" title="Close">&times;</button>
 			</div>
