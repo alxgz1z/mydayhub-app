@@ -12,32 +12,24 @@ SET time_zone = "+00:00";
 -- ============================================================================
 -- breveasy has: token (plain), used_at
 -- localhost has: token_hash (hashed), no used_at
--- Strategy: Rename token to token_hash, drop used_at, migrate existing data
+-- Strategy: Since tokens are single-use and expire quickly, we can safely
+-- drop existing tokens and start fresh with hashed tokens going forward
 
--- Step 1: Add temporary column for migration
+-- Step 1: Drop old columns (existing tokens will be lost, but they're likely expired anyway)
 ALTER TABLE `password_resets` 
-ADD COLUMN `token_hash_temp` VARCHAR(255) COLLATE utf8mb4_unicode_ci NULL AFTER `token`;
+DROP COLUMN IF EXISTS `token`,
+DROP COLUMN IF EXISTS `used_at`;
 
--- Step 2: Hash existing plain tokens (if any exist)
-UPDATE `password_resets` 
-SET `token_hash_temp` = SHA2(`token`, 256) 
-WHERE `token` IS NOT NULL AND `token_hash_temp` IS NULL;
-
--- Step 3: Drop old columns
+-- Step 2: Add token_hash column
 ALTER TABLE `password_resets` 
-DROP COLUMN `token`,
-DROP COLUMN `used_at`;
+ADD COLUMN `token_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL AFTER `user_id`;
 
--- Step 4: Rename temp column to final name
-ALTER TABLE `password_resets` 
-CHANGE COLUMN `token_hash_temp` `token_hash` VARCHAR(255) COLLATE utf8mb4_unicode_ci NOT NULL;
-
--- Step 5: Update index
+-- Step 3: Update index
 ALTER TABLE `password_resets`
 DROP INDEX IF EXISTS `unique_token`,
 ADD UNIQUE KEY `token_hash_UNIQUE` (`token_hash`);
 
--- Step 6: Update column types to match localhost
+-- Step 4: Update column types to match localhost
 ALTER TABLE `password_resets`
 MODIFY `id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `user_id` INT NOT NULL,
@@ -72,18 +64,25 @@ MODIFY `created_at` DATETIME DEFAULT CURRENT_TIMESTAMP;
 -- 3. FIX shared_items TABLE
 -- ============================================================================
 -- breveasy missing: status, review_status columns
--- Strategy: Add missing columns with default values
+-- breveasy has: item_type enum('task') only
+-- localhost has: item_type enum('task','column'), status, review_status
+-- Strategy: Add missing columns and update enum
 
+-- Step 1: Update item_type enum to include 'column'
+ALTER TABLE `shared_items`
+MODIFY `item_type` ENUM('task','column') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'task';
+
+-- Step 2: Add missing columns
 ALTER TABLE `shared_items`
 ADD COLUMN `status` ENUM('active','ready_for_review','revoked') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'active' AFTER `permission`,
 ADD COLUMN `review_status` ENUM('pending','in_review','approved','needs_changes','completed') COLLATE utf8mb4_unicode_ci DEFAULT 'pending' AFTER `ready_for_review`;
 
--- Update existing rows to have status='active' if ready_for_review=1
+-- Step 3: Update existing rows to have status='active' if ready_for_review=1
 UPDATE `shared_items` 
 SET `status` = 'ready_for_review' 
 WHERE `ready_for_review` = 1 AND `status` = 'active';
 
--- Update indexes to match localhost
+-- Step 4: Update indexes to match localhost
 ALTER TABLE `shared_items`
 DROP INDEX IF EXISTS `unique_share`,
 ADD UNIQUE KEY `ux_share` (`owner_id`, `recipient_id`, `item_type`, `item_id`),
@@ -96,12 +95,11 @@ ADD KEY `ix_owner_item` (`owner_id`, `item_type`, `item_id`),
 ADD KEY `idx_shared_items_detection` (`owner_id`, `recipient_id`, `item_type`, `item_id`, `status`),
 ADD KEY `idx_review_status` (`review_status`, `item_type`, `item_id`);
 
--- Update column types
+-- Step 5: Update column types
 ALTER TABLE `shared_items`
 MODIFY `id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `owner_id` INT NOT NULL,
 MODIFY `recipient_id` INT NOT NULL,
-MODIFY `item_type` ENUM('task','column') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'task',
 MODIFY `item_id` INT NOT NULL,
 MODIFY `permission` ENUM('edit','view') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'edit',
 MODIFY `ready_for_review` TINYINT(1) DEFAULT '0';
@@ -110,7 +108,8 @@ MODIFY `ready_for_review` TINYINT(1) DEFAULT '0';
 -- 4. FIX tasks TABLE
 -- ============================================================================
 -- breveasy missing: snoozed_at column
--- Strategy: Add missing column
+-- breveasy has different column order
+-- Strategy: Add missing column, ensure column order matches
 
 ALTER TABLE `tasks`
 ADD COLUMN `snoozed_at` DATETIME DEFAULT NULL AFTER `snoozed_until`;
@@ -120,9 +119,17 @@ ALTER TABLE `tasks`
 MODIFY `task_id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `user_id` INT NOT NULL,
 MODIFY `column_id` INT NOT NULL,
+MODIFY `encrypted_data` TEXT COLLATE utf8mb4_unicode_ci NOT NULL,
+MODIFY `position` INT NOT NULL,
+MODIFY `classification` ENUM('signal','support','backlog','completed') COLLATE utf8mb4_unicode_ci NOT NULL,
+MODIFY `due_date` DATE DEFAULT NULL,
 MODIFY `is_private` TINYINT(1) NOT NULL DEFAULT '0',
+MODIFY `snoozed_until` DATETIME DEFAULT NULL,
+MODIFY `journal_entry_id` INT DEFAULT NULL,
 MODIFY `privacy_inherited` TINYINT(1) DEFAULT '0' COMMENT 'Task privacy inherited from column',
-MODIFY `privacy_override` TINYINT(1) DEFAULT '0' COMMENT 'User explicitly set task privacy';
+MODIFY `privacy_override` TINYINT(1) DEFAULT '0' COMMENT 'User explicitly set task privacy',
+MODIFY `created_at` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+MODIFY `updated_at` DATETIME DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP;
 
 -- ============================================================================
 -- 5. ADD MISSING TABLES
@@ -278,6 +285,8 @@ MODIFY `id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `created_at` TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP;
 
 -- Update task_activity
+-- breveasy has: activity_data with CHECK constraint
+-- localhost has: activity_data as JSON type
 ALTER TABLE `task_activity`
 MODIFY `activity_id` INT NOT NULL AUTO_INCREMENT,
 MODIFY `activity_data` JSON DEFAULT NULL,
