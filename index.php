@@ -2882,7 +2882,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<script src="uix/view-manager.js" defer></script>
 	<script src="uix/tasks.js" defer></script>
 	<script src="uix/calendar.js" defer></script>
-	<script src="uix/journal.js?v=8.7" defer></script>
+	<script src="uix/journal.js?v=8.8" defer></script>
 
 </body>
 </html>
