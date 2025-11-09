@@ -127,9 +127,18 @@ function openImportExportModal(tabName = 'tasks') {
 	}
 	
 	console.log('Opening Import/Export modal');
+	// Remove hidden class first (which has display: none !important)
 	overlay.classList.remove('hidden');
+	// Then explicitly set display to flex to override any other rules
 	overlay.style.display = 'flex';
+	overlay.style.visibility = 'visible';
+	overlay.style.opacity = '1';
+	overlay.style.pointerEvents = 'auto';
 	overlay.style.zIndex = '10000';
+	
+	console.log('Modal overlay classes:', overlay.className);
+	console.log('Modal overlay display:', overlay.style.display);
+	console.log('Modal overlay computed display:', window.getComputedStyle(overlay).display);
 	
 	if (window.registerModal) {
 		window.registerModal('import-export-modal', () => {

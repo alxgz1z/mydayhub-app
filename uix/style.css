@@ -3887,6 +3887,7 @@ body.light-mode .btn-add-column-menu:hover {
 }
 
 #import-export-modal-overlay.hidden {
+	display: none !important;
 	opacity: 0;
 	pointer-events: none;
 }
