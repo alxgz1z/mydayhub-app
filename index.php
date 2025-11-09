@@ -875,7 +875,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 				</div>
 				<div class="setting-item">
 					<div class="setting-control">
-						<button type="button" id="btn-import-export" class="btn">
+						<button type="button" id="btn-import-export" class="btn" onclick="if(typeof openImportExportModal === 'function') { openImportExportModal('tasks'); } else { console.error('openImportExportModal not available'); }">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
 								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
 								<polyline points="7 10 12 15 17 10"></polyline>

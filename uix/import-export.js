@@ -3,33 +3,48 @@
  * Manages the consolidated Import/Export modal with tabs for Tasks and Journal
  */
 
+// Track if already initialized to prevent duplicate listeners
+let importExportInitialized = false;
+
 /**
  * Initialize import/export functionality
  */
 function initImportExport() {
+	// Prevent duplicate initialization
+	if (importExportInitialized) {
+		return;
+	}
+	
 	// Setup modal first
 	setupImportExportModal();
 	
-	// Main button to open modal
-	const btnImportExport = document.getElementById('btn-import-export');
-	if (btnImportExport) {
-		btnImportExport.addEventListener('click', (e) => {
-			e.preventDefault();
-			e.stopPropagation();
-			openImportExportModal('tasks');
-		});
-	} else {
-		// If button not found, try again after a short delay (in case settings panel loads dynamically)
+	// Function to attach button listener
+	const attachButtonListener = () => {
+		const btnImportExport = document.getElementById('btn-import-export');
+		if (btnImportExport && !btnImportExport.hasAttribute('data-listener-attached')) {
+			btnImportExport.setAttribute('data-listener-attached', 'true');
+			btnImportExport.addEventListener('click', (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				console.log('Import/Export button clicked');
+				openImportExportModal('tasks');
+			});
+			console.log('Import/Export button listener attached');
+			return true;
+		}
+		return false;
+	};
+	
+	// Try to attach listener immediately
+	if (!attachButtonListener()) {
+		// If button not found, try again after delays (in case settings panel loads dynamically)
 		setTimeout(() => {
-			const btn = document.getElementById('btn-import-export');
-			if (btn) {
-				btn.addEventListener('click', (e) => {
-					e.preventDefault();
-					e.stopPropagation();
-					openImportExportModal('tasks');
-				});
-			} else {
-				console.warn('Import/Export button not found');
+			if (!attachButtonListener()) {
+				setTimeout(() => {
+					if (!attachButtonListener()) {
+						console.warn('Import/Export button not found after multiple attempts');
+					}
+				}, 500);
 			}
 		}, 200);
 	}
@@ -41,6 +56,8 @@ function initImportExport() {
 	if (typeof initJournalExportImport === 'function') {
 		initJournalExportImport();
 	}
+	
+	importExportInitialized = true;
 }
 
 /**
@@ -102,15 +119,26 @@ function switchImportExportTab(tabName) {
  * Open import/export modal
  */
 function openImportExportModal(tabName = 'tasks') {
+	console.log('openImportExportModal called with tab:', tabName);
 	const overlay = document.getElementById('import-export-modal-overlay');
-	if (!overlay) return;
+	if (!overlay) {
+		console.error('Import/Export modal overlay not found!');
+		return;
+	}
 	
+	console.log('Opening Import/Export modal');
 	overlay.classList.remove('hidden');
-	window.registerModal('import-export-modal', () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('import-export-modal');
-		resetImportExportModal();
-	});
+	overlay.style.display = 'flex';
+	overlay.style.zIndex = '10000';
+	
+	if (window.registerModal) {
+		window.registerModal('import-export-modal', () => {
+			overlay.classList.add('hidden');
+			overlay.style.display = 'none';
+			window.unregisterModal('import-export-modal');
+			resetImportExportModal();
+		});
+	}
 	
 	// Switch to specified tab
 	switchImportExportTab(tabName);
@@ -128,10 +156,15 @@ function resetImportExportModal() {
 	switchImportExportTab('tasks');
 }
 
-// Initialize on DOM ready
+// Initialize on DOM ready - but app.js will also call this, so we check readyState
+// This ensures it works even if app.js hasn't loaded yet
 if (document.readyState === 'loading') {
-	document.addEventListener('DOMContentLoaded', initImportExport);
+	document.addEventListener('DOMContentLoaded', () => {
+		// Small delay to ensure settings panel is initialized
+		setTimeout(initImportExport, 100);
+	});
 } else {
-	initImportExport();
+	// DOM already loaded, but wait a bit for settings panel
+	setTimeout(initImportExport, 100);
 }
 
