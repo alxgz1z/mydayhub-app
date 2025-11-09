@@ -7,14 +7,32 @@
  * Initialize import/export functionality
  */
 function initImportExport() {
+	// Setup modal first
+	setupImportExportModal();
+	
 	// Main button to open modal
 	const btnImportExport = document.getElementById('btn-import-export');
 	if (btnImportExport) {
-		btnImportExport.addEventListener('click', openImportExportModal);
+		btnImportExport.addEventListener('click', (e) => {
+			e.preventDefault();
+			e.stopPropagation();
+			openImportExportModal('tasks');
+		});
+	} else {
+		// If button not found, try again after a short delay (in case settings panel loads dynamically)
+		setTimeout(() => {
+			const btn = document.getElementById('btn-import-export');
+			if (btn) {
+				btn.addEventListener('click', (e) => {
+					e.preventDefault();
+					e.stopPropagation();
+					openImportExportModal('tasks');
+				});
+			} else {
+				console.warn('Import/Export button not found');
+			}
+		}, 200);
 	}
-	
-	// Setup modal
-	setupImportExportModal();
 	
 	// Initialize tasks and journal handlers
 	if (typeof initTasksExportImport === 'function') {

@@ -728,6 +728,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	updateFooterDate();
 	initSettingsPanel();
+	
+	// Initialize import/export functionality after settings panel
+	if (typeof initImportExport === 'function') {
+		initImportExport();
+	}
+	
 	setupUserGuideEventListeners();
 	
 	// Debug DEVMODE footer
