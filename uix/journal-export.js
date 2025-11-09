@@ -15,14 +15,8 @@ function initJournalExportImport() {
 		btnExportJournal.addEventListener('click', handleExportJournal);
 	}
 	
-	// Import button
-	const btnImportJournal = document.getElementById('btn-import-journal');
-	if (btnImportJournal) {
-		btnImportJournal.addEventListener('click', openJournalImportModal);
-	}
-	
-	// Export modal
-	setupJournalExportModal();
+	// Export result buttons
+	setupJournalExportButtons();
 	
 	// Import modal
 	setupJournalImportModal();
@@ -45,7 +39,7 @@ async function handleExportJournal() {
 		
 		if (response.success && response.data) {
 			const jsonText = JSON.stringify(response.data, null, 2);
-			openJournalExportModal(jsonText);
+			showJournalExportResult(jsonText);
 		} else {
 			showToast({ message: response.error || 'Failed to export journal entries', type: 'error' });
 		}
@@ -56,24 +50,11 @@ async function handleExportJournal() {
 }
 
 /**
- * Setup journal export modal
+ * Setup journal export buttons
  */
-function setupJournalExportModal() {
-	const overlay = document.getElementById('journal-export-modal-overlay');
-	const closeBtn = document.getElementById('journal-export-modal-close-btn');
-	const btnClose = document.getElementById('btn-close-journal-export');
+function setupJournalExportButtons() {
 	const btnCopy = document.getElementById('btn-copy-journal-export');
 	const btnDownload = document.getElementById('btn-download-journal-export');
-	
-	if (!overlay) return;
-	
-	const closeModal = () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('journal-export-modal');
-	};
-	
-	if (closeBtn) closeBtn.addEventListener('click', closeModal);
-	if (btnClose) btnClose.addEventListener('click', closeModal);
 	
 	if (btnCopy) {
 		btnCopy.addEventListener('click', () => {
@@ -106,20 +87,19 @@ function setupJournalExportModal() {
 }
 
 /**
- * Open journal export modal with JSON data
+ * Show journal export result in unified modal
  */
-function openJournalExportModal(jsonText) {
-	const overlay = document.getElementById('journal-export-modal-overlay');
+function showJournalExportResult(jsonText) {
+	const resultDiv = document.getElementById('journal-export-result');
 	const textarea = document.getElementById('journal-export-json');
 	
-	if (!overlay || !textarea) return;
+	if (!resultDiv || !textarea) return;
 	
 	textarea.value = jsonText;
-	overlay.classList.remove('hidden');
-	window.registerModal('journal-export-modal', () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('journal-export-modal');
-	});
+	resultDiv.classList.remove('hidden');
+	
+	// Scroll to result
+	resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /**
@@ -303,10 +283,13 @@ async function executeJournalImport(entries) {
 			showToast({ message, type: 'success' });
 			
 			// Close modal and reload journal
-			const overlay = document.getElementById('journal-import-modal-overlay');
+			const overlay = document.getElementById('import-export-modal-overlay');
 			if (overlay) {
 				overlay.classList.add('hidden');
-				window.unregisterModal('journal-import-modal');
+				window.unregisterModal('import-export-modal');
+			}
+			if (typeof resetImportExportModal === 'function') {
+				resetImportExportModal();
 			}
 			resetJournalImportForm();
 			
@@ -328,19 +311,12 @@ async function executeJournalImport(entries) {
 }
 
 /**
- * Open journal import modal
+ * Open journal import modal (now handled by unified modal)
  */
 function openJournalImportModal() {
-	const overlay = document.getElementById('journal-import-modal-overlay');
-	if (!overlay) return;
-	
-	overlay.classList.remove('hidden');
-	window.registerModal('journal-import-modal', () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('journal-import-modal');
-		resetJournalImportForm();
-	});
-	
+	if (typeof openImportExportModal === 'function') {
+		openImportExportModal('journal');
+	}
 	resetJournalImportForm();
 }
 

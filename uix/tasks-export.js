@@ -15,14 +15,8 @@ function initTasksExportImport() {
 		btnExportTasks.addEventListener('click', handleExportTasks);
 	}
 	
-	// Import button
-	const btnImportTasks = document.getElementById('btn-import-tasks');
-	if (btnImportTasks) {
-		btnImportTasks.addEventListener('click', openTasksImportModal);
-	}
-	
-	// Export modal
-	setupTasksExportModal();
+	// Export result buttons
+	setupTasksExportButtons();
 	
 	// Import modal
 	setupTasksImportModal();
@@ -45,7 +39,7 @@ async function handleExportTasks() {
 		
 		if (response.success && response.data) {
 			const jsonText = JSON.stringify(response.data, null, 2);
-			openTasksExportModal(jsonText);
+			showTasksExportResult(jsonText);
 		} else {
 			showToast({ message: response.error || 'Failed to export tasks', type: 'error' });
 		}
@@ -56,24 +50,11 @@ async function handleExportTasks() {
 }
 
 /**
- * Setup tasks export modal
+ * Setup tasks export buttons
  */
-function setupTasksExportModal() {
-	const overlay = document.getElementById('tasks-export-modal-overlay');
-	const closeBtn = document.getElementById('tasks-export-modal-close-btn');
-	const btnClose = document.getElementById('btn-close-tasks-export');
+function setupTasksExportButtons() {
 	const btnCopy = document.getElementById('btn-copy-tasks-export');
 	const btnDownload = document.getElementById('btn-download-tasks-export');
-	
-	if (!overlay) return;
-	
-	const closeModal = () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('tasks-export-modal');
-	};
-	
-	if (closeBtn) closeBtn.addEventListener('click', closeModal);
-	if (btnClose) btnClose.addEventListener('click', closeModal);
 	
 	if (btnCopy) {
 		btnCopy.addEventListener('click', () => {
@@ -106,20 +87,19 @@ function setupTasksExportModal() {
 }
 
 /**
- * Open tasks export modal with JSON data
+ * Show tasks export result in unified modal
  */
-function openTasksExportModal(jsonText) {
-	const overlay = document.getElementById('tasks-export-modal-overlay');
+function showTasksExportResult(jsonText) {
+	const resultDiv = document.getElementById('tasks-export-result');
 	const textarea = document.getElementById('tasks-export-json');
 	
-	if (!overlay || !textarea) return;
+	if (!resultDiv || !textarea) return;
 	
 	textarea.value = jsonText;
-	overlay.classList.remove('hidden');
-	window.registerModal('tasks-export-modal', () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('tasks-export-modal');
-	});
+	resultDiv.classList.remove('hidden');
+	
+	// Scroll to result
+	resultDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
 
 /**
@@ -303,10 +283,13 @@ async function executeTasksImport(tasks) {
 			showToast({ message, type: 'success' });
 			
 			// Close modal and reload tasks
-			const overlay = document.getElementById('tasks-import-modal-overlay');
+			const overlay = document.getElementById('import-export-modal-overlay');
 			if (overlay) {
 				overlay.classList.add('hidden');
-				window.unregisterModal('tasks-import-modal');
+				window.unregisterModal('import-export-modal');
+			}
+			if (typeof resetImportExportModal === 'function') {
+				resetImportExportModal();
 			}
 			resetTasksImportForm();
 			
@@ -328,19 +311,12 @@ async function executeTasksImport(tasks) {
 }
 
 /**
- * Open tasks import modal
+ * Open tasks import modal (now handled by unified modal)
  */
 function openTasksImportModal() {
-	const overlay = document.getElementById('tasks-import-modal-overlay');
-	if (!overlay) return;
-	
-	overlay.classList.remove('hidden');
-	window.registerModal('tasks-import-modal', () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('tasks-import-modal');
-		resetTasksImportForm();
-	});
-	
+	if (typeof openImportExportModal === 'function') {
+		openImportExportModal('tasks');
+	}
 	resetTasksImportForm();
 }
 

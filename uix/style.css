@@ -3872,3 +3872,152 @@ body.light-mode .btn-add-column-menu:hover {
 	display: none;
 }
 
+/* Import/Export Unified Modal */
+#import-export-modal-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 1300;
+}
+
+#import-export-modal-overlay.hidden {
+	opacity: 0;
+	pointer-events: none;
+}
+
+#import-export-modal-container {
+	background: var(--card-bg, #1e293b);
+	border: 1px solid var(--border-color, #475569);
+	border-radius: 12px;
+	width: 90%;
+	max-width: 700px;
+	max-height: 90vh;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+	color: var(--text-primary, #f8fafc);
+}
+
+.import-export-modal-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 1.5rem;
+	border-bottom: 1px solid var(--border-color, #475569);
+}
+
+.import-export-modal-header h4 {
+	margin: 0;
+	font-size: 1.25rem;
+	font-weight: 600;
+}
+
+.import-export-modal-body {
+	padding: 1.5rem;
+	overflow-y: auto;
+	flex: 1;
+}
+
+/* Import/Export Tabs */
+.import-export-tabs {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 1.5rem;
+	border-bottom: 1px solid var(--border-color, #475569);
+}
+
+.import-export-tab {
+	background: transparent;
+	border: none;
+	color: var(--text-secondary, #94a3b8);
+	padding: 0.75rem 1.5rem;
+	cursor: pointer;
+	font-size: 0.9375rem;
+	font-weight: 500;
+	transition: all 0.2s ease;
+	border-bottom: 2px solid transparent;
+	margin-bottom: -1px;
+}
+
+.import-export-tab:hover {
+	color: var(--text-primary, #f8fafc);
+	background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+}
+
+.import-export-tab.active {
+	color: var(--accent-color, #22c55e);
+	border-bottom-color: var(--accent-color, #22c55e);
+}
+
+/* Import/Export Panels */
+.import-export-panel {
+	display: block;
+}
+
+.import-export-panel.hidden {
+	display: none;
+}
+
+.import-export-section {
+	margin-bottom: 1.5rem;
+}
+
+.import-export-section h5 {
+	margin: 0 0 1rem 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+	color: var(--text-primary, #f8fafc);
+}
+
+.import-export-result {
+	margin-top: 1.5rem;
+	padding-top: 1.5rem;
+	border-top: 1px solid var(--border-color, #475569);
+}
+
+.import-export-result label {
+	display: block;
+	margin-bottom: 0.5rem;
+	font-weight: 500;
+	color: var(--text-primary, #f8fafc);
+}
+
+.import-export-result textarea {
+	width: 100%;
+	padding: 0.75rem;
+	background: var(--bg-secondary, #0f172a);
+	border: 1px solid var(--border-color, #475569);
+	border-radius: 6px;
+	color: var(--text-primary, #f8fafc);
+	font-family: 'Courier New', monospace;
+	font-size: 0.875rem;
+	resize: vertical;
+}
+
+.import-export-result-buttons {
+	display: flex;
+	gap: 0.75rem;
+	margin-top: 1rem;
+}
+
+.import-export-action-buttons {
+	display: flex;
+	gap: 0.75rem;
+	margin-top: 1rem;
+	justify-content: flex-end;
+}
+
+.import-export-modal-buttons {
+	display: flex;
+	justify-content: flex-end;
+	padding: 1rem 1.5rem;
+	border-top: 1px solid var(--border-color, #475569);
+	gap: 0.75rem;
+}
+
