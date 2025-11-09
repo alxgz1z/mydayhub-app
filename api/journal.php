@@ -170,6 +170,18 @@ function handle_journal_action(string $action, string $method, PDO $pdo, int $us
                 }
                 break;
                 
+            case 'exportJournal':
+                if ($method === 'GET' || $method === 'POST') {
+                    return handle_export_journal($pdo, $userId, $data);
+                }
+                break;
+                
+            case 'importJournal':
+                if ($method === 'POST') {
+                    return handle_import_journal($pdo, $userId, $data);
+                }
+                break;
+                
             default:
                 return ['status' => 'error', 'message' => 'Invalid action specified.'];
         }
@@ -1711,6 +1723,218 @@ function handle_bulk_delete_journal_entries(PDO $pdo, int $userId, array $data):
         if ($pdo->inTransaction()) $pdo->rollBack();
         log_debug_message('Error in handle_bulk_delete_journal_entries(): ' . $e->getMessage());
         return ['status' => 'error', 'message' => 'A server error occurred.'];
+    }
+}
+
+/**
+ * Exports journal entries as JSON in the format: [{title, date, notes, isPrivate}]
+ */
+function handle_export_journal(PDO $pdo, int $userId, array $data): array {
+    $timeRange = $data['time_range'] ?? 'all_time';
+    
+    try {
+        // Calculate date range based on time_range parameter
+        $startDate = null;
+        $endDate = date('Y-m-d');
+        
+        switch ($timeRange) {
+            case 'past_month':
+                $startDate = date('Y-m-d', strtotime('-1 month'));
+                break;
+            case 'past_3_months':
+                $startDate = date('Y-m-d', strtotime('-3 months'));
+                break;
+            case 'past_year':
+                $startDate = date('Y-m-d', strtotime('-1 year'));
+                break;
+            case 'all_time':
+            default:
+                $startDate = '2000-01-01'; // Far back date to get all entries
+                break;
+        }
+        
+        // Get journal entries
+        $stmt = $pdo->prepare("
+            SELECT 
+                entry_id,
+                entry_date,
+                title,
+                content,
+                encrypted_data,
+                is_private
+            FROM journal_entries 
+            WHERE user_id = :userId 
+            AND entry_date BETWEEN :startDate AND :endDate
+            ORDER BY entry_date ASC, position ASC
+        ");
+        
+        $stmt->execute([
+            ':userId' => $userId,
+            ':startDate' => $startDate,
+            ':endDate' => $endDate
+        ]);
+        
+        $exportData = [];
+        while ($entry = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            // Decrypt entry data if private
+            $title = $entry['title'];
+            $content = $entry['content'];
+            
+            if ($entry['is_private']) {
+                $decryptedData = decryptJournalData($pdo, $userId, $entry['entry_id'], $entry['encrypted_data']);
+                if ($decryptedData) {
+                    $title = $decryptedData['title'] ?? $title;
+                    $content = $decryptedData['content'] ?? $content;
+                }
+            } else {
+                // For public entries, encrypted_data contains the JSON
+                if ($entry['encrypted_data']) {
+                    $data = json_decode($entry['encrypted_data'], true);
+                    $title = $data['title'] ?? $title;
+                    $content = $data['content'] ?? $content;
+                }
+            }
+            
+            $exportData[] = [
+                'title' => $title,
+                'date' => $entry['entry_date'],
+                'notes' => $content,
+                'isPrivate' => (bool)$entry['is_private']
+            ];
+        }
+        
+        return [
+            'status' => 'success',
+            'data' => $exportData
+        ];
+        
+    } catch (Exception $e) {
+        log_debug_message('Error in handle_export_journal(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to export journal entries.'];
+    }
+}
+
+/**
+ * Imports journal entries from JSON format: [{title, date, notes, isPrivate}]
+ */
+function handle_import_journal(PDO $pdo, int $userId, array $data): array {
+    $entriesJson = $data['entries'] ?? null;
+    
+    if (!$entriesJson) {
+        return ['status' => 'error', 'message' => 'Entries data is required.'];
+    }
+    
+    // Parse JSON if it's a string
+    if (is_string($entriesJson)) {
+        $entries = json_decode($entriesJson, true);
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            return ['status' => 'error', 'message' => 'Invalid JSON format.'];
+        }
+    } else {
+        $entries = $entriesJson;
+    }
+    
+    if (!is_array($entries)) {
+        return ['status' => 'error', 'message' => 'Entries must be an array.'];
+    }
+    
+    // Check quota
+    $quotaCheck = canCreateJournalEntry($pdo, $userId);
+    $currentCount = $quotaCheck['current_count'];
+    $limit = $quotaCheck['limit'];
+    
+    if ($limit !== -1 && ($currentCount + count($entries)) > $limit) {
+        return [
+            'status' => 'error',
+            'message' => "Import would exceed journal entry limit ({$limit}). You can import up to " . ($limit - $currentCount) . " more entries.",
+            'quota_exceeded' => true,
+            'current_count' => $currentCount,
+            'limit' => $limit,
+            'import_count' => count($entries)
+        ];
+    }
+    
+    try {
+        $pdo->beginTransaction();
+        
+        $imported = 0;
+        $errors = [];
+        
+        foreach ($entries as $index => $entry) {
+            if (empty($entry['title'])) {
+                $errors[] = "Entry #" . ($index + 1) . ": Missing title";
+                continue;
+            }
+            
+            // Parse date
+            $entryDate = null;
+            if (!empty($entry['date'])) {
+                $entryDate = date('Y-m-d', strtotime($entry['date']));
+                if ($entryDate === false) {
+                    $entryDate = date('Y-m-d'); // Default to today if invalid
+                }
+            } else {
+                $entryDate = date('Y-m-d'); // Default to today
+            }
+            
+            // Get position for this date
+            $stmtPos = $pdo->prepare("SELECT COALESCE(MAX(position), -1) + 1 FROM journal_entries WHERE user_id = :userId AND entry_date = :entryDate");
+            $stmtPos->execute([':userId' => $userId, ':entryDate' => $entryDate]);
+            $position = (int)$stmtPos->fetchColumn();
+            
+            $isPrivate = isset($entry['isPrivate']) && $entry['isPrivate'] === true;
+            $title = trim($entry['title']);
+            $content = trim($entry['notes'] ?? '');
+            
+            // Prepare entry data
+            $entryData = [
+                'title' => $title,
+                'content' => $content
+            ];
+            
+            // Insert entry
+            $stmtEntry = $pdo->prepare("INSERT INTO journal_entries (user_id, entry_date, title, content, encrypted_data, is_private, position, created_at, updated_at) VALUES (:userId, :entryDate, :title, :content, :encryptedData, :isPrivate, :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+            $stmtEntry->execute([
+                ':userId' => $userId,
+                ':entryDate' => $entryDate,
+                ':title' => $title,
+                ':content' => $content,
+                ':encryptedData' => json_encode($entryData),
+                ':isPrivate' => $isPrivate ? 1 : 0,
+                ':position' => $position
+            ]);
+            
+            $entryId = (int)$pdo->lastInsertId();
+            
+            // Encrypt if encryption is enabled and entry is private
+            if ($isPrivate && isEncryptionEnabled($pdo, $userId)) {
+                $encryptedData = encryptJournalData($pdo, $userId, $entryId, $entryData);
+                if ($encryptedData) {
+                    $stmtEncrypt = $pdo->prepare("UPDATE journal_entries SET encrypted_data = :encryptedData WHERE entry_id = :entryId");
+                    $stmtEncrypt->execute([':encryptedData' => $encryptedData, ':entryId' => $entryId]);
+                }
+            }
+            
+            $imported++;
+        }
+        
+        $pdo->commit();
+        
+        return [
+            'status' => 'success',
+            'data' => [
+                'imported_count' => $imported,
+                'total_count' => count($entries),
+                'errors' => $errors
+            ]
+        ];
+        
+    } catch (Exception $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
+        log_debug_message('Error in handle_import_journal(): ' . $e->getMessage());
+        return ['status' => 'error', 'message' => 'Failed to import journal entries: ' . $e->getMessage()];
     }
 }
 ?>

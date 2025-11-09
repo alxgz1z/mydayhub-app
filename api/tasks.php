@@ -352,6 +352,18 @@ function handle_tasks_action(string $action, string $method, PDO $pdo, int $user
 			}
 			break;
 		
+		case 'exportTasks':
+			if ($method === 'GET' || $method === 'POST') {
+				handle_export_tasks($pdo, $userId, $data);
+			}
+			break;
+		
+		case 'importTasks':
+			if ($method === 'POST') {
+				handle_import_tasks($pdo, $userId, $data);
+			}
+			break;
+		
 		default:
 			send_json_response(['status' => 'error', 'message' => "Action '{$action}' not found in tasks module."], 404);
 			break;
@@ -3061,5 +3073,280 @@ function handle_bulk_delete_tasks(PDO $pdo, int $userId, ?array $data): void {
 		if ($pdo->inTransaction()) $pdo->rollBack();
 		log_debug_message('Error in handle_bulk_delete_tasks(): ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'A server error occurred.'], 500);
+	}
+}
+
+/**
+ * Exports tasks as JSON in the format: [{title, columnName, isPriority, dueDate, notes}]
+ */
+function handle_export_tasks(PDO $pdo, int $userId, ?array $data): void {
+	$includeCompleted = isset($data['include_completed']) && $data['include_completed'] === true;
+	
+	try {
+		// Get all columns for mapping column_id to column_name
+		$stmtColumns = $pdo->prepare("SELECT column_id, column_name FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+		$stmtColumns->execute([':userId' => $userId]);
+		$columns = [];
+		while ($col = $stmtColumns->fetch(PDO::FETCH_ASSOC)) {
+			$columns[$col['column_id']] = $col['column_name'];
+		}
+		
+		// Build query - exclude completed tasks unless includeCompleted is true
+		$sql = "SELECT task_id, column_id, encrypted_data, classification, due_date 
+				FROM tasks 
+				WHERE user_id = :userId AND deleted_at IS NULL";
+		
+		if (!$includeCompleted) {
+			$sql .= " AND classification != 'completed'";
+		}
+		
+		$sql .= " ORDER BY column_id, position ASC";
+		
+		$stmt = $pdo->prepare($sql);
+		$stmt->execute([':userId' => $userId]);
+		
+		$exportData = [];
+		while ($task = $stmt->fetch(PDO::FETCH_ASSOC)) {
+			// Decrypt task data
+			$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+			if (!$decryptedData) {
+				// Fallback: try JSON decode for non-encrypted tasks
+				$decryptedData = json_decode($task['encrypted_data'], true);
+			}
+			
+			if (!$decryptedData) {
+				continue; // Skip tasks we can't decrypt
+			}
+			
+			$columnName = $columns[$task['column_id']] ?? 'Unknown Column';
+			$isPriority = ($task['classification'] === 'mission');
+			
+			$exportData[] = [
+				'title' => $decryptedData['title'] ?? '',
+				'columnName' => $columnName,
+				'isPriority' => $isPriority,
+				'dueDate' => $task['due_date'] ? date('Y-m-d', strtotime($task['due_date'])) : '',
+				'notes' => $decryptedData['notes'] ?? ''
+			];
+		}
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => $exportData
+		]);
+		
+	} catch (Exception $e) {
+		log_debug_message('Error in handle_export_tasks(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to export tasks.'], 500);
+	}
+}
+
+/**
+ * Imports tasks from JSON format: [{title, columnName, isPriority, dueDate, notes}]
+ */
+function handle_import_tasks(PDO $pdo, int $userId, ?array $data): void {
+	$tasksJson = $data['tasks'] ?? null;
+	
+	if (!$tasksJson) {
+		send_json_response(['status' => 'error', 'message' => 'Tasks data is required.'], 400);
+		return;
+	}
+	
+	// Parse JSON if it's a string
+	if (is_string($tasksJson)) {
+		$tasks = json_decode($tasksJson, true);
+		if (json_last_error() !== JSON_ERROR_NONE) {
+			send_json_response(['status' => 'error', 'message' => 'Invalid JSON format.'], 400);
+			return;
+		}
+	} else {
+		$tasks = $tasksJson;
+	}
+	
+	if (!is_array($tasks)) {
+		send_json_response(['status' => 'error', 'message' => 'Tasks must be an array.'], 400);
+		return;
+	}
+	
+	// Check quota
+	$quotaCheck = canCreateTask($pdo, $userId);
+	$currentCount = $quotaCheck['current_count'];
+	$limit = $quotaCheck['limit'];
+	
+	if ($limit !== -1 && ($currentCount + count($tasks)) > $limit) {
+		send_json_response([
+			'status' => 'error',
+			'message' => "Import would exceed task limit ({$limit}). You can import up to " . ($limit - $currentCount) . " more tasks.",
+			'quota_exceeded' => true,
+			'current_count' => $currentCount,
+			'limit' => $limit,
+			'import_count' => count($tasks)
+		], 403);
+		return;
+	}
+	
+	try {
+		$pdo->beginTransaction();
+		
+		// Get all existing columns for mapping columnName to column_id
+		$stmtColumns = $pdo->prepare("SELECT column_id, column_name FROM `columns` WHERE user_id = :userId AND deleted_at IS NULL");
+		$stmtColumns->execute([':userId' => $userId]);
+		$columnMap = [];
+		$maxPosition = [];
+		while ($col = $stmtColumns->fetch(PDO::FETCH_ASSOC)) {
+			$columnMap[strtolower($col['column_name'])] = $col['column_id'];
+			$maxPosition[$col['column_id']] = 0;
+		}
+		
+		// Get current max positions for each column
+		foreach ($maxPosition as $colId => $pos) {
+			$stmtPos = $pdo->prepare("SELECT COALESCE(MAX(position), -1) + 1 FROM tasks WHERE user_id = :userId AND column_id = :columnId AND deleted_at IS NULL");
+			$stmtPos->execute([':userId' => $userId, ':columnId' => $colId]);
+			$maxPosition[$colId] = (int)$stmtPos->fetchColumn();
+		}
+		
+		$imported = 0;
+		$errors = [];
+		
+		// Ensure "Unallocated Tasks" column exists for tasks from missing columns
+		$unallocatedColumnId = null;
+		$unallocatedColumnKey = strtolower('Unallocated Tasks');
+		if (isset($columnMap[$unallocatedColumnKey])) {
+			$unallocatedColumnId = $columnMap[$unallocatedColumnKey];
+		} else {
+			// Create "Unallocated Tasks" column if it doesn't exist
+			$quotaCheckCol = canCreateColumn($pdo, $userId);
+			if ($quotaCheckCol['can_create']) {
+				$stmtUnallocated = $pdo->prepare("INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, 'Unallocated Tasks', :position, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+				$unallocatedPosition = count($columnMap);
+				$stmtUnallocated->execute([':userId' => $userId, ':position' => $unallocatedPosition]);
+				$unallocatedColumnId = (int)$pdo->lastInsertId();
+				$columnMap[$unallocatedColumnKey] = $unallocatedColumnId;
+				$maxPosition[$unallocatedColumnId] = 0;
+			}
+		}
+		
+		foreach ($tasks as $index => $task) {
+			if (empty($task['title'])) {
+				$errors[] = "Task #" . ($index + 1) . ": Missing title";
+				continue;
+			}
+			
+			$columnName = $task['columnName'] ?? '';
+			$originalColumnName = $columnName; // Store original for title prefix
+			$columnId = null;
+			$needsUnallocated = false;
+			
+			// Find or use unallocated column
+			if (!empty($columnName)) {
+				$columnKey = strtolower($columnName);
+				if (isset($columnMap[$columnKey])) {
+					$columnId = $columnMap[$columnKey];
+				} else {
+					// Column doesn't exist - use Unallocated Tasks column
+					$needsUnallocated = true;
+					if ($unallocatedColumnId) {
+						$columnId = $unallocatedColumnId;
+					} else {
+						// Can't create Unallocated Tasks column - skip task
+						$errors[] = "Task #" . ($index + 1) . ": Cannot create 'Unallocated Tasks' column - quota exceeded";
+						continue;
+					}
+				}
+			} else {
+				// Use first available column or create "Backlog"
+				if (isset($columnMap['backlog'])) {
+					$columnId = $columnMap['backlog'];
+				} elseif (!empty($columnMap)) {
+					$columnId = reset($columnMap);
+				} else {
+					// Create Backlog column
+					$quotaCheckCol = canCreateColumn($pdo, $userId);
+					if (!$quotaCheckCol['can_create']) {
+						$errors[] = "Task #" . ($index + 1) . ": No columns available and cannot create new column";
+						continue;
+					}
+					
+					$stmtNewCol = $pdo->prepare("INSERT INTO `columns` (user_id, column_name, position, created_at, updated_at) VALUES (:userId, 'Backlog', 0, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+					$stmtNewCol->execute([':userId' => $userId]);
+					$columnId = (int)$pdo->lastInsertId();
+					$columnMap['backlog'] = $columnId;
+					$maxPosition[$columnId] = 0;
+				}
+			}
+			
+			if (!$columnId) {
+				$errors[] = "Task #" . ($index + 1) . ": Could not determine column";
+				continue;
+			}
+			
+			// Determine position
+			$position = $maxPosition[$columnId]++;
+			
+			// Determine classification
+			$classification = 'support';
+			if (isset($task['isPriority']) && $task['isPriority'] === true) {
+				$classification = 'mission';
+			}
+			
+			// Prepare task data - prefix title with original column name if unallocated
+			$taskTitle = trim($task['title']);
+			if ($needsUnallocated && !empty($originalColumnName)) {
+				$taskTitle = "({$originalColumnName}) " . $taskTitle;
+			}
+			
+			$taskData = [
+				'title' => $taskTitle,
+				'notes' => trim($task['notes'] ?? '')
+			];
+			
+			// Insert task
+			$dueDate = null;
+			if (!empty($task['dueDate'])) {
+				$dueDate = date('Y-m-d', strtotime($task['dueDate']));
+				if ($dueDate === false) {
+					$dueDate = null;
+				}
+			}
+			
+			$stmtTask = $pdo->prepare("INSERT INTO tasks (user_id, column_id, encrypted_data, position, classification, due_date, created_at, updated_at) VALUES (:userId, :columnId, :encryptedData, :position, :classification, :dueDate, UTC_TIMESTAMP(), UTC_TIMESTAMP())");
+			$stmtTask->execute([
+				':userId' => $userId,
+				':columnId' => $columnId,
+				':encryptedData' => json_encode($taskData),
+				':position' => $position,
+				':classification' => $classification,
+				':dueDate' => $dueDate
+			]);
+			
+			$taskId = (int)$pdo->lastInsertId();
+			
+			// Encrypt if encryption is enabled
+			if (isEncryptionEnabled($pdo, $userId)) {
+				$encryptedData = encryptTaskData($pdo, $userId, $taskId, $taskData);
+				$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+				$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':taskId' => $taskId]);
+			}
+			
+			$imported++;
+		}
+		
+		$pdo->commit();
+		
+		send_json_response([
+			'status' => 'success',
+			'data' => [
+				'imported_count' => $imported,
+				'total_count' => count($tasks),
+				'errors' => $errors
+			]
+		]);
+		
+	} catch (Exception $e) {
+		if ($pdo->inTransaction()) {
+			$pdo->rollBack();
+		}
+		log_debug_message('Error in handle_import_tasks(): ' . $e->getMessage());
+		send_json_response(['status' => 'error', 'message' => 'Failed to import tasks: ' . $e->getMessage()], 500);
 	}
 }

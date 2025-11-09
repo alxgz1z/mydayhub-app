@@ -1,0 +1,541 @@
+[
+  {
+	"title": "Schedule Interlock Sales 07/28",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "2025-12-15",
+	"notes": ""
+  },
+  {
+	"title": "Schedule Q1 all hands (Invite Isidro Extreme Accountability)  11/21",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "2025-11-21",
+	"notes": "moving to Q2"
+  },
+  {
+	"title": "Hugo Barojas @ BBVA With Telmex and Raul Cortes",
+	"columnName": "Track with region leaders",
+	"isPriority": true,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Pursue non incremental req for Arch People Leader & EC People leader",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": true,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Create security war room Latam",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Start Better-Up 2.0",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Majo + Luis + Ade Ref Coppel",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": "have them meet"
+  },
+  {
+	"title": "Monitor Disti AS-T governance",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Connect German with Karla Rivera about AI Workshops",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": true,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@jugirald monitor PMO RB tenure 9/25",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@Tatiana help book Edelman appointment",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "MPP presentation Miguel Ordonez",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": "Quick Update de la evolución del Marco Proactivo, en base a lo que me comentaste cuando viniste a MX y pláticas con Marcelo acerca del ASN TM Forum. Hemos estado trabajando en algunas modificaciones:\n\n1) Trabajamos una Metodología de la Evolución del Marco Proactivo(2.0) alineado con lo del ASN TM Forum, AIOPs y Observabilidad. Estamos terminando de afinar una presentación para mostrártelo a ti y Marcelo tener tus insights.\n\n2) Orchestrator(aka Blackbox - pendiente cambiar el nombre): se tiene approval de CXPM por parte del area del CX Center que lo desarrollo y ya está en el CX Catalog."
+  },
+  {
+	"title": "Tavo Velasques sobre AI partners",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Connect Laercio with EOS vos Eric K.",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": true,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@bewall <> RaVi WiFi enablement (similar Security)",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Book Cancun 9/29",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Service Quality Hub",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Push focus for adoption of Meraki Cloud sync with Ramon V.",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@demariann sync con Manuel Cab Nexus Dashboard/Spaces training partners",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@bewall quarterly provide BU feedback in Jyoti's form",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@jugirald R2B PMO savings projection",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Send Marshall requested CRs to BU contacts supporting Latam",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Coordinar reunión con Enrique Quant - Miguel Damian por negocios en CentAm",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Recognition Program Exec Sponsor",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Look for \"Leading with Impact: Advanced Communications\" or similar",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@KarenM onboard Tatiana B.",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Some way to view P&L / squad",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": "9/8 Asked Lore for status"
+  },
+  {
+	"title": "TAC stats for Latam audience in Connect",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Firewall Migration Program sponsored by Amanatullah (revisar)",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Expand Clark's KPI Tree practice?",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "temporal",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "2025-07-31",
+	"notes": ""
+  },
+  {
+	"title": "Why only ¼ of T&E charged to projects?",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "We need the list of demos in Connect",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Work on proposed contents for SAS",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@bewall monitor Costa Rica overtime policy changes",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Understand CVI/CX Platform",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Ana Rider offering CAP training",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": "Delegated to Juan Giraldo.  He'll take the lead for this training to be delivered."
+  },
+  {
+	"title": "War Gaming (SPA) for Latam?",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "AMX renewal big honcho's meeting",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@BeWa finish achievement cards inventory",
+	"columnName": "Parking Lot",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Schedule Q4 Eng Pulse debrief",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@germrod get GBM co-delivery PO",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "SAS approved low margin",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Technocaliente, Erics role in Cancun",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Take AI for everyone training",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Finalize agenda Petite Miami Meeting",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Prepare August meetings Latam @German",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Accomplishments Q4",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "2025-07-29",
+	"notes": ""
+  },
+  {
+	"title": "Complete Talent Assessments DRs",
+	"columnName": "Sync with my Admin Assistant",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@bewall finish backfill req's hiring",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@malves track G12 lateral moves FerFL and Bruno",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Note to Karen Webb for Cancun sponsorship",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@jugirald BCI migracion a Splunk Cloud",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Sync with John Stone for use of adoption cibercapsules",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "AI general tools productivity gains",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Finish agreement on people transfers to EMEA",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@RuTe list top20 customers IPA target",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Prepare response for FY26 COGS challenge",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@jugirald manage OneTen IC NME",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@AnMa Piloto DLSE en Brazil",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Complete Talent Assessment",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "2025-07-14",
+	"notes": ""
+  },
+  {
+	"title": "Refer Issac Gil to Malu (Wess Moss)",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Discuss value realization YPF & Entel commented by Daniela Hernandez",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@bewall template  07/14",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "2025-07-14",
+	"notes": ""
+  },
+  {
+	"title": "Brainstorming State of Team Culture",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@DeMa meeting with Ramon to promote use of subway maps",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Delivery Intelligence: iWFM  Complete Skills Inventory",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "2025-07-14",
+	"notes": ""
+  },
+  {
+	"title": "@JuGi follow-up PMI initiative (Heally)",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@VeZa  CX champion program status",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Follow-up NDA/Explain signature to theater leaders",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@LuMa leading ramp-up of security engineers",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Discuss market share at risk for EoL IB",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Socialize with P&C span of control ideas",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "@JaM Re-group Banorte fronts",
+	"columnName": "Track with my direct reports",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "Organice call TAC champions",
+	"columnName": "Track with region leaders",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": "Include Luis Preciado, Juan del Villar, Ramon Vinals, Expert Care team, Squad Leaders and my direct reports, CPMs"
+  },
+  {
+	"title": "Schedule guiding principles activation series",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  },
+  {
+	"title": "test task",
+	"columnName": "Track with my mgr and peers",
+	"isPriority": false,
+	"dueDate": "",
+	"notes": ""
+  }
+]

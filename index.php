@@ -874,6 +874,81 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 					</div>
 				</div>
 				<div class="setting-item">
+					<div class="setting-section-header">
+						<h5>Export Tasks</h5>
+					</div>
+					<div class="setting-control">
+						<label class="toggle-switch">
+							<input type="checkbox" id="export-tasks-include-completed" checked>
+							<span class="toggle-slider"></span>
+							<span class="toggle-label">Include completed tasks</span>
+						</label>
+					</div>
+					<div class="setting-control">
+						<button type="button" id="btn-export-tasks" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="7 10 12 15 17 10"></polyline>
+								<line x1="12" y1="15" x2="12" y2="3"></line>
+							</svg>
+							<span class="setting-label">Export</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-section-header">
+						<h5>Import Tasks</h5>
+					</div>
+					<div class="setting-control">
+						<button type="button" id="btn-import-tasks" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="17 8 12 3 7 8"></polyline>
+								<line x1="12" y1="3" x2="12" y2="15"></line>
+							</svg>
+							<span class="setting-label">Import</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-section-header">
+						<h5>Export Journal</h5>
+					</div>
+					<div class="setting-control">
+						<select id="export-journal-time-range" class="form-select" style="margin-bottom: 0.5rem;">
+							<option value="all_time">All time</option>
+							<option value="past_year">Past year</option>
+							<option value="past_3_months">Past 3 months</option>
+							<option value="past_month">Past month</option>
+						</select>
+					</div>
+					<div class="setting-control">
+						<button type="button" id="btn-export-journal" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="7 10 12 15 17 10"></polyline>
+								<line x1="12" y1="15" x2="12" y2="3"></line>
+							</svg>
+							<span class="setting-label">Export</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
+					<div class="setting-section-header">
+						<h5>Import Journal</h5>
+					</div>
+					<div class="setting-control">
+						<button type="button" id="btn-import-journal" class="btn">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
+								<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+								<polyline points="17 8 12 3 7 8"></polyline>
+								<line x1="12" y1="3" x2="12" y2="15"></line>
+							</svg>
+							<span class="setting-label">Import</span>
+						</button>
+					</div>
+				</div>
+				<div class="setting-item">
 					<div class="setting-control">
 						<button type="button" id="btn-usage-stats" class="btn">
 							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-right: 0.5rem;">
@@ -2097,10 +2172,154 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 					<label for="calendar-export-json">Calendar JSON</label>
 					<textarea id="calendar-export-json" rows="15" readonly></textarea>
 				</div>
-				<div class="calendar-export-modal-buttons">
-					<button type="button" id="btn-copy-export-json" class="btn btn-primary">Copy All</button>
-					<button type="button" id="btn-export-close" class="btn">Close</button>
+			<div class="calendar-export-modal-buttons">
+				<button type="button" id="btn-copy-export-json" class="btn btn-primary">Copy All</button>
+				<button type="button" id="btn-export-close" class="btn">Close</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Tasks Export Modal -->
+	<div id="tasks-export-modal-overlay" class="hidden">
+		<div id="tasks-export-modal-container">
+			<div class="tasks-export-modal-header">
+				<h4>Export Tasks</h4>
+				<button id="tasks-export-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="tasks-export-modal-body">
+				<label for="tasks-export-json">Tasks JSON</label>
+				<textarea id="tasks-export-json" rows="15" readonly></textarea>
+			</div>
+			<div class="tasks-export-modal-buttons">
+				<button type="button" id="btn-copy-tasks-export" class="btn btn-primary">Copy All</button>
+				<button type="button" id="btn-download-tasks-export" class="btn btn-secondary">Download as .json</button>
+				<button type="button" id="btn-close-tasks-export" class="btn">Close</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Tasks Import Modal -->
+	<div id="tasks-import-modal-overlay" class="hidden">
+		<div id="tasks-import-modal-container">
+			<div class="tasks-import-modal-header">
+				<h4>Import Tasks</h4>
+				<button id="tasks-import-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="tasks-import-modal-body">
+				<div class="import-instructions">
+					<h6>Import Instructions</h6>
+					<p>Upload a JSON file or paste JSON data containing tasks in the following format:</p>
+					<pre><code>[
+  {
+    "title": "Task title",
+    "columnName": "Column Name",
+    "isPriority": false,
+    "dueDate": "2025-12-15",
+    "notes": "Task notes"
+  }
+]</code></pre>
 				</div>
+				<div class="import-form">
+					<div class="import-method-tabs">
+						<button type="button" class="import-method-tab active" data-method="file">Upload File</button>
+						<button type="button" class="import-method-tab" data-method="paste">Paste JSON</button>
+					</div>
+					
+					<div id="tasks-import-file-section" class="import-method-section active">
+						<div class="form-group">
+							<label for="tasks-json-file-input">Select JSON File</label>
+							<input type="file" id="tasks-json-file-input" accept=".json" />
+						</div>
+					</div>
+					
+					<div id="tasks-import-paste-section" class="import-method-section hidden">
+						<div class="form-group">
+							<label for="tasks-json-paste-input">Paste JSON Data</label>
+							<textarea id="tasks-json-paste-input" rows="10" placeholder="Paste your JSON data here..."></textarea>
+						</div>
+					</div>
+				</div>
+				<div id="tasks-import-preview" class="import-preview hidden">
+					<h6>Import Preview</h6>
+					<p id="tasks-import-preview-text"></p>
+				</div>
+			</div>
+			<div class="tasks-import-modal-buttons">
+				<button type="button" id="btn-tasks-import-cancel" class="btn">Cancel</button>
+				<button type="button" id="btn-tasks-import-preview" class="btn btn-secondary" disabled>Preview</button>
+				<button type="button" id="btn-tasks-import-execute" class="btn btn-primary" disabled>Import Tasks</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Journal Export Modal -->
+	<div id="journal-export-modal-overlay" class="hidden">
+		<div id="journal-export-modal-container">
+			<div class="journal-export-modal-header">
+				<h4>Export Journal</h4>
+				<button id="journal-export-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="journal-export-modal-body">
+				<label for="journal-export-json">Journal JSON</label>
+				<textarea id="journal-export-json" rows="15" readonly></textarea>
+			</div>
+			<div class="journal-export-modal-buttons">
+				<button type="button" id="btn-copy-journal-export" class="btn btn-primary">Copy All</button>
+				<button type="button" id="btn-download-journal-export" class="btn btn-secondary">Download as .json</button>
+				<button type="button" id="btn-close-journal-export" class="btn">Close</button>
+			</div>
+		</div>
+	</div>
+	
+	<!-- Journal Import Modal -->
+	<div id="journal-import-modal-overlay" class="hidden">
+		<div id="journal-import-modal-container">
+			<div class="journal-import-modal-header">
+				<h4>Import Journal</h4>
+				<button id="journal-import-modal-close-btn" class="btn-icon btn-close" type="button">&times;</button>
+			</div>
+			<div class="journal-import-modal-body">
+				<div class="import-instructions">
+					<h6>Import Instructions</h6>
+					<p>Upload a JSON file or paste JSON data containing journal entries in the following format:</p>
+					<pre><code>[
+  {
+    "title": "Entry title",
+    "date": "2025-10-25",
+    "notes": "Entry content",
+    "isPrivate": false
+  }
+]</code></pre>
+				</div>
+				<div class="import-form">
+					<div class="import-method-tabs">
+						<button type="button" class="import-method-tab active" data-method="file">Upload File</button>
+						<button type="button" class="import-method-tab" data-method="paste">Paste JSON</button>
+					</div>
+					
+					<div id="journal-import-file-section" class="import-method-section active">
+						<div class="form-group">
+							<label for="journal-json-file-input">Select JSON File</label>
+							<input type="file" id="journal-json-file-input" accept=".json" />
+						</div>
+					</div>
+					
+					<div id="journal-import-paste-section" class="import-method-section hidden">
+						<div class="form-group">
+							<label for="journal-json-paste-input">Paste JSON Data</label>
+							<textarea id="journal-json-paste-input" rows="10" placeholder="Paste your JSON data here..."></textarea>
+						</div>
+					</div>
+				</div>
+				<div id="journal-import-preview" class="import-preview hidden">
+					<h6>Import Preview</h6>
+					<p id="journal-import-preview-text"></p>
+				</div>
+			</div>
+			<div class="journal-import-modal-buttons">
+				<button type="button" id="btn-journal-import-cancel" class="btn">Cancel</button>
+				<button type="button" id="btn-journal-import-preview" class="btn btn-secondary" disabled>Preview</button>
+				<button type="button" id="btn-journal-import-execute" class="btn btn-primary" disabled>Import Journal</button>
 			</div>
 		</div>
 	</div>
@@ -2877,6 +3096,8 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<script src="uix/tasks.js" defer></script>
 	<script src="uix/calendar.js" defer></script>
 	<script src="uix/journal.js?v=8.8" defer></script>
+	<script src="uix/tasks-export.js" defer></script>
+	<script src="uix/journal-export.js" defer></script>
 
 </body>
 </html>
