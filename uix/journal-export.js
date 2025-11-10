@@ -255,8 +255,10 @@ async function executeJournalImport(entries) {
 			}
 		});
 		
-		if (response.success) {
-			const data = response.data || {};
+		const isSuccess = response && (response.success === true || response.status === 'success');
+		
+		if (isSuccess) {
+			const data = response.data || response;
 			const imported = data.imported_count || 0;
 			const total = data.total_count || 0;
 			const errors = data.errors || [];
@@ -286,7 +288,8 @@ async function executeJournalImport(entries) {
 				initJournalView();
 			}
 		} else {
-			showToast({ message: response.error || 'Failed to import journal entries', type: 'error' });
+			const errorMessage = response?.error || response?.message || 'Failed to import journal entries';
+			showToast({ message: errorMessage, type: 'error' });
 			if (btnExecute) btnExecute.disabled = false;
 		}
 	} catch (error) {
