@@ -120,6 +120,15 @@ function switchImportExportTab(tabName) {
  */
 function openImportExportModal(tabName = 'tasks') {
 	console.log('openImportExportModal called with tab:', tabName);
+	// Close settings panel if it's open to prevent overlay conflicts
+	if (typeof closeSettingsPanel === 'function') {
+		try {
+			closeSettingsPanel();
+		} catch (error) {
+			console.warn('Failed to close settings panel before opening Import/Export modal:', error);
+		}
+	}
+	
 	const overlay = document.getElementById('import-export-modal-overlay');
 	if (!overlay) {
 		console.error('Import/Export modal overlay not found!');
