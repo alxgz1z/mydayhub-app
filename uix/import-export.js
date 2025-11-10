@@ -12,8 +12,10 @@ let importExportInitialized = false;
 function initImportExport() {
 	// Prevent duplicate initialization
 	if (importExportInitialized) {
+		console.log('initImportExport already initialized');
 		return;
 	}
+	console.log('initImportExport running');
 	
 	// Setup modal first
 	setupImportExportModal();
@@ -133,6 +135,12 @@ function openImportExportModal(tabName = 'tasks') {
 	if (!overlay) {
 		console.error('Import/Export modal overlay not found!');
 		return;
+	}
+	
+	// Ensure overlay is attached directly to body to avoid parent overflow/stacking issues
+	if (overlay.parentNode !== document.body) {
+		console.log('Reattaching import/export modal overlay to body');
+		document.body.appendChild(overlay);
 	}
 	
 	console.log('Opening Import/Export modal');
