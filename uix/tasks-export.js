@@ -106,27 +106,13 @@ function showTasksExportResult(jsonText) {
  * Setup tasks import modal
  */
 function setupTasksImportModal() {
-	const overlay = document.getElementById('tasks-import-modal-overlay');
-	const closeBtn = document.getElementById('tasks-import-modal-close-btn');
-	const btnCancel = document.getElementById('btn-tasks-import-cancel');
 	const btnPreview = document.getElementById('btn-tasks-import-preview');
 	const btnExecute = document.getElementById('btn-tasks-import-execute');
 	const fileInput = document.getElementById('tasks-json-file-input');
 	const pasteInput = document.getElementById('tasks-json-paste-input');
-	const fileTab = overlay?.querySelector('.import-method-tab[data-method="file"]');
-	const pasteTab = overlay?.querySelector('.import-method-tab[data-method="paste"]');
-	
-	if (!overlay) return;
-	
-	const closeModal = () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('tasks-import-modal');
-		resetTasksImportForm();
-	};
-	
-	if (closeBtn) closeBtn.addEventListener('click', closeModal);
-	if (btnCancel) btnCancel.addEventListener('click', closeModal);
-	
+	const fileTab = document.querySelector('#import-export-tasks-panel .import-method-tab[data-method="file"]');
+	const pasteTab = document.querySelector('#import-export-tasks-panel .import-method-tab[data-method="paste"]');
+
 	// Method tabs
 	if (fileTab && pasteTab) {
 		fileTab.addEventListener('click', () => switchTasksImportMethod('file'));
@@ -179,8 +165,8 @@ function setupTasksImportModal() {
 function switchTasksImportMethod(method) {
 	const fileSection = document.getElementById('tasks-import-file-section');
 	const pasteSection = document.getElementById('tasks-import-paste-section');
-	const fileTab = document.querySelector('#tasks-import-modal-overlay .import-method-tab[data-method="file"]');
-	const pasteTab = document.querySelector('#tasks-import-modal-overlay .import-method-tab[data-method="paste"]');
+	const fileTab = document.querySelector('#import-export-tasks-panel .import-method-tab[data-method="file"]');
+	const pasteTab = document.querySelector('#import-export-tasks-panel .import-method-tab[data-method="paste"]');
 	
 	if (method === 'file') {
 		fileSection?.classList.add('active');

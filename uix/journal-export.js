@@ -106,27 +106,13 @@ function showJournalExportResult(jsonText) {
  * Setup journal import modal
  */
 function setupJournalImportModal() {
-	const overlay = document.getElementById('journal-import-modal-overlay');
-	const closeBtn = document.getElementById('journal-import-modal-close-btn');
-	const btnCancel = document.getElementById('btn-journal-import-cancel');
 	const btnPreview = document.getElementById('btn-journal-import-preview');
 	const btnExecute = document.getElementById('btn-journal-import-execute');
 	const fileInput = document.getElementById('journal-json-file-input');
 	const pasteInput = document.getElementById('journal-json-paste-input');
-	const fileTab = overlay?.querySelector('.import-method-tab[data-method="file"]');
-	const pasteTab = overlay?.querySelector('.import-method-tab[data-method="paste"]');
-	
-	if (!overlay) return;
-	
-	const closeModal = () => {
-		overlay.classList.add('hidden');
-		window.unregisterModal('journal-import-modal');
-		resetJournalImportForm();
-	};
-	
-	if (closeBtn) closeBtn.addEventListener('click', closeModal);
-	if (btnCancel) btnCancel.addEventListener('click', closeModal);
-	
+	const fileTab = document.querySelector('#import-export-journal-panel .import-method-tab[data-method="file"]');
+	const pasteTab = document.querySelector('#import-export-journal-panel .import-method-tab[data-method="paste"]');
+
 	// Method tabs
 	if (fileTab && pasteTab) {
 		fileTab.addEventListener('click', () => switchJournalImportMethod('file'));
@@ -179,8 +165,8 @@ function setupJournalImportModal() {
 function switchJournalImportMethod(method) {
 	const fileSection = document.getElementById('journal-import-file-section');
 	const pasteSection = document.getElementById('journal-import-paste-section');
-	const fileTab = document.querySelector('#journal-import-modal-overlay .import-method-tab[data-method="file"]');
-	const pasteTab = document.querySelector('#journal-import-modal-overlay .import-method-tab[data-method="paste"]');
+	const fileTab = document.querySelector('#import-export-journal-panel .import-method-tab[data-method="file"]');
+	const pasteTab = document.querySelector('#import-export-journal-panel .import-method-tab[data-method="paste"]');
 	
 	if (method === 'file') {
 		fileSection?.classList.add('active');
