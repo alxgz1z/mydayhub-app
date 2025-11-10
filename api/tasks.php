@@ -3283,11 +3283,13 @@ function handle_import_tasks(PDO $pdo, int $userId, ?array $data): void {
 			// Determine position
 			$position = $maxPosition[$columnId]++;
 			
-			// Determine classification
-			$classification = 'support';
-			if (isset($task['isPriority']) && $task['isPriority'] === true) {
-				$classification = 'mission';
+			// Determine classification - map priority flag to existing enum values
+			// 'signal' represents high-priority tasks in the current schema.
+			$isPriority = $task['isPriority'] ?? false;
+			if (is_string($isPriority)) {
+				$isPriority = filter_var($isPriority, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
 			}
+			$classification = ($isPriority === true) ? 'signal' : 'support';
 			
 			// Prepare task data - prefix title with original column name if unallocated
 			$taskTitle = trim($task['title']);
