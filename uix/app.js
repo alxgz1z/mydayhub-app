@@ -1,7 +1,7 @@
 /**
  * Code for /uix/app.js
  *
- *  MyDayHub - Main Application Logic
+ *  Signal - Main Application Logic
  *
  * This script initializes the application, handles view switching,
  * and contains global UI functions like toasts and modals.
@@ -24,7 +24,7 @@ async function apiFetch(bodyPayload = {}) {
 		 'Content-Type': 'application/json',
 		 'X-CSRF-TOKEN': csrfToken,
 	 };
-	 const appURL = window.MyDayHub_Config?.appURL || '';
+	 const appURL = window.Signal_Config?.appURL || '';
 	 const response = await fetch(`${appURL}/api/api.php`, {
 		 method: 'POST',
 		 headers,
@@ -117,7 +117,7 @@ function showSessionWarning() {
  * Handles automatic session timeout by redirecting to logout.
  */
 function handleSessionTimeout() {
-	const appURL = window.MyDayHub_Config?.appURL || '';
+	const appURL = window.Signal_Config?.appURL || '';
 	window.location.href = `${appURL}/login/logout.php?reason=timeout`;
 }
 
@@ -336,7 +336,7 @@ async function updateMissionFocusChart() {
         } else {
             // Fallback: fetch task data via API so chart works on Journal view without rendering Tasks
             try {
-                const appURL = window.MyDayHub_Config?.appURL || '';
+                const appURL = window.Signal_Config?.appURL || '';
                 const apiURL = `${appURL}/api/api.php?module=tasks&action=getAll`;
                 const resp = await fetch(apiURL, { method: 'GET', headers: { 'Content-Type': 'application/json' } });
                 if (resp.ok) {
@@ -368,7 +368,7 @@ async function updateMissionFocusChart() {
 		const endDate = new Date().toISOString().split('T')[0];
 		
 	try {
-		const journalResponse = await fetch(`${window.MyDayHub_Config.appURL}/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`);
+		const journalResponse = await fetch(`${window.Signal_Config.appURL}/api/api.php?module=journal&action=getEntries&start_date=${startDate}&end_date=${endDate}`);
 		if (journalResponse.ok) {
 			const text = await journalResponse.text();
 			if (text && text.trim()) {
@@ -698,10 +698,10 @@ window.addEventListener('error', function(event) {
 });
 
 document.addEventListener('DOMContentLoaded', () => {
-	console.log("MyDayHub App Initialized");
+	console.log("Signal App Initialized");
 
 	// DEV: capture console errors/warnings and unhandled errors to a ring buffer
-	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_buffer') : true)) {
+	if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_buffer') : true)) {
 		if (!window.__consoleBuffer) window.__consoleBuffer = [];
 		const pushLog = (level, args) => {
 			try {
@@ -769,14 +769,14 @@ document.addEventListener('DOMContentLoaded', () => {
 	initMobileViewportFix();
 
 	// DEV: Footer dev report button to open latest layout report
-	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_construction_button') : true)) {
+	if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_construction_button') : true)) {
 		const btnDev = document.getElementById('btn-dev-report');
 		if (btnDev) {
 			btnDev.style.display = 'inline-block';
 		}
 		if (btnDev && !btnDev.hasAttribute('data-listener-added')) {
 			btnDev.addEventListener('click', async () => {
-				const appURL = window.MyDayHub_Config?.appURL || '';
+				const appURL = window.Signal_Config?.appURL || '';
 				// Open synchronously to avoid popup blockers
 				const win = window.open('', '_blank');
 				if (!win) {
@@ -926,17 +926,12 @@ function initSettingsPanel() {
 		trustButton.addEventListener('click', openTrustManagementModal);
 	}
 
-	// Theme selector event listeners
-	themeDarkBtn.addEventListener('click', () => {
-		setTheme('dark');
-	});
-
-	themeLightBtn.addEventListener('click', () => {
-		setTheme('light');
-	});
-
-	themeHighContrastBtn.addEventListener('click', () => {
-		setTheme('high-contrast');
+	// Theme selector event listeners. Delegated over data-theme so adding a theme
+	// is a markup + CSS change only.
+	document.querySelectorAll('.theme-btn').forEach(btn => {
+		btn.addEventListener('click', () => {
+			setTheme(btn.dataset.theme);
+		});
 	});
 
 	// Font Size Selector
@@ -1070,24 +1065,72 @@ function initSettingsPanel() {
 }
 
 /**
+ * Themes ported from nookbase. Each defines its own accent in style.css.
+ */
+const NOOK_THEME_CLASSES = {
+	hearth: 'theme-hearth',
+	garden: 'theme-garden',
+	paper: 'theme-paper'
+};
+
+/**
+ * How each Nook theme maps onto the legacy light_mode/high_contrast_mode pair.
+ * Those two booleans are still what the login page (auth.js) and the backend
+ * sync path read, so they must keep describing the closest dark/light match.
+ */
+const NOOK_THEME_FALLBACK = {
+	hearth: { lightMode: false, highContrast: false },
+	garden: { lightMode: false, highContrast: false },
+	paper:  { lightMode: true,  highContrast: false }
+};
+
+/**
+ * Applies one of the Nook themes: sets its body class, drops any custom accent
+ * overrides so the theme's own accent shows through, and persists the choice.
+ */
+function applyNookTheme(theme) {
+	document.body.classList.add(NOOK_THEME_CLASSES[theme]);
+
+	const activeBtn = document.querySelector(`.theme-btn[data-theme="${theme}"]`);
+	if (activeBtn) activeBtn.classList.add('active');
+
+	// Must clear rather than skip: these are inline !important and would persist.
+	clearAccentOverrides();
+
+	const fallback = NOOK_THEME_FALLBACK[theme];
+	localStorage.setItem('theme', theme);
+	localStorage.setItem('light_mode', fallback.lightMode ? 'true' : 'false');
+	localStorage.setItem('high_contrast_mode', fallback.highContrast ? 'true' : 'false');
+	saveUserPreference('theme', theme);
+	saveUserPreference('light_mode', fallback.lightMode);
+	saveUserPreference('high_contrast_mode', fallback.highContrast);
+}
+
+/**
  * Sets the application theme
- * @param {string} theme - The theme to set ('dark', 'light', or 'high-contrast')
+ * @param {string} theme - 'dark', 'light', 'high-contrast', 'hearth', 'garden' or 'paper'
  */
 function setTheme(theme) {
 	// Remove all theme classes
-	document.body.classList.remove('light-mode', 'high-contrast');
-	
+	document.body.classList.remove('light-mode', 'high-contrast', ...Object.values(NOOK_THEME_CLASSES));
+
 	// Remove active class from all theme buttons
-	document.getElementById('theme-dark').classList.remove('active');
-	document.getElementById('theme-light').classList.remove('active');
-	document.getElementById('theme-high-contrast').classList.remove('active');
-	
+	document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+
+	// The Nook themes bring their own accent, so they take a separate path.
+	if (NOOK_THEME_CLASSES[theme]) {
+		applyNookTheme(theme);
+		return;
+	}
+
 	// Apply the selected theme
 	switch (theme) {
 		case 'light':
 			document.body.classList.add('light-mode');
 			document.getElementById('theme-light').classList.add('active');
 			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('theme', 'light');
+			saveUserPreference('theme', 'light');
 			localStorage.setItem('light_mode', 'true');
 			localStorage.setItem('high_contrast_mode', 'false');
 			saveUserPreference('light_mode', true);
@@ -1102,6 +1145,8 @@ function setTheme(theme) {
 			document.body.classList.add('high-contrast');
 			document.getElementById('theme-high-contrast').classList.add('active');
 			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('theme', 'high-contrast');
+			saveUserPreference('theme', 'high-contrast');
 			localStorage.setItem('light_mode', 'false');
 			localStorage.setItem('high_contrast_mode', 'true');
 			saveUserPreference('light_mode', false);
@@ -1116,6 +1161,8 @@ function setTheme(theme) {
 		default:
 			document.getElementById('theme-dark').classList.add('active');
 			// Save to both localStorage (immediate) and backend (persistent)
+			localStorage.setItem('theme', 'dark');
+			saveUserPreference('theme', 'dark');
 			localStorage.setItem('light_mode', 'false');
 			localStorage.setItem('high_contrast_mode', 'false');
 			saveUserPreference('light_mode', false);
@@ -1139,7 +1186,20 @@ function loadThemePreferences() {
 	// Backend preferences will override this when tasks.js loads
 	const lightMode = localStorage.getItem('light_mode') === 'true';
 	const highContrast = localStorage.getItem('high_contrast_mode') === 'true';
-	
+
+	// Prefer the named theme. Users who set a theme before this key existed have
+	// only the two booleans, so fall through to those when it is absent.
+	const savedTheme = localStorage.getItem('theme');
+	if (savedTheme && NOOK_THEME_CLASSES[savedTheme]) {
+		document.body.classList.remove('light-mode', 'high-contrast');
+		document.body.classList.add(NOOK_THEME_CLASSES[savedTheme]);
+		clearAccentOverrides();
+		document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+		const activeBtn = document.querySelector(`.theme-btn[data-theme="${savedTheme}"]`);
+		if (activeBtn) activeBtn.classList.add('active');
+		return;
+	}
+
 	if (highContrast) {
 		document.body.classList.add('high-contrast');
 		document.body.classList.remove('light-mode');
@@ -1260,11 +1320,27 @@ async function saveUserPreference(key, value) {
  * Syncs localStorage with backend preferences
  * This should be called after backend preferences are loaded
  */
-window.syncThemeWithBackend = function(lightMode, highContrast) {
+window.syncThemeWithBackend = function(lightMode, highContrast, theme) {
 	// Update localStorage to match backend
 	localStorage.setItem('light_mode', lightMode ? 'true' : 'false');
 	localStorage.setItem('high_contrast_mode', highContrast ? 'true' : 'false');
-	
+
+	// A named Nook theme from the backend wins over the legacy boolean pair.
+	if (theme && NOOK_THEME_CLASSES[theme]) {
+		localStorage.setItem('theme', theme);
+		document.body.classList.remove('light-mode', 'high-contrast', ...Object.values(NOOK_THEME_CLASSES));
+		document.body.classList.add(NOOK_THEME_CLASSES[theme]);
+		clearAccentOverrides();
+		document.querySelectorAll('.theme-btn').forEach(btn => btn.classList.remove('active'));
+		const activeBtn = document.querySelector(`.theme-btn[data-theme="${theme}"]`);
+		if (activeBtn) activeBtn.classList.add('active');
+		return;
+	}
+
+	// Otherwise a legacy theme is in effect; drop any stale Nook class.
+	document.body.classList.remove(...Object.values(NOOK_THEME_CLASSES));
+	if (theme) localStorage.setItem('theme', theme);
+
 	// Apply the theme
 	if (highContrast) {
 		document.body.classList.add('high-contrast');
@@ -3281,7 +3357,7 @@ function debugDevModeFooter() {
 	console.log('Footer has dev-mode class:', footer.classList.contains('dev-mode'));
 	
 	// Check if DEVMODE is defined in JavaScript
-	console.log('window.MyDayHub_Config.DEVMODE:', window.MyDayHub_Config?.DEVMODE);
+	console.log('window.Signal_Config.DEVMODE:', window.Signal_Config?.DEVMODE);
 	console.log('window.DEVMODE:', window.DEVMODE);
 	console.log('DEVMODE constant:', typeof DEVMODE !== 'undefined' ? DEVMODE : 'undefined');
 }
@@ -3470,6 +3546,41 @@ function applyAccentColorToUI(color) {
 	
 	// Update all active settings buttons with the calculated text color
 	updateSettingsButtonTextColors(textColor);
+}
+
+/**
+ * Removes the inline accent overrides written by applyAccentColorToUI().
+ *
+ * Those are set as inline !important on both documentElement and body, so they
+ * survive a theme change. The Nook themes (Hearth/Garden/Paper) carry their own
+ * signature accent in CSS, and it can only win if these are cleared first --
+ * simply not reapplying them would leave the previous accent in place.
+ * Keep this list in sync with applyAccentColorToUI above.
+ */
+function clearAccentOverrides() {
+	const accentVars = [
+		'--accent-color',
+		'--accent-color-secondary',
+		'--accent-gradient',
+		'--accent-gradient-light',
+		'--accent-gradient-hover',
+		'--btn-hover-bg',
+		'--btn-success-bg',
+		'--btn-success-hover-bg',
+		'--toast-success-bg',
+		'--accent-text-color'
+	];
+
+	accentVars.forEach(name => {
+		document.documentElement.style.removeProperty(name);
+		document.body.style.removeProperty(name);
+	});
+
+	// Let the settings preview fall back to whatever the theme defines.
+	const settingsPreview = document.querySelector('.accent-color-preview');
+	if (settingsPreview) {
+		settingsPreview.style.backgroundColor = '';
+	}
 }
 
 /**

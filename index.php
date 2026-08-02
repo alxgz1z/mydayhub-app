@@ -2,7 +2,7 @@
 /**
  * code for index.php 
  *
- * MyDayHub - Main Application Shell
+ * Signal - Main Application Shell
  *
  * This page is the main entry point for authenticated users.
  * It establishes the session and redirects to login if the user is not authenticated.
@@ -38,7 +38,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 	<meta name="csrf-token" content="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-	<title>mdhub</title>
+	<title>Signal</title>
 	
 	<!-- Web App Manifest for PWA support -->
 	<link rel="manifest" href="manifest.json">
@@ -58,7 +58,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<meta name="apple-mobile-web-app-capable" content="yes">
 	<meta name="mobile-web-app-capable" content="yes">
 	<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-	<meta name="apple-mobile-web-app-title" content="mdhub">
+	<meta name="apple-mobile-web-app-title" content="Signal">
 	<meta name="theme-color" content="#FD7E13">
 	
 	<!-- Google Fonts - Inter for elegant typography -->
@@ -532,7 +532,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	</style>
 	<link rel="stylesheet" href="uix/journal.css">
 	<script>
-		window.MyDayHub_Config = {
+		window.Signal_Config = {
 			appURL: "<?php echo APP_URL; ?>",
 			DEVMODE: <?php echo defined('DEVMODE') && DEVMODE ? 'true' : 'false'; ?>
 		};
@@ -571,7 +571,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 						<line x1="3" y1="18" x2="21" y2="18"></line>
 					</svg>
 				</button>
-				<img src="media/icons/icon-192x192.png" alt="MyDayHub Logo" id="header-logo">
+				<img src="media/icons/icon-192x192.png" alt="Signal Logo" id="header-logo">
 			</div>
 			
 			<div class="header-center">
@@ -764,7 +764,10 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 						<div class="theme-selector">
 							<button type="button" class="theme-btn" data-theme="dark" id="theme-dark">Dark</button>
 							<button type="button" class="theme-btn" data-theme="light" id="theme-light">Light</button>
-							<button type="button" class="theme-btn" data-theme="high-contrast" id="theme-high-contrast">High-Contrast</button>
+							<button type="button" class="theme-btn" data-theme="high-contrast" id="theme-high-contrast">Contrast</button>
+							<button type="button" class="theme-btn" data-theme="hearth" id="theme-hearth">Hearth</button>
+							<button type="button" class="theme-btn" data-theme="garden" id="theme-garden">Garden</button>
+							<button type="button" class="theme-btn" data-theme="paper" id="theme-paper">Paper</button>
 						</div>
 					</div>
 				</div>
@@ -2284,14 +2287,14 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<div id="user-guide-modal" class="modal hidden">
 		<div class="modal-content user-guide-modal-content">
 			<div class="modal-header">
-				<h3>MyDayHub User Guide</h3>
+				<h3>Signal User Guide</h3>
 				<button class="btn-icon btn-close" id="btn-close-user-guide">&times;</button>
 			</div>
 			<div class="modal-body user-guide-modal-body">
 				<div class="user-guide-container">
 					<div class="guide-header">
-						<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="MyDayHub Logo" class="guide-logo">
-						<h1>MyDayHub User Guide</h1>
+						<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="Signal Logo" class="guide-logo">
+						<h1>Signal User Guide</h1>
 						<p>Your comprehensive guide to mastering productivity with privacy</p>
 					</div>
 					
@@ -2311,10 +2314,10 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 							</div>
 							<div class="accordion-content">
 								<div class="accordion-body">
-									<p>Welcome to MyDayHub! This guide will help you understand and make the most of your privacy-focused productivity hub.</p>
+									<p>Welcome to Signal! This guide will help you understand and make the most of your privacy-focused productivity hub.</p>
 									
-									<h3>What is MyDayHub?</h3>
-									<p>MyDayHub is a privacy-first productivity application designed to help you focus on what truly matters. Unlike traditional task managers, MyDayHub emphasizes <strong>signal over noise</strong>—helping you distinguish between work that advances your mission and work that merely keeps you busy.</p>
+									<h3>What is Signal?</h3>
+									<p>Signal is a privacy-first productivity application designed to help you focus on what truly matters. Unlike traditional task managers, Signal emphasizes <strong>signal over noise</strong>—helping you distinguish between work that advances your mission and work that merely keeps you busy.</p>
 									
 									<h3>Key Features</h3>
 									<ul>
@@ -2346,7 +2349,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 							</div>
 							<div class="accordion-content">
 								<div class="accordion-body">
-									<p>MyDayHub uses a three-tier classification system to help you focus on what truly matters:</p>
+									<p>Signal uses a three-tier classification system to help you focus on what truly matters:</p>
 									
 									<h3>Signal (Green) - Mission-Critical Work</h3>
 									<p>Tasks that directly advance your most important goals. These are your highest priority items that move the needle on your mission.</p>
@@ -2444,7 +2447,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 							</div>
 							<div class="accordion-content">
 								<div class="accordion-body">
-									<p>MyDayHub offers optional zero-knowledge encryption to protect your most sensitive information.</p>
+									<p>Signal offers optional zero-knowledge encryption to protect your most sensitive information.</p>
 									
 									<h3>Setting Up Encryption</h3>
 									<ol>
@@ -2654,12 +2657,12 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 									</ul>
 									
 									<h3>Design & Typography</h3>
-									<p>MyDayHub features a modern, elegant design system:</p>
+									<p>Signal features a modern, elegant design system:</p>
 									<ul>
 										<li><strong>Inter Font:</strong> Professional, highly legible typeface designed for digital interfaces</li>
 										<li><strong>Light Typography:</strong> Refined font weights for a clean, modern appearance</li>
 										<li><strong>Consistent Icons:</strong> Professional SVG icons throughout the interface</li>
-										<li><strong>Theme Support:</strong> Dark (default), Light, and High-Contrast modes</li>
+										<li><strong>Theme Support:</strong> Dark (default), Light, Contrast, plus the Hearth, Garden and Paper themes</li>
 										<li><strong>Accent Colors:</strong> Customizable accent colors with automatic contrast adjustment</li>
 									</ul>
 									
@@ -2714,6 +2717,9 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 										<li><strong>Dark:</strong> Default theme with dark backgrounds</li>
 										<li><strong>Light:</strong> Light backgrounds for bright environments</li>
 										<li><strong>High-Contrast:</strong> Maximum contrast for accessibility</li>
+										<li><strong>Hearth:</strong> Warm charcoal with a gold accent</li>
+										<li><strong>Garden:</strong> Deep green-black with a mint accent</li>
+										<li><strong>Paper:</strong> Warm paper and ink, with an ochre accent</li>
 									</ul>
 									
 									<h3>Accent Color Customization</h3>

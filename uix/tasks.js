@@ -1,7 +1,7 @@
 /**
  * code for /uix/tasks.js
  *
- * MyDayHub - Tasks View Module
+ * Signal - Tasks View Module
  *
  * Handles fetching and rendering the task board, and all interactions
  * within the Tasks view.
@@ -120,7 +120,7 @@ function initTasksView() {
 		initEventListeners();
 
 		// DEV: layout inspector hotkey (Ctrl/Cmd + Alt + D)
-		if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_layout_report_hotkey') : true)) {
+		if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_layout_report_hotkey') : true)) {
 			const sendLayoutReport = async () => {
 				try {
 					const container = document.getElementById('task-board-container');
@@ -156,7 +156,7 @@ function initTasksView() {
 						columns: columnPayload,
 						console: (window.__consoleBuffer || []).slice(-200)
 					};
-					await fetch((window.MyDayHub_Config?.appURL || '') + '/api/debug.php', {
+					await fetch((window.Signal_Config?.appURL || '') + '/api/debug.php', {
 						method: 'POST',
 						headers: { 'Content-Type': 'application/json' },
 						credentials: 'include',
@@ -888,14 +888,14 @@ function initEventListeners() {
 		
 				if (newTitle === '' || newTitle === originalTitle) {
 					// Restore with ID if needed
-					const displayTitle = originalTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+					const displayTitle = originalTitle + (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
 					titleEl.textContent = displayTitle;
 					input.replaceWith(titleEl);
 					return;
 				}
 		
 				// Update display with ID if needed
-				const displayTitle = newTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+				const displayTitle = newTitle + (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
 				titleEl.textContent = displayTitle;
 				input.replaceWith(titleEl);
 				
@@ -908,7 +908,7 @@ function initEventListeners() {
 					showToast({ message: 'Task renamed.', type: 'success' });
 				} else {
 					// Restore original display title with ID if needed
-					const restoreTitle = originalTitle + (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
+					const restoreTitle = originalTitle + (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true) ? ` (${taskId})` : '');
 					titleEl.textContent = restoreTitle;
 					showToast({ message: 'Error: Could not rename task.', type: 'error' });
 				}
@@ -1038,14 +1038,14 @@ function initEventListeners() {
  * Modified for Ready for Review - Fixed UI state update after toggle
  */
 async function toggleReadyForReview(taskId, taskCard) {
-	 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+	 if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 		 console.log('=== toggleReadyForReview called ===');
 		 console.log('Function params - taskId:', taskId, 'taskCard:', !!taskCard);
 		 console.log('isActionRunning check:', isActionRunning);
 	 }
 	 
 	 if (isActionRunning) {
-		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+		 if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('Action blocked - isActionRunning is true');
 		 }
 		 return;
@@ -1056,7 +1056,7 @@ async function toggleReadyForReview(taskId, taskCard) {
 		 const currentReady = taskCard.dataset.readyForReview === 'true';
 		 const newReady = !currentReady;
 		 
-		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+		 if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('Current ready state:', currentReady);
 			 console.log('New ready state will be:', newReady);
 			 console.log('About to call API...');
@@ -1069,7 +1069,7 @@ async function toggleReadyForReview(taskId, taskCard) {
 			 ready_for_review: newReady
 		 });
  
-		 if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+		 if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 			 console.log('API result:', result);
 		 }
  
@@ -1386,7 +1386,7 @@ function closeAllTaskActionMenus() {
 	const isSnoozed = taskCard.dataset.isSnoozed === 'true';
 	
 	// Debug: Log the privacy state for context menu
-	if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+	if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
 		console.log('Context menu privacy debug:', {
 			taskId: taskCard.dataset.taskId,
 			datasetIsPrivate: taskCard.dataset.isPrivate,
@@ -1883,7 +1883,7 @@ async function checkIfMakingPrivate(type, id) {
 async function checkEncryptionSetupNeeded() {
 	try {
 		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-		const appURL = window.MyDayHub_Config?.appURL || '';
+		const appURL = window.Signal_Config?.appURL || '';
 		
 		const response = await fetch(`${appURL}/api/api.php?module=encryption&action=getEncryptionStatus`, {
 			method: 'GET',
@@ -2330,7 +2330,7 @@ async function fetchAndRenderBoard() {
 	}
 
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
+		const appURL = window.Signal_Config?.appURL || '';
 		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAll`, {
 			method: 'GET',
@@ -2412,7 +2412,7 @@ async function fetchAndRenderBoard() {
 			}
 				// Handle theme preferences - sync with backend data
 				if (typeof window.syncThemeWithBackend === 'function') {
-					window.syncThemeWithBackend(userPrefs.light_mode, userPrefs.high_contrast_mode);
+					window.syncThemeWithBackend(userPrefs.light_mode, userPrefs.high_contrast_mode, userPrefs.theme);
 				}
 				
 				// Handle header date visibility preference
@@ -2582,7 +2582,7 @@ function createColumnElement(columnData) {
 	columnEl.innerHTML = `
 		<div class="column-header">
 			${headerControlsHTML}
-			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}${window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_column_ids') : true) ? ` [${columnData.column_id}]` : ''}</h2>
+			<h2 class="column-title ${isVirtualColumn ? 'readonly' : ''}" ${isVirtualColumn ? '' : 'draggable="true"'}>${columnData.column_name}${window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_column_ids') : true) ? ` [${columnData.column_id}]` : ''}</h2>
 			<span class="task-count">${columnData.tasks ? columnData.tasks.filter(task => task.classification !== 'completed').length : 0}</span>
 		</div>
 		<div class="column-body">
@@ -2622,7 +2622,7 @@ function createTaskCard(taskData) {
 							if (titleElement) {
 								const cleanTitle = getCleanTitle(decryptedData.title || 'Untitled Task');
 								titleElement.textContent = cleanTitle;
-								if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
+								if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)) {
 									titleElement.textContent += ` (${taskData.task_id})`;
 								}
 								// Update data-title attribute with clean title
@@ -2653,7 +2653,7 @@ function createTaskCard(taskData) {
 	const cleanTitle = getCleanTitle(taskTitle);
 	
 	// Add task_id in parentheses when DEVMODE and preference is enabled (for display only)
-	const displayTitle = window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)
+	const displayTitle = window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_show_task_ids') : true)
 		? `${cleanTitle} (${taskData.task_id})`
 		: cleanTitle;
 
@@ -2911,7 +2911,7 @@ async function deleteAttachment(attachmentId) {
 
 		if (result.status === 'success') {
 			showToast({ message: 'Attachment deleted.', type: 'success' });
-			const appURL = window.MyDayHub_Config?.appURL || '';
+			const appURL = window.Signal_Config?.appURL || '';
 			const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 			const boardResponse = await fetch(`${appURL}/api/api.php?module=tasks&action=getAll`, {
 				method: 'GET',
@@ -2943,7 +2943,7 @@ async function deleteAttachment(attachmentId) {
  */
 window.getAttachments = async function getAttachments(taskId) {
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
+		const appURL = window.Signal_Config?.appURL || '';
 		const response = await fetch(`${appURL}/api/api.php?module=tasks&action=getAttachments&task_id=${taskId}`, {
 			credentials: 'include'
 		});
@@ -2970,7 +2970,7 @@ async function uploadAttachment(taskId, file) {
 	formData.append('attachment', file);
 
 	try {
-		const appURL = window.MyDayHub_Config?.appURL || '';
+		const appURL = window.Signal_Config?.appURL || '';
 		const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
 		const response = await fetch(`${appURL}/api/api.php`, {
 			method: 'POST',
@@ -3753,7 +3753,7 @@ function renderAttachmentList(attachments, container) {
 		return;
 	}
 
-	const appURL = window.MyDayHub_Config?.appURL || '';
+	const appURL = window.Signal_Config?.appURL || '';
 
 	attachments.forEach(att => {
 		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
@@ -3893,7 +3893,7 @@ async function openFileManagementModal() {
 
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
-				const appURL = window.MyDayHub_Config?.appURL || '';
+				const appURL = window.Signal_Config?.appURL || '';
 				const result = await apiFetch({
 					module: 'tasks',
 					action: 'getAllUserAttachments',
@@ -4015,7 +4015,7 @@ function renderFileManagementList(attachments, container) {
 		return;
 	}
 
-	const appURL = window.MyDayHub_Config?.appURL || '';
+	const appURL = window.Signal_Config?.appURL || '';
 
 	attachments.forEach(att => {
 		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');
@@ -4140,7 +4140,7 @@ async function openFileManagementModal() {
 
 		const refreshFileList = async (sortBy = 'date', sortOrder = 'desc') => {
 			try {
-				const appURL = window.MyDayHub_Config?.appURL || '';
+				const appURL = window.Signal_Config?.appURL || '';
 				const result = await apiFetch({
 					module: 'tasks',
 					action: 'getAllUserAttachments',
@@ -4262,7 +4262,7 @@ function renderFileManagementList(attachments, container) {
 		return;
 	}
 
-	const appURL = window.MyDayHub_Config?.appURL || '';
+	const appURL = window.Signal_Config?.appURL || '';
 
 	attachments.forEach(att => {
 		const isPdf = att.original_filename.toLowerCase().endsWith('.pdf');

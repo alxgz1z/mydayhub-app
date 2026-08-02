@@ -1,5 +1,5 @@
 /* Code for /uix/settings.css */
-/* MyDayHub - Settings Panel Styles */
+/* Signal - Settings Panel Styles */
 /* @version 8.6 Nosara - Refactored */
 /* @author Alex & Gemini & Claude & Cursor */
 
@@ -145,6 +145,8 @@
 /* Theme Selector - Segmented Control */
 .theme-selector {
 	display: flex;
+	/* Six themes no longer fit on one row of a settings panel. */
+	flex-wrap: wrap;
 	background-color: var(--border-color);
 	border-radius: 8px;
 	padding: 2px;
@@ -152,13 +154,15 @@
 }
 
 .theme-btn {
-	flex: 1;
-	padding: 8px 12px;
+	/* Three per row, wrapping to a second row. */
+	flex: 1 1 calc(33.333% - 2px);
+	min-width: 0;
+	padding: 8px 6px;
 	border: none;
 	border-radius: 6px;
 	background-color: transparent;
 	color: var(--text-secondary);
-	font-size: 0.85rem;
+	font-size: 0.8rem;
 	font-weight: 500;
 	cursor: pointer;
 	transition: all 0.2s ease;
@@ -193,6 +197,26 @@ body.light-mode .theme-btn:hover {
 body.light-mode .theme-btn.active {
 	background: var(--accent-gradient);
 	color: var(--accent-text-color, #ffffff);
+}
+
+/* Paper is light, so it needs the same treatment as light-mode. Hearth and
+   Garden are dark and inherit the defaults above correctly. */
+body.theme-paper .theme-selector {
+	background-color: #e7e0d2;
+}
+
+body.theme-paper .theme-btn {
+	color: #6b6055;
+}
+
+body.theme-paper .theme-btn:hover {
+	background-color: rgba(35, 24, 12, 0.06);
+	color: #20180f;
+}
+
+body.theme-paper .theme-btn.active {
+	background: var(--accent-gradient);
+	color: #ffffff;
 }
 
 /* Sound Selector - Segmented Control (matches theme selector) */

@@ -1,6 +1,6 @@
 <?php
 /**
- * MyDayHub User Guide
+ * Signal User Guide
  * 
  * Comprehensive user manual with accordion-style sections
  * Follows app theming and visual design patterns
@@ -25,7 +25,7 @@ if (!isset($_SESSION['user_id'])) {
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-	<title>MyDayHub User Guide</title>
+	<title>Signal User Guide</title>
 	
 	<link rel="icon" type="image/svg+xml" href="<?php echo APP_URL; ?>/media/favico.svg">
 	<link rel="stylesheet" href="<?php echo APP_URL; ?>/uix/style.css">
@@ -274,12 +274,12 @@ if (!isset($_SESSION['user_id'])) {
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M19 12H5M12 19l-7-7 7-7"/>
 			</svg>
-			Back to MyDayHub
+			Back to Signal
 		</a>
 		
 		<div class="guide-header">
-			<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="MyDayHub Logo" class="guide-logo">
-			<h1>MyDayHub User Guide</h1>
+			<img src="<?php echo APP_URL; ?>/media/icons/icon-192x192.png" alt="Signal Logo" class="guide-logo">
+			<h1>Signal User Guide</h1>
 			<p>Your comprehensive guide to mastering productivity with privacy</p>
 		</div>
 		
@@ -299,10 +299,10 @@ if (!isset($_SESSION['user_id'])) {
 				</div>
 				<div class="accordion-content">
 					<div class="accordion-body">
-						<p>Welcome to MyDayHub! This guide will help you understand and make the most of your privacy-focused productivity hub.</p>
+						<p>Welcome to Signal! This guide will help you understand and make the most of your privacy-focused productivity hub.</p>
 						
-						<h3>What is MyDayHub?</h3>
-						<p>MyDayHub is a privacy-first productivity application designed to help you focus on what truly matters. Unlike traditional task managers, MyDayHub emphasizes <strong>signal over noise</strong>—helping you distinguish between work that advances your mission and work that merely keeps you busy.</p>
+						<h3>What is Signal?</h3>
+						<p>Signal is a privacy-first productivity application designed to help you focus on what truly matters. Unlike traditional task managers, Signal emphasizes <strong>signal over noise</strong>—helping you distinguish between work that advances your mission and work that merely keeps you busy.</p>
 						
 						<h3>Key Features</h3>
 						<ul>
@@ -335,7 +335,7 @@ if (!isset($_SESSION['user_id'])) {
 				</div>
 				<div class="accordion-content">
 					<div class="accordion-body">
-						<p>The heart of MyDayHub's philosophy is the task classification system. Instead of simple priorities, tasks are categorized by their relationship to your mission.</p>
+						<p>The heart of Signal's philosophy is the task classification system. Instead of simple priorities, tasks are categorized by their relationship to your mission.</p>
 						
 						<h3><span class="classification-badge badge-signal">Signal</span> Tasks</h3>
 						<p><strong>Definition:</strong> Work that directly advances your mission or core objectives.</p>
@@ -461,7 +461,7 @@ if (!isset($_SESSION['user_id'])) {
 				</div>
 				<div class="accordion-content">
 					<div class="accordion-body">
-						<p>MyDayHub offers optional zero-knowledge encryption to protect your sensitive information. With encryption enabled, your private data is encrypted on your device before being sent to the server—meaning not even we can read it.</p>
+						<p>Signal offers optional zero-knowledge encryption to protect your sensitive information. With encryption enabled, your private data is encrypted on your device before being sent to the server—meaning not even we can read it.</p>
 						
 						<h3>How Encryption Works</h3>
 						<ul>
@@ -499,7 +499,7 @@ if (!isset($_SESSION['user_id'])) {
 						</ul>
 						
 						<h3>Hybrid Architecture</h3>
-						<p>MyDayHub uses a <strong>hybrid zero-knowledge architecture</strong>:</p>
+						<p>Signal uses a <strong>hybrid zero-knowledge architecture</strong>:</p>
 						<ul>
 							<li><strong>Private items:</strong> Encrypted end-to-end, zero-knowledge</li>
 							<li><strong>Public items:</strong> Not encrypted, can be shared with collaborators</li>
@@ -529,7 +529,7 @@ if (!isset($_SESSION['user_id'])) {
 				</div>
 				<div class="accordion-content">
 					<div class="accordion-body">
-						<p>MyDayHub allows you to share tasks with other users while maintaining control over permissions and privacy.</p>
+						<p>Signal allows you to share tasks with other users while maintaining control over permissions and privacy.</p>
 						
 						<h3>Important: Privacy Boundary</h3>
 						<div class="warning-box">
@@ -585,7 +585,7 @@ if (!isset($_SESSION['user_id'])) {
 						</ul>
 						
 						<h3>Task Comments System</h3>
-						<p>MyDayHub includes a social-style comment system for shared tasks:</p>
+						<p>Signal includes a social-style comment system for shared tasks:</p>
 						<ul>
 							<li><strong>Main Note:</strong> The task's primary note is editable only by the owner</li>
 							<li><strong>Comments:</strong> Both owner and recipients can add, edit, and delete comments</li>
@@ -789,12 +789,12 @@ if (!isset($_SESSION['user_id'])) {
 						</ul>
 						
 						<h3>Design & Typography</h3>
-						<p>MyDayHub features a modern, elegant design system:</p>
+						<p>Signal features a modern, elegant design system:</p>
 						<ul>
 							<li><strong>Inter Font:</strong> Professional, highly legible typeface designed for digital interfaces</li>
 							<li><strong>Light Typography:</strong> Refined font weights for a clean, modern appearance</li>
 							<li><strong>Consistent Icons:</strong> Professional SVG icons throughout the interface</li>
-							<li><strong>Theme Support:</strong> Dark (default), Light, and High-Contrast modes</li>
+							<li><strong>Theme Support:</strong> Dark (default), Light, Contrast, plus the Hearth, Garden and Paper themes</li>
 							<li><strong>Accent Colors:</strong> Customizable accent colors with automatic contrast adjustment</li>
 						</ul>
 						
@@ -848,6 +848,9 @@ if (!isset($_SESSION['user_id'])) {
 							<li><strong>Dark:</strong> Default theme with comfortable dark backgrounds</li>
 							<li><strong>Light:</strong> Softer light mode for daytime work</li>
 							<li><strong>High-Contrast:</strong> Enhanced contrast for accessibility</li>
+							<li><strong>Hearth:</strong> Warm charcoal with a gold accent</li>
+							<li><strong>Garden:</strong> Deep green-black with a mint accent</li>
+							<li><strong>Paper:</strong> Warm paper and ink, with an ochre accent</li>
 						</ul>
 						
 						<p><strong>Global Font Size:</strong></p>
@@ -1031,10 +1034,10 @@ if (!isset($_SESSION['user_id'])) {
 						<p>A: Tasks sort automatically by classification: Signal → Support → Backlog → Completed. Within each classification, you can manually reorder tasks. Ensure the task has the correct classification by clicking its status band.</p>
 						
 						<p><strong>Q: What happens to shared tasks if I make a column private?</strong></p>
-						<p>A: MyDayHub will prompt you with a warning. If you proceed, all shared tasks in that column will be automatically unshared before the column becomes private. Recipients will lose access.</p>
+						<p>A: Signal will prompt you with a warning. If you proceed, all shared tasks in that column will be automatically unshared before the column becomes private. Recipients will lose access.</p>
 						
-						<p><strong>Q: Can I access MyDayHub offline?</strong></p>
-						<p>A: Full offline functionality is planned for a future release. Currently, you need an internet connection to use MyDayHub.</p>
+						<p><strong>Q: Can I access Signal offline?</strong></p>
+						<p>A: Full offline functionality is planned for a future release. Currently, you need an internet connection to use Signal.</p>
 						
 						<p><strong>Q: How do I delete my account?</strong></p>
 						<p>A: Contact your administrator or use the account deletion option in Settings → Privacy & Encryption. Note that this action is irreversible.</p>
@@ -1068,7 +1071,7 @@ if (!isset($_SESSION['user_id'])) {
 						</ul>
 						
 						<div class="warning-box">
-							<strong>⚠️ Data Safety:</strong> MyDayHub performs automatic backups, but we recommend periodically reviewing your critical tasks. For encrypted data, ensure you remember your encryption password and security question answers—we cannot recover them for you.
+							<strong>⚠️ Data Safety:</strong> Signal performs automatic backups, but we recommend periodically reviewing your critical tasks. For encrypted data, ensure you remember your encryption password and security question answers—we cannot recover them for you.
 						</div>
 					</div>
 				</div>
@@ -1080,14 +1083,22 @@ if (!isset($_SESSION['user_id'])) {
 			<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
 				<path d="M19 12H5M12 19l-7-7 7-7"/>
 			</svg>
-			Back to MyDayHub
+			Back to Signal
 		</a>
 	</div>
 	
 	<script>
-		// Load theme preference
+		// Load theme preference. The Nook themes define their palette in
+		// style.css, which this page already loads, so the class is enough.
 		const savedTheme = localStorage.getItem('theme') || 'dark';
-		if (savedTheme === 'light') {
+		const nookThemeClasses = {
+			hearth: 'theme-hearth',
+			garden: 'theme-garden',
+			paper: 'theme-paper'
+		};
+		if (nookThemeClasses[savedTheme]) {
+			document.body.classList.add(nookThemeClasses[savedTheme]);
+		} else if (savedTheme === 'light') {
 			document.body.classList.add('light-mode');
 		} else if (savedTheme === 'high-contrast') {
 			document.body.classList.add('high-contrast');

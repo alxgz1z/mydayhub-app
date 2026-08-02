@@ -1,5 +1,5 @@
 /* Code for /uix/style.css */
-/* MyDayHub - Main Application Styles */
+/* Signal - Main Application Styles */
 /* @version 8.6 Nosara */
 /* @author Alex & Gemini & Claude & Cursor & Cursor */
 /* ==========================================================================
@@ -107,6 +107,120 @@ body.light-mode {
 
 /* Additional overrides for light mode for better visibility */
 body.light-mode #date-modal-input::-webkit-calendar-picker-indicator {
+	filter: none;
+}
+
+/* ==========================================================================
+   NOOK THEMES — Hearth, Garden, Paper (ported from nookbase)
+   Each carries its own signature accent, so setTheme() clears the custom
+   accent-colour overrides when one of these is selected. Every variable in
+   :root is restated here; anything omitted would fall back to the dark
+   defaults, which is especially wrong for the light Paper theme.
+   ========================================================================== */
+
+/* Warm charcoal + gold */
+body.theme-hearth {
+	--bg-color: #141210;
+	--app-header-bg: #100e0c;
+	--toolbar-bg: #1c1915;
+	--text-primary: #f5f2eb;
+	--text-secondary: #a39e94;
+	--accent-color: #c9a227;
+	--accent-color-secondary: #b3781f;
+	--accent-gradient: linear-gradient(135deg, #c9a227, #a8871f);
+	--accent-gradient-light: linear-gradient(135deg, #e0bc4a, #c9a227);
+	--accent-gradient-hover: linear-gradient(135deg, #a8871f, #8a6e19);
+	--border-color: rgba(245, 236, 220, 0.10);
+	--btn-hover-bg: rgba(201, 162, 39, 0.12);
+	--column-bg: #1c1915;
+	--card-bg: #262219;
+	--card-border: rgba(245, 236, 220, 0.10);
+	--card-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	--shadow-color: rgba(0, 0, 0, 0.5);
+	--toast-success-bg: #4f7d62;
+	--toast-error-bg: #d9534f;
+	--btn-danger-bg: #d9534f;
+	--btn-danger-hover-bg: #c0413d;
+	--btn-success-bg: #4f7d62;
+	--btn-success-hover-bg: #416b52;
+	--border-color-light: rgba(245, 236, 220, 0.16);
+}
+
+/* Cool green-black + mint */
+body.theme-garden {
+	--bg-color: #0f1612;
+	--app-header-bg: #0a1010;
+	--toolbar-bg: #18211c;
+	--text-primary: #e9f1eb;
+	--text-secondary: #9caea3;
+	--accent-color: #72c090;
+	--accent-color-secondary: #4f9e70;
+	--accent-gradient: linear-gradient(135deg, #72c090, #4f9e70);
+	--accent-gradient-light: linear-gradient(135deg, #96d6ac, #72c090);
+	--accent-gradient-hover: linear-gradient(135deg, #4f9e70, #3d7a58);
+	--border-color: rgba(196, 214, 204, 0.11);
+	--btn-hover-bg: rgba(114, 192, 144, 0.14);
+	--column-bg: #18211c;
+	--card-bg: #212b25;
+	--card-border: rgba(196, 214, 204, 0.11);
+	--card-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+	--shadow-color: rgba(0, 0, 0, 0.5);
+	--toast-success-bg: #3d7a58;
+	--toast-error-bg: #e0685f;
+	--btn-danger-bg: #e0685f;
+	--btn-danger-hover-bg: #c7524a;
+	--btn-success-bg: #3d7a58;
+	--btn-success-hover-bg: #326349;
+	--border-color-light: rgba(196, 214, 204, 0.18);
+}
+
+/* Warm paper + ink (light) */
+body.theme-paper {
+	--bg-color: #f7f3ea;
+	--app-header-bg: #241c14;
+	--toolbar-bg: #ffffff;
+	--text-primary: #20180f;
+	--text-secondary: #4f453a;
+	--accent-color: #9a6b1f;
+	--accent-color-secondary: #7d5518;
+	--accent-gradient: linear-gradient(135deg, #9a6b1f, #7d5518);
+	--accent-gradient-light: linear-gradient(135deg, #bd8a34, #9a6b1f);
+	--accent-gradient-hover: linear-gradient(135deg, #7d5518, #63430f);
+	--border-color: rgba(35, 24, 12, 0.10);
+	--btn-hover-bg: rgba(154, 107, 31, 0.12);
+	--column-bg: #ffffff;
+	--card-bg: #fffdf8;
+	--card-border: rgba(35, 24, 12, 0.10);
+	--card-shadow: 0 1px 3px rgba(35, 24, 12, 0.10);
+	--shadow-color: rgba(35, 24, 12, 0.16);
+	--toast-success-bg: #2f6b4c;
+	--toast-error-bg: #b3403a;
+	--btn-danger-bg: #b3403a;
+	--btn-danger-hover-bg: #97332e;
+	--btn-success-bg: #2f6b4c;
+	--btn-success-hover-bg: #25563d;
+	--border-color-light: rgba(35, 24, 12, 0.18);
+}
+
+/* Paper is a light theme, so the header follows the same "keep it dark for
+   readability" rule that light-mode uses above. */
+body.theme-paper #app-header {
+	background-color: #241c14 !important;
+	border-bottom-color: #3a2e21 !important;
+	color: #f7f3ea !important;
+}
+
+body.theme-paper #app-header .btn-header {
+	color: #f7f3ea !important;
+	border-color: #3a2e21 !important;
+}
+
+body.theme-paper #app-header .btn-header:hover {
+	background-color: rgba(247, 243, 234, 0.12) !important;
+	color: #ffffff !important;
+}
+
+body.theme-paper #date-modal-input::-webkit-calendar-picker-indicator {
 	filter: none;
 }
 
