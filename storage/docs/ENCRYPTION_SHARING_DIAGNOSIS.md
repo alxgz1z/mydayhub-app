@@ -224,6 +224,34 @@ place. It also contradicts §4 as written, so the spec would need updating to ma
 
 ---
 
+## UPDATE 2026-08-01 — fix applied, and what the counts revealed
+
+The owner-keying fix is implemented and verified (commit "Key item encryption on the owner, not
+the requester"). Verified against live data: a user with **no encryption keys of their own** now reads
+a private task's real title instead of the envelope; a corrupt payload returns null instead of silently
+succeeding; and fields stranded outside the envelope by the old recipient-write bug are recovered.
+
+**But the live counts change the conclusion about what Alex is experiencing:**
+
+| metric | count |
+|---|---|
+| private tasks | 1 |
+| tasks stored as ciphertext | 1 |
+| **shared AND private** | **0** |
+| private but stored as plaintext (finding #0) | 0 |
+| users with encryption keys | 3 of 5 |
+| shares total | 1 (task 15, **not private**, permission `edit`) |
+
+**No task is currently both shared and private.** So the bug fixed here — real, reachable, and now
+closed — does **not** explain a present-day "sharing doesn't work well" complaint. The only live share
+is a non-private task whose payload is plain JSON and always rendered correctly.
+
+That means the answer to the headline question above is very likely *"yes, it fails with non-private
+shared tasks too"* — which points at §14's own open item, **"Enforce permission-based UI restrictions
+for shared items,"** not at encryption. That is the next thing to investigate.
+
+---
+
 ## Not yet verified
 
 A read-only count against the live prod DB was blocked by the sandbox permission classifier. To size the
