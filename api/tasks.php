@@ -3158,16 +3158,16 @@ function handle_export_tasks(PDO $pdo, int $userId, ?array $data): void {
 		$stmt->execute([':userId' => $userId]);
 		
 		$exportData = [];
+		$skippedFromExport = [];
 		while ($task = $stmt->fetch(PDO::FETCH_ASSOC)) {
-			// Decrypt task data
+			// Decrypt task data. This already returns plaintext payloads as-is, so a null
+			// here is a genuine failure — never fall back to the raw envelope, which would
+			// put ciphertext in an export the user believes is a good backup.
 			$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
-			if (!$decryptedData) {
-				// Fallback: try JSON decode for non-encrypted tasks
-				$decryptedData = json_decode($task['encrypted_data'], true);
-			}
-			
-			if (!$decryptedData) {
-				continue; // Skip tasks we can't decrypt
+			if ($decryptedData === null) {
+				log_debug_message("Excluding task {$task['task_id']} from export: could not decrypt");
+				$skippedFromExport[] = (int)$task['task_id'];
+				continue;
 			}
 			
 			$columnName = $columns[$task['column_id']] ?? 'Unknown Column';
@@ -3184,9 +3184,13 @@ function handle_export_tasks(PDO $pdo, int $userId, ?array $data): void {
 		
 		send_json_response([
 			'status' => 'success',
-			'data' => $exportData
+			'data' => $exportData,
+			// Tell the caller when the export is incomplete rather than handing over a
+			// file that silently omits tasks.
+			'skipped_task_ids' => $skippedFromExport,
+			'skipped_count' => count($skippedFromExport)
 		]);
-		
+
 	} catch (Exception $e) {
 		log_debug_message('Error in handle_export_tasks(): ' . $e->getMessage());
 		send_json_response(['status' => 'error', 'message' => 'Failed to export tasks.'], 500);
