@@ -1,7 +1,7 @@
 <?php
 /**
  * Centralized Encryption Engine
- * MyDayHub - Zero-Knowledge Encryption Backend
+ * Signal - Zero-Knowledge Encryption Backend
  * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
@@ -24,16 +24,59 @@ class CryptoEngine {
     }
 
     /**
-     * Check if encryption is enabled for this user
+     * Check if encryption is enabled for this user (the caller).
+     * Used by the settings/status UI, which asks about the current user specifically.
      */
     public function isEncryptionEnabled(): bool {
+        return $this->userHasEncryption($this->userId);
+    }
+
+    /**
+     * Check if encryption is enabled for an arbitrary user.
+     * Item crypto follows the item's OWNER, who is not always the caller (shared items).
+     */
+    private function userHasEncryption(int $userId): bool {
         try {
             $stmt = $this->pdo->prepare("SELECT user_id FROM user_encryption_keys WHERE user_id = ?");
-            $stmt->execute([$this->userId]);
+            $stmt->execute([$userId]);
             return $stmt->fetch() !== false;
         } catch (Exception $e) {
             log_debug_message("Error checking encryption status: " . $e->getMessage());
             return false;
+        }
+    }
+
+    /**
+     * Look up an item's owner and privacy flag.
+     * Every crypto decision keys on these, never on the requesting user — otherwise a
+     * recipient of a shared item makes the wrong call in both directions.
+     */
+    private function getItemMeta(string $itemType, int $itemId): ?array {
+        $tables = [
+            'task'          => ['tasks', 'task_id'],
+            'column'        => ['columns', 'column_id'],
+            'journal_entry' => ['journal_entries', 'entry_id'],
+        ];
+        if (!isset($tables[$itemType])) {
+            log_debug_message("Unknown item type for crypto metadata: $itemType");
+            return null;
+        }
+        [$table, $idColumn] = $tables[$itemType];
+
+        try {
+            $stmt = $this->pdo->prepare("SELECT user_id, is_private FROM `{$table}` WHERE `{$idColumn}` = ?");
+            $stmt->execute([$itemId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$row) {
+                return null;
+            }
+            return [
+                'owner_id'   => (int)$row['user_id'],
+                'is_private' => (bool)$row['is_private'],
+            ];
+        } catch (Exception $e) {
+            log_debug_message("Error resolving crypto metadata for $itemType $itemId: " . $e->getMessage());
+            return null;
         }
     }
 
@@ -94,7 +137,10 @@ class CryptoEngine {
      * Encrypt data for a specific item (task, column, etc.)
      */
     public function encryptItem(string $itemType, int $itemId, array $data): ?string {
-        if (!$this->isEncryptionEnabled()) {
+        // Keys belong to the owner, not the caller — a recipient editing a shared item
+        // must still encrypt with the owner's settings rather than silently storing plaintext.
+        $meta = $this->getItemMeta($itemType, $itemId);
+        if (!$meta || !$this->userHasEncryption($meta['owner_id'])) {
             return json_encode($data);
         }
 
@@ -147,15 +193,16 @@ class CryptoEngine {
      * Decrypt data for a specific item
      */
     public function decryptItem(string $itemType, int $itemId, string $encryptedData): ?array {
-        if (!$this->isEncryptionEnabled()) {
-            return json_decode($encryptedData, true);
+        $data = json_decode($encryptedData, true);
+        if (!is_array($data)) {
+            log_debug_message("Stored payload for $itemType $itemId is not valid JSON");
+            return null;
         }
 
-        $data = json_decode($encryptedData, true);
-        
-        // Check if data is encrypted
-        if (!isset($data['encrypted']) || !$data['encrypted']) {
-            return $data; // Not encrypted, return as-is
+        // Decide on the shape of the stored payload, never on who is asking. The caller
+        // may be a recipient of a shared item and have no encryption of their own.
+        if (empty($data['encrypted'])) {
+            return $data; // Plaintext JSON, return as-is
         }
 
         try {
@@ -186,7 +233,22 @@ class CryptoEngine {
                 return null;
             }
 
-            return json_decode($decryptedJson, true);
+            $plaintext = json_decode($decryptedJson, true);
+            if (!is_array($plaintext)) {
+                log_debug_message("Decrypted payload for $itemType $itemId is not valid JSON");
+                return null;
+            }
+
+            // Recover fields a recipient's edit wrote alongside the envelope instead of
+            // inside it. Envelope keys are ours; anything else is salvaged content.
+            $envelopeKeys = ['encrypted', 'item_type', 'item_id', 'encrypted_data', 'iv', 'tag', 'encrypted_at'];
+            $strays = array_diff_key($data, array_flip($envelopeKeys));
+            if ($strays) {
+                log_debug_message("Recovered " . count($strays) . " stray field(s) for $itemType $itemId");
+                $plaintext = array_merge($plaintext, $strays);
+            }
+
+            return $plaintext;
         } catch (Exception $e) {
             log_debug_message("Error decrypting item: " . $e->getMessage());
             return null;
@@ -255,51 +317,35 @@ class CryptoEngine {
      * Check if an item should be encrypted based on its privacy status
      */
     public function shouldEncrypt(string $itemType, int $itemId): bool {
-        if (!$this->isEncryptionEnabled()) {
+        $meta = $this->getItemMeta($itemType, $itemId);
+        if (!$meta) {
             return false;
         }
 
-        try {
-            switch ($itemType) {
-                case 'task':
-                    $stmt = $this->pdo->prepare("SELECT is_private FROM tasks WHERE task_id = ? AND user_id = ?");
-                    $stmt->execute([$itemId, $this->userId]);
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    return $result && (bool)$result['is_private'];
-
-                case 'column':
-                    $stmt = $this->pdo->prepare("SELECT is_private FROM columns WHERE column_id = ? AND user_id = ?");
-                    $stmt->execute([$itemId, $this->userId]);
-                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
-                    return $result && (bool)$result['is_private'];
-
-                default:
-                    return false;
-            }
-        } catch (Exception $e) {
-            log_debug_message("Error checking if item should be encrypted: " . $e->getMessage());
-            return false;
-        }
+        // Owner's privacy flag and owner's encryption setup — not the caller's.
+        return $meta['is_private'] && $this->userHasEncryption($meta['owner_id']);
     }
 
     /**
-     * Encrypt data if item is private, otherwise return as-is
+     * Encrypt data if item is private, otherwise return as-is.
+     * Returns null if encryption was required but failed — callers MUST abort rather
+     * than fall back to plaintext, which would silently downgrade a private item.
      */
-    public function encryptIfPrivate(string $itemType, int $itemId, array $data): string {
+    public function encryptIfPrivate(string $itemType, int $itemId, array $data): ?string {
         if ($this->shouldEncrypt($itemType, $itemId)) {
-            $encrypted = $this->encryptItem($itemType, $itemId, $data);
-            return $encrypted ?: json_encode($data);
+            return $this->encryptItem($itemType, $itemId, $data);
         }
-        
+
         return json_encode($data);
     }
 
     /**
-     * Decrypt data if it's encrypted, otherwise return as-is
+     * Decrypt data if it's encrypted, otherwise return as-is.
+     * Returns null on failure. Previously this fell back to the raw envelope, which is
+     * truthy, so a failed decrypt was indistinguishable from a successful one.
      */
     public function decryptIfEncrypted(string $itemType, int $itemId, string $encryptedData): ?array {
-        $decrypted = $this->decryptItem($itemType, $itemId, $encryptedData);
-        return $decrypted ?: json_decode($encryptedData, true);
+        return $this->decryptItem($itemType, $itemId, $encryptedData);
     }
 }
 
@@ -321,7 +367,7 @@ function isEncryptionEnabled(PDO $pdo, int $userId): bool {
 /**
  * Helper function to encrypt task data
  */
-function encryptTaskData(PDO $pdo, int $userId, int $taskId, array $data): string {
+function encryptTaskData(PDO $pdo, int $userId, int $taskId, array $data): ?string {
     $crypto = createCryptoEngine($pdo, $userId);
     return $crypto->encryptIfPrivate('task', $taskId, $data);
 }
@@ -337,7 +383,7 @@ function decryptTaskData(PDO $pdo, int $userId, int $taskId, string $encryptedDa
 /**
  * Helper function to encrypt column data
  */
-function encryptColumnData(PDO $pdo, int $userId, int $columnId, array $data): string {
+function encryptColumnData(PDO $pdo, int $userId, int $columnId, array $data): ?string {
     $crypto = createCryptoEngine($pdo, $userId);
     return $crypto->encryptIfPrivate('column', $columnId, $data);
 }

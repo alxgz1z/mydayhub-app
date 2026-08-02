@@ -2,7 +2,7 @@
 /**
  * Code for /api/tasks.php
  *
- * MyDayHub - Tasks Module Handler
+ * Signal - Tasks Module Handler
  *
  * Contains all business logic for task-related API actions.
  * This file is included and called by the main API gateway.
@@ -772,21 +772,31 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 
 		// Handle encryption for tasks
 		if ($type === 'task' && isEncryptionEnabled($pdo, $userId) && isset($currentData['encrypted_data'])) {
+			// A failure here would leave is_private flipped but the payload in the old
+			// state, so abort the whole toggle rather than press on.
+			$decryptedData = decryptTaskData($pdo, $userId, $id, $currentData['encrypted_data']);
+			if ($decryptedData === null) {
+				$pdo->rollBack();
+				log_debug_message("Aborting privacy toggle for task $id: could not decrypt existing data");
+				send_json_response(['status' => 'error', 'message' => 'Could not read the task data. Privacy was not changed.'], 500);
+				return;
+			}
+
 			if ($newPrivateState) {
 				// Task is being made private - encrypt the data
-				$decryptedData = decryptTaskData($pdo, $userId, $id, $currentData['encrypted_data']);
-				if ($decryptedData) {
-					$encryptedData = encryptTaskData($pdo, $userId, $id, $decryptedData);
-					$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
-					$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':id' => $id]);
+				$encryptedData = encryptTaskData($pdo, $userId, $id, $decryptedData);
+				if ($encryptedData === null) {
+					$pdo->rollBack();
+					log_debug_message("Aborting privacy toggle for task $id: encryption failed");
+					send_json_response(['status' => 'error', 'message' => 'Could not encrypt the task. Privacy was not changed.'], 500);
+					return;
 				}
+				$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
+				$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':id' => $id]);
 			} else {
 				// Task is being made public - decrypt the data
-				$decryptedData = decryptTaskData($pdo, $userId, $id, $currentData['encrypted_data']);
-				if ($decryptedData) {
-					$stmtDecrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
-					$stmtDecrypt->execute([':encryptedData' => json_encode($decryptedData), ':id' => $id]);
-				}
+				$stmtDecrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :id");
+				$stmtDecrypt->execute([':encryptedData' => json_encode($decryptedData), ':id' => $id]);
 			}
 		}
 
@@ -830,11 +840,17 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 						
 						// Encrypt the task data
 						$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
-						if ($decryptedData) {
-							$encryptedData = encryptTaskData($pdo, $userId, $task['task_id'], $decryptedData);
-							$stmtEncryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
-							$stmtEncryptTask->execute([':encryptedData' => $encryptedData, ':taskId' => $task['task_id']]);
+						$encryptedData = $decryptedData === null
+							? null
+							: encryptTaskData($pdo, $userId, $task['task_id'], $decryptedData);
+						if ($encryptedData === null) {
+							$pdo->rollBack();
+							log_debug_message("Aborting column privacy for column $id: task {$task['task_id']} could not be encrypted");
+							send_json_response(['status' => 'error', 'message' => 'Could not encrypt every task in this column. Privacy was not changed.'], 500);
+							return;
 						}
+						$stmtEncryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+						$stmtEncryptTask->execute([':encryptedData' => $encryptedData, ':taskId' => $task['task_id']]);
 					}
 				} else {
 					// Just mark tasks as private and track inheritance without encryption
@@ -855,10 +871,14 @@ function handle_toggle_privacy(PDO $pdo, int $userId, ?array $data): void {
 						
 						// Decrypt the task data back to plain JSON
 						$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
-						if ($decryptedData) {
-							$stmtDecryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
-							$stmtDecryptTask->execute([':encryptedData' => json_encode($decryptedData), ':taskId' => $task['task_id']]);
+						if ($decryptedData === null) {
+							$pdo->rollBack();
+							log_debug_message("Aborting column un-privacy for column $id: task {$task['task_id']} could not be decrypted");
+							send_json_response(['status' => 'error', 'message' => 'Could not read every task in this column. Privacy was not changed.'], 500);
+							return;
 						}
+						$stmtDecryptTask = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+						$stmtDecryptTask->execute([':encryptedData' => json_encode($decryptedData), ':taskId' => $task['task_id']]);
 					}
 				} else {
 					// Just restore privacy states for inherited tasks without encryption
@@ -931,14 +951,27 @@ function handle_save_task_details(PDO $pdo, int $userId, ?array $data): void {
 			send_json_response(['status' => 'error', 'message' => 'Task not found or you do not have permission to edit it.'], 404);
 			return;
 		}
-		// Decrypt current data if encrypted
-		$currentData = decryptTaskData($pdo, $userId, $taskId, $task['encrypted_data']) ?: [];
+		// Decrypt current data if encrypted. Never fall back to an empty array here: that
+		// would drop the title and every other field on the next write.
+		$currentData = decryptTaskData($pdo, $userId, $taskId, $task['encrypted_data']);
+		if ($currentData === null) {
+			$pdo->rollBack();
+			log_debug_message("Aborting update for task $taskId: could not decrypt existing data");
+			send_json_response(['status' => 'error', 'message' => 'Could not read the existing task data. No changes were saved.'], 500);
+			return;
+		}
 		if ($notes !== null) {
 			$currentData['notes'] = $notes;
 		}
-		
+
 		// Encrypt the updated data
 		$newDataJson = encryptTaskData($pdo, $userId, $taskId, $currentData);
+		if ($newDataJson === null) {
+			$pdo->rollBack();
+			log_debug_message("Aborting update for task $taskId: encryption failed");
+			send_json_response(['status' => 'error', 'message' => 'Could not securely save the task. No changes were saved.'], 500);
+			return;
+		}
 		$sql_parts = [];
 		$params = [':taskId' => $taskId];
 		if ($notes !== null) {
@@ -1138,15 +1171,14 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 			if (isset($columnMap[$task['column_id']])) {
 				// Decrypt task data if encrypted for display
 				// This is a hybrid approach - server can decrypt for display but maintains zero-knowledge for storage
-				$decryptedData = null;
-				if ($task['is_private']) {
-					$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
-					if ($decryptedData) {
-						$task['encrypted_data'] = json_encode($decryptedData); // Send decrypted data
-					}
+				$decryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+				if ($decryptedData === null) {
+					// Leave the payload untouched so the card renders a placeholder rather
+					// than a card whose content silently vanished.
+					log_debug_message("Could not decrypt owned task {$task['task_id']} for display");
+					$decryptedData = [];
 				} else {
-					// For non-private tasks, decode JSON to check for notes
-					$decryptedData = json_decode($task['encrypted_data'], true);
+					$task['encrypted_data'] = json_encode($decryptedData); // Send decrypted data
 				}
 				$task['has_notes'] = !empty($decryptedData['notes'] ?? '');
 				$task['is_snoozed'] = !empty($task['snoozed_until']);
@@ -1157,9 +1189,15 @@ function handle_get_all_board_data(PDO $pdo, int $userId): void {
 
 		// Process shared tasks - add to "Shared with Me" column only if it exists
 		foreach ($sharedTasks as $task) {
-			// For shared tasks, we don't decrypt them as they belong to other users
-			// The frontend will handle decryption if needed
-			$encryptedData = json_decode($task['encrypted_data'], true);
+			// Decrypt shared tasks with the OWNER's keys. The recipient has no keys of their
+			// own, so the previous json_decode left the raw envelope on the card ("Encrypted Task").
+			$encryptedData = decryptTaskData($pdo, $userId, $task['task_id'], $task['encrypted_data']);
+			if ($encryptedData === null) {
+				log_debug_message("Could not decrypt shared task {$task['task_id']} for recipient $userId");
+				$encryptedData = [];
+			} else {
+				$task['encrypted_data'] = json_encode($encryptedData);
+			}
 			$task['has_notes'] = !empty($encryptedData['notes']);
 			$task['is_snoozed'] = !empty($task['snoozed_until']);
 			$task['column_id'] = $sharedColumnId; // Assign to shared column
@@ -1239,9 +1277,16 @@ function handle_decrypt_task_data(PDO $pdo, int $userId, array $data): void {
 	}
 	
 	try {
-		// Get the encrypted data for the task
-		$stmt = $pdo->prepare("SELECT encrypted_data FROM tasks WHERE task_id = :taskId AND user_id = :userId");
-		$stmt->execute([':taskId' => $taskId, ':userId' => $userId]);
+		// Owner, or anyone the task is shared with. Restricting this to the owner made the
+		// frontend's decrypt retry return 404 for every recipient, every time.
+		$stmt = $pdo->prepare("
+			SELECT t.encrypted_data
+			FROM tasks t
+			LEFT JOIN shared_items s ON s.item_id = t.task_id AND s.item_type = 'task' AND s.recipient_id = :userId
+			WHERE t.task_id = :taskId AND t.deleted_at IS NULL
+			AND (t.user_id = :ownerId OR s.recipient_id IS NOT NULL)
+		");
+		$stmt->execute([':taskId' => $taskId, ':userId' => $userId, ':ownerId' => $userId]);
 		$task = $stmt->fetch(PDO::FETCH_ASSOC);
 		
 		if (!$task) {
@@ -1355,14 +1400,21 @@ function handle_create_task(PDO $pdo, int $userId, ?array $data): void {
 		$newTaskId = (int)$pdo->lastInsertId();
 		
 		// Encrypt the data if encryption is enabled and task is private
+		$encryptedData = null;
 		if (isEncryptionEnabled($pdo, $userId)) {
 			$encryptedData = encryptTaskData($pdo, $userId, $newTaskId, $taskData);
-			$stmtUpdate = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
-			$stmtUpdate->execute([':encryptedData' => $encryptedData, ':taskId' => $newTaskId]);
+			if ($encryptedData === null) {
+				// New tasks are created public, so the plaintext row already inserted above
+				// is correct; just don't overwrite it with NULL.
+				log_debug_message("Skipping encryption update for new task $newTaskId: encryption returned null");
+			} else {
+				$stmtUpdate = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+				$stmtUpdate->execute([':encryptedData' => $encryptedData, ':taskId' => $newTaskId]);
+			}
 		}
 
 		// Get the final encrypted data for response
-		$finalEncryptedData = isEncryptionEnabled($pdo, $userId) ? $encryptedData : json_encode($taskData);
+		$finalEncryptedData = $encryptedData ?? json_encode($taskData);
 		
 		send_json_response([
 			'status' => 'success',
@@ -2569,7 +2621,7 @@ function handle_get_all_user_attachments(PDO $pdo, int $userId): void {
 
 		// Process attachments to include task titles
 		foreach ($attachments as &$attachment) {
-			$taskData = json_decode($attachment['encrypted_data'], true);
+			$taskData = decryptTaskData($pdo, $userId, (int)$attachment['task_id'], $attachment['encrypted_data']);
 			$attachment['task_title'] = $taskData['title'] ?? 'Untitled Task';
 			unset($attachment['encrypted_data']); // Remove encrypted data from response
 		}
@@ -2666,7 +2718,7 @@ function handle_get_trust_relationships(PDO $pdo, int $userId): void {
 
 		// Process outgoing shares to include task titles
 		foreach ($outgoingShares as &$share) {
-			$taskData = json_decode($share['encrypted_data'], true);
+			$taskData = decryptTaskData($pdo, $userId, (int)$share['task_id'], $share['encrypted_data']);
 			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
 			unset($share['encrypted_data']); // Remove from response
 		}
@@ -2698,7 +2750,7 @@ function handle_get_trust_relationships(PDO $pdo, int $userId): void {
 
 		// Process incoming shares to include task titles
 		foreach ($incomingShares as &$share) {
-			$taskData = json_decode($share['encrypted_data'], true);
+			$taskData = decryptTaskData($pdo, $userId, (int)$share['task_id'], $share['encrypted_data']);
 			$share['task_title'] = $taskData['title'] ?? 'Untitled Task';
 			unset($share['encrypted_data']); // Remove from response
 		}
@@ -3326,8 +3378,13 @@ function handle_import_tasks(PDO $pdo, int $userId, ?array $data): void {
 			// Encrypt if encryption is enabled
 			if (isEncryptionEnabled($pdo, $userId)) {
 				$encryptedData = encryptTaskData($pdo, $userId, $taskId, $taskData);
-				$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
-				$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':taskId' => $taskId]);
+				if ($encryptedData === null) {
+					// Imported tasks land public, so the plaintext row inserted above stands.
+					log_debug_message("Skipping encryption update for imported task $taskId: encryption returned null");
+				} else {
+					$stmtEncrypt = $pdo->prepare("UPDATE tasks SET encrypted_data = :encryptedData WHERE task_id = :taskId");
+					$stmtEncrypt->execute([':encryptedData' => $encryptedData, ':taskId' => $taskId]);
+				}
 			}
 			
 			$imported++;
