@@ -1,6 +1,6 @@
 /**
  * Zero-Knowledge Encryption Module
- * MyDayHub - Client-Side Encryption for Private Tasks
+ * Signal - Client-Side Encryption for Private Tasks
  * @version 8.5 Avellanas
  * @author Alex & Gemini & Claude & Cursor
  */
@@ -12,10 +12,9 @@
 class CryptoManager {
     constructor() {
         this.masterKey = null;
-        this.keyCache = new Map(); // Cache for unwrapped DEKs
         this.worker = null;
         this.isInitialized = false;
-        
+
         // Initialize Web Worker for crypto operations
         this.initWorker();
     }
@@ -26,7 +25,7 @@ class CryptoManager {
 
     async initWorker() {
         // Check if Web Crypto API is available
-        if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+        if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
             console.log('Checking crypto availability:');
             console.log('window.crypto:', !!window.crypto);
             console.log('window.crypto.subtle:', !!window.crypto?.subtle);
@@ -55,7 +54,7 @@ For localhost development, HTTPS is not required, but for other domains it is ma
                 false,
                 ['encrypt', 'decrypt']
             );
-            if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+            if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
                 console.log('Crypto test successful:', !!testKey);
             }
         } catch (error) {
@@ -63,7 +62,7 @@ For localhost development, HTTPS is not required, but for other domains it is ma
             throw new Error('Web Crypto API test failed: ' + error.message);
         }
         
-        if (window.MyDayHub_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
+        if (window.Signal_Config?.DEVMODE && (typeof isDebugAidEnabled === 'function' ? isDebugAidEnabled('debug_console_messages') : true)) {
             console.log('Crypto manager initialized successfully on main thread');
         }
         this.isInitialized = true;
@@ -126,128 +125,8 @@ For localhost development, HTTPS is not required, but for other domains it is ma
         }
     }
 
-    async generateDEK() {
-        try {
-            return await window.crypto.subtle.generateKey(
-                { name: 'AES-GCM', length: 256 },
-                true, // extractable
-                ['encrypt', 'decrypt']
-            );
-        } catch (error) {
-            console.error('Failed to generate DEK:', error);
-            throw new Error('DEK generation failed: ' + error.message);
-        }
-    }
-
-    async wrapDEK(dek, masterKey = this.masterKey) {
-        if (!masterKey) {
-            throw new Error('Master key not available');
-        }
-        
-        try {
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            const wrappedKey = await window.crypto.subtle.exportKey('raw', dek);
-            
-            const ciphertext = await window.crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: iv },
-                masterKey,
-                wrappedKey
-            );
-            
-            return {
-                ciphertext: Array.from(new Uint8Array(ciphertext)),
-                iv: Array.from(iv)
-            };
-        } catch (error) {
-            console.error('Failed to wrap DEK:', error);
-            throw new Error('DEK wrapping failed: ' + error.message);
-        }
-    }
-
-    async unwrapDEK(wrappedDEK, masterKey = this.masterKey) {
-        if (!masterKey) {
-            throw new Error('Master key not available');
-        }
-
-        // Check cache first
-        const cacheKey = JSON.stringify(wrappedDEK);
-        if (this.keyCache.has(cacheKey)) {
-            return this.keyCache.get(cacheKey);
-        }
-
-        try {
-            const ciphertext = new Uint8Array(wrappedDEK.ciphertext);
-            const iv = new Uint8Array(wrappedDEK.iv);
-            
-            const decryptedKey = await window.crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: iv },
-                masterKey,
-                ciphertext
-            );
-            
-            const dek = await window.crypto.subtle.importKey(
-                'raw',
-                decryptedKey,
-                { name: 'AES-GCM' },
-                false,
-                ['encrypt', 'decrypt']
-            );
-            
-            this.keyCache.set(cacheKey, dek);
-            return dek;
-        } catch (error) {
-            console.error('Failed to unwrap DEK:', error);
-            throw new Error('DEK unwrapping failed: ' + error.message);
-        }
-    }
-
     // ==========================================================================
-    // 4. DATA ENCRYPTION/DECRYPTION
-    // ==========================================================================
-
-    async encryptItem(data, dek) {
-        try {
-            const encoder = new TextEncoder();
-            const dataBuffer = encoder.encode(JSON.stringify(data));
-            const iv = window.crypto.getRandomValues(new Uint8Array(12));
-            
-            const ciphertext = await window.crypto.subtle.encrypt(
-                { name: 'AES-GCM', iv: iv },
-                dek,
-                dataBuffer
-            );
-            
-            return {
-                ciphertext: Array.from(new Uint8Array(ciphertext)),
-                iv: Array.from(iv)
-            };
-        } catch (error) {
-            console.error('Failed to encrypt data:', error);
-            throw new Error('Encryption failed: ' + error.message);
-        }
-    }
-
-    async decryptItem(encryptedData, dek) {
-        try {
-            const ciphertext = new Uint8Array(encryptedData.ciphertext);
-            const iv = new Uint8Array(encryptedData.iv);
-            
-            const decryptedData = await window.crypto.subtle.decrypt(
-                { name: 'AES-GCM', iv: iv },
-                dek,
-                ciphertext
-            );
-            
-            const decoder = new TextDecoder();
-            return JSON.parse(decoder.decode(decryptedData));
-        } catch (error) {
-            console.error('Failed to decrypt data:', error);
-            throw new Error('Decryption failed: ' + error.message);
-        }
-    }
-
-    // ==========================================================================
-    // 5. SECURITY QUESTIONS & RECOVERY
+    // 4. SECURITY QUESTIONS & RECOVERY
     // ==========================================================================
 
     async generateRecoveryKey(answers) {
@@ -299,6 +178,8 @@ For localhost development, HTTPS is not required, but for other domains it is ma
         }
     }
 
+    // Unused: nothing consumes a recovery envelope yet (the server stores it and never
+    // reads it back). Kept as the counterpart to createRecoveryEnvelope, which setup uses.
     async decryptRecoveryEnvelope(recoveryEnvelope, recoveryKey) {
         try {
             // Import recovery key
@@ -335,96 +216,16 @@ For localhost development, HTTPS is not required, but for other domains it is ma
     }
 
     // ==========================================================================
-    // 6. UTILITY FUNCTIONS
+    // 5. UTILITY FUNCTIONS
     // ==========================================================================
 
     generateSalt(length = 32) {
         return Array.from(window.crypto.getRandomValues(new Uint8Array(length)));
     }
-
-    clearCache() {
-        this.keyCache.clear();
-    }
-
-    isInitialized() {
-        return this.masterKey !== null && this.isInitialized;
-    }
-
-    destroy() {
-        this.clearCache();
-        this.masterKey = null;
-        this.isInitialized = false;
-    }
 }
 
 // ==========================================================================
-// 7. GLOBAL CRYPTO MANAGER INSTANCE
+// 6. GLOBAL CRYPTO MANAGER INSTANCE
 // ==========================================================================
 
 window.cryptoManager = new CryptoManager();
-
-// ==========================================================================
-// 8. CONVENIENCE FUNCTIONS
-// ==========================================================================
-
-/**
- * Initialize encryption for a user
- */
-async function initUserEncryption(password) {
-    try {
-        // Generate salt
-        const salt = window.cryptoManager.generateSalt();
-        
-        // Derive master key
-        const masterKey = await window.cryptoManager.deriveMasterKey(password, salt);
-        
-        return { masterKey, salt };
-    } catch (error) {
-        console.error('Failed to initialize user encryption:', error);
-        throw error;
-    }
-}
-
-/**
- * Encrypt a task with automatic DEK generation
- */
-async function encryptTask(taskData, masterKey = window.cryptoManager.masterKey) {
-    try {
-        // Generate DEK for this task
-        const dek = await window.cryptoManager.generateDEK();
-        
-        // Encrypt task data
-        const encryptedData = await window.cryptoManager.encryptItem(taskData, dek);
-        
-        // Wrap DEK with master key
-        const wrappedDEK = await window.cryptoManager.wrapDEK(dek, masterKey);
-        
-        return { encryptedData, wrappedDEK };
-    } catch (error) {
-        console.error('Failed to encrypt task:', error);
-        throw error;
-    }
-}
-
-/**
- * Decrypt a task using wrapped DEK
- */
-async function decryptTask(encryptedData, wrappedDEK, masterKey = window.cryptoManager.masterKey) {
-    try {
-        // Unwrap DEK
-        const dek = await window.cryptoManager.unwrapDEK(wrappedDEK, masterKey);
-        
-        // Decrypt task data
-        const taskData = await window.cryptoManager.decryptItem(encryptedData, dek);
-        
-        return taskData;
-    } catch (error) {
-        console.error('Failed to decrypt task:', error);
-        throw error;
-    }
-}
-
-// Export for module usage
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { CryptoManager, initUserEncryption, encryptTask, decryptTask };
-}
