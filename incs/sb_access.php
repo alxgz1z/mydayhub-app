@@ -10,7 +10,7 @@
  * different gateways. This file is what makes them one thing to everything
  * downstream: an actor with a participant id.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 

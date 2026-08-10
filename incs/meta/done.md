@@ -1,10 +1,15 @@
-# MyDayHub — Development Progress Summary (Concise)
-Updated: 2025-11-02
+# Signal — Development Progress Summary (Concise)
+Updated: 2026-08-09
 Order: chronological (newest at bottom)
 
 ## Current State
-- Version: Nosara 8.6 — Collaboration Features & Editor Enhancements
+- Version: Samara 8.8 — Storyboards View
 - **Next Release**: Web Mirror Focus - TBD
+- **Storyboards View: COMPLETE** — Third tab: a collaborative drafting tool for narrative
+  structure. Storyboards hold scenes; scenes hold text boxes and reference images in one ordered
+  sequence; `<<3>>` cross-references bind to scene ids so reordering never breaks them. Team Notes
+  is a separate review log. Codeword sharing with guest participants, a required delivery brief,
+  and a markdown build brief an agent can build a deck or document from
 - Core: Tasks CRUD with Signal > Support > Backlog > Completed sorting
 - UI: Three-theme system, responsive, touch-friendly; attachments; unified editor; SVG tab icons
 - Calendar: Overlay badges, events CRUD, JSON import/export, group priorities
@@ -265,3 +270,47 @@ Order: chronological (newest at bottom)
   - Separated internal YYYY-MM-DD formatter from display YYYY.MMM.DD formatter
   - Added comprehensive diagnostics for date filtering troubleshooting
 - **VALIDATION COMPLETE**: Journal view now works consistently across all filter modes and day counts, typography enhanced throughout app
+### 2026-08-09 — Storyboards View (v8.8 Samara)
+- **New third tab**: a collaborative drafting tool for narrative structure, replicated from the
+  standalone STORYBOARDS app. That app is untouched and shares no code, data or runtime — only the
+  behaviour carries over; everything about how it is built follows Signal
+  - Design of record: `incs/meta/storyboards-module.md`; schema: `sql/storyboards_schema.sql`
+- **Vocabulary**: a **storyboard** is one argument; a **scene** is one step of it. The word "slide"
+  appears nowhere in the UI or the code — only in the exported brief, naming what an agent should
+  produce downstream
+- **Screens**: dashboard of storyboard cards, scene index of live miniatures, scene workspace with
+  Team Notes beside it and a full-width mode
+  - One canvas renderer draws the workspace stage and the index tiles; everything is sized in `cqw`
+    against the frame, so a tile is a scale model of the scene, and both run the same shrink-to-fit
+    pass
+  - The drafting canvas is fluid to the viewport, deliberately not locked to 16:9
+- **Scene content**: text boxes and up to four reference images in **one** ordered sequence, so an
+  image can sit between two text boxes. Every image requires a non-empty description — it is the alt
+  text, the tooltip, and the image's label in the export
+- **Cross-references**: `<<3>>` as typed, stored against the scene's stable id, rendered as the
+  target's current position — reordering never repoints a reference
+- **Team Notes**: a review log, separate from scene content. Open/closed (closed = hidden but kept),
+  action items with an owner, and never exported as content
+- **Sharing by codeword**: each storyboard has a shareable code and a `code_version`. Rotating is one
+  UPDATE that locks out every stale collaborator atomically; deactivating closes the storyboard
+  - Guests join with a code and a display name at `/sb/?code=…`, with no Signal account
+  - `sb_participants` is the feature's only identity — a Signal account or a guest — so authorship
+    and ownership share one foreign key
+  - Guests use their own gateway, `sb/api.php`, so Signal's auth path is untouched
+- **Delivery brief**: nine questions that decide what the export is *for*; export is refused while
+  any of the seven required answers is blank, and the refusal hands over to the form with those
+  fields flagged
+- **Markdown export**: a scene-by-scene build brief, snapshotted in `sb_exports`
+- **Frameworks reference**: the communication-frameworks catalogue as reading material; seeds nothing
+- **Colour**: a six-hue arc ramp driven by scene position, defined per theme in `uix/storyboards.css`
+  and kept out of `--accent-color`, which the accent customiser overrides with `!important`
+- **Mobile**: responsive throughout, with a touch move mode for scene and element reordering
+- **Pre-existing bugs fixed along the way**
+  - `media/imgs` had lost its group-write bit, which silently broke **every** attachment upload, not
+    just the new ones (`chgrp 33` + `chmod 2775`)
+  - The confirm dialog sat at z-index 1300, below `.modal`, so a confirmation raised from **any**
+    modal rendered underneath it and swallowed the clicks. Now above
+  - `uix/view-manager.js` hardcoded two views in four places; views are now one registry
+- **Version Synchronization**: APP_VER "Nosara 8.7" → "Samara 8.8", file headers and asset cache
+  query strings updated. NB `uix/` assets sit behind Cloudflare for 4 hours — the `?v=` query is what
+  makes an edit reach a browser

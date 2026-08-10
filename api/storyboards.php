@@ -13,7 +13,7 @@
  * 'http_code' key on the returned array is the status the gateway should send
  * and is stripped before the body goes out.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 
@@ -1406,7 +1406,6 @@ function sb_update_comment(PDO $pdo, array $actor, array $data): array {
 
 	$resolved = sb_require_scene_access($pdo, (int)$comment['scene_id'], $actor, 'read');
 	$isAuthor = (int)$comment['author_participant_id'] === (int)$actor['participant_id'];
-	$isOwner = $resolved['role'] === 'owner';
 
 	$sets = [];
 	$params = [':commentId' => $commentId];
@@ -1444,9 +1443,6 @@ function sb_update_comment(PDO $pdo, array $actor, array $data): array {
 
 	if (!$sets) {
 		throw new SbException('Nothing to update.', 400);
-	}
-	if (!$isAuthor && !$isOwner && isset($data['body'])) {
-		throw new SbException('Only the author can edit a comment.', 403);
 	}
 
 	$stmt = $pdo->prepare("UPDATE sb_comments SET " . implode(', ', $sets) . ", updated_at = UTC_TIMESTAMP() WHERE comment_id = :commentId");

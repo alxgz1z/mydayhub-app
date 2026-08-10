@@ -2,12 +2,12 @@
 /**
  * Code for /incs/config.php
  *
- * MyDayHub - Core Configuration
+ * Signal - Core Configuration
  *
  * Reads credentials from a .env file for security and portability.
  * Manages session start and CSRF token generation.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Gemini & Claude & Cursor
  */
 
@@ -99,7 +99,7 @@ function log_debug_message(string $message): void {
 }
 
 if (DEVMODE) {
-	function mydayhub_error_handler($errno, $errstr, $errfile, $errline) {
+	function signal_error_handler($errno, $errstr, $errfile, $errline) {
 		if (!(error_reporting() & $errno)) {
 			return false;
 		}
@@ -107,12 +107,12 @@ if (DEVMODE) {
 		log_debug_message($logMessage);
 		return true; // Prevent default PHP error handler
 	}
-	set_error_handler('mydayhub_error_handler');
+	set_error_handler('signal_error_handler');
 }
 
 
 // --- APPLICATION URL & VERSION ---
-define('APP_VER', 'Nosara 8.7');
+define('APP_VER', 'Samara 8.8');
 
 // Smart APP_URL detection - uses stable hostnames only (no dynamic IPs)
 function detectAppUrl() {
@@ -225,13 +225,10 @@ if (isset($_SESSION['user_id'])) {
 $timeoutSeconds = $_SESSION['session_timeout'] ?? 3600; // Default to 1 hour if not set
 
 
-// --- SMTP (MAIL) SERVICE (from Environment Variables) --- //
-define('SMTP_HOST', getenv('SMTP_HOST'));
-define('SMTP_USER', getenv('SMTP_USER'));
-define('SMTP_PASS', getenv('SMTP_PASS'));
-define('SMTP_PORT', getenv('SMTP_PORT'));
-define('SMTP_FROM_EMAIL', getenv('SMTP_FROM_EMAIL'));
-define('SMTP_FROM_NAME', getenv('SMTP_FROM_NAME'));
+// --- MAIL SERVICE (Resend API, from Environment Variables) --- //
+define('RESEND_API_KEY', getenv('RESEND_API_KEY'));
+define('MAIL_FROM_EMAIL', getenv('MAIL_FROM_EMAIL'));
+define('MAIL_FROM_NAME', getenv('MAIL_FROM_NAME'));
 
 // --- SSL CERTIFICATES (from Environment Variables) --- //
 define('SSL_CERT_PATH', getenv('SSL_CERT_PATH'));

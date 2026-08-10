@@ -4,7 +4,7 @@
  * Handles switching between views (Tasks, Journal, Storyboards) with tab navigation
  * Persists view preference to database for cross-session synchronization
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  */
 
 /**

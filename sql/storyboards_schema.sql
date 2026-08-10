@@ -8,7 +8,7 @@
 --
 -- Safe to re-run: every statement is IF NOT EXISTS.
 --
--- @version 8.7 Nosara
+-- @version 8.8 Samara
 -- @author Alex & Claude
 
 -- ---------------------------------------------------------------------------

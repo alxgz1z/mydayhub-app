@@ -16,7 +16,7 @@
  * /sb/ that a codeword opens. The only difference between them is the endpoint
  * and CSRF token in window.SB_Config, so everything below is shared.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 

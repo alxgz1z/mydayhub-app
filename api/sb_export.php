@@ -14,7 +14,7 @@
  * And the review log is emitted as context under a scene, never mixed into its
  * content — what the reviewers saw as the scene is exactly what the agent gets.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 

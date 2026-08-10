@@ -17,7 +17,7 @@
  * The module itself is shared and unchanged: both gateways establish an actor
  * and hand it the same handler.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 

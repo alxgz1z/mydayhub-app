@@ -11,7 +11,7 @@
  * visible, and what catches a mistyped or rotated code before someone is
  * standing inside a stranger's work under a name they did not mean to use.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 

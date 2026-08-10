@@ -1,8 +1,8 @@
-# MyDayHub Reference Specification
+# Signal Reference Specification
 
-Version: Avellanas 8.5 (Journal View Refactored & Typography Enhanced)
+Version: Samara 8.8 (Storyboards View)
 Audience: Internal Development & Product
-Last Updated: 2025-10-31
+Last Updated: 2026-08-09
 
 ---
 
@@ -28,7 +28,7 @@ Last Updated: 2025-10-31
 
 ## 1. Introduction & Philosophy
 
-MyDayHub is a productivity hub emphasizing signal over noise. The objective is a fast, fluid, mobile‑friendly experience that keeps sensitive data private by default while enabling practical collaboration when explicitly chosen.
+Signal is a productivity hub emphasizing signal over noise. The objective is a fast, fluid, mobile‑friendly experience that keeps sensitive data private by default while enabling practical collaboration when explicitly chosen.
 
 Core principles:
 - **Hybrid zero-knowledge privacy**: Server decrypts for display, maintains encrypted storage; plaintext never stored for private items.
@@ -54,7 +54,19 @@ The Journal View delivers:
 - Same privacy/encryption system as tasks
 - Mobile-optimized collapsible tab navigation
 
-Non‑goals for the current milestone: full offline engine, full end‑to‑end encrypted sharing, and cross‑view integrations beyond the Calendar Overlay basics.
+The Storyboards View (third tab) delivers:
+- A collaborative drafting tool for narrative structure: a **storyboard** is one argument, a
+  **scene** is one step of it. The word "slide" is not used in the UI or the code — only in the
+  exported brief, where it names what an agent should produce downstream
+- Dashboard, scene index of live miniatures, and a scene workspace with a Team Notes review log
+- Scene content is text boxes and up to four reference images in one ordered sequence; every image
+  requires a description, which is its alt text and its label in the export
+- `<<3>>` cross-references stored against stable scene ids, so reordering never breaks a link
+- Sharing by rotatable codeword, including guest participants with no Signal account
+- A required delivery brief, and a markdown build brief for an AI agent to build the deliverable
+- Full detail lives in `incs/meta/storyboards-module.md`, which is the design of record
+
+Non‑goals for the current milestone: full offline engine, full end‑to‑end encrypted sharing, and cross‑view integrations beyond the Calendar Overlay basics. Storyboard content is deliberately **not** encrypted — a storyboard is inherently shared, and Signal's rule is that only non‑private items are shareable. Scenes backed by uploaded HTML ("built scenes" in the source app) are not implemented: serving user HTML same-origin is stored XSS against a session holding encryption keys.
 
 ---
 
@@ -287,7 +299,7 @@ Theming & Accessibility:
 - Tip boxes (green) and warning boxes (orange) for important information
 - Smooth accordion animations with scroll-into-view
 - Fully responsive for mobile and desktop
-- Back to MyDayHub buttons for easy navigation
+- Back to Signal buttons for easy navigation
 
 **User Experience:**
 - Friendly, approachable tone following industry best practices
@@ -443,7 +455,17 @@ Long term:
 - Journal entry: date-based entry in the Journal View with rich text content and classification
 - Journal classification: Signal/Support/Backlog classification system matching task card patterns
 - Task markup: @task[description] syntax within journal entries to create linked tasks
-- View switching: seamless transition between Tasks (Kanban) and Journal (date-based) views
+- View switching: seamless transition between Tasks (Kanban), Journal (date-based) and Storyboards views
+- Storyboard: the document unit of the Storyboards view — one self-contained argument
+- Scene: one step of a storyboard's argument, a single point the audience should take away
+- Scene index: the tile grid of a storyboard's scenes, each tile a live miniature of the scene
+- Element: one item on a scene's canvas — a text box or a reference image — in one shared sequence
+- Cross-reference: `<<3>>` in a text box or note, bound to a scene id and rendered as its current position
+- Team Notes: a scene's review log; open or closed (closed = hidden but kept), never exported as content
+- Codeword: a storyboard's shareable access code; rotating it locks out everyone who joined under the old one
+- Participant: the Storyboards view's identity — a Signal account or a codeword guest
+- Delivery brief: the nine answers about audience, outcome and format that gate the export
+- Build brief: the exported markdown an AI agent turns into a deck or document
 - Navigation buttons: < > for single-day navigation, << >> for multi-day navigation
 - Footer popover: centralized controls menu for view modes, date jumping, and navigation
 - Vertical space optimization: removal of header ribbon to maximize content area

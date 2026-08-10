@@ -66,12 +66,12 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 	
-	<link rel="stylesheet" href="uix/style.css?v=8.7.3">
+	<link rel="stylesheet" href="uix/style.css?v=8.8">
 	<link rel="stylesheet" href="uix/tasks.css?v=8.7">
 	<link rel="stylesheet" href="uix/editor.css?v=8.7">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
-	<link rel="stylesheet" href="uix/storyboards.css?v=8.7.3">
+	<link rel="stylesheet" href="uix/storyboards.css?v=8.8">
 	
 	<style>
 		/* User Guide Modal Styles */
@@ -3093,14 +3093,14 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<script src="uix/editor.js" defer></script>
 	<!-- Versioned: the view registry changed shape, and a cached copy of the old
 	     two-view file sends every tab that is not Tasks to the Journal view. -->
-	<script src="uix/view-manager.js?v=8.7.3" defer></script>
+	<script src="uix/view-manager.js?v=8.8" defer></script>
 	<script src="uix/tasks.js" defer></script>
 	<script src="uix/calendar.js" defer></script>
 	<script src="uix/journal.js?v=8.8" defer></script>
 	<script src="uix/import-export.js" defer></script>
 	<script src="uix/tasks-export.js" defer></script>
 	<script src="uix/journal-export.js" defer></script>
-	<script src="uix/storyboards.js?v=8.7.3" defer></script>
+	<script src="uix/storyboards.js?v=8.8" defer></script>
 
 </body>
 </html>

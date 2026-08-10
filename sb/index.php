@@ -14,7 +14,7 @@
  * so a path segment would 404. The QR code and the copyable invite link both
  * encode this form.
  *
- * @version 8.7 Nosara
+ * @version 8.8 Samara
  * @author Alex & Claude
  */
 
@@ -54,8 +54,8 @@ try {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Storyboards — Signal</title>
 	<link rel="icon" type="image/svg+xml" href="../media/favico.svg">
-	<link rel="stylesheet" href="../uix/style.css?v=8.7.3">
-	<link rel="stylesheet" href="../uix/storyboards.css?v=8.7.3">
+	<link rel="stylesheet" href="../uix/style.css?v=8.8">
+	<link rel="stylesheet" href="../uix/storyboards.css?v=8.8">
 	<style>
 		/* The guest shell is the app's chrome with everything an account owns
 		   taken out: one header strip and the view. */
@@ -137,7 +137,7 @@ try {
 			code: <?php echo json_encode($code); ?>
 		};
 	</script>
-	<script src="../uix/storyboards.js?v=8.7.3" defer></script>
-	<script src="guest.js?v=8.7.3" defer></script>
+	<script src="../uix/storyboards.js?v=8.8" defer></script>
+	<script src="guest.js?v=8.8" defer></script>
 </body>
 </html>
