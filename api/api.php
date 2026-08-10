@@ -2,7 +2,7 @@
 /**
  * Code for /api/api.php
  *
- * MyDayHub - Main API Gateway
+ * Signal - Main API Gateway
  *
  * This file is the single entry point for all data-related API calls.
  * It handles error logging, session security, request routing, and dispatches to module handlers.
@@ -121,6 +121,19 @@ try {
 			require_once __DIR__ . '/journal.php';
 			$result = handle_journal_action($action, $method, $pdo, $userId, $data);
 			send_json_response($result);
+			break;
+
+		case 'storyboards':
+			require_once __DIR__ . '/../incs/sb_access.php';
+			require_once __DIR__ . '/storyboards.php';
+			// The module speaks in participants, not user ids, because a
+			// codeword guest arriving at /sb/api.php has no account. An account
+			// gets its participant row here, on first use.
+			$actor = sb_participant_for_user($pdo, $userId);
+			$result = handle_storyboards_action($action, $method, $pdo, $actor, $data);
+			$httpCode = $result['http_code'] ?? 200;
+			unset($result['http_code']);
+			send_json_response($result, (int)$httpCode);
 			break;
 
 		default:
