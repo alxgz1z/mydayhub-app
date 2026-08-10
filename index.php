@@ -71,6 +71,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<link rel="stylesheet" href="uix/editor.css?v=8.7">
 	<link rel="stylesheet" href="uix/attachments.css">
 	<link rel="stylesheet" href="uix/settings.css">
+	<link rel="stylesheet" href="uix/storyboards.css?v=8.7">
 	
 	<style>
 		/* User Guide Modal Styles */
@@ -600,6 +601,18 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 						</span>
 						<span class="tab-label">Journal</span>
 					</button>
+					<button class="tab-btn" data-view="storyboards" id="storyboards-tab">
+						<span class="tab-icon">
+							<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+								<!-- Three panels of a storyboard: the argument, scene by scene -->
+								<rect x="2.5" y="5" width="7" height="6" rx="1"></rect>
+								<rect x="14.5" y="5" width="7" height="6" rx="1"></rect>
+								<rect x="2.5" y="14" width="7" height="6" rx="1" opacity="0.45"></rect>
+								<rect x="14.5" y="14" width="7" height="6" rx="1" opacity="0.45"></rect>
+							</svg>
+						</span>
+						<span class="tab-label">Storyboards</span>
+					</button>
 				</nav>
 			</div>
 			
@@ -666,7 +679,11 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 			<div id="journal-view" class="view-container">
 				<p>Loading Journal View...</p>
 			</div>
-			
+
+			<div id="storyboards-view" class="view-container">
+				<p>Loading Storyboards...</p>
+			</div>
+
 			<div class="mobile-bottom-spacer"></div>
 		</main>
 
@@ -705,6 +722,26 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 				<!-- Journal-specific controls (hidden by default) -->
 				<div id="journal-controls" class="hidden">
 					<button id="btn-journal-menu" class="btn-footer-icon" title="Journal Options">
+						<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="View Options">
+							<line x1="4" y1="7" x2="20" y2="7"></line>
+							<circle cx="9" cy="7" r="1.75"></circle>
+							<line x1="4" y1="12" x2="20" y2="12"></line>
+							<circle cx="15" cy="12" r="1.75"></circle>
+							<line x1="4" y1="17" x2="20" y2="17"></line>
+							<circle cx="11" cy="17" r="1.75"></circle>
+						</svg>
+					</button>
+				</div>
+
+				<!-- Storyboards-specific controls (hidden by default) -->
+				<div id="storyboards-controls" class="hidden">
+					<button id="btn-sb-frameworks" class="btn-footer-icon" title="Communication Frameworks">
+						<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="Frameworks">
+							<path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H19v15H6.5A2.5 2.5 0 0 0 4 20.5z"></path>
+							<path d="M4 20.5A2.5 2.5 0 0 1 6.5 18H19v3H6.5A2.5 2.5 0 0 0 4 20.5z" opacity="0.45"></path>
+						</svg>
+					</button>
+					<button id="btn-sb-menu" class="btn-footer-icon" title="Storyboard Options">
 						<svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-label="View Options">
 							<line x1="4" y1="7" x2="20" y2="7"></line>
 							<circle cx="9" cy="7" r="1.75"></circle>
@@ -3061,6 +3098,7 @@ $isCurrentUserDeveloper = isset($_SESSION['user_id']) ? isDeveloperMode() : fals
 	<script src="uix/import-export.js" defer></script>
 	<script src="uix/tasks-export.js" defer></script>
 	<script src="uix/journal-export.js" defer></script>
+	<script src="uix/storyboards.js?v=8.7" defer></script>
 
 </body>
 </html>

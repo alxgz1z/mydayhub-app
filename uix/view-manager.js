@@ -1,11 +1,38 @@
 /**
  * View Manager
- * 
- * Handles switching between different views (Tasks, Journal) with tab navigation
+ *
+ * Handles switching between views (Tasks, Journal, Storyboards) with tab navigation
  * Persists view preference to database for cross-session synchronization
- * 
- * @version 8.5 Avellanas
+ *
+ * @version 8.7 Nosara
  */
+
+/**
+ * Every view the tab bar can show, in one place.
+ *
+ * This used to be two views hardcoded in four places — a container-id ternary,
+ * two copies of the same preference validation, and an if/else in
+ * toggleViewSpecificElements — so adding a third meant finding all four. A view
+ * is now a row here: its container, the footer controls only it shows, and the
+ * lazy initializer to call the first time it is opened.
+ */
+const VIEW_REGISTRY = {
+    tasks: {
+        container: 'task-board-container',
+        controls: ['#add-column-container', '#btn-filters', '#filter-menu'],
+        init: 'initTasksView'
+    },
+    journal: {
+        container: 'journal-view',
+        controls: ['#journal-controls'],
+        init: 'initJournalView'
+    },
+    storyboards: {
+        container: 'storyboards-view',
+        controls: ['#storyboards-controls'],
+        init: 'initStoryboardsView'
+    }
+};
 
 class ViewManager {
     constructor() {
@@ -58,25 +85,24 @@ class ViewManager {
             container.classList.remove('active');
         });
         
-        const activeContainer = document.getElementById(`${view === 'tasks' ? 'task-board-container' : 'journal-view'}`);
+        const definition = VIEW_REGISTRY[view];
+        const activeContainer = definition ? document.getElementById(definition.container) : null;
         if (activeContainer) {
             activeContainer.classList.add('active');
         } else {
             console.error(`Could not find container for view: ${view}`);
         }
-        
+
         this.currentView = view;
-        
+
         // Show/hide view-specific UI elements
         this.toggleViewSpecificElements(view);
-        
+
         // Initialize the view if needed (lazy loading)
-        if (view === 'tasks' && typeof window.initTasksView === 'function') {
-            window.initTasksView();
-        } else if (view === 'journal' && typeof window.initJournalView === 'function') {
-            window.initJournalView();
+        if (definition && typeof window[definition.init] === 'function') {
+            window[definition.init]();
         }
-        
+
         // Update mission focus chart after view loads (with longer delay for session)
         setTimeout(() => {
             if (typeof window.updateMissionFocusChart === 'function') {
@@ -89,49 +115,16 @@ class ViewManager {
      * Show/hide view-specific UI elements
      */
     toggleViewSpecificElements(view) {
-        // Task-specific elements (show only in tasks view)
-        const taskElements = [
-            '#add-column-container',
-            '#btn-filters',
-            '#filter-menu'
-        ];
-        
-        // Journal-specific elements (show only in journal view)
-        const journalElements = [
-            '#journal-controls'
-        ];
-        
-        if (view === 'tasks') {
-            // Show task elements, hide journal elements
-            taskElements.forEach(selector => {
+        // Each view's footer controls show only while that view is active. Driven
+        // off the registry so a view that owns no controls still hides the others'.
+        Object.entries(VIEW_REGISTRY).forEach(([name, definition]) => {
+            definition.controls.forEach(selector => {
                 const element = document.querySelector(selector);
                 if (element) {
-                    element.classList.remove('hidden');
+                    element.classList.toggle('hidden', name !== view);
                 }
             });
-            
-            journalElements.forEach(selector => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    element.classList.add('hidden');
-                }
-            });
-        } else if (view === 'journal') {
-            // Hide task elements, show journal elements
-            taskElements.forEach(selector => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    element.classList.add('hidden');
-                }
-            });
-            
-            journalElements.forEach(selector => {
-                const element = document.querySelector(selector);
-                if (element) {
-                    element.classList.remove('hidden');
-                }
-            });
-        }
+        });
     }
     
     /**
@@ -154,7 +147,7 @@ class ViewManager {
                 const result = await response.json();
                 if (result.status === 'success' && result.data?.current_view) {
                     const savedView = result.data.current_view;
-                    if (savedView === 'tasks' || savedView === 'journal') {
+                    if (VIEW_REGISTRY[savedView]) {
                         this.setActiveView(savedView);
                         return;
                     }
@@ -165,8 +158,8 @@ class ViewManager {
         }
         
         // Fallback to localStorage
-        const localView = localStorage.getItem('mydayhub-current-view');
-        if (localView && (localView === 'tasks' || localView === 'journal')) {
+        const localView = localStorage.getItem('signal-current-view');
+        if (localView && VIEW_REGISTRY[localView]) {
             this.setActiveView(localView);
         } else {
             // Default to tasks view
@@ -180,7 +173,7 @@ class ViewManager {
      */
     async saveViewPreference(view) {
         // Update localStorage immediately for instant feedback
-        localStorage.setItem('mydayhub-current-view', view);
+        localStorage.setItem('signal-current-view', view);
         
         try {
             const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');

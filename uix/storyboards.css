@@ -1,0 +1,204 @@
+/* Code for /uix/storyboards.css */
+/* Signal - Storyboards view styles */
+/* @version 8.7 Nosara */
+/* @author Alex & Claude */
+
+/* ==========================================================================
+   1. STORYBOARDS TOKENS
+   --------------------------------------------------------------------------
+   Colour this view needs that Signal does not already have, kept in its own
+   --sb-* family and restated for every theme.
+
+   Two rules this section exists to hold:
+
+   1. The arc ramp is NOT routed through --accent-color. The accent customiser
+      writes the user's chosen accent with !important, which would collapse all
+      six hues onto one colour and destroy the only information the ramp
+      carries.
+   2. Every theme restates every token. style.css carries the same warning for
+      its own variables: anything omitted here falls back to the dark defaults,
+      which is exactly wrong on the two light themes.
+
+   The ramp is worn by a scene's POSITION — real, ordered data — so the hue
+   informs rather than decorates. Past six scenes it cycles.
+   ========================================================================== */
+
+:root {
+	/* Dark ramp */
+	--sb-arc-1: #7c8cf0;
+	--sb-arc-2: #35becb;
+	--sb-arc-3: #a981ec;
+	--sb-arc-4: #5fc086;
+	--sb-arc-5: #e0a445;
+	--sb-arc-6: #ec7f9f;
+	--sb-arc-wash: 0.07;
+
+	/* Ink that sits on a saturated arc chip */
+	--sb-chip-ink: #10131a;
+
+	/* Status: open comments demand attention, backup and action items are a
+	   reserve signal, an incomplete brief blocks the export. */
+	--sb-danger: #f08a8a;
+	--sb-danger-soft: rgba(240, 138, 138, 0.14);
+	--sb-warn: #e8b564;
+	--sb-warn-soft: rgba(232, 181, 100, 0.14);
+
+	/* The scene stage: a surface the canvas sits on, distinct from a card. */
+	--sb-stage-bg: #14171d;
+	--sb-canvas-bg: #1b1f27;
+	--sb-element-bg: #232833;
+	--sb-scrim: rgba(0, 0, 0, 0.55);
+}
+
+body.light-mode {
+	/* Light ramp — the dark ramp's hues are too pale to read on white */
+	--sb-arc-1: #4f63d2;
+	--sb-arc-2: #0e9aa7;
+	--sb-arc-3: #8b5cd6;
+	--sb-arc-4: #3d9a63;
+	--sb-arc-5: #c8841f;
+	--sb-arc-6: #d25b7d;
+	--sb-arc-wash: 0.05;
+
+	--sb-chip-ink: #ffffff;
+
+	--sb-danger: #c4362f;
+	--sb-danger-soft: rgba(196, 54, 47, 0.10);
+	--sb-warn: #a86a13;
+	--sb-warn-soft: rgba(168, 106, 19, 0.10);
+
+	--sb-stage-bg: #e2e2e2;
+	--sb-canvas-bg: #ffffff;
+	--sb-element-bg: #f4f4f5;
+	--sb-scrim: rgba(0, 0, 0, 0.35);
+}
+
+body.high-contrast {
+	/* Maximum separation between neighbours rather than a tuned ramp: at this
+	   contrast level the point is telling positions apart, not harmony. */
+	--sb-arc-1: #00b0ff;
+	--sb-arc-2: #00e676;
+	--sb-arc-3: #ffcc00;
+	--sb-arc-4: #ff7043;
+	--sb-arc-5: #e040fb;
+	--sb-arc-6: #ffffff;
+	--sb-arc-wash: 0.12;
+
+	--sb-chip-ink: #000000;
+
+	--sb-danger: #ff5252;
+	--sb-danger-soft: rgba(255, 82, 82, 0.22);
+	--sb-warn: #ffcc00;
+	--sb-warn-soft: rgba(255, 204, 0, 0.22);
+
+	--sb-stage-bg: #000000;
+	--sb-canvas-bg: #0a0a0a;
+	--sb-element-bg: #1a1a1a;
+	--sb-scrim: rgba(0, 0, 0, 0.75);
+}
+
+body.theme-hearth {
+	--sb-arc-1: #e0bc4a;
+	--sb-arc-2: #4fa8a0;
+	--sb-arc-3: #c78fd8;
+	--sb-arc-4: #7fb37a;
+	--sb-arc-5: #e08b52;
+	--sb-arc-6: #d9788f;
+	--sb-arc-wash: 0.08;
+
+	--sb-chip-ink: #141210;
+
+	--sb-danger: #e08078;
+	--sb-danger-soft: rgba(224, 128, 120, 0.14);
+	--sb-warn: #d6a340;
+	--sb-warn-soft: rgba(214, 163, 64, 0.14);
+
+	--sb-stage-bg: #17140f;
+	--sb-canvas-bg: #211d16;
+	--sb-element-bg: #2b261d;
+	--sb-scrim: rgba(0, 0, 0, 0.6);
+}
+
+body.theme-garden {
+	--sb-arc-1: #6fb8d8;
+	--sb-arc-2: #72c090;
+	--sb-arc-3: #b193dd;
+	--sb-arc-4: #a8c96a;
+	--sb-arc-5: #dcae5f;
+	--sb-arc-6: #dd8399;
+	--sb-arc-wash: 0.08;
+
+	--sb-chip-ink: #0f1612;
+
+	--sb-danger: #e0685f;
+	--sb-danger-soft: rgba(224, 104, 95, 0.14);
+	--sb-warn: #d9ad5a;
+	--sb-warn-soft: rgba(217, 173, 90, 0.14);
+
+	--sb-stage-bg: #121a15;
+	--sb-canvas-bg: #1b241e;
+	--sb-element-bg: #242e28;
+	--sb-scrim: rgba(0, 0, 0, 0.6);
+}
+
+body.theme-paper {
+	--sb-arc-1: #3f5aa6;
+	--sb-arc-2: #197b83;
+	--sb-arc-3: #7c53ad;
+	--sb-arc-4: #45804f;
+	--sb-arc-5: #9a6b1f;
+	--sb-arc-6: #a94f66;
+	--sb-arc-wash: 0.06;
+
+	--sb-chip-ink: #fffdf8;
+
+	--sb-danger: #b3403a;
+	--sb-danger-soft: rgba(179, 64, 58, 0.10);
+	--sb-warn: #8a5c18;
+	--sb-warn-soft: rgba(138, 92, 24, 0.12);
+
+	--sb-stage-bg: #ece5d7;
+	--sb-canvas-bg: #fffdf8;
+	--sb-element-bg: #f6f1e6;
+	--sb-scrim: rgba(35, 24, 12, 0.45);
+}
+
+/* ==========================================================================
+   2. VIEW SHELL
+   ========================================================================== */
+
+#storyboards-view {
+	flex-direction: column;
+	height: 100%;
+	overflow: hidden;
+}
+
+#storyboards-view.active {
+	display: flex;
+}
+
+.sb-loading,
+.sb-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 0.75rem;
+	flex: 1;
+	color: var(--text-secondary);
+	text-align: center;
+	padding: 2rem 1.5rem;
+}
+
+.sb-empty h2 {
+	margin: 0;
+	font-size: 1.15rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.sb-empty p {
+	margin: 0;
+	max-width: 34ch;
+	line-height: 1.5;
+}
