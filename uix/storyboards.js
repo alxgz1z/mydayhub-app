@@ -1129,10 +1129,12 @@
 		let position = 0;
 		tiles.forEach((tile) => {
 			const tileSceneId = Number(tile.dataset.sceneId);
-			if (tileSceneId !== scene.scene_id) {
-				addTarget(tile, position);
-				position += 1;
-			}
+			if (tileSceneId === scene.scene_id) return;
+			// Position 0 goes before whatever is physically first, which may be
+			// the tile being moved — otherwise "Move to the front" renders after
+			// the very scene it would move in front of.
+			addTarget(position === 0 ? grid.firstElementChild : tile, position);
+			position += 1;
 		});
 		addTarget(null, position);
 
