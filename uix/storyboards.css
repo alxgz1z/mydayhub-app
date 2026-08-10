@@ -202,3 +202,1227 @@ body.theme-paper {
 	max-width: 34ch;
 	line-height: 1.5;
 }
+
+/* ==========================================================================
+   3. TOP BAR — the same strip on every storyboards screen
+   ========================================================================== */
+
+.sb-topbar {
+	display: flex;
+	align-items: center;
+	gap: 0.65rem;
+	padding: 0.55rem 0.9rem;
+	background: var(--toolbar-bg);
+	border-bottom: 1px solid var(--border-color);
+	flex: 0 0 auto;
+	min-height: 3rem;
+}
+
+.sb-topbar-title {
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--text-primary);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	min-width: 0;
+	flex: 1;
+}
+
+/* Inline rename, the same gesture as a scene title: double-click to edit. */
+.sb-topbar-title.editable {
+	cursor: text;
+	border-bottom: 1px dashed transparent;
+}
+
+.sb-topbar-title.editable:hover {
+	border-bottom-color: var(--border-color-light);
+}
+
+.sb-topbar-actions {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex: 0 0 auto;
+}
+
+.sb-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.4rem 0.7rem;
+	font-family: inherit;
+	font-size: 0.82rem;
+	font-weight: 400;
+	color: var(--text-primary);
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.4rem;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.sb-btn:hover {
+	background: var(--btn-hover-bg);
+	border-color: var(--accent-color);
+}
+
+.sb-btn.primary {
+	background: var(--accent-color);
+	border-color: var(--accent-color);
+	color: var(--sb-chip-ink);
+	font-weight: 500;
+}
+
+.sb-btn.primary:hover {
+	filter: brightness(1.08);
+}
+
+.sb-btn.danger {
+	color: var(--sb-danger);
+	border-color: var(--sb-danger-soft);
+}
+
+.sb-btn.icon-only {
+	padding: 0.4rem 0.5rem;
+}
+
+.sb-btn:disabled {
+	opacity: 0.5;
+	cursor: not-allowed;
+}
+
+/* A count that has to be seen from across the grid without being read. */
+.sb-pill {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.25rem;
+	padding: 0.1rem 0.4rem;
+	font-size: 0.7rem;
+	font-weight: 500;
+	line-height: 1.5;
+	border-radius: 0.35rem;
+	font-variant-numeric: tabular-nums;
+}
+
+.sb-pill.notes {
+	color: var(--sb-danger);
+	background: var(--sb-danger-soft);
+}
+
+.sb-pill.warn {
+	color: var(--sb-warn);
+	background: var(--sb-warn-soft);
+}
+
+.sb-pill.quiet {
+	color: var(--text-secondary);
+	background: var(--btn-hover-bg);
+}
+
+.sb-scroll {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	overflow-x: hidden;
+	padding: 1rem;
+}
+
+/* ==========================================================================
+   4. DASHBOARD
+   ========================================================================== */
+
+.sb-dash-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(255px, 1fr));
+	gap: 0.9rem;
+}
+
+.sb-card {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	padding: 0.85rem 0.9rem 0.75rem;
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 0.5rem;
+	box-shadow: var(--card-shadow);
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.sb-card:hover {
+	transform: translateY(-2px);
+	border-color: var(--accent-color);
+	box-shadow: 0 6px 16px var(--shadow-color);
+}
+
+/*
+ * One segment per scene, in the same ramp the scene index uses.
+ *
+ * A single hue per card would be decoration — the dashboard has no sequence of
+ * its own. This is the storyboard's own shape: length and emptiness read before
+ * any text is parsed, and it rhymes with the coloured top edge each scene tile
+ * carries inside.
+ */
+.sb-arc-strip {
+	display: flex;
+	gap: 2px;
+	height: 4px;
+	margin: -0.35rem -0.4rem 0.15rem;
+	border-radius: 2px;
+	overflow: hidden;
+}
+
+.sb-arc-strip span {
+	flex: 1 1 0;
+	min-width: 3px;
+	border-radius: 1px;
+}
+
+/* A storyboard with no scenes keeps its shape rather than collapsing. */
+.sb-arc-strip.empty span {
+	background: var(--border-color);
+	opacity: 0.7;
+}
+
+.sb-card-title {
+	font-size: 0.95rem;
+	font-weight: 500;
+	color: var(--text-primary);
+	line-height: 1.3;
+	overflow-wrap: anywhere;
+}
+
+.sb-card-desc {
+	font-size: 0.8rem;
+	color: var(--text-secondary);
+	line-height: 1.4;
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.sb-card-foot {
+	display: flex;
+	align-items: center;
+	gap: 0.4rem;
+	flex-wrap: wrap;
+	margin-top: auto;
+	padding-top: 0.35rem;
+	font-size: 0.72rem;
+	color: var(--text-secondary);
+}
+
+/* Role is context, not the headline, so it stays quiet text. */
+.sb-card-role {
+	margin-left: auto;
+	text-transform: capitalize;
+}
+
+/* ==========================================================================
+   5. SCENE INDEX
+   ========================================================================== */
+
+.sb-scene-index {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+	gap: 1rem;
+}
+
+/* A tile is a frame with a caption under it — a storyboard panel, not a row. */
+.sb-tile {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 0.5rem;
+	overflow: hidden;
+	cursor: pointer;
+	transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.sb-tile:hover {
+	border-color: var(--accent-color);
+	box-shadow: 0 6px 16px var(--shadow-color);
+}
+
+/* The scene's hue as a top edge: enough to identify it at a glance, contained
+   enough that six side by side still read as one set. */
+.sb-tile::before {
+	content: '';
+	position: absolute;
+	inset: 0 0 auto 0;
+	height: 3px;
+	background: var(--sb-arc, var(--accent-color));
+	z-index: 1;
+}
+
+.sb-tile-body {
+	container-type: inline-size;
+}
+
+.sb-tile-meta {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.55rem 0.65rem;
+	border-top: 1px solid var(--border-color);
+}
+
+/* The shot number, filled with the scene's hue. Tabular so the column of
+   numerals down the grid stays put as positions change. */
+.sb-tile-num {
+	flex: none;
+	font-size: 0.68rem;
+	font-weight: 600;
+	line-height: 1;
+	font-variant-numeric: tabular-nums;
+	padding: 0.2rem 0.35rem;
+	border-radius: 0.3rem;
+	background: var(--sb-arc, var(--accent-color));
+	color: var(--sb-chip-ink);
+}
+
+.sb-tile-title {
+	flex: 1;
+	min-width: 0;
+	font-size: 0.82rem;
+	font-weight: 400;
+	color: var(--text-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+/*
+ * The slot the carried tile holds: its own place, emptied. The scene is under
+ * the cursor, so what is left behind is the shape of the hole it would fill —
+ * and it travels with the drag, so the arrangement on screen at any moment is
+ * exactly what dropping commits.
+ */
+.sb-tile.slot {
+	border: 1px dashed var(--accent-color);
+	background: var(--btn-hover-bg);
+}
+
+.sb-tile.slot > * {
+	visibility: hidden;
+}
+
+/* The clone under the cursor: picked up off the page and tilted. */
+.sb-tile.carried {
+	position: fixed;
+	z-index: 21000;
+	pointer-events: none;
+	transform: rotate(-3deg);
+	box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+	border-color: var(--accent-color);
+	opacity: 0.95;
+}
+
+/* ==========================================================================
+   6. THE SCENE CANVAS
+   --------------------------------------------------------------------------
+   One markup and one stylesheet, rendered twice: full size in the workspace and
+   at tile size in the index. Everything on the canvas is sized in cqw against
+   the frame, so the miniature is a scale model rather than a crop — it shrinks
+   text at the same point the full canvas does.
+   ========================================================================== */
+
+/*
+ * A flex column, so the canvas inside is clamped to the frame's height however
+ * that height was arrived at — the stage's remaining space here, the 16:9
+ * aspect ratio on a miniature.
+ *
+ * `height: 100%` on the inner did not do it: the flow deliberately refuses to
+ * shrink (that is what keeps overflow measurable), and the inner box grew with
+ * it. The fit pass then measured its floor from a box hanging 50px below the
+ * frame, concluded a stack that was actually clipped fitted, and stopped.
+ */
+.sb-canvas-frame {
+	position: relative;
+	display: flex;
+	flex-direction: column;
+	background: var(--sb-canvas-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 0.5rem;
+	overflow: hidden;
+	container-type: inline-size;
+}
+
+/*
+ * The drafting canvas is fluid to the viewport and deliberately NOT locked to
+ * 16:9. Framing the editing surface as slide dimensions would make the tool
+ * read as a PowerPoint substitute, which is what it is not. 16:9 survives only
+ * as the deck target named in the exported brief.
+ *
+ * Its height comes from the flex column it sits in rather than from
+ * `100dvh - a constant`. Signal's chrome is not a constant: the header, the
+ * quota banner and the encryption banner all come and go, and a stage measured
+ * against a guess is taller than the space it has, so the fit pass concludes
+ * the content fits while the page quietly clips the bottom of it.
+ */
+.sb-canvas-stage {
+	position: relative;
+	width: 100%;
+	height: 100%;
+	min-height: 0;
+}
+
+.sb-canvas-stage > .sb-canvas-frame {
+	height: 100%;
+}
+
+/* The miniature keeps a fixed ratio: it gives the fit pass a stable target and
+   makes every tile one height off one width, so grid rows are uniform. It is a
+   tile shape, not a claim about the canvas. */
+.sb-canvas-frame.mini {
+	border: none;
+	border-radius: 0;
+	pointer-events: none;
+	aspect-ratio: 16 / 9;
+	background: color-mix(in srgb, var(--sb-arc, transparent) calc(var(--sb-arc-wash) * 100%), var(--sb-canvas-bg));
+}
+
+.sb-canvas-inner {
+	position: relative;
+	width: 100%;
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 2cqw;
+	padding: 2.5cqw;
+	/* Canvas text is presentation-sized. --sb-text-scale is driven by the fit
+	   pass, which shrinks type only as far as it must for the whole stack to
+	   clear the stage. */
+	--sb-text-scale: 1;
+	--sb-canvas-fs: calc(4.75cqw * var(--sb-text-scale));
+}
+
+.sb-canvas-frame.mini .sb-canvas-inner {
+	overflow: hidden;
+}
+
+/* Only a scene too dense to fit even at the floor scale is clipped, so the fade
+   marks a real cut rather than sitting over every tile pretending there is more. */
+.sb-canvas-frame.mini .sb-canvas-inner.overflowing::after {
+	content: '';
+	position: absolute;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	height: 22%;
+	pointer-events: none;
+	background: linear-gradient(to bottom, transparent, var(--sb-canvas-bg));
+}
+
+/*
+ * The scene title, on the scene. It is part of the scene — it becomes the
+ * heading in the exported brief — so it heads the canvas, not just the app bar.
+ * Same type size as a text box so it belongs to the same optical system, but
+ * deliberately un-carded: no fill, no border, an accent rule under it, heavier
+ * weight. A title should never read as another text box.
+ */
+.sb-canvas-title {
+	flex: 0 0 auto;
+	font-size: var(--sb-canvas-fs);
+	font-weight: 600;
+	line-height: 1.2;
+	color: var(--text-primary);
+	padding: 0 0 0.3em;
+	margin-bottom: 0.15em;
+	border-bottom: 2px solid var(--accent-color);
+	overflow-wrap: anywhere;
+}
+
+.sb-canvas-title.editable {
+	cursor: text;
+	transition: transform 0.16s ease, color 0.16s ease;
+}
+
+/* Lifts slightly on hover, to advertise that it is editable in place. */
+.sb-canvas-title.editable:hover {
+	transform: translateY(-2px);
+	color: var(--accent-color);
+}
+
+.sb-canvas-frame.mini .sb-canvas-title {
+	border-bottom-width: 1px;
+}
+
+.sb-title-input {
+	flex: 0 0 auto;
+	width: 100%;
+	font-family: inherit;
+	font-size: var(--sb-canvas-fs);
+	font-weight: 600;
+	line-height: 1.2;
+	color: var(--text-primary);
+	background: var(--sb-element-bg);
+	border: none;
+	border-bottom: 2px solid var(--accent-color);
+	border-radius: 0.2em 0.2em 0 0;
+	padding: 0 0.2em 0.3em;
+	margin-bottom: 0.15em;
+}
+
+.sb-title-input:focus {
+	outline: none;
+}
+
+/*
+ * The elements, in one sequence.
+ *
+ * Text boxes and images are one ordered list of ideas, not two stacked regions,
+ * which is what lets an image sit at position 2 between two text boxes.
+ *
+ * `flex: 1 0 auto` is load-bearing for the fit pass: grow keeps the add row on
+ * the floor of the stage, and no-shrink is what keeps the overflow measurable.
+ * Letting this region absorb the squeeze makes the fit loop chase its own tail,
+ * because shrinking the text also shrinks the budget it is measured against.
+ */
+.sb-canvas-flow {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 1.5cqw;
+	align-content: flex-start;
+	flex: 1 0 auto;
+}
+
+/* A wall of text that will not fit even at the floor scale scrolls rather than
+   being clipped — losing content is the worse failure. */
+.sb-canvas-inner.overflowing .sb-canvas-flow {
+	flex: 1 1 auto;
+	min-height: 0;
+	overflow: auto;
+}
+
+.sb-textbox {
+	position: relative;
+	background: var(--sb-element-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 0.3em;
+	/* em-based, so the card shrinks with its text during the fit pass. */
+	padding: 0.6em 1.4em 0.6em 0.75em;
+	font-size: var(--sb-canvas-fs);
+	line-height: 1.35;
+	flex: 1 1 46%;
+	min-width: 46%;
+	/* A pasted URL is one unbreakable word; without this it sets the box's
+	   minimum width and no amount of shrinking gets the row to fit. */
+	overflow-wrap: anywhere;
+	white-space: pre-wrap;
+}
+
+/* "May show subtly" — so it is UI-sized rather than canvas-sized. In em it grew
+   with presentation-sized body text and shouted the author's name louder than
+   what they wrote. */
+.sb-textbox .sb-who {
+	font-size: 0.7rem;
+	color: var(--text-secondary);
+	margin-bottom: 0.3rem;
+}
+
+.sb-textbox.editing {
+	flex: 1 1 100%;
+}
+
+.sb-textbox textarea {
+	width: 100%;
+	font-family: inherit;
+	font-size: var(--sb-canvas-fs);
+	line-height: 1.35;
+	min-height: 3em;
+	padding: 0.4em 0.5em;
+	color: var(--text-primary);
+	background: var(--sb-canvas-bg);
+	border: 1px solid var(--accent-color);
+	border-radius: 0.25em;
+	resize: vertical;
+}
+
+/* At index size a text box is filled, not outlined: three nested rectangles at
+   the same contrast is what makes a grid read as a wireframe. */
+.sb-canvas-frame.mini .sb-textbox {
+	border-color: transparent;
+	background: color-mix(in srgb, var(--text-primary) 6%, transparent);
+	border-radius: 3px;
+	padding: 0.5em 0.6em;
+}
+
+.sb-image {
+	position: relative;
+	flex: 1 1 46%;
+	min-width: 46%;
+	height: 7em;
+	font-size: var(--sb-canvas-fs);
+}
+
+/* Nothing but images on the scene: let them fill the stage rather than sitting
+   at their nominal height with slack underneath. */
+.sb-canvas-flow:not(:has(.sb-textbox)) {
+	align-content: stretch;
+}
+
+.sb-canvas-flow:not(:has(.sb-textbox)) .sb-image {
+	height: auto;
+}
+
+.sb-image-body {
+	position: relative;
+	height: 100%;
+	border: 1px solid var(--card-border);
+	border-radius: 0.25em;
+	overflow: hidden;
+	cursor: pointer;
+	background: var(--sb-canvas-bg);
+}
+
+.sb-image-body img {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+/* Bottom-left, because the sequence badge hangs off the element's top-left
+   corner and the two were landing on top of each other. */
+.sb-ref-tag {
+	position: absolute;
+	bottom: 0.2em;
+	left: 0.2em;
+	font-size: 0.42em;
+	color: var(--sb-warn);
+	background: var(--sb-scrim);
+	padding: 0.1em 0.4em;
+	border-radius: 0.25em;
+}
+
+.sb-canvas-frame.mini .sb-image-body {
+	border-color: transparent;
+	cursor: inherit;
+}
+
+/*
+ * Sequence badge — the element's place in the scene's order, and its drag
+ * handle. Sized in em so it shrinks with everything else, and carrying the
+ * chip ink because this is the one place on the canvas where text sits on a
+ * saturated fill.
+ */
+.sb-seq {
+	position: absolute;
+	top: -0.55em;
+	left: -0.55em;
+	z-index: 2;
+	min-width: 1.6em;
+	height: 1.6em;
+	padding: 0 0.4em;
+	border-radius: 999px;
+	background: var(--sb-arc, var(--accent-color));
+	color: var(--sb-chip-ink);
+	font-size: 0.55em;
+	font-weight: 700;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: grab;
+	user-select: none;
+	touch-action: none;
+}
+
+.sb-seq:active {
+	cursor: grabbing;
+}
+
+/* At index size the badge would be an unreadable dot that only adds noise —
+   the sequence reads from the arrangement itself. */
+.sb-canvas-frame.mini .sb-seq {
+	display: none;
+}
+
+/*
+ * Canvas controls stay visible at rest: a control nobody can see is a control
+ * nobody uses, and on touch there is no hover to reveal it.
+ *
+ * Fixed size, not em. These are chrome, not content — sized against
+ * presentation-scale body text they came out as 38px glyphs pressed against the
+ * frame edge.
+ */
+.sb-el-btn {
+	position: absolute;
+	top: 0.15rem;
+	right: 0.3rem;
+	z-index: 2;
+	width: 1.2rem;
+	height: 1.2rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: none;
+	border: none;
+	padding: 0;
+	line-height: 1;
+	font-size: 0.95rem;
+	color: var(--text-secondary);
+	cursor: pointer;
+	opacity: 0.65;
+	transition: opacity 0.12s, color 0.12s;
+}
+
+.sb-el-btn.move {
+	right: 1.7rem;
+}
+
+.sb-textbox:hover .sb-el-btn,
+.sb-image:hover .sb-el-btn,
+.sb-el-btn:focus-visible {
+	opacity: 1;
+}
+
+.sb-el-btn.del:hover {
+	color: var(--sb-danger);
+}
+
+.sb-el-btn.move:hover {
+	color: var(--accent-color);
+}
+
+.sb-canvas-frame.mini .sb-el-btn {
+	display: none;
+}
+
+/* The element slot, same language as the scene index. */
+.sb-textbox.slot,
+.sb-image.slot {
+	border: 1px dashed var(--accent-color);
+	background: var(--btn-hover-bg);
+}
+
+.sb-textbox.slot > *,
+.sb-image.slot > * {
+	visibility: hidden;
+}
+
+.sb-canvas-empty {
+	flex: 1 1 auto;
+	min-height: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	text-align: center;
+	color: var(--text-secondary);
+	font-size: 2.4cqw;
+}
+
+/* Add controls sit outside the flow, so their fixed height is not part of the
+   text budget the fit pass measures. */
+.sb-canvas-add {
+	display: flex;
+	gap: 0.5rem;
+	flex: 0 0 auto;
+}
+
+/* ==========================================================================
+   7. WORKSPACE AND TEAM NOTES
+   ========================================================================== */
+
+/* The workspace does not scroll: the canvas takes the room that is actually
+   there, and anything too dense scrolls inside the canvas instead. */
+.sb-scroll.fixed {
+	overflow: hidden;
+	display: flex;
+	flex-direction: column;
+	padding: 0;
+}
+
+.sb-workspace {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) 21rem;
+	gap: 1rem;
+	padding: 0.9rem 1.4rem;
+	align-items: stretch;
+	flex: 1 1 auto;
+	min-height: 0;
+}
+
+.sb-workspace.fullwidth {
+	grid-template-columns: minmax(0, 1fr);
+}
+
+/* Prev/next scene: a triangle astride the frame edge — half on the scene, half
+   on the page — so the affordance is unmissable without eating canvas space. */
+.sb-canvas-arrow {
+	position: absolute;
+	top: 50%;
+	width: 2.4rem;
+	height: 4rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0;
+	background: none;
+	border: none;
+	cursor: pointer;
+	color: var(--text-secondary);
+	z-index: 3;
+	filter: drop-shadow(0 2px 5px var(--sb-scrim));
+	transition: color 0.16s ease;
+}
+
+.sb-canvas-arrow.prev {
+	left: 0;
+	transform: translate(-50%, -50%);
+}
+
+.sb-canvas-arrow.next {
+	right: 0;
+	transform: translate(50%, -50%);
+}
+
+.sb-canvas-arrow:hover {
+	color: var(--accent-color);
+}
+
+.sb-notes {
+	display: flex;
+	flex-direction: column;
+	background: var(--column-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.5rem;
+	padding: 0.7rem;
+	max-height: calc(100dvh - 9.5rem);
+}
+
+.sb-notes-head {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.sb-notes-head h3 {
+	margin: 0;
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--text-primary);
+	flex: 1;
+}
+
+.sb-notes-list {
+	flex: 1 1 auto;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	margin-bottom: 0.5rem;
+}
+
+.sb-note {
+	position: relative;
+	background: var(--card-bg);
+	border: 1px solid var(--card-border);
+	border-radius: 0.4rem;
+	padding: 0.5rem 0.6rem;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	color: var(--text-primary);
+	overflow-wrap: anywhere;
+}
+
+/* A closed note is kept for the record, so it stays legible — just clearly
+   out of the active conversation. */
+.sb-note.closed {
+	opacity: 0.55;
+}
+
+.sb-note.action {
+	border-left: 3px solid var(--sb-warn);
+}
+
+.sb-note-head {
+	display: flex;
+	align-items: baseline;
+	gap: 0.4rem;
+	margin-bottom: 0.2rem;
+	font-size: 0.72rem;
+	color: var(--text-secondary);
+}
+
+.sb-note-author {
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.sb-note-actions {
+	display: flex;
+	gap: 0.3rem;
+	margin-top: 0.35rem;
+}
+
+.sb-note-actions button {
+	background: none;
+	border: none;
+	padding: 0;
+	font-family: inherit;
+	font-size: 0.72rem;
+	color: var(--text-secondary);
+	cursor: pointer;
+}
+
+.sb-note-actions button:hover {
+	color: var(--accent-color);
+}
+
+.sb-note-compose textarea,
+.sb-note textarea {
+	width: 100%;
+	font-family: inherit;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	color: var(--text-primary);
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.4rem;
+	padding: 0.45rem 0.5rem;
+	resize: vertical;
+	min-height: 3.2rem;
+	box-sizing: border-box;
+}
+
+/* A cross-reference resolves to the target scene's CURRENT position and
+   navigates there, so reordering never leaves a reference pointing at nothing. */
+.sb-ref {
+	color: var(--accent-color);
+	cursor: pointer;
+	border-bottom: 1px dotted currentColor;
+}
+
+/* ==========================================================================
+   8. MODALS AND FORMS
+   ========================================================================== */
+
+.sb-modal-body {
+	padding: 1rem 1.1rem;
+	overflow-y: auto;
+	max-height: 65vh;
+}
+
+.sb-modal-head {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.8rem 1.1rem;
+	border-bottom: 1px solid var(--border-color);
+}
+
+.sb-modal-head h2 {
+	margin: 0;
+	font-size: 1rem;
+	font-weight: 500;
+	flex: 1;
+}
+
+/*
+ * The action row is pinned to the bottom of the modal rather than sitting at
+ * the end of the scroll. Nine full-width brief fields once put Save far below
+ * the fold, which read as the optional fields blocking the save.
+ */
+.sb-modal-foot {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.7rem 1.1rem;
+	border-top: 1px solid var(--border-color);
+	background: var(--toolbar-bg);
+	position: sticky;
+	bottom: 0;
+}
+
+.sb-modal-foot .sb-spacer {
+	flex: 1;
+}
+
+.sb-field {
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	margin-bottom: 0.8rem;
+}
+
+.sb-field label {
+	font-size: 0.8rem;
+	font-weight: 500;
+	color: var(--text-primary);
+}
+
+.sb-field .sb-hint {
+	font-size: 0.72rem;
+	color: var(--text-secondary);
+	line-height: 1.35;
+}
+
+.sb-field input,
+.sb-field textarea,
+.sb-field select {
+	width: 100%;
+	font-family: inherit;
+	font-size: 0.85rem;
+	color: var(--text-primary);
+	background: var(--card-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.4rem;
+	padding: 0.45rem 0.55rem;
+	box-sizing: border-box;
+}
+
+.sb-field input:focus,
+.sb-field textarea:focus {
+	outline: none;
+	border-color: var(--accent-color);
+}
+
+/* A field the export named as missing, so the way out of the refusal lands on
+   the exact answer that is blocking it. */
+.sb-field.flagged input,
+.sb-field.flagged textarea {
+	border-color: var(--sb-warn);
+}
+
+/* The brief lays short answers two-up and gives the three that need room the
+   full width; under 620px it collapses to one column. */
+.sb-brief-grid {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0 0.8rem;
+}
+
+.sb-brief-grid .sb-field.wide {
+	grid-column: 1 / -1;
+}
+
+.sb-code {
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 1rem;
+	letter-spacing: 0.02em;
+	color: var(--accent-color);
+	background: var(--sb-element-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.4rem;
+	padding: 0.5rem 0.6rem;
+	word-break: break-all;
+}
+
+.sb-member-row {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.45rem 0;
+	border-bottom: 1px solid var(--border-color);
+	font-size: 0.82rem;
+}
+
+.sb-member-row:last-child {
+	border-bottom: none;
+}
+
+.sb-member-name {
+	flex: 1;
+	min-width: 0;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.sb-framework-list button {
+	display: block;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: none;
+	border-bottom: 1px solid var(--border-color);
+	padding: 0.6rem 0;
+	font-family: inherit;
+	color: var(--text-primary);
+	cursor: pointer;
+}
+
+.sb-framework-list button:hover {
+	color: var(--accent-color);
+}
+
+.sb-framework-list .sb-fw-name {
+	font-weight: 500;
+	font-size: 0.88rem;
+}
+
+.sb-framework-list .sb-fw-summary {
+	display: block;
+	font-size: 0.76rem;
+	color: var(--text-secondary);
+	line-height: 1.4;
+	margin-top: 0.15rem;
+}
+
+.sb-fw-detail h3 {
+	margin: 1rem 0 0.35rem;
+	font-size: 0.85rem;
+	font-weight: 500;
+	color: var(--accent-color);
+}
+
+.sb-fw-detail p,
+.sb-fw-detail li {
+	font-size: 0.83rem;
+	line-height: 1.5;
+	color: var(--text-primary);
+}
+
+.sb-export-preview {
+	width: 100%;
+	min-height: 14rem;
+	font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+	font-size: 0.75rem;
+	line-height: 1.45;
+	white-space: pre-wrap;
+	color: var(--text-primary);
+	background: var(--sb-element-bg);
+	border: 1px solid var(--border-color);
+	border-radius: 0.4rem;
+	padding: 0.6rem;
+	box-sizing: border-box;
+}
+
+/* ==========================================================================
+   9. TOUCH MOVE MODE
+   --------------------------------------------------------------------------
+   Drag-and-drop is a pointer gesture. On touch, reordering happens in an
+   explicit mode — the same shape as the tasks board's move mode: a wiggle to
+   say what is moving, a banner that can always cancel, and drop targets that
+   say where it can land.
+   ========================================================================== */
+
+.sb-move-banner {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	z-index: 20500;
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	padding: 0.6rem 0.9rem;
+	background: var(--accent-color);
+	color: var(--sb-chip-ink);
+	font-size: 0.85rem;
+	font-weight: 500;
+	box-shadow: 0 2px 10px var(--shadow-color);
+}
+
+.sb-move-banner button {
+	margin-left: auto;
+	background: var(--sb-scrim);
+	color: #fff;
+	border: none;
+	border-radius: 0.35rem;
+	padding: 0.3rem 0.7rem;
+	font-family: inherit;
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+.sb-moving {
+	animation: sb-wiggle 0.4s ease-in-out infinite alternate;
+	border-color: var(--accent-color) !important;
+}
+
+@keyframes sb-wiggle {
+	from { transform: rotate(-1.2deg); }
+	to   { transform: rotate(1.2deg); }
+}
+
+/* Where the carried thing can land. Sized for a fingertip, not a cursor. */
+.sb-drop-here {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 3rem;
+	border: 1px dashed var(--accent-color);
+	border-radius: 0.5rem;
+	background: var(--btn-hover-bg);
+	color: var(--accent-color);
+	font-size: 0.8rem;
+	cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	.sb-moving { animation: none; }
+	.sb-card:hover,
+	.sb-tile:hover,
+	.sb-canvas-title.editable:hover { transform: none; }
+	.sb-btn, .sb-card, .sb-tile, .sb-canvas-title { transition: none; }
+}
+
+/* ==========================================================================
+   10. NARROW SCREENS
+   ========================================================================== */
+
+@media (max-width: 900px) {
+	.sb-workspace {
+		grid-template-columns: minmax(0, 1fr);
+		padding: 0.7rem;
+	}
+
+	/* Notes drop below the scene rather than squeezing it — the canvas is the
+	   thing being reviewed, so it keeps the width. Which means the workspace has
+	   to scroll again, and the stage takes a share of the viewport rather than
+	   all of the remaining column. */
+	.sb-scroll.fixed {
+		overflow-y: auto;
+	}
+
+	.sb-workspace {
+		align-items: start;
+	}
+
+	.sb-notes {
+		max-height: 60vh;
+	}
+
+	.sb-canvas-stage {
+		height: 58dvh;
+		min-height: 15rem;
+	}
+}
+
+@media (max-width: 620px) {
+	.sb-brief-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.sb-scroll {
+		padding: 0.7rem;
+	}
+
+	.sb-dash-grid,
+	.sb-scene-index {
+		grid-template-columns: 1fr;
+	}
+
+	.sb-topbar {
+		flex-wrap: wrap;
+		gap: 0.4rem;
+	}
+
+	.sb-topbar-title {
+		flex: 1 0 100%;
+	}
+
+	/* Arrows sit inboard on a phone: half a control hanging off the frame edge
+	   lands under the thumb's own screen edge gestures. */
+	.sb-canvas-arrow.prev { transform: translate(0, -50%); }
+	.sb-canvas-arrow.next { transform: translate(0, -50%); }
+}

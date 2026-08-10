@@ -2519,7 +2519,11 @@ body.light-mode #app-footer.dev-mode a:hover {
 	width: 100%;
 	height: 100%;
 	background-color: rgba(0, 0, 0, 0.7);
-	z-index: 1300; 
+	/* Above .modal (20000), because a confirmation is always raised BY something
+	   and has to sit on top of whatever raised it. At 1300 a confirm opened from
+	   inside any modal rendered underneath it, and every click on Confirm went to
+	   the modal instead. */
+	z-index: 22000;
 	display: flex;
 	align-items: center;
 	justify-content: center;
